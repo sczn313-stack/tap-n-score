@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#000000" />
   <title>Tap-n-Score</title>
 
-  <link rel="stylesheet" href="./styles.css?v=1" />
+  <link rel="stylesheet" href="./styles.css?v=2" />
 </head>
 
 <body>
@@ -34,7 +34,7 @@
       </div>
 
       <div id="instructionLine" class="hint">
-        1) Choose a photo • 2) Tap each bullet hole • 3) See results
+        1) Choose a photo • 2) Tap the bull (center) • 3) Tap each bullet hole • 4) Show results
       </div>
 
       <div id="targetWrap" class="targetWrap" aria-label="Target image area">
@@ -43,7 +43,12 @@
       </div>
 
       <div class="row row2">
-        <div class="pill">Taps: <span id="tapCount">0</span></div>
+        <div class="pill">Bull: <span id="bullStatus">not set</span></div>
+        <div class="pill">Holes: <span id="tapCount">0</span></div>
+
+        <button id="undoBtn" class="btn secondary" type="button" disabled>
+          Undo
+        </button>
 
         <button id="clearTapsBtn" class="btn secondary" type="button" disabled>
           Clear
@@ -64,9 +69,8 @@
   </main>
 
   <script>
-    // Single source of truth flags
     window.TNS_CONFIG = { enable_leaderboards: false };
   </script>
-  <script src="./index.js?v=1"></script>
+  <script src="./index.js?v=2"></script>
 </body>
 </html>
