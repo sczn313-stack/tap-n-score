@@ -3,16 +3,16 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="color-scheme" content="dark" />
   <meta name="theme-color" content="#000000" />
   <title>Tap-n-Score</title>
 
-  <!-- CACHE BUST -->
-  <link rel="stylesheet" href="./styles.css?v=20260121a" />
+  <!-- cache-bust -->
+  <link rel="stylesheet" href="./styles.css?v=20260121b" />
 </head>
 
 <body>
   <main class="page">
-
     <header class="top">
       <div class="brand">
         <span class="brandTap">TAP</span><span class="brandN">-N-</span><span class="brandScore">SCORE</span><span class="brandTm">™</span>
@@ -27,15 +27,53 @@
           Choose Target Photo
         </label>
 
-        <select id="modeSelect" class="select">
-          <option value="pistol">Pistol</option>
+        <select id="modeSelect" class="select" aria-label="Mode">
           <option value="rifle">Rifle</option>
+          <option value="pistol">Pistol</option>
           <option value="measure">Measure (inches only)</option>
         </select>
       </div>
 
+      <div class="row rowMeta">
+        <div class="metaCol">
+          <div class="metaLabel">Target Size</div>
+          <select id="targetSizeSelect" class="select" aria-label="Target size">
+            <option value="8.5x11">8.5 × 11</option>
+            <option value="23x23">23 × 23</option>
+            <option value="19x25">19 × 25</option>
+            <option value="custom">Custom</option>
+          </select>
+        </div>
+
+        <div class="metaCol">
+          <div class="metaLabel">Distance (yards)</div>
+          <input id="distanceYds" class="input" type="number" inputmode="decimal" min="1" step="1" value="100" />
+        </div>
+
+        <div class="metaCol">
+          <div class="metaLabel">Click Value</div>
+          <select id="clickValue" class="select" aria-label="Click value">
+            <option value="0.25">0.25 MOA / click</option>
+            <option value="0.5">0.50 MOA / click</option>
+            <option value="0.1mil">0.1 MIL / click</option>
+          </select>
+        </div>
+      </div>
+
+      <div id="customSizeRow" class="row rowMeta" style="display:none;">
+        <div class="metaCol">
+          <div class="metaLabel">Custom Width (in)</div>
+          <input id="customWidthIn" class="input" type="number" inputmode="decimal" min="1" step="0.01" value="23" />
+        </div>
+        <div class="metaCol">
+          <div class="metaLabel">Custom Height (in)</div>
+          <input id="customHeightIn" class="input" type="number" inputmode="decimal" min="1" step="0.01" value="23" />
+        </div>
+        <div class="metaCol"></div>
+      </div>
+
       <div id="instructionLine" class="hint">
-        1) Choose a photo • 2) Tap the bull (center) • 3) Tap each bullet hole • 4) Show results
+        Choose a target photo to begin.
       </div>
 
       <div id="targetWrap" class="targetWrap" aria-label="Target image area">
@@ -47,17 +85,9 @@
         <div class="pill">Bull: <span id="bullStatus">not set</span></div>
         <div class="pill">Holes: <span id="tapCount">0</span></div>
 
-        <button id="undoBtn" class="btn secondary" type="button" disabled>
-          Undo
-        </button>
-
-        <button id="clearTapsBtn" class="btn secondary" type="button" disabled>
-          Clear
-        </button>
-
-        <button id="seeResultsBtn" class="btn primary" type="button" disabled>
-          Show Results
-        </button>
+        <button id="undoBtn" class="btn secondary" type="button" disabled>Undo</button>
+        <button id="clearTapsBtn" class="btn secondary" type="button" disabled>Clear</button>
+        <button id="seeResultsBtn" class="btn primary" type="button" disabled>Show Results</button>
       </div>
 
       <div id="resultsBox" class="results" style="display:none;"></div>
@@ -65,16 +95,15 @@
 
     <footer class="foot">
       <div class="tiny">enable_leaderboards: <b>false</b></div>
-      <div class="tiny">build: <b>20260121a</b></div>
+      <div class="tiny">build: <b>20260121b</b></div>
     </footer>
-
   </main>
 
   <script>
     window.TNS_CONFIG = { enable_leaderboards: false };
   </script>
 
-  <!-- CACHE BUST -->
-  <script src="./index.js?v=20260121a"></script>
+  <!-- cache-bust -->
+  <script src="./index.js?v=20260121b"></script>
 </body>
 </html>
