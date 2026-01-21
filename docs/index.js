@@ -109,9 +109,79 @@
 
   function clearDots() { elDots.innerHTML = ""; }
 
+  function computePoibPct() {
+    if (!bull || holes.length === 0) return null;
+    const sum = holes.reduce((a, t) => ({ x: a.x + t.xPct, y: a.y + t.yPct }), { x: 0, y: 0 });
+    return { xPct: sum.x / holes.length, yPct: sum.y / holes.length };
+  }
+
+  function makeArrowSvg(x1, y1, x2, y2) {
+    // svg in % viewBox space (0..100)
+    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    svg.setAttribute("class", "overlaySvg");
+    svg.setAttribute("viewBox", "0 0 100 100");
+    svg.setAttribute("preserveAspectRatio", "none");
+
+    const defs = document.createElementNS("http://www.w3.org/2000/svg", "defs");
+
+    const marker = document.createElementNS("http://www.w3.org/2000/svg", "marker");
+    marker.setAttribute("id", "arrowHead");
+    marker.setAttribute("markerWidth", "6");
+    marker.setAttribute("markerHeight", "6");
+    marker.setAttribute("refX", "5");
+    marker.setAttribute("refY", "3");
+    marker.setAttribute("orient", "auto");
+    marker.setAttribute("markerUnits", "strokeWidth");
+
+    const poly = document.createElementNS("http://www.w3.org/2000/svg", "polygon");
+    poly.setAttribute("points", "0,0 6,3 0,6");
+    poly.setAttribute("fill", "rgba(255,255,255,0.92)");
+    marker.appendChild(poly);
+    defs.appendChild(marker);
+    svg.appendChild(defs);
+
+    // shadow line
+    const shadow = document.createElementNS("http://www.w3.org/2000/svg", "line");
+    shadow.setAttribute("x1", String(x1));
+    shadow.setAttribute("y1", String(y1));
+    shadow.setAttribute("x2", String(x2));
+    shadow.setAttribute("y2", String(y2));
+    shadow.setAttribute("class", "arrowShadow");
+    shadow.setAttribute("marker-end", "url(#arrowHead)");
+    svg.appendChild(shadow);
+
+    // main line
+    const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+    line.setAttribute("x1", String(x1));
+    line.setAttribute("y1", String(y1));
+    line.setAttribute("x2", String(x2));
+    line.setAttribute("y2", String(y2));
+    line.setAttribute("class", "arrowLine");
+    line.setAttribute("marker-end", "url(#arrowHead)");
+    svg.appendChild(line);
+
+    return svg;
+  }
+
   function drawDots() {
     clearDots();
 
+    // draw correction arrow + POIB (when we have bull + at least 1 hole)
+    const poib = computePoibPct();
+    if (poib && bull) {
+      // Arrow from POIB -> Bull (correction direction)
+      const arrow = makeArrowSvg(poib.xPct, poib.yPct, bull.xPct, bull.yPct);
+      elDots.appendChild(arrow);
+
+      // POIB dot (white)
+      const p = document.createElement("div");
+      p.className = "dotPoib";
+      p.style.left = `${poib.xPct}%`;
+      p.style.top = `${poib.yPct}%`;
+      elDots.appendChild(p);
+    }
+
+    // bull dot (yellow)
     if (bull) {
       const b = document.createElement("div");
       b.className = "dotBull";
@@ -120,6 +190,7 @@
       elDots.appendChild(b);
     }
 
+    // holes (green)
     for (const h of holes) {
       const d = document.createElement("div");
       d.className = "dot";
@@ -262,8 +333,7 @@
     return 1.047 * (distanceYds / 100);
   }
 
-  // Score100 v0: based on distance from bull in inches (stable + simple)
-  // 0" = 100, 1" = 90, 2" = 80 ... floor at 0
+  // Score100 v0: 0" = 100, 1" = 90, 2" = 80 ... floor at 0
   function score100FromOffset(offsetIn) {
     const score = 100 - (offsetIn * 10);
     return Math.max(0, Math.min(100, score));
@@ -276,36 +346,27 @@
     const distYds = Math.max(1, Number(elDistance.value) || 100);
 
     // POIB (avg of holes) in % space
-    const sum = holes.reduce((a, t) => ({ x: a.x + t.xPct, y: a.y + t.yPct }), { x: 0, y: 0 });
-    const poibPct = { xPct: sum.x / holes.length, yPct: sum.y / holes.length };
+    const poibPct = computePoibPct();
 
     // Convert bull + POIB to inches
     const bullIn = pctToInches(bull);
     const poibIn = pctToInches(poibPct);
 
-    // Offset vector (bull - POIB) in inches (positive = move impact toward bull)
+    // Offset vector (bull - POIB) in inches
     const dxIn = (bullIn.xIn - poibIn.xIn);
     const dyIn = (bullIn.yIn - poibIn.yIn);
 
-    // Magnitude (inches)
     const offsetMagIn = Math.sqrt((dxIn * dxIn) + (dyIn * dyIn));
-
-    // Score100 v0
     const score100 = score100FromOffset(offsetMagIn);
 
-    // Directions (screen truth): right=+, up is negative y in screen space.
-    // Here dyIn positive means bull is BELOW POIB in inches (need DOWN correction on impact),
-    // but we express correction as "move impact" directions:
     const windDir = dxIn >= 0 ? "RIGHT" : "LEFT";
     const elevDir = dyIn >= 0 ? "DOWN" : "UP";
 
-    // Click computations
     const clickSetting = elClickValue.value;
-
     let clickLine = "";
+
     if (mode === "rifle") {
       if (clickSetting === "0.1mil") {
-        // MIL: 1 mil ≈ 3.6" at 100y, scales with distance
         const inchesPerMil = 3.6 * (distYds / 100);
         const milX = Math.abs(dxIn) / inchesPerMil;
         const milY = Math.abs(dyIn) / inchesPerMil;
@@ -317,7 +378,7 @@
           <div><b>Elev:</b> ${elevDir} ${Math.abs(dyIn).toFixed(2)}" → ${clicksY.toFixed(2)} clicks (0.1 mil)</div>
         `;
       } else {
-        const moaPerClick = Number(clickSetting); // 0.25 or 0.5
+        const moaPerClick = Number(clickSetting);
         const ipm = inchesPerMOA(distYds);
         const moaX = Math.abs(dxIn) / ipm;
         const moaY = Math.abs(dyIn) / ipm;
@@ -335,7 +396,6 @@
         <div><b>Elev:</b> ${elevDir} ${Math.abs(dyIn).toFixed(2)}"</div>
       `;
     } else {
-      // pistol: show inches + score (no scope language required)
       clickLine = `
         <div><b>Wind:</b> ${windDir} ${Math.abs(dxIn).toFixed(2)}"</div>
         <div><b>Elev:</b> ${elevDir} ${Math.abs(dyIn).toFixed(2)}"</div>
@@ -362,7 +422,7 @@
       <div style="margin-top:10px;"><b>Score100:</b> ${score100.toFixed(2)}</div>
 
       <div style="margin-top:10px; color:#b9b9b9;">
-        Next: we can add an on-image POIB marker + correction arrow, then tighten Score100 with consistency (group radius).
+        On-image overlay now shows POIB (white) and correction arrow (POIB → bull).
       </div>
     `;
   });
