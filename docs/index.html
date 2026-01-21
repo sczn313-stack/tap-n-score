@@ -5,21 +5,68 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="theme-color" content="#000000" />
   <title>Tap-n-Score</title>
-  <style>
-    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial; margin:0; padding:24px;}
-    .card{max-width:700px; margin:0 auto; padding:18px; border:1px solid #ddd; border-radius:12px;}
-    h1{margin:0 0 10px 0;}
-  </style>
+
+  <link rel="stylesheet" href="./styles.css?v=1" />
 </head>
+
 <body>
-  <div class="card">
-    <h1>Tap-n-Score ✅</h1>
-    <p id="status">HTML loaded.</p>
-    <p>If you can see this, GitHub Pages is working.</p>
-  </div>
+  <main class="page">
+
+    <header class="top">
+      <div class="brand">
+        <span class="brandTap">TAP</span><span class="brandN">-N-</span><span class="brandScore">SCORE</span><span class="brandTm">™</span>
+      </div>
+      <div class="sub">Shooter-facing experience</div>
+    </header>
+
+    <section class="card">
+      <div class="row">
+        <label class="btn fileBtn">
+          <input id="photoInput" type="file" accept="image/*" />
+          Choose Target Photo
+        </label>
+
+        <select id="modeSelect" class="select">
+          <option value="pistol">Pistol</option>
+          <option value="rifle">Rifle</option>
+          <option value="measure">Measure (inches only)</option>
+        </select>
+      </div>
+
+      <div id="instructionLine" class="hint">
+        1) Choose a photo • 2) Tap each bullet hole • 3) See results
+      </div>
+
+      <div id="targetWrap" class="targetWrap" aria-label="Target image area">
+        <img id="targetImg" alt="Target preview" />
+        <div id="dotsLayer" class="dotsLayer" aria-hidden="true"></div>
+      </div>
+
+      <div class="row row2">
+        <div class="pill">Taps: <span id="tapCount">0</span></div>
+
+        <button id="clearTapsBtn" class="btn secondary" type="button" disabled>
+          Clear
+        </button>
+
+        <button id="seeResultsBtn" class="btn primary" type="button" disabled>
+          Show Results
+        </button>
+      </div>
+
+      <div id="resultsBox" class="results" style="display:none;"></div>
+    </section>
+
+    <footer class="foot">
+      <div class="tiny">enable_leaderboards: <b>false</b></div>
+    </footer>
+
+  </main>
 
   <script>
-    document.getElementById("status").textContent = "JS loaded ✅";
+    // Single source of truth flags
+    window.TNS_CONFIG = { enable_leaderboards: false };
   </script>
+  <script src="./index.js?v=1"></script>
 </body>
 </html>
