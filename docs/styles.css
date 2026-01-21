@@ -40,7 +40,7 @@ body{
   border:0;
   border-radius:12px;
   padding:12px 14px;
-  font-weight:700;
+  font-weight:800;
   color:white;
   cursor:pointer;
   background:var(--btn2);
@@ -58,7 +58,7 @@ body{
   border:1px solid var(--line);
   border-radius:12px;
   padding:11px 12px;
-  font-weight:700;
+  font-weight:800;
 }
 
 .hint{ color:var(--muted); margin:12px 0; }
@@ -85,9 +85,10 @@ body{
 .dotsLayer{
   position:absolute;
   inset:0;
-  pointer-events:none; /* important: prevents double-count/touch weirdness */
+  pointer-events:none; /* prevents accidental double interactions */
 }
 
+/* Bullet hole dot */
 .dot{
   position:absolute;
   width:16px;
@@ -99,13 +100,25 @@ body{
   box-shadow:0 6px 20px rgba(0,0,0,0.45);
 }
 
+/* Bull (center) dot */
+.dotBull{
+  position:absolute;
+  width:18px;
+  height:18px;
+  border-radius:50%;
+  background:#ffd400; /* yellow */
+  border:2px solid rgba(0,0,0,0.65);
+  transform:translate(-50%,-50%);
+  box-shadow:0 8px 24px rgba(0,0,0,0.55);
+}
+
 .pill{
   padding:8px 12px;
   border-radius:999px;
   background:#1a1a1a;
   border:1px solid var(--line);
   color:var(--text);
-  font-weight:700;
+  font-weight:800;
 }
 
 .results{
@@ -116,5 +129,6 @@ body{
   border:1px solid var(--line);
   color:var(--text);
 }
+
 .tiny{ color:var(--muted); margin-top:10px; font-size:12px; }
 .foot{ margin-top:10px; }
