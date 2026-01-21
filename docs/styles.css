@@ -1,134 +1,191 @@
 :root{
   --bg:#0b0b0b;
-  --card:#121212;
-  --text:#f2f2f2;
+  --card:#141414;
   --muted:#b9b9b9;
-  --line:#2a2a2a;
-  --btn:#1f7aff;
-  --btn2:#2a2a2a;
+  --text:#f5f5f5;
+  --border: rgba(255,255,255,0.10);
+  --shadow: rgba(0,0,0,0.45);
+  --btn:#2b2b2b;
+  --btn2:#1f1f1f;
+  --blue:#1e78ff;
+  --green:#00d07f;
+  --yellow:#ffd400;
 }
 
 *{ box-sizing:border-box; }
 html,body{ height:100%; }
 body{
   margin:0;
-  background:var(--bg);
-  color:var(--text);
-  font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;
+  background: var(--bg);
+  color: var(--text);
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial;
 }
 
-.page{ padding:18px; max-width:900px; margin:0 auto; }
-.top{ margin:6px 0 14px; }
-.brand{ font-weight:800; letter-spacing:0.5px; font-size:34px; line-height:1.1; }
+.page{
+  max-width: 980px;
+  margin: 0 auto;
+  padding: 18px 14px 40px;
+}
+
+.top{ margin-bottom: 14px; }
+.brand{
+  font-weight: 900;
+  letter-spacing: 0.8px;
+  font-size: 34px;
+  line-height: 1.05;
+}
 .brandTap{ color:#ffffff; }
-.brandN{ color:#9a9a9a; }
+.brandN{ color:#bdbdbd; }
 .brandScore{ color:#ffffff; }
-.brandTm{ color:#9a9a9a; font-size:18px; vertical-align:top; margin-left:2px; }
-.sub{ color:var(--muted); margin-top:6px; }
+.brandTm{ color:#bdbdbd; font-size: 18px; vertical-align: super; margin-left: 2px; }
+.sub{ color: var(--muted); margin-top: 6px; }
 
 .card{
-  background:var(--card);
-  border:1px solid var(--line);
-  border-radius:16px;
-  padding:14px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 14px;
+  box-shadow: 0 18px 50px var(--shadow);
 }
 
-.row{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
-.row2{ margin-top:12px; justify-content:space-between; }
+.row{
+  display:flex;
+  gap: 10px;
+  align-items:center;
+  flex-wrap: wrap;
+}
+
+.rowMeta{
+  margin-top: 10px;
+  gap: 12px;
+}
+
+.metaCol{
+  flex: 1 1 180px;
+  min-width: 160px;
+}
+
+.metaLabel{
+  font-size: 12px;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+
+.hint{
+  margin-top: 12px;
+  color: var(--muted);
+  font-size: 14px;
+}
 
 .btn{
-  border:0;
-  border-radius:12px;
-  padding:12px 14px;
-  font-weight:800;
-  color:white;
-  cursor:pointer;
-  background:var(--btn2);
-}
-.btn.primary{ background:var(--btn); }
-.btn.secondary{ background:var(--btn2); }
-
-.btn:disabled{ opacity:0.45; cursor:not-allowed; }
-
-.fileBtn input{ display:none; }
-
-.select{
-  background:#1a1a1a;
-  color:var(--text);
-  border:1px solid var(--line);
-  border-radius:12px;
-  padding:11px 12px;
-  font-weight:800;
+  border: 1px solid var(--border);
+  background: var(--btn);
+  color: var(--text);
+  padding: 12px 14px;
+  border-radius: 14px;
+  font-weight: 800;
+  cursor: pointer;
+  user-select:none;
+  -webkit-tap-highlight-color: transparent;
 }
 
-.hint{ color:var(--muted); margin:12px 0; }
+.btn:disabled{
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.btn.primary{
+  background: var(--blue);
+  border-color: rgba(255,255,255,0.12);
+}
+
+.btn.secondary{
+  background: var(--btn2);
+}
+
+.fileBtn input{
+  display:none;
+}
+
+.select, .input{
+  width: 100%;
+  background: #0f0f0f;
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 12px 12px;
+  border-radius: 14px;
+  font-weight: 800;
+  outline: none;
+}
 
 .targetWrap{
-  position:relative;
-  width:100%;
-  min-height:220px;
-  border-radius:14px;
-  overflow:hidden;
-  border:1px solid var(--line);
-  background:#000;
+  margin-top: 12px;
+  position: relative;
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  background: #0f0f0f;
 }
 
 #targetImg{
-  width:100%;
-  height:auto;
-  display:none;
-  user-select:none;
-  -webkit-user-drag:none;
-  touch-action:manipulation;
+  width: 100%;
+  height: auto;
+  display: none;
 }
 
 .dotsLayer{
   position:absolute;
   inset:0;
-  pointer-events:none; /* prevents accidental double interactions */
+  pointer-events:none;
 }
 
-/* Bullet hole dot */
+.dot, .dotBull{
+  position:absolute;
+  width: 14px;
+  height: 14px;
+  border-radius: 999px;
+  transform: translate(-50%, -50%);
+  box-shadow: 0 10px 24px rgba(0,0,0,0.35);
+}
+
 .dot{
-  position:absolute;
-  width:16px;
-  height:16px;
-  border-radius:50%;
-  background:#00d26a;
-  border:2px solid rgba(255,255,255,0.9);
-  transform:translate(-50%,-50%);
-  box-shadow:0 6px 20px rgba(0,0,0,0.45);
+  background: var(--green);
+  border: 2px solid rgba(255,255,255,0.85);
 }
 
-/* Bull (center) dot */
 .dotBull{
-  position:absolute;
-  width:18px;
-  height:18px;
-  border-radius:50%;
-  background:#ffd400; /* yellow */
-  border:2px solid rgba(0,0,0,0.65);
-  transform:translate(-50%,-50%);
-  box-shadow:0 8px 24px rgba(0,0,0,0.55);
+  background: var(--yellow);
+  border: 2px solid rgba(0,0,0,0.45);
+}
+
+.row2{
+  margin-top: 12px;
+  justify-content: space-between;
 }
 
 .pill{
-  padding:8px 12px;
-  border-radius:999px;
-  background:#1a1a1a;
-  border:1px solid var(--line);
-  color:var(--text);
-  font-weight:800;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid var(--border);
+  padding: 10px 12px;
+  border-radius: 14px;
+  font-weight: 900;
 }
 
 .results{
-  margin-top:14px;
-  padding:12px;
-  border-radius:14px;
-  background:#0f0f0f;
-  border:1px solid var(--line);
-  color:var(--text);
+  margin-top: 12px;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 12px;
+  color: #eaeaea;
 }
 
-.tiny{ color:var(--muted); margin-top:10px; font-size:12px; }
-.foot{ margin-top:10px; }
+.foot{
+  margin-top: 10px;
+  color: var(--muted);
+  display:flex;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.tiny{ font-size: 12px; }
