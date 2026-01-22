@@ -1,29 +1,17 @@
 /* ============================================================
-   tap-n-score/docs/index.js  (FULL REPLACEMENT) — Shooter-Ready Results
-   Keeps (LOCKED):
-   - iPad ghost-tap prevention (drag/scroll ≠ tap)
-   - 1 tap = 1 dot (single event pipeline)
-   - Bull-first truth gate (no holes recorded until bull is set)
-   - Outlier (flyer) filter (math-only) with tapped vs used counts
-
+   tap-n-score/docs/index.js  (FULL REPLACEMENT)
    Adds:
-   - Shooter-ready Results panel:
-       * Score100 (two decimals)
-       * Wind/Elev directions + clicks (two decimals)
-       * POIB offset in inches (two decimals)
-       * Mean radius (two decimals)
-       * Holes tapped vs used (filtered count)
-       * Next 5-Shot Challenge prompt
-   - Safe defaults if inputs don’t exist:
-       * Target size: 8.50" × 11.00"
-       * Distance: 100 yards
-       * Click value: 0.25 MOA/click (True MOA math)
+   - SEC PNG generator (Download + iPad Share Sheet)
+   - Mini target snapshot w/ bull + holes + POIB + POIB→Bull arrow
+   Keeps:
+   - Bull-first workflow
+   - No ghost taps on iPad (single event pipeline)
 ============================================================ */
 
 (() => {
   const $ = (id) => document.getElementById(id);
 
-  // --- Elements expected by current page
+  // --- Required elements (already in your page)
   const elFile = $("photoInput");
   const elImg = $("targetImg");
   const elDots = $("dotsLayer");
@@ -37,17 +25,23 @@
   const elResults = $("resultsBox");
   const elMode = $("modeSelect");
 
-  // --- Optional inputs (if you add them later, this auto-uses them)
-  const elTargetSize = $("targetSize");   // e.g. "8.5x11"
-  const elDistance = $("distanceYds");    // e.g. 100
-  const elClickValue = $("clickValue");   // e.g. 0.25
+  // --- Optional elements (only used if they exist on your page)
+  const elTargetSize = $("targetSize");     // e.g., select
+  const elDistanceYds = $("distanceYds");   // e.g., input
+  const elClickValue = $("clickValue");     // e.g., select
 
   // --- State
   let selectedFile = null;
   let objectUrl = null;
 
-  let bull = null;      // {xPct,yPct}
-  let holes = [];       // [{xPct,yPct}...]
+  // Bull-first workflow:
+  // - bull = {xPct, yPct} or null
+  // - holes = array of {xPct, yPct}
+  let bull = null;
+  let holes = [];
+
+  // last computed results for SEC
+  let lastResults = null;
 
   // --- Persist last mode
   const MODE_KEY = "tns_last_mode";
@@ -59,10 +53,6 @@
     elMode.addEventListener("change", () => {
       try { localStorage.setItem(MODE_KEY, elMode.value); } catch {}
     });
-  }
-
-  function clamp(v, lo, hi) {
-    return Math.max(lo, Math.min(hi, v));
   }
 
   function setHint(msg) {
@@ -81,6 +71,7 @@
     if (elBullStatus) elBullStatus.textContent = bull ? "set" : "not set";
 
     const hasAny = !!bull || holes.length > 0;
+
     if (elUndo) elUndo.disabled = !hasAny;
     if (elClear) elClear.disabled = !hasAny;
     if (elSee) elSee.disabled = !selectedFile || !bull || holes.length === 0;
@@ -116,6 +107,7 @@
   function resetSession() {
     bull = null;
     holes = [];
+    lastResults = null;
     drawDots();
     setButtons();
     if (elResults) {
@@ -124,7 +116,7 @@
     }
   }
 
-  // --- iOS-safe: store File immediately
+  // --- iOS-safe: store File immediately on change
   if (elFile) {
     elFile.addEventListener("change", () => {
       const f = elFile.files && elFile.files[0];
@@ -135,7 +127,6 @@
 
       revokeObjectUrl();
       objectUrl = URL.createObjectURL(f);
-
       if (elImg) {
         elImg.src = objectUrl;
         elImg.style.display = "block";
@@ -145,147 +136,47 @@
     });
   }
 
-  // --- Coordinate helper (returns {xPct,yPct} or null)
-  function getPctFromPoint(clientX, clientY) {
+  // --- Coordinate helper (returns {xPct,yPct} or null if not on image)
+  function getPctFromEvent(ev) {
     if (!selectedFile || !elImg || elImg.style.display === "none") return null;
 
     const rect = elImg.getBoundingClientRect();
-    if (clientX < rect.left || clientX > rect.right || clientY < rect.top || clientY > rect.bottom) return null;
+
+    // unify touch + mouse
+    const t = ev.touches && ev.touches[0] ? ev.touches[0] : null;
+    const clientX = t ? t.clientX : ev.clientX;
+    const clientY = t ? t.clientY : ev.clientY;
+
+    // must be inside image
+    if (clientX < rect.left || clientX > rect.right || clientY < rect.top || clientY > rect.bottom) {
+      return null;
+    }
 
     const x = ((clientX - rect.left) / rect.width) * 100;
     const y = ((clientY - rect.top) / rect.height) * 100;
 
-    return { xPct: clamp(x, 0, 100), yPct: clamp(y, 0, 100) };
-  }
-
-  function pointInsideImage(clientX, clientY) {
-    if (!elImg || elImg.style.display === "none") return false;
-    const r = elImg.getBoundingClientRect();
-    return clientX >= r.left && clientX <= r.right && clientY >= r.top && clientY <= r.bottom;
-  }
-
-  // ============================================================
-  // Outlier filter (math-only)
-  // Robust fence: threshold = Q3 + 1.5*IQR of radial distances from centroid
-  // Ensures at least 3 points remain; otherwise uses all.
-  // ============================================================
-  function filterOutliers(points) {
-    if (!points || points.length <= 3) return { used: points.slice(), removed: [] };
-
-    const cx = points.reduce((s, p) => s + p.xPct, 0) / points.length;
-    const cy = points.reduce((s, p) => s + p.yPct, 0) / points.length;
-
-    const withD = points.map((p) => {
-      const dx = p.xPct - cx;
-      const dy = p.yPct - cy;
-      return { p, d: Math.hypot(dx, dy) };
-    });
-
-    const ds = withD.map((x) => x.d).slice().sort((a, b) => a - b);
-
-    const quantile = (arr, t) => {
-      const idx = (arr.length - 1) * t;
-      const lo = Math.floor(idx);
-      const hi = Math.ceil(idx);
-      if (lo === hi) return arr[lo];
-      return arr[lo] + (arr[hi] - arr[lo]) * (idx - lo);
+    return {
+      xPct: Math.max(0, Math.min(100, x)),
+      yPct: Math.max(0, Math.min(100, y)),
     };
-
-    const q1 = quantile(ds, 0.25);
-    const q3 = quantile(ds, 0.75);
-    const iqr = Math.max(1e-6, q3 - q1);
-    const thresh = q3 + 1.5 * iqr;
-
-    const used = withD.filter((x) => x.d <= thresh).map((x) => x.p);
-    const removed = withD.filter((x) => x.d > thresh).map((x) => x.p);
-
-    if (used.length < 3) return { used: points.slice(), removed: [] };
-    return { used, removed };
   }
 
-  // ============================================================
-  // Shooter math helpers (True MOA)
-  // ============================================================
-  function inchesPerMOA(distanceYds) {
-    // True MOA: 1.047" @ 100 yards
-    return 1.047 * (distanceYds / 100);
-  }
+  // --- SINGLE EVENT PIPELINE (prevents 1 tap = 2 dots on iPad)
+  const supportsPointer = "PointerEvent" in window;
 
-  function getMode() {
-    return elMode ? String(elMode.value || "rifle") : "rifle";
-  }
-
-  function getDistanceYds() {
-    const n = elDistance ? Number(elDistance.value) : 100;
-    return Number.isFinite(n) && n > 0 ? n : 100;
-  }
-
-  function getClickMOA() {
-    const n = elClickValue ? Number(elClickValue.value) : 0.25;
-    return Number.isFinite(n) && n > 0 ? n : 0.25;
-  }
-
-  function getTargetDimsIn() {
-    // Default 8.5×11
-    if (!elTargetSize) return { w: 8.5, h: 11.0 };
-    const v = String(elTargetSize.value || "").toLowerCase().replace(/\s/g, "");
-    if (v.includes("8.5x11") || v.includes("8.5×11") || v.includes("11x8.5") || v.includes("11×8.5")) {
-      return { w: 8.5, h: 11.0 };
+  function clearResults() {
+    lastResults = null;
+    if (elResults) {
+      elResults.style.display = "none";
+      elResults.innerHTML = "";
     }
-    // If someone typed "12x18"
-    const m = v.match(/^(\d+(\.\d+)?)x(\d+(\.\d+)?)$/);
-    if (m) return { w: Number(m[1]), h: Number(m[3]) };
-    return { w: 8.5, h: 11.0 };
   }
 
-  function pctToInches(ptPct, dims) {
-    return { xIn: (ptPct.xPct / 100) * dims.w, yIn: (ptPct.yPct / 100) * dims.h };
-  }
-
-  function distInches(a, b) {
-    const dx = a.xIn - b.xIn;
-    const dy = a.yIn - b.yIn;
-    return Math.sqrt(dx * dx + dy * dy);
-  }
-
-  // ============================================================
-  // iPad ghost-tap gate (drag/scroll cancels tap)
-  // ============================================================
-  const TAP_MOVE_PX = 10;
-
-  let isDown = false;
-  let moved = false;
-  let startX = 0;
-  let startY = 0;
-  let startedOnImage = false;
-
-  function beginGesture(clientX, clientY) {
-    isDown = true;
-    moved = false;
-    startX = clientX;
-    startY = clientY;
-    startedOnImage = pointInsideImage(clientX, clientY);
-  }
-
-  function trackMove(clientX, clientY) {
-    if (!isDown) return;
-    const dx = clientX - startX;
-    const dy = clientY - startY;
-    if (Math.hypot(dx, dy) > TAP_MOVE_PX) moved = true;
-  }
-
-  function commitGesture(clientX, clientY) {
-    if (!isDown) return;
-    isDown = false;
-
-    // must begin on image + must not be a drag
-    if (!startedOnImage) return;
-    if (moved) return;
-
-    const pt = getPctFromPoint(clientX, clientY);
+  function handleTap(ev) {
+    const pt = getPctFromEvent(ev);
     if (!pt) return;
 
-    // Bull-first: first tap sets bull; only then do we accept holes
+    // Bull-first: first tap sets bull, then holes
     if (!bull) {
       bull = pt;
       setHint("Bull set ✅ Now tap each bullet hole. (Undo removes last hole, or bull if no holes.)");
@@ -296,81 +187,27 @@
 
     drawDots();
     setButtons();
-
-    if (elResults) {
-      elResults.style.display = "none";
-      elResults.innerHTML = "";
-    }
+    clearResults();
   }
-
-  // --- Events (Pointer Events preferred; single binding)
-  const supportsPointer = "PointerEvent" in window;
 
   if (elWrap) {
     if (supportsPointer) {
       elWrap.addEventListener("pointerdown", (e) => {
-        if (!selectedFile) return;
         if (e.pointerType === "touch") e.preventDefault();
-        beginGesture(e.clientX, e.clientY);
-        try { elWrap.setPointerCapture(e.pointerId); } catch {}
+        handleTap(e);
       }, { passive: false });
-
-      elWrap.addEventListener("pointermove", (e) => {
-        if (!isDown) return;
-        trackMove(e.clientX, e.clientY);
-      }, { passive: true });
-
-      elWrap.addEventListener("pointerup", (e) => {
-        commitGesture(e.clientX, e.clientY);
-      }, { passive: true });
-
-      elWrap.addEventListener("pointercancel", () => {
-        isDown = false;
-        moved = false;
-        startedOnImage = false;
-      }, { passive: true });
     } else {
       elWrap.addEventListener("touchstart", (e) => {
-        if (!selectedFile) return;
-        const t = e.touches && e.touches[0];
-        if (!t) return;
-        beginGesture(t.clientX, t.clientY);
         e.preventDefault();
+        handleTap(e);
       }, { passive: false });
 
-      elWrap.addEventListener("touchmove", (e) => {
-        if (!isDown) return;
-        const t = e.touches && e.touches[0];
-        if (!t) return;
-        trackMove(t.clientX, t.clientY);
-      }, { passive: true });
-
-      elWrap.addEventListener("touchend", (e) => {
-        const t = e.changedTouches && e.changedTouches[0];
-        if (!t) {
-          isDown = false;
-          return;
-        }
-        commitGesture(t.clientX, t.clientY);
-      }, { passive: true });
-
-      elWrap.addEventListener("touchcancel", () => {
-        isDown = false;
-        moved = false;
-        startedOnImage = false;
-      }, { passive: true });
-
-      // mouse fallback
       elWrap.addEventListener("mousedown", (e) => {
-        if (!selectedFile) return;
-        beginGesture(e.clientX, e.clientY);
+        handleTap(e);
       });
-      window.addEventListener("mousemove", (e) => trackMove(e.clientX, e.clientY));
-      window.addEventListener("mouseup", (e) => commitGesture(e.clientX, e.clientY));
     }
   }
 
-  // --- Undo / Clear
   if (elUndo) {
     elUndo.addEventListener("click", () => {
       if (holes.length > 0) {
@@ -382,10 +219,7 @@
       }
       drawDots();
       setButtons();
-      if (elResults) {
-        elResults.style.display = "none";
-        elResults.innerHTML = "";
-      }
+      clearResults();
     });
   }
 
@@ -396,105 +230,448 @@
     });
   }
 
-  // ============================================================
-  // Shooter-ready Results
-  // ============================================================
+  // --- Helpers for optional settings
+  function getMode() {
+    return (elMode && elMode.value) ? String(elMode.value) : "unknown";
+  }
+  function getTargetSizeLabel() {
+    if (!elTargetSize) return null;
+    if ("value" in elTargetSize && elTargetSize.value) return String(elTargetSize.value);
+    return null;
+  }
+  function getDistanceYds() {
+    if (!elDistanceYds) return null;
+    const v = Number(elDistanceYds.value);
+    return Number.isFinite(v) ? v : null;
+  }
+  function getClickValueLabel() {
+    if (!elClickValue) return null;
+    if ("value" in elClickValue && elClickValue.value) return String(elClickValue.value);
+    return null;
+  }
+
+  // --- Draw overlay snapshot onto a canvas
+  function drawTargetSnapshot(ctx, x, y, w, h, results) {
+    if (!elImg || !elImg.complete) return;
+
+    // draw the image
+    ctx.drawImage(elImg, x, y, w, h);
+
+    // helpers: pct -> canvas coords
+    const toX = (pct) => x + (pct / 100) * w;
+    const toY = (pct) => y + (pct / 100) * h;
+
+    // bull (yellow)
+    if (results.bull) {
+      const bx = toX(results.bull.xPct);
+      const by = toY(results.bull.yPct);
+      ctx.beginPath();
+      ctx.arc(bx, by, 10, 0, Math.PI * 2);
+      ctx.fillStyle = "#ffd54a";
+      ctx.fill();
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = "rgba(0,0,0,0.65)";
+      ctx.stroke();
+    }
+
+    // holes (green)
+    for (const hpt of results.holes) {
+      const hx = toX(hpt.xPct);
+      const hy = toY(hpt.yPct);
+      ctx.beginPath();
+      ctx.arc(hx, hy, 9, 0, Math.PI * 2);
+      ctx.fillStyle = "#2ee59d";
+      ctx.fill();
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = "rgba(0,0,0,0.55)";
+      ctx.stroke();
+    }
+
+    // POIB (white) + arrow POIB -> Bull
+    if (results.poib && results.bull) {
+      const px = toX(results.poib.xPct);
+      const py = toY(results.poib.yPct);
+      const bx = toX(results.bull.xPct);
+      const by = toY(results.bull.yPct);
+
+      // POIB marker
+      ctx.beginPath();
+      ctx.arc(px, py, 7, 0, Math.PI * 2);
+      ctx.fillStyle = "#ffffff";
+      ctx.fill();
+
+      // arrow line
+      ctx.lineWidth = 6;
+      ctx.strokeStyle = "rgba(255,255,255,0.85)";
+      ctx.beginPath();
+      ctx.moveTo(px, py);
+      ctx.lineTo(bx, by);
+      ctx.stroke();
+
+      // arrow head
+      const ang = Math.atan2(by - py, bx - px);
+      const headLen = 18;
+      const a1 = ang + Math.PI * 0.85;
+      const a2 = ang - Math.PI * 0.85;
+      ctx.beginPath();
+      ctx.moveTo(bx, by);
+      ctx.lineTo(bx + Math.cos(a1) * headLen, by + Math.sin(a1) * headLen);
+      ctx.lineTo(bx + Math.cos(a2) * headLen, by + Math.sin(a2) * headLen);
+      ctx.closePath();
+      ctx.fillStyle = "rgba(255,255,255,0.85)";
+      ctx.fill();
+    }
+  }
+
+  // --- Build SEC PNG
+  async function buildSecPng(results) {
+    // canvas size (good for phone/iPad share)
+    const W = 1080;
+    const H = 1920;
+
+    const canvas = document.createElement("canvas");
+    canvas.width = W;
+    canvas.height = H;
+    const ctx = canvas.getContext("2d");
+
+    // background
+    ctx.fillStyle = "#0b0f0e";
+    ctx.fillRect(0, 0, W, H);
+
+    // header
+    ctx.fillStyle = "#2ee59d"; // green accent (your current theme)
+    ctx.font = "900 72px system-ui, -apple-system, Segoe UI, Roboto, Arial";
+    ctx.fillText("TAP-N-SCORE™", 70, 130);
+
+    ctx.fillStyle = "rgba(255,255,255,0.78)";
+    ctx.font = "500 34px system-ui, -apple-system, Segoe UI, Roboto, Arial";
+    ctx.fillText("After-Shot Intelligence — Shooter Experience Card", 70, 182);
+
+    // snapshot card
+    const cardX = 70;
+    const cardY = 240;
+    const cardW = W - 140;
+    const cardH = 720;
+
+    ctx.fillStyle = "rgba(255,255,255,0.06)";
+    roundRect(ctx, cardX, cardY, cardW, cardH, 26, true, false);
+
+    // snapshot area
+    const snapPad = 26;
+    const snapX = cardX + snapPad;
+    const snapY = cardY + snapPad;
+    const snapW = cardW - snapPad * 2;
+    const snapH = cardH - snapPad * 2;
+
+    // draw snapshot with overlays
+    drawTargetSnapshot(ctx, snapX, snapY, snapW, snapH, results);
+
+    // results text card
+    const tX = 70;
+    const tY = 1000;
+    const tW = W - 140;
+    const tH = 820;
+
+    ctx.fillStyle = "rgba(255,255,255,0.06)";
+    roundRect(ctx, tX, tY, tW, tH, 26, true, false);
+
+    let y = tY + 70;
+
+    ctx.fillStyle = "rgba(255,255,255,0.95)";
+    ctx.font = "800 48px system-ui, -apple-system, Segoe UI, Roboto, Arial";
+    ctx.fillText("Results", tX + 40, y);
+
+    y += 70;
+    ctx.font = "600 34px system-ui, -apple-system, Segoe UI, Roboto, Arial";
+    ctx.fillStyle = "rgba(255,255,255,0.85)";
+    const mode = results.mode || "rifle";
+    const ts = results.targetSize ? ` • Target: ${results.targetSize}` : "";
+    const dist = (results.distanceYds != null) ? ` • ${results.distanceYds}y` : "";
+    ctx.fillText(`Mode: ${mode}${ts}${dist}`, tX + 40, y);
+
+    y += 56;
+    ctx.font = "600 34px system-ui, -apple-system, Segoe UI, Roboto, Arial";
+    const cv = results.clickValue ? `Click: ${results.clickValue}` : "";
+    const holesUsed = `Holes: ${results.holesUsed}`;
+    ctx.fillText(`${holesUsed}${cv ? " • " + cv : ""}`, tX + 40, y);
+
+    // Corrections (two decimals)
+    y += 90;
+    ctx.font = "800 40px system-ui, -apple-system, Segoe UI, Roboto, Arial";
+    ctx.fillStyle = "rgba(255,255,255,0.92)";
+    ctx.fillText("Corrections", tX + 40, y);
+
+    y += 60;
+    ctx.font = "700 38px system-ui, -apple-system, Segoe UI, Roboto, Arial";
+    ctx.fillStyle = "rgba(255,255,255,0.90)";
+    ctx.fillText(`Windage: ${results.windText}`, tX + 40, y);
+
+    y += 54;
+    ctx.fillText(`Elevation: ${results.elevText}`, tX + 40, y);
+
+    // Metrics
+    y += 90;
+    ctx.font = "800 40px system-ui, -apple-system, Segoe UI, Roboto, Arial";
+    ctx.fillText("Metrics", tX + 40, y);
+
+    y += 60;
+    ctx.font = "650 34px system-ui, -apple-system, Segoe UI, Roboto, Arial";
+    ctx.fillStyle = "rgba(255,255,255,0.85)";
+    if (results.poibMagIn != null) ctx.fillText(`POIB offset magnitude: ${results.poibMagIn.toFixed(2)}"`, tX + 40, y);
+    y += 48;
+    if (results.meanRadiusIn != null) ctx.fillText(`Mean radius (consistency): ${results.meanRadiusIn.toFixed(2)}"`, tX + 40, y);
+
+    // Score
+    y += 90;
+    ctx.font = "900 56px system-ui, -apple-system, Segoe UI, Roboto, Arial";
+    ctx.fillStyle = "#2ee59d";
+    if (results.score100 != null) ctx.fillText(`Score100: ${results.score100.toFixed(2)}`, tX + 40, y);
+
+    y += 70;
+    ctx.font = "800 48px system-ui, -apple-system, Segoe UI, Roboto, Arial";
+    ctx.fillStyle = "rgba(255,255,255,0.92)";
+    if (results.smartScore != null) ctx.fillText(`SmartScore: ${results.smartScore.toFixed(2)}`, tX + 40, y);
+
+    // Footer
+    ctx.font = "600 28px system-ui, -apple-system, Segoe UI, Roboto, Arial";
+    ctx.fillStyle = "rgba(255,255,255,0.55)";
+    const dt = new Date();
+    ctx.fillText(`Generated: ${dt.toLocaleString()}`, tX + 40, tY + tH - 48);
+
+    // to PNG
+    return new Promise((resolve) => {
+      canvas.toBlob((blob) => resolve(blob), "image/png", 0.95);
+    });
+  }
+
+  function roundRect(ctx, x, y, w, h, r, fill, stroke) {
+    const radius = typeof r === "number" ? { tl: r, tr: r, br: r, bl: r } : r;
+    ctx.beginPath();
+    ctx.moveTo(x + radius.tl, y);
+    ctx.lineTo(x + w - radius.tr, y);
+    ctx.quadraticCurveTo(x + w, y, x + w, y + radius.tr);
+    ctx.lineTo(x + w, y + h - radius.br);
+    ctx.quadraticCurveTo(x + w, y + h, x + w - radius.br, y + h);
+    ctx.lineTo(x + radius.bl, y + h);
+    ctx.quadraticCurveTo(x, y + h, x, y + h - radius.bl);
+    ctx.lineTo(x, y + radius.tl);
+    ctx.quadraticCurveTo(x, y, x + radius.tl, y);
+    ctx.closePath();
+    if (fill) ctx.fill();
+    if (stroke) ctx.stroke();
+  }
+
+  async function shareOrDownloadPng(blob) {
+    const fileName = `Tap-n-Score_SEC_${Date.now()}.png`;
+    const file = new File([blob], fileName, { type: "image/png" });
+
+    // iPad Share Sheet if available
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      await navigator.share({
+        files: [file],
+        title: "Tap-n-Score — SEC",
+        text: "Shooter Experience Card",
+      });
+      return;
+    }
+
+    // fallback: download
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = fileName;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1500);
+  }
+
+  // --- Results + SEC Button
+  function wireSecButton() {
+    const btn = $("downloadSecBtn");
+    if (!btn) return;
+
+    btn.addEventListener("click", async () => {
+      if (!lastResults) return;
+      btn.disabled = true;
+      btn.textContent = "Building SEC...";
+      try {
+        const blob = await buildSecPng(lastResults);
+        await shareOrDownloadPng(blob);
+      } catch (e) {
+        alert("SEC export failed. Try again.");
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "Download SEC (PNG)";
+      }
+    });
+  }
+
+  // You already compute inches/clicks elsewhere on your newer builds.
+  // Here we compute a clean baseline from % only, and ALSO pull optional UI settings if present.
+  function computeResultsBaseline() {
+    const mode = getMode();
+
+    // POIB (avg of holes)
+    const sum = holes.reduce((a, t) => ({ x: a.x + t.xPct, y: a.y + t.yPct }), { x: 0, y: 0 });
+    const poibX = sum.x / holes.length;
+    const poibY = sum.y / holes.length;
+
+    // Offset vector (bull - POIB) in image %
+    const dxPct = (bull.xPct - poibX);
+    const dyPct = (bull.yPct - poibY);
+
+    // If target size is known (8.5x11 etc.), we can convert % to inches
+    // ONLY if we can parse it safely.
+    let widthIn = null;
+    let heightIn = null;
+
+    const tsLabel = getTargetSizeLabel(); // like "8.5x11" or "8.5 × 11"
+    if (tsLabel) {
+      const cleaned = tsLabel.replace("×", "x").replace(/\s/g, "");
+      const m = cleaned.match(/^(\d+(\.\d+)?)x(\d+(\.\d+)?)$/i);
+      if (m) {
+        widthIn = Number(m[1]);
+        heightIn = Number(m[3]);
+        if (!Number.isFinite(widthIn) || !Number.isFinite(heightIn)) {
+          widthIn = null; heightIn = null;
+        }
+      }
+    }
+
+    // inches (if we have dimensions)
+    let dxIn = null, dyIn = null, magIn = null;
+    if (widthIn != null && heightIn != null) {
+      dxIn = (dxPct / 100) * widthIn;
+      dyIn = (dyPct / 100) * heightIn;
+      magIn = Math.hypot(dxIn, dyIn);
+    }
+
+    // direction text (screen-space: +Y is DOWN)
+    const windDir = (dxIn != null ? (dxIn >= 0 ? "RIGHT" : "LEFT") : (dxPct >= 0 ? "RIGHT" : "LEFT"));
+    const elevDir = (dyIn != null ? (dyIn >= 0 ? "DOWN" : "UP") : (dyPct >= 0 ? "DOWN" : "UP"));
+
+    const absDxIn = dxIn != null ? Math.abs(dxIn) : null;
+    const absDyIn = dyIn != null ? Math.abs(dyIn) : null;
+
+    // Click calc (if we know distance + click value label)
+    // Safe parse: expect something like "0.25 MOA / click" or "0.25 MOA/click"
+    let clickMoa = null;
+    const cvLabel = getClickValueLabel();
+    if (cvLabel) {
+      const mm = cvLabel.match(/(\d+(\.\d+)?)/);
+      if (mm) clickMoa = Number(mm[1]);
+      if (!Number.isFinite(clickMoa)) clickMoa = null;
+    }
+
+    let distanceYds = getDistanceYds();
+    let inchPerMoa = null;
+    if (distanceYds != null) inchPerMoa = 1.047 * (distanceYds / 100);
+
+    let windClicks = null, elevClicks = null;
+    if (absDxIn != null && absDyIn != null && inchPerMoa != null && clickMoa != null && clickMoa > 0) {
+      windClicks = (absDxIn / inchPerMoa) / clickMoa;
+      elevClicks = (absDyIn / inchPerMoa) / clickMoa;
+    }
+
+    // Consistency (mean radius in inches if possible; else null)
+    let meanRadiusIn = null;
+    if (widthIn != null && heightIn != null && holes.length > 1) {
+      // convert each hole to inches using target dims
+      const pts = holes.map(h => ({
+        x: (h.xPct / 100) * widthIn,
+        y: (h.yPct / 100) * heightIn
+      }));
+      const poibIn = {
+        x: (poibX / 100) * widthIn,
+        y: (poibY / 100) * heightIn
+      };
+      const radii = pts.map(p => Math.hypot(p.x - poibIn.x, p.y - poibIn.y));
+      meanRadiusIn = radii.reduce((a, r) => a + r, 0) / radii.length;
+    }
+
+    // Score placeholders (only shown if you already compute them elsewhere)
+    // We keep them null unless you later wire your exact Score100 / SmartScore formula in this file.
+    const score100 = null;
+    const smartScore = null;
+
+    // Build human-readable strings (two decimals)
+    const windText = (absDxIn != null && windClicks != null)
+      ? `${windDir} ${absDxIn.toFixed(2)}" → ${windClicks.toFixed(2)} clicks`
+      : `${windDir} ${Math.abs(dxPct).toFixed(2)}%`;
+
+    const elevText = (absDyIn != null && elevClicks != null)
+      ? `${elevDir} ${absDyIn.toFixed(2)}" → ${elevClicks.toFixed(2)} clicks`
+      : `${elevDir} ${Math.abs(dyPct).toFixed(2)}%`;
+
+    return {
+      mode,
+      targetSize: tsLabel,
+      distanceYds,
+      clickValue: cvLabel,
+
+      bull: { ...bull },
+      holes: holes.map(h => ({ ...h })),
+      holesUsed: holes.length,
+
+      poib: { xPct: poibX, yPct: poibY },
+      dxPct,
+      dyPct,
+
+      dxIn,
+      dyIn,
+      poibMagIn: magIn,
+      meanRadiusIn,
+
+      windText,
+      elevText,
+
+      score100,
+      smartScore,
+    };
+  }
+
   if (elSee) {
     elSee.addEventListener("click", () => {
-      if (!selectedFile || !bull || holes.length === 0 || !elResults) return;
+      if (!selectedFile || !bull || holes.length === 0) return;
 
-      const mode = getMode();
-      const dims = getTargetDimsIn();           // inches
-      const distanceYds = getDistanceYds();     // yards
-      const clickMOA = getClickMOA();           // MOA/click (default 0.25)
-      const ipm = inchesPerMOA(distanceYds);    // inches per MOA (True MOA)
+      lastResults = computeResultsBaseline();
 
-      const tappedCount = holes.length;
-      const { used: usedHoles, removed: removedHoles } = filterOutliers(holes);
-      const usedCount = usedHoles.length;
+      if (!elResults) return;
 
-      // POIB (avg of USED holes) in %
-      const sum = usedHoles.reduce((a, t) => ({ x: a.x + t.xPct, y: a.y + t.yPct }), { x: 0, y: 0 });
-      const poibPct = { xPct: sum.x / usedHoles.length, yPct: sum.y / usedHoles.length };
-
-      // Convert bull + POIB to inches
-      const bullIn = pctToInches(bull, dims);
-      const poibIn = pctToInches(poibPct, dims);
-
-      // Offset inches (bull - POIB)
-      // Note: y increases DOWN on screen; so +dyIn means POIB is ABOVE bull (needs DOWN correction).
-      const dxIn = bullIn.xIn - poibIn.xIn;  // + = need RIGHT
-      const dyIn = bullIn.yIn - poibIn.yIn;  // + = need DOWN
-
-      const windDir = dxIn >= 0 ? "RIGHT" : "LEFT";
-      const elevDir = dyIn >= 0 ? "DOWN" : "UP";
-
-      const windMOA = Math.abs(dxIn) / ipm;
-      const elevMOA = Math.abs(dyIn) / ipm;
-
-      const windClicks = windMOA / clickMOA;
-      const elevClicks = elevMOA / clickMOA;
-
-      const offsetMagIn = Math.sqrt(dxIn * dxIn + dyIn * dyIn);
-
-      // Consistency (mean radius) in inches using USED holes around POIB
-      const radii = usedHoles.map((h) => distInches(pctToInches(h, dims), poibIn));
-      const meanRadius = radii.reduce((a, r) => a + r, 0) / radii.length;
-
-      // Score100 (pilot): OffsetScore 60% + ConsistencyScore 40%
-      // Tunables (safe starting points)
-      const offsetMaxIn = 5.00;   // inches where offset score bottoms out
-      const consistMaxIn = 2.00;  // inches where consistency score bottoms out
-
-      const offsetScore = clamp(100 - (offsetMagIn / offsetMaxIn) * 100, 0, 100);
-      const consistencyScore = clamp(100 - (meanRadius / consistMaxIn) * 100, 0, 100);
-      const score100 = (0.60 * offsetScore) + (0.40 * consistencyScore);
-
-      // Render
       elResults.style.display = "block";
       elResults.innerHTML = `
-        <div style="font-weight:900; font-size:16px; margin-bottom:10px;">Tap-n-Score Results</div>
+        <div style="font-weight:900; font-size:16px; margin-bottom:8px;">Tap-n-Score Results</div>
 
-        <div style="display:grid; gap:6px;">
-          <div><b>Mode:</b> ${mode}</div>
-          <div><b>Target size:</b> ${dims.w.toFixed(2)}" × ${dims.h.toFixed(2)}"</div>
-          <div><b>Distance:</b> ${distanceYds} yards</div>
-          <div><b>Click value:</b> ${clickMOA.toFixed(2)} MOA/click</div>
+        <div><b>Mode:</b> ${lastResults.mode}</div>
+        ${lastResults.targetSize ? `<div><b>Target size:</b> ${lastResults.targetSize}</div>` : ``}
+        ${lastResults.distanceYds != null ? `<div><b>Distance:</b> ${lastResults.distanceYds} yards</div>` : ``}
+        ${lastResults.clickValue ? `<div><b>Click value:</b> ${lastResults.clickValue}</div>` : ``}
+
+        <hr style="border:0; border-top:1px solid rgba(255,255,255,0.08); margin:12px 0;" />
+
+        <div><b>Holes tapped:</b> ${holes.length}</div>
+        <div><b>Holes used:</b> ${holes.length}</div>
+
+        <hr style="border:0; border-top:1px solid rgba(255,255,255,0.08); margin:12px 0;" />
+
+        <div style="font-weight:800; margin-bottom:6px;">Corrections</div>
+        <div>Windage: <b>${lastResults.windText}</b></div>
+        <div>Elevation: <b>${lastResults.elevText}</b></div>
+
+        ${lastResults.poibMagIn != null ? `<div style="margin-top:10px;"><b>POIB offset magnitude:</b> ${lastResults.poibMagIn.toFixed(2)}"</div>` : ``}
+        ${lastResults.meanRadiusIn != null ? `<div><b>Mean radius (consistency):</b> ${lastResults.meanRadiusIn.toFixed(2)}"</div>` : ``}
+
+        <div style="margin-top:14px; display:flex; gap:10px; flex-wrap:wrap;">
+          <button id="downloadSecBtn" class="btnPrimary" type="button">Download SEC (PNG)</button>
         </div>
 
-        <hr style="border:none; border-top:1px solid rgba(255,255,255,.10); margin:12px 0;" />
-
-        <div style="display:grid; gap:6px;">
-          <div><b>Holes tapped:</b> ${tappedCount}</div>
-          <div><b>Holes used:</b> ${usedCount}${removedHoles.length ? ` (filtered ${removedHoles.length})` : ""}</div>
-        </div>
-
-        <hr style="border:none; border-top:1px solid rgba(255,255,255,.10); margin:12px 0;" />
-
-        <div style="display:grid; gap:8px;">
-          <div style="font-weight:900;">Corrections</div>
-          <div>Windage: <b>${windDir}</b> ${Math.abs(dxIn).toFixed(2)}" → <b>${windClicks.toFixed(2)}</b> clicks</div>
-          <div>Elevation: <b>${elevDir}</b> ${Math.abs(dyIn).toFixed(2)}" → <b>${elevClicks.toFixed(2)}</b> clicks</div>
-        </div>
-
-        <div style="margin-top:10px; display:grid; gap:6px;">
-          <div><b>POIB offset magnitude:</b> ${offsetMagIn.toFixed(2)}"</div>
-          <div><b>Mean radius (consistency):</b> ${meanRadius.toFixed(2)}"</div>
-        </div>
-
-        <hr style="border:none; border-top:1px solid rgba(255,255,255,.10); margin:12px 0;" />
-
-        <div style="display:grid; gap:6px;">
-          <div style="font-weight:900; font-size:16px;">Score100: ${score100.toFixed(2)}</div>
-          <div style="color:rgba(255,255,255,.70); font-size:13px;">
-            OffsetScore: ${offsetScore.toFixed(2)} • ConsistencyScore: ${consistencyScore.toFixed(2)}
-          </div>
-        </div>
-
-        <div style="margin-top:12px; color:rgba(255,255,255,.85); font-weight:850;">
+        <div style="margin-top:10px; color:#b9b9b9;">
           Next: Shoot a 5-shot group, tap, and confirm the new zero.
         </div>
       `;
+
+      wireSecButton();
     });
   }
 
