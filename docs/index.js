@@ -1,9 +1,11 @@
-/* docs/index.js (FULL REPLACEMENT) — Click/Distance hidden; button is the hero; no extra “photo” copy */
+/* docs/index.js (FULL REPLACEMENT) — Pilot clean: hides choose card after load; SEC naming; removes extra tip copy */
 (() => {
   const $ = (id) => document.getElementById(id);
 
   // --- UI
   const elDetailsBtn = $("detailsBtn");
+
+  const elChooseCard = $("chooseCard");
   const elFile = $("photoInput");
   const elFileName = $("fileName");
 
@@ -31,9 +33,9 @@
   const rElevDir = $("rElevDir");
   const rElevClk = $("rElevClk");
 
-  const elReceiptLink = $("downloadReceiptLink");
+  const elSecLink = $("downloadSecLink");
 
-  // Bottom sheet (optional)
+  // Bottom sheet
   const elBackdrop = $("sheetBackdrop");
   const elSheet = $("bottomSheet");
   const elSheetClose = $("sheetClose");
@@ -128,14 +130,23 @@
     updateStatus();
 
     elResults.classList.add("hidden");
-    elReceiptLink.classList.add("hidden");
-    elReceiptLink.href = "#";
+    elSecLink.classList.add("hidden");
+    elSecLink.href = "#";
 
     if (!keepImage) elImg.src = "";
   }
 
   function showDetailsBtn(){
     elDetailsBtn.classList.remove("hidden");
+  }
+
+  function hideChooseCard(){
+    // You requested: once target photo is on screen, "choose photo" should disappear.
+    if (elChooseCard) elChooseCard.classList.add("hidden");
+  }
+
+  function showChooseCard(){
+    if (elChooseCard) elChooseCard.classList.remove("hidden");
   }
 
   // --- File load
@@ -152,6 +163,7 @@
     elImg.onload = () => {
       resetSession(true);
       showDetailsBtn();
+      hideChooseCard();
     };
 
     elImg.src = objectUrl;
@@ -209,6 +221,7 @@
   });
 
   elClear.addEventListener("click", () => {
+    // Fully reset back to start state
     elFile.value = "";
     elFileName.textContent = "No photo selected";
 
@@ -217,6 +230,7 @@
 
     resetSession(false);
     elDetailsBtn.classList.add("hidden");
+    showChooseCard();
   });
 
   // --- Show results
@@ -258,15 +272,15 @@
     elResults.classList.remove("hidden");
 
     try {
-      const png = await buildReceiptPng({
+      const png = await buildSecPng({
         mode: getMode(),
         windDir, windClicks,
         elevDir, elevClicks
       });
-      elReceiptLink.href = png;
-      elReceiptLink.classList.remove("hidden");
+      elSecLink.href = png;
+      elSecLink.classList.remove("hidden");
     } catch {
-      elReceiptLink.classList.add("hidden");
+      elSecLink.classList.add("hidden");
     }
 
     setTimeout(() => elResults.scrollIntoView({ behavior:"smooth", block:"start" }), 30);
@@ -276,7 +290,7 @@
   elModeRifle.addEventListener("click", () => setMode("rifle"));
   elModePistol.addEventListener("click", () => setMode("pistol"));
 
-  // --- Bottom sheet (optional)
+  // --- Bottom sheet (Details)
   function openSheet(){
     if (elBackdrop && elSheet) {
       elBackdrop.classList.remove("hidden");
@@ -298,8 +312,8 @@
   elSheetClose?.addEventListener("click", closeSheet);
   elBackdrop?.addEventListener("click", closeSheet);
 
-  // --- Receipt PNG builder (Clicks-only numbers; 2 decimals)
-  async function buildReceiptPng(s) {
+  // --- SEC PNG builder (Clicks-only numbers; 2 decimals)
+  async function buildSecPng(s) {
     const W = 1200, H = 675;
     const c = document.createElement("canvas");
     c.width = W; c.height = H;
@@ -318,7 +332,7 @@
 
     ctx.fillStyle = "rgba(255,255,255,.72)";
     ctx.font = "650 26px system-ui, -apple-system, Segoe UI, Roboto, Arial";
-    ctx.fillText("After-Shot Intelligence Receipt", 60, 128);
+    ctx.fillText("Shooter Experience Card (SEC)", 60, 128);
 
     // Panel
     const x=60, y=180, w=1080, h=420;
@@ -328,7 +342,7 @@
 
     ctx.fillStyle = "rgba(255,255,255,.92)";
     ctx.font = "900 34px system-ui, -apple-system, Segoe UI, Roboto, Arial";
-    ctx.fillText("Corrections", x+34, y+70);
+    ctx.fillText("Corrections (Scope)", x+34, y+70);
 
     ctx.font = "900 30px system-ui, -apple-system, Segoe UI, Roboto, Arial";
     ctx.fillText(`Windage: ${s.windDir} → ${fmtClicks(s.windClicks)} clicks`, x+34, y+140);
