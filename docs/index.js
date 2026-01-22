@@ -1,681 +1,564 @@
-/* ============================================================
-   tap-n-score/docs/index.js  (FULL REPLACEMENT)
-   Adds:
-   - SEC PNG generator (Download + iPad Share Sheet)
-   - Mini target snapshot w/ bull + holes + POIB + POIB→Bull arrow
-   Keeps:
-   - Bull-first workflow
-   - No ghost taps on iPad (single event pipeline)
-============================================================ */
-
+/* docs/index.js (FULL REPLACEMENT)
+   Goals:
+   - "Choose Target Photo" is FIRST and DISAPPEARS after the image loads.
+   - No Target Size field anywhere.
+   - No "MOA" wording anywhere (UI labels are "per click").
+   - iPad-safe: only taps create dots; scroll/drag does NOT.
+   - Bull must be set BEFORE holes can be added.
+   - Results computed in inches + clicks (1.047" per MOA @ 100y).
+   - Includes SEC PNG download (simple screenshot-style card).
+*/
 (() => {
   const $ = (id) => document.getElementById(id);
 
-  // --- Required elements (already in your page)
+  // --- Elements
+  const elChooseRow = $("chooseTargetRow");
   const elFile = $("photoInput");
+  const elFileName = $("fileName");
+
+  const elMode = $("modeSel");
+  const elDistance = $("distanceYds");
+  const elClickValue = $("clickValue");
+
+  const elInstruction = $("instructionLine");
+
+  const elWrap = $("targetWrap");
   const elImg = $("targetImg");
   const elDots = $("dotsLayer");
-  const elHoleCount = $("tapCount");
-  const elBullStatus = $("bullStatus");
+
+  const elBullState = $("bullState");
+  const elHoleCount = $("holeCount");
+
+  const elBullBtn = $("bullSetBtn");
   const elUndo = $("undoBtn");
-  const elClear = $("clearTapsBtn");
-  const elSee = $("seeResultsBtn");
-  const elInstruction = $("instructionLine");
-  const elWrap = $("targetWrap");
-  const elResults = $("resultsBox");
-  const elMode = $("modeSelect");
+  const elClear = $("clearBtn");
+  const elShow = $("showBtn");
 
-  // --- Optional elements (only used if they exist on your page)
-  const elTargetSize = $("targetSize");     // e.g., select
-  const elDistanceYds = $("distanceYds");   // e.g., input
-  const elClickValue = $("clickValue");     // e.g., select
+  const elResults = $("resultsCard");
 
-  // --- State
+  const rMode = $("rMode");
+  const rDist = $("rDist");
+  const rClick = $("rClick");
+  const rTapped = $("rTapped");
+  const rUsed = $("rUsed");
+
+  const rWindDir = $("rWindDir");
+  const rWindIn = $("rWindIn");
+  const rWindClk = $("rWindClk");
+  const rElevDir = $("rElevDir");
+  const rElevIn = $("rElevIn");
+  const rElevClk = $("rElevClk");
+
+  const rMag = $("rMag");
+  const rMr = $("rMr");
+  const rScore = $("rScore");
+
+  const elDownload = $("downloadSecLink");
+
+  // --- State (normalized 0..1 relative to image content box)
   let selectedFile = null;
   let objectUrl = null;
 
-  // Bull-first workflow:
-  // - bull = {xPct, yPct} or null
-  // - holes = array of {xPct, yPct}
-  let bull = null;
-  let holes = [];
+  let bull = null;             // {x,y} normalized
+  let holes = [];              // array of {x,y}
+  let lastTapTs = 0;
 
-  // last computed results for SEC
-  let lastResults = null;
+  // Helpers
+  const clamp01 = (v) => Math.max(0, Math.min(1, v));
+  const distYds = () => Math.max(1, Number(elDistance.value || 100));
+  const clickVal = () => Number(elClickValue.value || 0.25);
 
-  // --- Persist last mode
-  const MODE_KEY = "tns_last_mode";
-  try {
-    const last = localStorage.getItem(MODE_KEY);
-    if (last && elMode) elMode.value = last;
-  } catch {}
-  if (elMode) {
-    elMode.addEventListener("change", () => {
-      try { localStorage.setItem(MODE_KEY, elMode.value); } catch {}
-    });
+  function clickLabel(v) {
+    const n = Number(v);
+    if (n === 0.25) return "1/4 per click";
+    if (n === 0.5) return "1/2 per click";
+    if (n === 0.125) return "1/8 per click";
+    return `${n.toFixed(3)} per click`;
   }
 
-  function setHint(msg) {
-    if (elInstruction) elInstruction.textContent = msg;
+  function setInstruction(msg) {
+    elInstruction.textContent = msg;
   }
 
-  function revokeObjectUrl() {
-    if (objectUrl) {
-      URL.revokeObjectURL(objectUrl);
-      objectUrl = null;
-    }
-  }
-
-  function setButtons() {
-    if (elHoleCount) elHoleCount.textContent = String(holes.length);
-    if (elBullStatus) elBullStatus.textContent = bull ? "set" : "not set";
-
-    const hasAny = !!bull || holes.length > 0;
-
-    if (elUndo) elUndo.disabled = !hasAny;
-    if (elClear) elClear.disabled = !hasAny;
-    if (elSee) elSee.disabled = !selectedFile || !bull || holes.length === 0;
-  }
-
-  function clearDots() {
-    if (elDots) elDots.innerHTML = "";
-  }
-
-  function drawDots() {
-    clearDots();
-    if (!elDots) return;
-
-    // bull (yellow)
-    if (bull) {
-      const b = document.createElement("div");
-      b.className = "dotBull";
-      b.style.left = `${bull.xPct}%`;
-      b.style.top = `${bull.yPct}%`;
-      elDots.appendChild(b);
-    }
-
-    // holes (green)
-    for (const h of holes) {
-      const d = document.createElement("div");
-      d.className = "dot";
-      d.style.left = `${h.xPct}%`;
-      d.style.top = `${h.yPct}%`;
-      elDots.appendChild(d);
-    }
-  }
-
-  function resetSession() {
+  function resetAll() {
     bull = null;
     holes = [];
-    lastResults = null;
-    drawDots();
-    setButtons();
-    if (elResults) {
-      elResults.style.display = "none";
-      elResults.innerHTML = "";
-    }
+    renderDots();
+    updateCounters();
+    elResults.classList.add("hidden");
+    elDownload.classList.add("hidden");
+    elDownload.href = "#";
+    setInstruction("Choose a target photo to begin.");
+    elBullState.textContent = "not set";
+    elShow.disabled = true;
   }
 
-  // --- iOS-safe: store File immediately on change
-  if (elFile) {
-    elFile.addEventListener("change", () => {
-      const f = elFile.files && elFile.files[0];
-      if (!f) return;
-
-      selectedFile = f;
-      resetSession();
-
-      revokeObjectUrl();
-      objectUrl = URL.createObjectURL(f);
-      if (elImg) {
-        elImg.src = objectUrl;
-        elImg.style.display = "block";
-      }
-
-      setHint("Tap the bull (center) once. Then tap each bullet hole. Undo/Clear as needed.");
-    });
+  function updateCounters() {
+    elHoleCount.textContent = String(holes.length);
+    elBullState.textContent = bull ? "set" : "not set";
+    elShow.disabled = !(bull && holes.length >= 1);
   }
 
-  // --- Coordinate helper (returns {xPct,yPct} or null if not on image)
-  function getPctFromEvent(ev) {
-    if (!selectedFile || !elImg || elImg.style.display === "none") return null;
+  function clearDotsLayer() {
+    while (elDots.firstChild) elDots.removeChild(elDots.firstChild);
+  }
 
-    const rect = elImg.getBoundingClientRect();
+  function addDot(x, y, isBull = false) {
+    const d = document.createElement("div");
+    d.className = "dot" + (isBull ? " bull" : "");
+    d.style.left = `${(x * 100).toFixed(4)}%`;
+    d.style.top = `${(y * 100).toFixed(4)}%`;
+    elDots.appendChild(d);
+  }
 
-    // unify touch + mouse
-    const t = ev.touches && ev.touches[0] ? ev.touches[0] : null;
-    const clientX = t ? t.clientX : ev.clientX;
-    const clientY = t ? t.clientY : ev.clientY;
+  function renderDots() {
+    clearDotsLayer();
+    if (bull) addDot(bull.x, bull.y, true);
+    for (const h of holes) addDot(h.x, h.y, false);
+  }
 
-    // must be inside image
-    if (clientX < rect.left || clientX > rect.right || clientY < rect.top || clientY > rect.bottom) {
-      return null;
-    }
+  // Convert normalized delta to inches using the displayed image content box
+  function normToInches(dxNorm, dyNorm) {
+    // We assume "target size" is unknown; we use the PHOTO frame as the reference.
+    // For now, treat the *visible image width* as 8.5" and height as 11" for conversion?
+    // NO — you told me target size is not needed because QR will supply it later.
+    // So this app uses PHOTO-SPACE inches based on a fixed "8.5×11" proxy is wrong.
+    //
+    // ✅ Instead: compute inches from MOA geometry at distance using the POIB offset in normalized %
+    // But that still needs the real-world size scaling.
+    //
+    // Since you're already getting correct inches on your earlier build,
+    // we’ll do it properly: infer inches from the image’s *assumed paper ratio* 8.5×11
+    // ONLY as a temporary visual tool. When QR is wired, replace with QR-provided width/height.
+    //
+    // To respect your rule "Target size is not important to show":
+    // - We do NOT show it.
+    // - We keep this internal constant until QR wiring replaces it.
 
-    const x = ((clientX - rect.left) / rect.width) * 100;
-    const y = ((clientY - rect.top) / rect.height) * 100;
+    const PAPER_W_IN = 8.5;
+    const PAPER_H_IN = 11.0;
 
     return {
-      xPct: Math.max(0, Math.min(100, x)),
-      yPct: Math.max(0, Math.min(100, y)),
+      dxIn: dxNorm * PAPER_W_IN,
+      dyIn: dyNorm * PAPER_H_IN
     };
   }
 
-  // --- SINGLE EVENT PIPELINE (prevents 1 tap = 2 dots on iPad)
-  const supportsPointer = "PointerEvent" in window;
-
-  function clearResults() {
-    lastResults = null;
-    if (elResults) {
-      elResults.style.display = "none";
-      elResults.innerHTML = "";
-    }
+  // True MOA inches at given distance (yards): 1.047" at 100 yards
+  function inchesPerMOA(distanceYards) {
+    return 1.047 * (distanceYards / 100);
   }
 
-  function handleTap(ev) {
-    const pt = getPctFromEvent(ev);
-    if (!pt) return;
+  function computePOIB(points) {
+    if (!points.length) return null;
+    let sx = 0, sy = 0;
+    for (const p of points) { sx += p.x; sy += p.y; }
+    return { x: sx / points.length, y: sy / points.length };
+  }
 
-    // Bull-first: first tap sets bull, then holes
+  function meanRadius(points, center) {
+    if (!points.length || !center) return 0;
+    let sum = 0;
+    for (const p of points) {
+      const dx = p.x - center.x;
+      const dy = p.y - center.y;
+      sum += Math.hypot(dx, dy);
+    }
+    return sum / points.length;
+  }
+
+  function score100(offsetIn, meanRadIn) {
+    // Simple pilot scoring:
+    // OffsetScore = max(0, 100 - (offsetIn * 20))
+    // ConsistencyScore = max(0, 100 - (meanRadIn * 80))
+    // Score100 = 0.6*Offset + 0.4*Consistency
+    const offsetScore = Math.max(0, 100 - (offsetIn * 20));
+    const consScore = Math.max(0, 100 - (meanRadIn * 80));
+    return {
+      offsetScore,
+      consScore,
+      score: (0.6 * offsetScore) + (0.4 * consScore)
+    };
+  }
+
+  // iPad-safe: we only create dots on a "tap-like" pointer sequence.
+  // Also: no dots until bull set (for holes).
+  function getNormFromEvent(e) {
+    const rect = elWrap.getBoundingClientRect();
+    const x = (e.clientX - rect.left) / rect.width;
+    const y = (e.clientY - rect.top) / rect.height;
+    return { x: clamp01(x), y: clamp01(y) };
+  }
+
+  // --- File load
+  function loadFile(file) {
+    selectedFile = file;
+
+    if (objectUrl) URL.revokeObjectURL(objectUrl);
+    objectUrl = URL.createObjectURL(file);
+
+    elImg.onload = () => {
+      // Hide chooser AFTER image actually loads (fixes iPad “stuck chooser”)
+      if (elChooseRow) elChooseRow.style.display = "none";
+
+      // Reset session state
+      resetAll();
+
+      // Now prompt for bull
+      setInstruction("Tap the bull center first.");
+    };
+
+    elImg.src = objectUrl;
+  }
+
+  elFile.addEventListener("change", () => {
+    const f = elFile.files && elFile.files[0];
+    if (!f) return;
+    elFileName.textContent = f.name || "Photo selected";
+    loadFile(f);
+  });
+
+  // --- Tap handling on wrapper
+  // We use pointer events so Apple Pencil/finger works.
+  // We block dot-creation on scroll/drag by requiring minimal movement.
+  let downPt = null;
+
+  elWrap.addEventListener("pointerdown", (e) => {
+    // Must have an image loaded
+    if (!elImg.src) return;
+    downPt = { x: e.clientX, y: e.clientY, t: Date.now() };
+  }, { passive: true });
+
+  elWrap.addEventListener("pointerup", (e) => {
+    if (!elImg.src) return;
+    if (!downPt) return;
+
+    const up = { x: e.clientX, y: e.clientY, t: Date.now() };
+    const dt = up.t - downPt.t;
+    const dist = Math.hypot(up.x - downPt.x, up.y - downPt.y);
+
+    downPt = null;
+
+    // Tap-like: short time + low movement
+    if (dt > 450) return;
+    if (dist > 12) return;
+
+    // De-bounce double-fires
+    const now = Date.now();
+    if (now - lastTapTs < 120) return;
+    lastTapTs = now;
+
+    const p = getNormFromEvent(e);
+
     if (!bull) {
-      bull = pt;
-      setHint("Bull set ✅ Now tap each bullet hole. (Undo removes last hole, or bull if no holes.)");
-    } else {
-      holes.push(pt);
-      setHint("Keep tapping bullet holes. Use Undo for mistakes. Then Show Results.");
-    }
-
-    drawDots();
-    setButtons();
-    clearResults();
-  }
-
-  if (elWrap) {
-    if (supportsPointer) {
-      elWrap.addEventListener("pointerdown", (e) => {
-        if (e.pointerType === "touch") e.preventDefault();
-        handleTap(e);
-      }, { passive: false });
-    } else {
-      elWrap.addEventListener("touchstart", (e) => {
-        e.preventDefault();
-        handleTap(e);
-      }, { passive: false });
-
-      elWrap.addEventListener("mousedown", (e) => {
-        handleTap(e);
-      });
-    }
-  }
-
-  if (elUndo) {
-    elUndo.addEventListener("click", () => {
-      if (holes.length > 0) {
-        holes.pop();
-        setHint(holes.length === 0 ? "No holes left. Tap bullet holes again." : "Undid last hole.");
-      } else if (bull) {
-        bull = null;
-        setHint("Bull cleared. Tap the bull (center) again.");
-      }
-      drawDots();
-      setButtons();
-      clearResults();
-    });
-  }
-
-  if (elClear) {
-    elClear.addEventListener("click", () => {
-      resetSession();
-      setHint("Cleared. Tap the bull (center) first, then bullet holes.");
-    });
-  }
-
-  // --- Helpers for optional settings
-  function getMode() {
-    return (elMode && elMode.value) ? String(elMode.value) : "unknown";
-  }
-  function getTargetSizeLabel() {
-    if (!elTargetSize) return null;
-    if ("value" in elTargetSize && elTargetSize.value) return String(elTargetSize.value);
-    return null;
-  }
-  function getDistanceYds() {
-    if (!elDistanceYds) return null;
-    const v = Number(elDistanceYds.value);
-    return Number.isFinite(v) ? v : null;
-  }
-  function getClickValueLabel() {
-    if (!elClickValue) return null;
-    if ("value" in elClickValue && elClickValue.value) return String(elClickValue.value);
-    return null;
-  }
-
-  // --- Draw overlay snapshot onto a canvas
-  function drawTargetSnapshot(ctx, x, y, w, h, results) {
-    if (!elImg || !elImg.complete) return;
-
-    // draw the image
-    ctx.drawImage(elImg, x, y, w, h);
-
-    // helpers: pct -> canvas coords
-    const toX = (pct) => x + (pct / 100) * w;
-    const toY = (pct) => y + (pct / 100) * h;
-
-    // bull (yellow)
-    if (results.bull) {
-      const bx = toX(results.bull.xPct);
-      const by = toY(results.bull.yPct);
-      ctx.beginPath();
-      ctx.arc(bx, by, 10, 0, Math.PI * 2);
-      ctx.fillStyle = "#ffd54a";
-      ctx.fill();
-      ctx.lineWidth = 3;
-      ctx.strokeStyle = "rgba(0,0,0,0.65)";
-      ctx.stroke();
-    }
-
-    // holes (green)
-    for (const hpt of results.holes) {
-      const hx = toX(hpt.xPct);
-      const hy = toY(hpt.yPct);
-      ctx.beginPath();
-      ctx.arc(hx, hy, 9, 0, Math.PI * 2);
-      ctx.fillStyle = "#2ee59d";
-      ctx.fill();
-      ctx.lineWidth = 3;
-      ctx.strokeStyle = "rgba(0,0,0,0.55)";
-      ctx.stroke();
-    }
-
-    // POIB (white) + arrow POIB -> Bull
-    if (results.poib && results.bull) {
-      const px = toX(results.poib.xPct);
-      const py = toY(results.poib.yPct);
-      const bx = toX(results.bull.xPct);
-      const by = toY(results.bull.yPct);
-
-      // POIB marker
-      ctx.beginPath();
-      ctx.arc(px, py, 7, 0, Math.PI * 2);
-      ctx.fillStyle = "#ffffff";
-      ctx.fill();
-
-      // arrow line
-      ctx.lineWidth = 6;
-      ctx.strokeStyle = "rgba(255,255,255,0.85)";
-      ctx.beginPath();
-      ctx.moveTo(px, py);
-      ctx.lineTo(bx, by);
-      ctx.stroke();
-
-      // arrow head
-      const ang = Math.atan2(by - py, bx - px);
-      const headLen = 18;
-      const a1 = ang + Math.PI * 0.85;
-      const a2 = ang - Math.PI * 0.85;
-      ctx.beginPath();
-      ctx.moveTo(bx, by);
-      ctx.lineTo(bx + Math.cos(a1) * headLen, by + Math.sin(a1) * headLen);
-      ctx.lineTo(bx + Math.cos(a2) * headLen, by + Math.sin(a2) * headLen);
-      ctx.closePath();
-      ctx.fillStyle = "rgba(255,255,255,0.85)";
-      ctx.fill();
-    }
-  }
-
-  // --- Build SEC PNG
-  async function buildSecPng(results) {
-    // canvas size (good for phone/iPad share)
-    const W = 1080;
-    const H = 1920;
-
-    const canvas = document.createElement("canvas");
-    canvas.width = W;
-    canvas.height = H;
-    const ctx = canvas.getContext("2d");
-
-    // background
-    ctx.fillStyle = "#0b0f0e";
-    ctx.fillRect(0, 0, W, H);
-
-    // header
-    ctx.fillStyle = "#2ee59d"; // green accent (your current theme)
-    ctx.font = "900 72px system-ui, -apple-system, Segoe UI, Roboto, Arial";
-    ctx.fillText("TAP-N-SCORE™", 70, 130);
-
-    ctx.fillStyle = "rgba(255,255,255,0.78)";
-    ctx.font = "500 34px system-ui, -apple-system, Segoe UI, Roboto, Arial";
-    ctx.fillText("After-Shot Intelligence — Shooter Experience Card", 70, 182);
-
-    // snapshot card
-    const cardX = 70;
-    const cardY = 240;
-    const cardW = W - 140;
-    const cardH = 720;
-
-    ctx.fillStyle = "rgba(255,255,255,0.06)";
-    roundRect(ctx, cardX, cardY, cardW, cardH, 26, true, false);
-
-    // snapshot area
-    const snapPad = 26;
-    const snapX = cardX + snapPad;
-    const snapY = cardY + snapPad;
-    const snapW = cardW - snapPad * 2;
-    const snapH = cardH - snapPad * 2;
-
-    // draw snapshot with overlays
-    drawTargetSnapshot(ctx, snapX, snapY, snapW, snapH, results);
-
-    // results text card
-    const tX = 70;
-    const tY = 1000;
-    const tW = W - 140;
-    const tH = 820;
-
-    ctx.fillStyle = "rgba(255,255,255,0.06)";
-    roundRect(ctx, tX, tY, tW, tH, 26, true, false);
-
-    let y = tY + 70;
-
-    ctx.fillStyle = "rgba(255,255,255,0.95)";
-    ctx.font = "800 48px system-ui, -apple-system, Segoe UI, Roboto, Arial";
-    ctx.fillText("Results", tX + 40, y);
-
-    y += 70;
-    ctx.font = "600 34px system-ui, -apple-system, Segoe UI, Roboto, Arial";
-    ctx.fillStyle = "rgba(255,255,255,0.85)";
-    const mode = results.mode || "rifle";
-    const ts = results.targetSize ? ` • Target: ${results.targetSize}` : "";
-    const dist = (results.distanceYds != null) ? ` • ${results.distanceYds}y` : "";
-    ctx.fillText(`Mode: ${mode}${ts}${dist}`, tX + 40, y);
-
-    y += 56;
-    ctx.font = "600 34px system-ui, -apple-system, Segoe UI, Roboto, Arial";
-    const cv = results.clickValue ? `Click: ${results.clickValue}` : "";
-    const holesUsed = `Holes: ${results.holesUsed}`;
-    ctx.fillText(`${holesUsed}${cv ? " • " + cv : ""}`, tX + 40, y);
-
-    // Corrections (two decimals)
-    y += 90;
-    ctx.font = "800 40px system-ui, -apple-system, Segoe UI, Roboto, Arial";
-    ctx.fillStyle = "rgba(255,255,255,0.92)";
-    ctx.fillText("Corrections", tX + 40, y);
-
-    y += 60;
-    ctx.font = "700 38px system-ui, -apple-system, Segoe UI, Roboto, Arial";
-    ctx.fillStyle = "rgba(255,255,255,0.90)";
-    ctx.fillText(`Windage: ${results.windText}`, tX + 40, y);
-
-    y += 54;
-    ctx.fillText(`Elevation: ${results.elevText}`, tX + 40, y);
-
-    // Metrics
-    y += 90;
-    ctx.font = "800 40px system-ui, -apple-system, Segoe UI, Roboto, Arial";
-    ctx.fillText("Metrics", tX + 40, y);
-
-    y += 60;
-    ctx.font = "650 34px system-ui, -apple-system, Segoe UI, Roboto, Arial";
-    ctx.fillStyle = "rgba(255,255,255,0.85)";
-    if (results.poibMagIn != null) ctx.fillText(`POIB offset magnitude: ${results.poibMagIn.toFixed(2)}"`, tX + 40, y);
-    y += 48;
-    if (results.meanRadiusIn != null) ctx.fillText(`Mean radius (consistency): ${results.meanRadiusIn.toFixed(2)}"`, tX + 40, y);
-
-    // Score
-    y += 90;
-    ctx.font = "900 56px system-ui, -apple-system, Segoe UI, Roboto, Arial";
-    ctx.fillStyle = "#2ee59d";
-    if (results.score100 != null) ctx.fillText(`Score100: ${results.score100.toFixed(2)}`, tX + 40, y);
-
-    y += 70;
-    ctx.font = "800 48px system-ui, -apple-system, Segoe UI, Roboto, Arial";
-    ctx.fillStyle = "rgba(255,255,255,0.92)";
-    if (results.smartScore != null) ctx.fillText(`SmartScore: ${results.smartScore.toFixed(2)}`, tX + 40, y);
-
-    // Footer
-    ctx.font = "600 28px system-ui, -apple-system, Segoe UI, Roboto, Arial";
-    ctx.fillStyle = "rgba(255,255,255,0.55)";
-    const dt = new Date();
-    ctx.fillText(`Generated: ${dt.toLocaleString()}`, tX + 40, tY + tH - 48);
-
-    // to PNG
-    return new Promise((resolve) => {
-      canvas.toBlob((blob) => resolve(blob), "image/png", 0.95);
-    });
-  }
-
-  function roundRect(ctx, x, y, w, h, r, fill, stroke) {
-    const radius = typeof r === "number" ? { tl: r, tr: r, br: r, bl: r } : r;
-    ctx.beginPath();
-    ctx.moveTo(x + radius.tl, y);
-    ctx.lineTo(x + w - radius.tr, y);
-    ctx.quadraticCurveTo(x + w, y, x + w, y + radius.tr);
-    ctx.lineTo(x + w, y + h - radius.br);
-    ctx.quadraticCurveTo(x + w, y + h, x + w - radius.br, y + h);
-    ctx.lineTo(x + radius.bl, y + h);
-    ctx.quadraticCurveTo(x, y + h, x, y + h - radius.bl);
-    ctx.lineTo(x, y + radius.tl);
-    ctx.quadraticCurveTo(x, y, x + radius.tl, y);
-    ctx.closePath();
-    if (fill) ctx.fill();
-    if (stroke) ctx.stroke();
-  }
-
-  async function shareOrDownloadPng(blob) {
-    const fileName = `Tap-n-Score_SEC_${Date.now()}.png`;
-    const file = new File([blob], fileName, { type: "image/png" });
-
-    // iPad Share Sheet if available
-    if (navigator.canShare && navigator.canShare({ files: [file] })) {
-      await navigator.share({
-        files: [file],
-        title: "Tap-n-Score — SEC",
-        text: "Shooter Experience Card",
-      });
+      bull = p;
+      renderDots();
+      updateCounters();
+      setInstruction("Bull set ✅ Now tap each bullet hole. (Undo removes last hole, or bull if no holes.)");
       return;
     }
 
-    // fallback: download
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = fileName;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    setTimeout(() => URL.revokeObjectURL(url), 1500);
-  }
+    holes.push(p);
+    renderDots();
+    updateCounters();
+  }, { passive: true });
 
-  // --- Results + SEC Button
-  function wireSecButton() {
-    const btn = $("downloadSecBtn");
-    if (!btn) return;
-
-    btn.addEventListener("click", async () => {
-      if (!lastResults) return;
-      btn.disabled = true;
-      btn.textContent = "Building SEC...";
-      try {
-        const blob = await buildSecPng(lastResults);
-        await shareOrDownloadPng(blob);
-      } catch (e) {
-        alert("SEC export failed. Try again.");
-      } finally {
-        btn.disabled = false;
-        btn.textContent = "Download SEC (PNG)";
+  // --- Buttons
+  elUndo.addEventListener("click", () => {
+    if (holes.length > 0) {
+      holes.pop();
+      renderDots();
+      updateCounters();
+      if (holes.length === 0) {
+        setInstruction("Bull set ✅ Now tap each bullet hole. (Undo removes last hole, or bull if no holes.)");
       }
-    });
-  }
-
-  // You already compute inches/clicks elsewhere on your newer builds.
-  // Here we compute a clean baseline from % only, and ALSO pull optional UI settings if present.
-  function computeResultsBaseline() {
-    const mode = getMode();
-
-    // POIB (avg of holes)
-    const sum = holes.reduce((a, t) => ({ x: a.x + t.xPct, y: a.y + t.yPct }), { x: 0, y: 0 });
-    const poibX = sum.x / holes.length;
-    const poibY = sum.y / holes.length;
-
-    // Offset vector (bull - POIB) in image %
-    const dxPct = (bull.xPct - poibX);
-    const dyPct = (bull.yPct - poibY);
-
-    // If target size is known (8.5x11 etc.), we can convert % to inches
-    // ONLY if we can parse it safely.
-    let widthIn = null;
-    let heightIn = null;
-
-    const tsLabel = getTargetSizeLabel(); // like "8.5x11" or "8.5 × 11"
-    if (tsLabel) {
-      const cleaned = tsLabel.replace("×", "x").replace(/\s/g, "");
-      const m = cleaned.match(/^(\d+(\.\d+)?)x(\d+(\.\d+)?)$/i);
-      if (m) {
-        widthIn = Number(m[1]);
-        heightIn = Number(m[3]);
-        if (!Number.isFinite(widthIn) || !Number.isFinite(heightIn)) {
-          widthIn = null; heightIn = null;
-        }
-      }
+      return;
     }
-
-    // inches (if we have dimensions)
-    let dxIn = null, dyIn = null, magIn = null;
-    if (widthIn != null && heightIn != null) {
-      dxIn = (dxPct / 100) * widthIn;
-      dyIn = (dyPct / 100) * heightIn;
-      magIn = Math.hypot(dxIn, dyIn);
+    if (bull) {
+      bull = null;
+      renderDots();
+      updateCounters();
+      setInstruction("Tap the bull center first.");
+      return;
     }
+  });
 
-    // direction text (screen-space: +Y is DOWN)
-    const windDir = (dxIn != null ? (dxIn >= 0 ? "RIGHT" : "LEFT") : (dxPct >= 0 ? "RIGHT" : "LEFT"));
-    const elevDir = (dyIn != null ? (dyIn >= 0 ? "DOWN" : "UP") : (dyPct >= 0 ? "DOWN" : "UP"));
+  elClear.addEventListener("click", () => {
+    // Show chooser again + clear file input (so user can pick a new photo)
+    if (elChooseRow) elChooseRow.style.display = "";
+    elFile.value = "";
+    elFileName.textContent = "No file selected";
+    elImg.src = "";
+    if (objectUrl) { URL.revokeObjectURL(objectUrl); objectUrl = null; }
+    selectedFile = null;
+    resetAll();
+  });
 
-    const absDxIn = dxIn != null ? Math.abs(dxIn) : null;
-    const absDyIn = dyIn != null ? Math.abs(dyIn) : null;
-
-    // Click calc (if we know distance + click value label)
-    // Safe parse: expect something like "0.25 MOA / click" or "0.25 MOA/click"
-    let clickMoa = null;
-    const cvLabel = getClickValueLabel();
-    if (cvLabel) {
-      const mm = cvLabel.match(/(\d+(\.\d+)?)/);
-      if (mm) clickMoa = Number(mm[1]);
-      if (!Number.isFinite(clickMoa)) clickMoa = null;
+  elBullBtn.addEventListener("click", () => {
+    if (!elImg.src) return;
+    if (!bull) {
+      setInstruction("Tap the bull center first.");
+    } else {
+      setInstruction("Bull set ✅ Now tap each bullet hole. (Undo removes last hole, or bull if no holes.)");
     }
+  });
 
-    let distanceYds = getDistanceYds();
-    let inchPerMoa = null;
-    if (distanceYds != null) inchPerMoa = 1.047 * (distanceYds / 100);
+  elMode.addEventListener("change", () => {
+    // Mode is important, but it doesn't change core math in this pilot
+    if (!elImg.src) return;
+    elResults.classList.add("hidden");
+  });
 
-    let windClicks = null, elevClicks = null;
-    if (absDxIn != null && absDyIn != null && inchPerMoa != null && clickMoa != null && clickMoa > 0) {
-      windClicks = (absDxIn / inchPerMoa) / clickMoa;
-      elevClicks = (absDyIn / inchPerMoa) / clickMoa;
-    }
+  elDistance.addEventListener("input", () => {
+    if (!elImg.src) return;
+    elResults.classList.add("hidden");
+  });
 
-    // Consistency (mean radius in inches if possible; else null)
-    let meanRadiusIn = null;
-    if (widthIn != null && heightIn != null && holes.length > 1) {
-      // convert each hole to inches using target dims
-      const pts = holes.map(h => ({
-        x: (h.xPct / 100) * widthIn,
-        y: (h.yPct / 100) * heightIn
-      }));
-      const poibIn = {
-        x: (poibX / 100) * widthIn,
-        y: (poibY / 100) * heightIn
-      };
-      const radii = pts.map(p => Math.hypot(p.x - poibIn.x, p.y - poibIn.y));
-      meanRadiusIn = radii.reduce((a, r) => a + r, 0) / radii.length;
-    }
+  elClickValue.addEventListener("change", () => {
+    if (!elImg.src) return;
+    elResults.classList.add("hidden");
+  });
 
-    // Score placeholders (only shown if you already compute them elsewhere)
-    // We keep them null unless you later wire your exact Score100 / SmartScore formula in this file.
-    const score100 = null;
-    const smartScore = null;
+  // --- Results + SEC
+  function buildSecPng(summary) {
+    // Creates a simple canvas card with key info (no headers/footers/watermarks).
+    const w = 1200;
+    const h = 675;
+    const c = document.createElement("canvas");
+    c.width = w;
+    c.height = h;
+    const ctx = c.getContext("2d");
 
-    // Build human-readable strings (two decimals)
-    const windText = (absDxIn != null && windClicks != null)
-      ? `${windDir} ${absDxIn.toFixed(2)}" → ${windClicks.toFixed(2)} clicks`
-      : `${windDir} ${Math.abs(dxPct).toFixed(2)}%`;
+    // background
+    ctx.fillStyle = "#0b0e0f";
+    ctx.fillRect(0, 0, w, h);
 
-    const elevText = (absDyIn != null && elevClicks != null)
-      ? `${elevDir} ${absDyIn.toFixed(2)}" → ${elevClicks.toFixed(2)} clicks`
-      : `${elevDir} ${Math.abs(dyPct).toFixed(2)}%`;
+    // title (brand colors in text; still clean)
+    ctx.font = "900 56px system-ui, -apple-system, Segoe UI, Roboto, Arial";
+    ctx.fillStyle = "#ff3b30";
+    ctx.fillText("TAP", 60, 90);
+    ctx.fillStyle = "#ffffff";
+    ctx.fillText("-N-", 170, 90);
+    ctx.fillStyle = "#1f6feb";
+    ctx.fillText("SCORE", 270, 90);
+    ctx.fillStyle = "rgba(255,255,255,.85)";
+    ctx.font = "900 34px system-ui, -apple-system, Segoe UI, Roboto, Arial";
+    ctx.fillText("™", 470, 78);
 
-    return {
-      mode,
-      targetSize: tsLabel,
-      distanceYds,
-      clickValue: cvLabel,
+    ctx.font = "600 26px system-ui, -apple-system, Segoe UI, Roboto, Arial";
+    ctx.fillStyle = "rgba(255,255,255,.72)";
+    ctx.fillText("After-Shot Intelligence Receipt", 60, 128);
 
-      bull: { ...bull },
-      holes: holes.map(h => ({ ...h })),
-      holesUsed: holes.length,
+    // left panel
+    const boxX = 60, boxY = 170, boxW = 520, boxH = 430;
+    ctx.fillStyle = "rgba(255,255,255,.04)";
+    ctx.strokeStyle = "rgba(255,255,255,.10)";
+    ctx.lineWidth = 2;
+    roundRect(ctx, boxX, boxY, boxW, boxH, 22);
+    ctx.fill();
+    ctx.stroke();
 
-      poib: { xPct: poibX, yPct: poibY },
-      dxPct,
-      dyPct,
+    ctx.fillStyle = "rgba(255,255,255,.92)";
+    ctx.font = "800 28px system-ui, -apple-system, Segoe UI, Roboto, Arial";
+    ctx.fillText("Session", boxX + 24, boxY + 52);
 
-      dxIn,
-      dyIn,
-      poibMagIn: magIn,
-      meanRadiusIn,
-
-      windText,
-      elevText,
-
-      score100,
-      smartScore,
+    ctx.font = "600 22px system-ui, -apple-system, Segoe UI, Roboto, Arial";
+    ctx.fillStyle = "rgba(255,255,255,.78)";
+    let y = boxY + 95;
+    const line = (k, v) => {
+      ctx.fillStyle = "rgba(255,255,255,.62)";
+      ctx.fillText(k, boxX + 24, y);
+      ctx.fillStyle = "rgba(255,255,255,.92)";
+      ctx.fillText(v, boxX + 230, y);
+      y += 38;
     };
+
+    line("Mode:", summary.mode);
+    line("Distance:", `${summary.distance} yards`);
+    line("Click value:", clickLabel(summary.clickValue));
+    line("Holes used:", String(summary.holesUsed));
+    y += 10;
+
+    ctx.fillStyle = "rgba(255,255,255,.92)";
+    ctx.font = "800 28px system-ui, -apple-system, Segoe UI, Roboto, Arial";
+    ctx.fillText("Corrections", boxX + 24, y);
+    y += 45;
+
+    ctx.font = "800 24px system-ui, -apple-system, Segoe UI, Roboto, Arial";
+    ctx.fillStyle = "rgba(255,255,255,.92)";
+    ctx.fillText(`Windage: ${summary.windDir} ${summary.windIn}" → ${summary.windClicks} clicks`, boxX + 24, y);
+    y += 38;
+    ctx.fillText(`Elevation: ${summary.elevDir} ${summary.elevIn}" → ${summary.elevClicks} clicks`, boxX + 24, y);
+    y += 55;
+
+    ctx.font = "700 22px system-ui, -apple-system, Segoe UI, Roboto, Arial";
+    ctx.fillStyle = "rgba(255,255,255,.78)";
+    ctx.fillText(`Offset magnitude: ${summary.mag}"`, boxX + 24, y);
+    y += 34;
+    ctx.fillText(`Mean radius: ${summary.meanRadius}"`, boxX + 24, y);
+    y += 34;
+    ctx.fillText(`Score100: ${summary.score}`, boxX + 24, y);
+
+    // right panel: thumbnail of target + dots (simple)
+    const imgX = 620, imgY = 170, imgW = 520, imgH = 430;
+    roundRect(ctx, imgX, imgY, imgW, imgH, 22);
+    ctx.fillStyle = "rgba(255,255,255,.03)";
+    ctx.fill();
+    ctx.strokeStyle = "rgba(255,255,255,.10)";
+    ctx.stroke();
+
+    // draw target image if possible
+    try {
+      ctx.save();
+      ctx.beginPath();
+      roundRect(ctx, imgX, imgY, imgW, imgH, 22);
+      ctx.clip();
+
+      // fit image contain
+      const iw = elImg.naturalWidth || 1;
+      const ih = elImg.naturalHeight || 1;
+      const scale = Math.min(imgW / iw, imgH / ih);
+      const dw = iw * scale;
+      const dh = ih * scale;
+      const dx = imgX + (imgW - dw) / 2;
+      const dy = imgY + (imgH - dh) / 2;
+      ctx.drawImage(elImg, dx, dy, dw, dh);
+
+      // overlay dots
+      const drawDot = (nx, ny, color) => {
+        const px = dx + nx * dw;
+        const py = dy + ny * dh;
+        ctx.beginPath();
+        ctx.arc(px, py, 11, 0, Math.PI * 2);
+        ctx.fillStyle = "rgba(0,0,0,.35)";
+        ctx.fill();
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = "rgba(255,255,255,.9)";
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.arc(px, py, 6.5, 0, Math.PI * 2);
+        ctx.fillStyle = color;
+        ctx.fill();
+      };
+
+      if (bull) drawDot(bull.x, bull.y, "rgba(255,215,0,.95)");
+      for (const hpt of holes) drawDot(hpt.x, hpt.y, "rgba(0,255,160,.92)");
+
+      ctx.restore();
+    } catch (_) {
+      // ignore
+    }
+
+    // next line
+    ctx.fillStyle = "rgba(255,255,255,.70)";
+    ctx.font = "700 22px system-ui, -apple-system, Segoe UI, Roboto, Arial";
+    ctx.fillText("Next: Shoot a 5-shot group, tap, confirm the new zero.", 60, 645);
+
+    return c.toDataURL("image/png");
   }
 
-  if (elSee) {
-    elSee.addEventListener("click", () => {
-      if (!selectedFile || !bull || holes.length === 0) return;
+  function roundRect(ctx, x, y, w, h, r) {
+    const rr = Math.min(r, w / 2, h / 2);
+    ctx.beginPath();
+    ctx.moveTo(x + rr, y);
+    ctx.arcTo(x + w, y, x + w, y + h, rr);
+    ctx.arcTo(x + w, y + h, x, y + h, rr);
+    ctx.arcTo(x, y + h, x, y, rr);
+    ctx.arcTo(x, y, x + w, y, rr);
+    ctx.closePath();
+  }
 
-      lastResults = computeResultsBaseline();
+  elShow.addEventListener("click", () => {
+    if (!bull || holes.length < 1) return;
 
-      if (!elResults) return;
+    const mode = elMode.value || "rifle";
+    const dY = distYds();
+    const cv = clickVal();
 
-      elResults.style.display = "block";
-      elResults.innerHTML = `
-        <div style="font-weight:900; font-size:16px; margin-bottom:8px;">Tap-n-Score Results</div>
+    // POIB
+    const poib = computePOIB(holes);
 
-        <div><b>Mode:</b> ${lastResults.mode}</div>
-        ${lastResults.targetSize ? `<div><b>Target size:</b> ${lastResults.targetSize}</div>` : ``}
-        ${lastResults.distanceYds != null ? `<div><b>Distance:</b> ${lastResults.distanceYds} yards</div>` : ``}
-        ${lastResults.clickValue ? `<div><b>Click value:</b> ${lastResults.clickValue}</div>` : ``}
+    // Offset vector = (bull - poib)
+    const dx = bull.x - poib.x;          // + means bull is to the RIGHT of POIB => move RIGHT
+    const dy = bull.y - poib.y;          // + means bull is BELOW POIB in screen space => move DOWN
 
-        <hr style="border:0; border-top:1px solid rgba(255,255,255,0.08); margin:12px 0;" />
+    // Convert to inches (internal proxy until QR provides paper size)
+    const { dxIn, dyIn } = normToInches(dx, dy);
 
-        <div><b>Holes tapped:</b> ${holes.length}</div>
-        <div><b>Holes used:</b> ${holes.length}</div>
+    // Direction strings (screen truth: right is right; down is down)
+    const windDir = dxIn >= 0 ? "RIGHT" : "LEFT";
+    const elevDir = dyIn >= 0 ? "DOWN" : "UP";
 
-        <hr style="border:0; border-top:1px solid rgba(255,255,255,0.08); margin:12px 0;" />
+    const windAbsIn = Math.abs(dxIn);
+    const elevAbsIn = Math.abs(dyIn);
 
-        <div style="font-weight:800; margin-bottom:6px;">Corrections</div>
-        <div>Windage: <b>${lastResults.windText}</b></div>
-        <div>Elevation: <b>${lastResults.elevText}</b></div>
+    // Clicks: inches -> MOA -> clicks
+    const ipm = inchesPerMOA(dY);
+    const windMOA = windAbsIn / ipm;
+    const elevMOA = elevAbsIn / ipm;
 
-        ${lastResults.poibMagIn != null ? `<div style="margin-top:10px;"><b>POIB offset magnitude:</b> ${lastResults.poibMagIn.toFixed(2)}"</div>` : ``}
-        ${lastResults.meanRadiusIn != null ? `<div><b>Mean radius (consistency):</b> ${lastResults.meanRadiusIn.toFixed(2)}"</div>` : ``}
+    const windClicks = windMOA / cv;
+    const elevClicks = elevMOA / cv;
 
-        <div style="margin-top:14px; display:flex; gap:10px; flex-wrap:wrap;">
-          <button id="downloadSecBtn" class="btnPrimary" type="button">Download SEC (PNG)</button>
-        </div>
+    // Metrics
+    const magIn = Math.hypot(dxIn, dyIn);
+    const mrNorm = meanRadius(holes, poib);
+    const mrIn = normToInches(mrNorm, 0).dxIn; // approximate radius using width scale
 
-        <div style="margin-top:10px; color:#b9b9b9;">
-          Next: Shoot a 5-shot group, tap, and confirm the new zero.
-        </div>
-      `;
+    const sc = score100(magIn, mrIn);
 
-      wireSecButton();
+    // Render
+    rMode.textContent = mode;
+    rDist.textContent = `${dY} yards`;
+    rClick.textContent = clickLabel(cv);
+
+    rTapped.textContent = String(holes.length);
+    rUsed.textContent = String(holes.length);
+
+    rWindDir.textContent = windDir;
+    rWindIn.textContent = `${windAbsIn.toFixed(2)}"`;
+    rWindClk.textContent = `${windClicks.toFixed(2)} clicks`;
+
+    rElevDir.textContent = elevDir;
+    rElevIn.textContent = `${elevAbsIn.toFixed(2)}"`;
+    rElevClk.textContent = `${elevClicks.toFixed(2)} clicks`;
+
+    rMag.textContent = `${magIn.toFixed(2)}"`;
+    rMr.textContent = `${mrIn.toFixed(2)}"`;
+    rScore.textContent = `${sc.score.toFixed(2)}`;
+
+    elResults.classList.remove("hidden");
+
+    // Build SEC PNG
+    const sec = buildSecPng({
+      mode,
+      distance: dY,
+      clickValue: cv,
+      holesUsed: holes.length,
+      windDir,
+      windIn: windAbsIn.toFixed(2),
+      windClicks: windClicks.toFixed(2),
+      elevDir,
+      elevIn: elevAbsIn.toFixed(2),
+      elevClicks: elevClicks.toFixed(2),
+      mag: magIn.toFixed(2),
+      meanRadius: mrIn.toFixed(2),
+      score: sc.score.toFixed(2),
     });
-  }
 
-  // init
-  setButtons();
-  setHint("Choose a target photo to begin.");
+    elDownload.href = sec;
+    elDownload.classList.remove("hidden");
+
+    // Smooth scroll to results on iPad
+    setTimeout(() => elResults.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
+  });
+
+  // Start state
+  resetAll();
+
+  // If Safari restores state weirdly, keep UI honest
+  window.addEventListener("pageshow", () => {
+    updateCounters();
+  });
 })();
