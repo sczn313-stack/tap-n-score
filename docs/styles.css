@@ -1,4 +1,4 @@
-/* docs/styles.css (FULL REPLACEMENT) — Bottom Sheet UX */
+/* docs/styles.css (FULL REPLACEMENT) — Clicks-only display (2 decimals) */
 :root{
   --bg:#050606;
   --card:rgba(255,255,255,.04);
@@ -189,7 +189,6 @@ body{
   pointer-events:none;
 }
 
-/* Dots */
 .dot{
   position:absolute;
   width:18px;
@@ -256,7 +255,19 @@ body{
   background:rgba(0,0,0,.18);
 }
 .corrHdr{font-weight:950; margin-bottom:8px}
-.corrLine{padding:10px 10px; border-radius:14px; border:1px solid rgba(255,255,255,.08); background:rgba(0,0,0,.18); margin-top:8px}
+.corrLine{
+  padding:12px 12px;
+  border-radius:14px;
+  border:1px solid rgba(255,255,255,.08);
+  background:rgba(0,0,0,.18);
+  margin-top:8px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+}
+.corrLine strong{letter-spacing:.3px}
+.arrow{opacity:.7; font-weight:900}
 
 .scoreRow{
   margin-top:12px;
@@ -265,16 +276,14 @@ body{
   flex-wrap:wrap;
   align-items:stretch;
 }
-.scoreBox{
-  flex:1 1 160px;
-  padding:12px;
-  border-radius:16px;
-  border:1px solid var(--stroke);
-  background:rgba(0,0,0,.18);
+.receiptBtn{
+  flex:1 1 260px;
+  text-align:center;
+  text-decoration:none;
+  display:flex;
+  align-items:center;
+  justify-content:center;
 }
-.scoreLbl{color:var(--muted); font-size:12px; font-weight:800}
-.scoreVal{font-size:34px; font-weight:950; margin-top:4px}
-.receiptBtn{flex:1 1 220px; text-align:center; text-decoration:none; display:flex; align-items:center; justify-content:center}
 .hidden{display:none !important}
 
 /* Bottom sheet */
