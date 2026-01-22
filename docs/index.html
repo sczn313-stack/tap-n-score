@@ -1,4 +1,4 @@
-<!-- docs/index.html (FULL REPLACEMENT) — “TARGET” only appears on the button -->
+<!-- docs/index.html (FULL REPLACEMENT) — Cleaner: button is the hero; click/distance hidden -->
 <!doctype html>
 <html lang="en">
 <head>
@@ -8,7 +8,7 @@
   <meta name="theme-color" content="#000000" />
   <title>Tap-n-Score™</title>
 
-  <link rel="stylesheet" href="./styles.css?v=20260122a" />
+  <link rel="stylesheet" href="./styles.css?v=20260122b" />
 </head>
 
 <body>
@@ -24,13 +24,11 @@
 
     <div class="subline">After-Shot Intelligence</div>
 
-    <!-- CARD 1: Choose photo (disappears once image is loaded) -->
-    <section id="chooseCard" class="card">
+    <!-- CARD 1: Choose photo (HERO) -->
+    <section class="card">
       <div id="chooseTargetRow" class="chooseRow">
-        <!-- No “Target” here -->
-        <div class="chooseTitle">Choose Photo</div>
 
-        <!-- “TARGET” appears ONLY here -->
+        <!-- HERO button (only place “TARGET” appears) -->
         <label class="chooseBtn">
           <input id="photoInput" type="file" accept="image/*" />
           <span>CHOOSE TARGET PHOTO</span>
@@ -38,35 +36,33 @@
 
         <div id="fileName" class="fileName">No photo selected</div>
         <div class="hint">Tip: straight-on photo, fill the frame.</div>
+
+        <!-- Mode stays visible -->
+        <div id="settingsRow" class="settingsRow">
+          <div class="seg">
+            <button id="modeRifle" class="segBtn active" type="button">Rifle</button>
+            <button id="modePistol" class="segBtn" type="button">Pistol</button>
+          </div>
+
+          <!-- Hidden for now (behind the scenes) -->
+          <div id="hiddenSettings" style="display:none">
+            <label for="distanceYds">Distance</label>
+            <input id="distanceYds" type="number" value="100" />
+            <label for="clickValue">Click</label>
+            <select id="clickValue">
+              <option value="0.25" selected>Quarter per click</option>
+              <option value="0.5">Half per click</option>
+              <option value="0.125">Eighth per click</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Instruction line removed (kept as an empty node for layout safety) -->
+        <div id="instructionLine" class="instruction" style="display:none"></div>
       </div>
-
-      <!-- Minimal settings that matter -->
-      <div id="settingsRow" class="settingsRow">
-        <div class="seg">
-          <button id="modeRifle" class="segBtn active" type="button">Rifle</button>
-          <button id="modePistol" class="segBtn" type="button">Pistol</button>
-        </div>
-
-        <div class="mini">
-          <label class="miniLabel" for="distanceYds">Distance</label>
-          <input id="distanceYds" class="miniInput" type="number" inputmode="numeric" min="1" step="1" value="100" />
-        </div>
-
-        <div class="mini">
-          <label class="miniLabel" for="clickValue">Click</label>
-          <select id="clickValue" class="miniSelect">
-            <option value="0.25" selected>Quarter per click</option>
-            <option value="0.5">Half per click</option>
-            <option value="0.125">Eighth per click</option>
-          </select>
-        </div>
-      </div>
-
-      <!-- No “Target” in this line -->
-      <div id="instructionLine" class="instruction">Choose a photo to begin.</div>
     </section>
 
-    <!-- CARD 2: Photo interaction (no “Target” label anywhere) -->
+    <!-- CARD 2: Photo interaction (no “Photo” label) -->
     <section class="card">
       <div id="targetWrap" class="targetWrap" aria-label="Photo and tap layer">
         <img id="targetImg" class="targetImg" alt="Photo" />
@@ -76,7 +72,6 @@
       <div class="statusRow">
         <div class="chip">Bull: <span id="bullState">not set</span></div>
         <div class="chip">Holes: <span id="holeCount">0</span></div>
-        <div class="chip hidden" id="confidenceChip">Confidence: <span id="rConfidence">—</span></div>
       </div>
 
       <div class="btnRow">
@@ -88,7 +83,7 @@
       <div class="tip">Bull first. Then holes. Scroll/drag won’t create dots.</div>
     </section>
 
-    <!-- CARD 3: Results (Clicks-only; 2 decimals) -->
+    <!-- CARD 3: Results -->
     <section id="resultsCard" class="card hidden" aria-live="polite">
       <div class="resultsTitle">Results</div>
 
@@ -113,52 +108,25 @@
       </div>
     </section>
 
-  </main>
-
-  <!-- Bottom Sheet (Details) -->
-  <div id="sheetBackdrop" class="sheetBackdrop hidden" aria-hidden="true"></div>
-
-  <section id="bottomSheet" class="sheet hidden" role="dialog" aria-modal="true" aria-label="Details">
-    <div class="sheetHandle" aria-hidden="true"></div>
-
-    <div class="sheetHeader">
-      <div class="sheetTitle">Details</div>
-      <button id="sheetClose" class="sheetClose" type="button">Close</button>
-    </div>
-
-    <div class="sheetTabs">
-      <button id="tabWhat" class="tabBtn active" type="button">What is this?</button>
-      <button id="tabHow" class="tabBtn" type="button">How it works</button>
-      <button id="tabPrinters" class="tabBtn" type="button">Printers</button>
-    </div>
-
-    <div class="sheetBody">
-      <div id="panelWhat" class="tabPanel">
+    <!-- Bottom Sheet (optional later; button hidden until photo loads) -->
+    <div id="sheetBackdrop" class="sheetBackdrop hidden" aria-hidden="true"></div>
+    <section id="bottomSheet" class="sheet hidden" role="dialog" aria-modal="true" aria-label="Details">
+      <div class="sheetHandle" aria-hidden="true"></div>
+      <div class="sheetHeader">
+        <div class="sheetTitle">Details</div>
+        <button id="sheetClose" class="sheetClose" type="button">Close</button>
+      </div>
+      <div class="sheetBody">
         <ul class="bullets">
           <li>Tap the bull center.</li>
           <li>Tap each bullet hole.</li>
-          <li>We output the correction as direction + clicks.</li>
+          <li>We output direction + clicks.</li>
         </ul>
       </div>
+    </section>
 
-      <div id="panelHow" class="tabPanel hidden">
-        <ol class="steps">
-          <li>Bull sets your intended aim point.</li>
-          <li>Holes produce the group center (POIB).</li>
-          <li>We convert the offset into clicks.</li>
-        </ol>
-      </div>
+  </main>
 
-      <div id="panelPrinters" class="tabPanel hidden">
-        <ul class="bullets">
-          <li>Tap-n-Score turns paper into After-Shot Intelligence.</li>
-          <li>Receipts drive repeat sessions and measurable value.</li>
-          <li>Partner/print details are delivered through the QR scan.</li>
-        </ul>
-      </div>
-    </div>
-  </section>
-
-  <script src="./index.js?v=20260122a"></script>
+  <script src="./index.js?v=20260122b"></script>
 </body>
 </html>
