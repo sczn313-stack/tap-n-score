@@ -7,85 +7,128 @@
   <meta name="theme-color" content="#000000" />
   <title>Tap-n-Score™</title>
 
-  <link rel="manifest" href="./manifest.webmanifest?v=1" />
-  <link rel="icon" href="./icons/icon-192.png" />
-  <link rel="apple-touch-icon" href="./icons/icon-192.png" />
-
-  <link rel="stylesheet" href="./styles.css?v=20260121a" />
+  <link rel="stylesheet" href="./styles.css?v=20260121b" />
 </head>
 
 <body>
-  <main class="page">
+  <main class="app">
 
-    <!-- Brand -->
-    <header class="top">
-      <div class="brand">
-        <span class="brandTap">TAP</span><span class="brandN">-N-</span><span class="brandScore">SCORE</span><span class="brandTm">™</span>
+    <!-- Header -->
+    <header class="hdr">
+      <div class="brandLine" aria-label="Tap-n-Score brand">
+        <div class="brand">
+          <span class="brandTap">TAP</span><span class="brandN">-N-</span><span class="brandScore">SCORE</span><span class="brandTm">™</span>
+        </div>
+        <div class="tagline">Fast, clean After-Shot Intelligence.</div>
       </div>
-      <div class="sub">Fast, clean After-Shot Intelligence.</div>
     </header>
 
-    <!-- Controls -->
-    <section class="panel">
-      <div class="row">
-        <label class="label">Mode</label>
-        <select id="modeSelect" class="select">
-          <option value="rifle">Rifle</option>
-          <option value="pistol">Pistol</option>
-        </select>
+    <!-- HERO: Choose photo must dominate -->
+    <section class="hero" aria-label="Choose target photo">
+      <input id="photoInput" class="fileInput" type="file" accept="image/*" />
+
+      <label class="heroBtn" for="photoInput" id="chooseBtn">
+        CHOOSE TARGET PHOTO
+      </label>
+
+      <div class="fileMeta" id="fileMeta" aria-live="polite">
+        <span class="fileName" id="fileName">No photo selected</span>
       </div>
 
-      <div class="row">
-        <label class="label">Target photo</label>
-        <input id="photoInput" class="file" type="file" accept="image/*" />
+      <!-- Compact defaults row -->
+      <div class="defaultsRow" aria-label="Defaults">
+        <div class="pill" id="pillMode">Rifle</div>
+        <div class="pill" id="pillSize">8.5 × 11</div>
+        <div class="pill" id="pillDist">100y</div>
+        <div class="pill" id="pillClick">0.25 MOA</div>
+
+        <button class="ghostBtn" id="toggleSettingsBtn" type="button">
+          Settings
+        </button>
       </div>
 
-      <div class="statusRow">
-        <div class="pill">
-          Bull: <b id="bullStatus">not set</b>
+      <!-- Settings panel (collapsed by default) -->
+      <div class="settingsPanel" id="settingsPanel" hidden>
+        <div class="settingsGrid">
+          <div class="field">
+            <label for="modeSelect">Mode</label>
+            <select id="modeSelect">
+              <option value="rifle" selected>Rifle</option>
+              <option value="pistol">Pistol</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label for="targetSizeSelect">Target size</label>
+            <select id="targetSizeSelect">
+              <option value="8.5x11" selected>8.5 × 11</option>
+              <option value="23x23">23 × 23</option>
+            </select>
+          </div>
+
+          <div class="field">
+            <label for="distanceYds">Distance (yards)</label>
+            <input id="distanceYds" type="number" inputmode="numeric" min="1" step="1" value="100" />
+          </div>
+
+          <div class="field">
+            <label for="clickValueSelect">Click value</label>
+            <select id="clickValueSelect">
+              <option value="0.25" selected>0.25 MOA / click</option>
+              <option value="0.5">0.50 MOA / click</option>
+              <option value="0.1">0.10 MIL / click</option>
+            </select>
+          </div>
         </div>
-        <div class="pill">
-          Holes: <b id="tapCount">0</b>
+
+        <div class="settingsActions">
+          <button class="ghostBtn" id="closeSettingsBtn" type="button">Close</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Work area -->
+    <section class="work">
+
+      <!-- Instruction line -->
+      <div class="instruction" id="instructionLine">
+        Tap bull first → then tap each bullet hole → Show Results.
+      </div>
+
+      <!-- Image / tap layer -->
+      <div class="targetWrap" id="targetWrap" aria-label="Target image">
+        <img id="targetImg" alt="Target" />
+        <div id="dotsLayer" aria-hidden="true"></div>
+      </div>
+
+      <!-- Controls -->
+      <div class="controls">
+        <div class="statusPills">
+          <div class="statusPill" id="bullStatus">Bull: not set</div>
+          <div class="statusPill" id="tapCount">Holes: 0</div>
+        </div>
+
+        <div class="btnRow">
+          <button class="btn" id="undoBtn" type="button">Undo</button>
+          <button class="btn" id="clearTapsBtn" type="button">Clear</button>
+          <button class="btnPrimary" id="showResultsBtn" type="button">Show Results</button>
         </div>
       </div>
 
-      <div id="instructionLine" class="hint">
-        Choose a target photo to begin.
+      <!-- Results -->
+      <section class="results" id="resultsPanel" hidden>
+        <h2>Tap-n-Score Results</h2>
+        <div id="resultsText"></div>
+        <a id="downloadSecLink" class="downloadLink" href="#" download="SEC.png" hidden>Download SEC (PNG)</a>
+      </section>
+
+      <div class="tip">
+        Tip: Bull first. Then holes. Scroll/drag won’t create dots.
       </div>
+
     </section>
-
-    <!-- Target workspace -->
-    <section class="workspace">
-      <div id="targetWrap" class="targetWrap" aria-label="Target workspace">
-        <img id="targetImg" class="targetImg" alt="Target" />
-        <div id="dotsLayer" class="dotsLayer" aria-hidden="true"></div>
-      </div>
-    </section>
-
-    <!-- Actions -->
-    <section class="actions">
-      <button id="undoBtn" class="btn btnGhost" disabled>Undo</button>
-      <button id="clearTapsBtn" class="btn btnGhost" disabled>Clear</button>
-      <button id="seeResultsBtn" class="btn btnPrimary" disabled>Show Results</button>
-    </section>
-
-    <!-- Results -->
-    <section id="resultsBox" class="results" style="display:none;"></section>
-
-    <footer class="foot">
-      <div class="tiny">Tip: Bull first. Then holes. Scroll/drag won’t create dots.</div>
-    </footer>
-
   </main>
 
-  <script src="./index.js?v=20260121a"></script>
-  <script>
-    // Register service worker (PWA)
-    if ("serviceWorker" in navigator) {
-      window.addEventListener("load", () => {
-        navigator.serviceWorker.register("./sw.js?v=1").catch(() => {});
-      });
-    }
-  </script>
+  <script src="./index.js?v=20260121b"></script>
 </body>
 </html>
