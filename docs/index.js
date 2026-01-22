@@ -1,18 +1,18 @@
-/* docs/index.js (FULL REPLACEMENT) — remove “target” from ALL UI text except the button */
+/* docs/index.js (FULL REPLACEMENT) — Click/Distance hidden; button is the hero; no extra “photo” copy */
 (() => {
   const $ = (id) => document.getElementById(id);
 
   // --- UI
-  const elChooseRow = $("chooseTargetRow");
   const elDetailsBtn = $("detailsBtn");
   const elFile = $("photoInput");
   const elFileName = $("fileName");
 
   const elModeRifle = $("modeRifle");
   const elModePistol = $("modePistol");
+
+  // Hidden inputs (behind the scenes)
   const elDistance = $("distanceYds");
   const elClickValue = $("clickValue");
-  const elInstruction = $("instructionLine");
 
   const elWrap = $("targetWrap");
   const elImg = $("targetImg");
@@ -31,21 +31,12 @@
   const rElevDir = $("rElevDir");
   const rElevClk = $("rElevClk");
 
-  const elConfidenceChip = $("confidenceChip");
-  const rConfidence = $("rConfidence");
-
   const elReceiptLink = $("downloadReceiptLink");
 
-  // Bottom sheet
+  // Bottom sheet (optional)
   const elBackdrop = $("sheetBackdrop");
   const elSheet = $("bottomSheet");
   const elSheetClose = $("sheetClose");
-  const tabWhat = $("tabWhat");
-  const tabHow = $("tabHow");
-  const tabPrinters = $("tabPrinters");
-  const panelWhat = $("panelWhat");
-  const panelHow = $("panelHow");
-  const panelPrinters = $("panelPrinters");
 
   // --- State
   let selectedFile = null;
@@ -60,14 +51,12 @@
   const TAP_MAX_MS = 450;
   let lastTapTs = 0;
 
-  // Internal size proxy until QR payload replaces it (not displayed)
+  // Internal size proxy until QR payload replaces it (NOT displayed)
   const PAPER_W_IN = 8.5;
   const PAPER_H_IN = 11.0;
 
   const clamp01 = (v) => Math.max(0, Math.min(1, v));
   const fmtClicks = (n) => (Number.isFinite(n) ? n.toFixed(2) : "0.00");
-
-  function setInstruction(s){ elInstruction.textContent = s; }
 
   function setMode(mode){
     const isRifle = mode === "rifle";
@@ -83,25 +72,6 @@
     } catch {
       return "rifle";
     }
-  }
-
-  function resetSession(keepImage){
-    bull = null;
-    holes = [];
-    clearDots();
-    updateStatus();
-
-    elResults.classList.add("hidden");
-    elReceiptLink.classList.add("hidden");
-    elReceiptLink.href = "#";
-
-    elConfidenceChip.classList.add("hidden");
-    rConfidence.textContent = "—";
-
-    if (!keepImage) elImg.src = "";
-
-    // No “target” here
-    setInstruction(selectedFile ? "Tap bull first → then tap each hole." : "Choose a photo to begin.");
   }
 
   function updateStatus(){
@@ -141,10 +111,6 @@
     };
   }
 
-  function normDeltaToInches(dx01, dy01){
-    return { dxIn: dx01 * PAPER_W_IN, dyIn: dy01 * PAPER_H_IN };
-  }
-
   function inchesPerMOA(distanceYds){
     return 1.047 * (distanceYds / 100); // True MOA
   }
@@ -155,22 +121,21 @@
     return { x01: sx / points.length, y01: sy / points.length };
   }
 
-  function confidenceLabel(offsetIn, meanRadIn){
-    const tight = meanRadIn <= 0.60;
-    const close = offsetIn <= 2.00;
-    if (tight && close) return "HIGH";
-    if (tight || close) return "MEDIUM";
-    return "LOW";
+  function resetSession(keepImage){
+    bull = null;
+    holes = [];
+    clearDots();
+    updateStatus();
+
+    elResults.classList.add("hidden");
+    elReceiptLink.classList.add("hidden");
+    elReceiptLink.href = "#";
+
+    if (!keepImage) elImg.src = "";
   }
 
-  function hideChooseUIAfterLoad(){
-    elChooseRow.style.display = "none";
+  function showDetailsBtn(){
     elDetailsBtn.classList.remove("hidden");
-  }
-
-  function showChooseUIOnClear(){
-    elChooseRow.style.display = "";
-    elDetailsBtn.classList.add("hidden");
   }
 
   // --- File load
@@ -185,9 +150,8 @@
     objectUrl = URL.createObjectURL(f);
 
     elImg.onload = () => {
-      hideChooseUIAfterLoad();
       resetSession(true);
-      setInstruction("Tap bull first → then tap each hole.");
+      showDetailsBtn();
     };
 
     elImg.src = objectUrl;
@@ -221,7 +185,6 @@
       bull = p;
       renderDots();
       updateStatus();
-      setInstruction("Bull set ✅ Now tap each bullet hole.");
       return;
     }
 
@@ -242,12 +205,10 @@
       bull = null;
       renderDots();
       updateStatus();
-      setInstruction("Tap bull first → then tap each hole.");
     }
   });
 
   elClear.addEventListener("click", () => {
-    showChooseUIOnClear();
     elFile.value = "";
     elFileName.textContent = "No photo selected";
 
@@ -255,13 +216,16 @@
     selectedFile = null;
 
     resetSession(false);
+    elDetailsBtn.classList.add("hidden");
   });
 
+  // --- Show results
   elShow.addEventListener("click", async () => {
     if (!bull || holes.length < 1) return;
 
-    const distance = Math.max(1, Number(elDistance.value || 100));
-    const click = Number(elClickValue.value || 0.25);
+    // Behind-the-scenes values (UI hidden)
+    const distance = Math.max(1, Number(elDistance?.value || 100));
+    const click = Number(elClickValue?.value || 0.25);
 
     const poib = meanPoint(holes);
 
@@ -269,7 +233,8 @@
     const dx01 = bull.x01 - poib.x01;
     const dy01 = bull.y01 - poib.y01;
 
-    const { dxIn, dyIn } = normDeltaToInches(dx01, dy01);
+    const dxIn = dx01 * PAPER_W_IN;
+    const dyIn = dy01 * PAPER_H_IN;
 
     const windDir = dxIn >= 0 ? "RIGHT" : "LEFT";
     const elevDir = dyIn <= 0 ? "UP" : "DOWN";
@@ -290,34 +255,13 @@
     rElevDir.textContent = elevDir;
     rElevClk.textContent = `${fmtClicks(elevClicks)} clicks`;
 
-    // Confidence word only
-    const offsetMagIn = Math.hypot(dxIn, dyIn);
-
-    let meanRadIn = 0;
-    {
-      let sum = 0;
-      for (const p of holes){
-        const ddx = (p.x01 - poib.x01) * PAPER_W_IN;
-        const ddy = (p.y01 - poib.y01) * PAPER_H_IN;
-        sum += Math.hypot(ddx, ddy);
-      }
-      meanRadIn = sum / holes.length;
-    }
-
-    rConfidence.textContent = confidenceLabel(offsetMagIn, meanRadIn);
-    elConfidenceChip.classList.remove("hidden");
-
     elResults.classList.remove("hidden");
 
     try {
       const png = await buildReceiptPng({
         mode: getMode(),
-        distance,
-        holesUsed: holes.length,
-        windDir,
-        windClicks,
-        elevDir,
-        elevClicks
+        windDir, windClicks,
+        elevDir, elevClicks
       });
       elReceiptLink.href = png;
       elReceiptLink.classList.remove("hidden");
@@ -332,52 +276,29 @@
   elModeRifle.addEventListener("click", () => setMode("rifle"));
   elModePistol.addEventListener("click", () => setMode("pistol"));
 
-  // --- Bottom sheet behavior
+  // --- Bottom sheet (optional)
   function openSheet(){
-    elBackdrop.classList.remove("hidden");
-    elSheet.classList.remove("hidden");
-    elBackdrop.setAttribute("aria-hidden", "false");
-    document.body.style.overflow = "hidden";
+    if (elBackdrop && elSheet) {
+      elBackdrop.classList.remove("hidden");
+      elSheet.classList.remove("hidden");
+      elBackdrop.setAttribute("aria-hidden", "false");
+      document.body.style.overflow = "hidden";
+    }
   }
   function closeSheet(){
-    elBackdrop.classList.add("hidden");
-    elSheet.classList.add("hidden");
-    elBackdrop.setAttribute("aria-hidden", "true");
-    document.body.style.overflow = "";
+    if (elBackdrop && elSheet) {
+      elBackdrop.classList.add("hidden");
+      elSheet.classList.add("hidden");
+      elBackdrop.setAttribute("aria-hidden", "true");
+      document.body.style.overflow = "";
+    }
   }
 
-  function activateTab(which){
-    tabWhat.classList.toggle("active", which === "what");
-    tabHow.classList.toggle("active", which === "how");
-    tabPrinters.classList.toggle("active", which === "printers");
+  elDetailsBtn?.addEventListener("click", openSheet);
+  elSheetClose?.addEventListener("click", closeSheet);
+  elBackdrop?.addEventListener("click", closeSheet);
 
-    panelWhat.classList.toggle("hidden", which !== "what");
-    panelHow.classList.toggle("hidden", which !== "how");
-    panelPrinters.classList.toggle("hidden", which !== "printers");
-  }
-
-  elDetailsBtn.addEventListener("click", openSheet);
-  elSheetClose.addEventListener("click", closeSheet);
-  elBackdrop.addEventListener("click", closeSheet);
-
-  tabWhat.addEventListener("click", () => activateTab("what"));
-  tabHow.addEventListener("click", () => activateTab("how"));
-  tabPrinters.addEventListener("click", () => activateTab("printers"));
-
-  // Swipe-down to close
-  let sheetStartY = null;
-  elSheet.addEventListener("touchstart", (e) => {
-    sheetStartY = e.touches && e.touches[0] ? e.touches[0].clientY : null;
-  }, { passive: true });
-  elSheet.addEventListener("touchend", (e) => {
-    if (sheetStartY == null) return;
-    const endY = e.changedTouches && e.changedTouches[0] ? e.changedTouches[0].clientY : sheetStartY;
-    const dy = endY - sheetStartY;
-    sheetStartY = null;
-    if (dy > 90) closeSheet();
-  }, { passive: true });
-
-  // Receipt PNG builder (Clicks-only numbers)
+  // --- Receipt PNG builder (Clicks-only numbers; 2 decimals)
   async function buildReceiptPng(s) {
     const W = 1200, H = 675;
     const c = document.createElement("canvas");
@@ -399,70 +320,23 @@
     ctx.font = "650 26px system-ui, -apple-system, Segoe UI, Roboto, Arial";
     ctx.fillText("After-Shot Intelligence Receipt", 60, 128);
 
-    // Left panel
-    const lx=60, ly=170, lw=520, lh=430;
-    roundRect(ctx, lx, ly, lw, lh, 22);
+    // Panel
+    const x=60, y=180, w=1080, h=420;
+    roundRect(ctx, x, y, w, h, 22);
     ctx.fillStyle = "rgba(255,255,255,.04)"; ctx.fill();
     ctx.strokeStyle = "rgba(255,255,255,.10)"; ctx.lineWidth=2; ctx.stroke();
 
     ctx.fillStyle = "rgba(255,255,255,.92)";
-    ctx.font = "900 28px system-ui, -apple-system, Segoe UI, Roboto, Arial";
-    ctx.fillText("Session", lx+24, ly+52);
+    ctx.font = "900 34px system-ui, -apple-system, Segoe UI, Roboto, Arial";
+    ctx.fillText("Corrections", x+34, y+70);
 
-    ctx.font = "650 22px system-ui, -apple-system, Segoe UI, Roboto, Arial";
-    let y = ly+95;
-
-    lineKV(ctx, lx+24, y, "Mode:", s.mode); y+=38;
-    lineKV(ctx, lx+24, y, "Distance:", String(s.distance)); y+=38;
-    lineKV(ctx, lx+24, y, "Holes:", String(s.holesUsed)); y+=52;
-
-    ctx.font = "900 28px system-ui, -apple-system, Segoe UI, Roboto, Arial";
-    ctx.fillStyle = "rgba(255,255,255,.92)";
-    ctx.fillText("Corrections", lx+24, y); y+=42;
-
-    ctx.font = "900 26px system-ui, -apple-system, Segoe UI, Roboto, Arial";
-    ctx.fillText(`Windage: ${s.windDir} → ${fmtClicks(s.windClicks)} clicks`, lx+24, y); y+=42;
-    ctx.fillText(`Elevation: ${s.elevDir} → ${fmtClicks(s.elevClicks)} clicks`, lx+24, y); y+=60;
+    ctx.font = "900 30px system-ui, -apple-system, Segoe UI, Roboto, Arial";
+    ctx.fillText(`Windage: ${s.windDir} → ${fmtClicks(s.windClicks)} clicks`, x+34, y+140);
+    ctx.fillText(`Elevation: ${s.elevDir} → ${fmtClicks(s.elevClicks)} clicks`, x+34, y+195);
 
     ctx.fillStyle = "rgba(255,255,255,.70)";
-    ctx.font = "750 22px system-ui, -apple-system, Segoe UI, Roboto, Arial";
-    ctx.fillText("Next: confirm with a follow-up group.", lx+24, y);
-
-    // Right image box
-    const rx=620, ry=170, rw=520, rh=430;
-    roundRect(ctx, rx, ry, rw, rh, 22);
-    ctx.fillStyle = "rgba(255,255,255,.03)"; ctx.fill();
-    ctx.strokeStyle = "rgba(255,255,255,.10)"; ctx.stroke();
-
-    try {
-      ctx.save();
-      ctx.beginPath(); roundRect(ctx, rx, ry, rw, rh, 22); ctx.clip();
-
-      const bmp = await createImageBitmap(selectedFile);
-      const arImg = bmp.width / bmp.height;
-      const arBox = rw / rh;
-
-      let dw, dh, dx, dy;
-      if (arImg > arBox){ dw = rw; dh = rw / arImg; dx = rx; dy = ry + (rh - dh)/2; }
-      else { dh = rh; dw = rh * arImg; dx = rx + (rw - dw)/2; dy = ry; }
-
-      ctx.drawImage(bmp, dx, dy, dw, dh);
-
-      const drawDot = (p, color) => {
-        const px = dx + p.x01 * dw;
-        const py = dy + p.y01 * dh;
-        ctx.beginPath(); ctx.arc(px, py, 11, 0, Math.PI*2);
-        ctx.fillStyle = "rgba(0,0,0,.35)"; ctx.fill();
-        ctx.lineWidth = 2; ctx.strokeStyle = "rgba(255,255,255,.9)"; ctx.stroke();
-        ctx.beginPath(); ctx.arc(px, py, 6.5, 0, Math.PI*2);
-        ctx.fillStyle = color; ctx.fill();
-      };
-
-      if (bull) drawDot(bull, "rgba(255,215,0,.95)");
-      for (const h of holes) drawDot(h, "rgba(0,255,160,.92)");
-
-      ctx.restore();
-    } catch {}
+    ctx.font = "750 24px system-ui, -apple-system, Segoe UI, Roboto, Arial";
+    ctx.fillText(`Mode: ${s.mode}`, x+34, y+270);
 
     return c.toDataURL("image/png");
   }
@@ -478,16 +352,7 @@
     ctx.closePath();
   }
 
-  function lineKV(ctx, x, y, k, v){
-    ctx.fillStyle = "rgba(255,255,255,.62)";
-    ctx.fillText(k, x, y);
-    ctx.fillStyle = "rgba(255,255,255,.92)";
-    ctx.fillText(v, x+200, y);
-  }
-
   // --- init
   setMode(getMode());
-  activateTab("what");
   resetSession(false);
-  elDetailsBtn.classList.add("hidden");
 })();
