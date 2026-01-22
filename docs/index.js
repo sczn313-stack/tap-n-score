@@ -1,15 +1,22 @@
 /* ============================================================
-   tap-n-score/docs/index.js  (FULL REPLACEMENT)
+   tap-n-score/docs/index.js  (FULL REPLACEMENT) — iPad Finger Fix
    Fixes:
-   - 1 tap = 1 dot (single pipeline)
-   - Prevents accidental "flyer" taps from scrolling/dragging
-     (tap only counts if movement <= TAP_SLOP_PX)
-   - Bull-first workflow
+   - Prevents “flyer taps” caused by scroll / drag on iPad
+   - 1 gesture = 1 tap (no double dots)
+   - Bull-first workflow (bull then holes)
+   - Undo / Clear / Show Results
+   - iOS-safe file handling (store File immediately)
+
+   Notes:
+   - Uses POINTER EVENTS only (with strict tap gating)
+   - Cancels tap if movement > TAP_SLOP_PX OR duration > TAP_MAX_MS
+   - Cancels tap if page scroll changed during the gesture (iPad finger)
 ============================================================ */
 
 (() => {
   const $ = (id) => document.getElementById(id);
 
+  // --- Elements (must exist)
   const elFile = $("photoInput");
   const elImg = $("targetImg");
   const elDots = $("dotsLayer");
@@ -23,20 +30,13 @@
   const elResults = $("resultsBox");
   const elMode = $("modeSelect");
 
-  // If these exist in your HTML, we'll use them; if not, we fall back safely.
-  const elTargetSize = $("targetSize");
-  const elDistance = $("distanceYds");
-  const elClickValue = $("clickValue");
-
   // --- State
   let selectedFile = null;
   let objectUrl = null;
 
-  // Bull-first workflow:
-  // bull = {xPct, yPct} or null
-  // holes = array of {xPct, yPct}
-  let bull = null;
-  let holes = [];
+  // bull-first
+  let bull = null;   // {xPct,yPct}
+  let holes = [];    // [{xPct,yPct}, ...]
 
   // --- Persist last mode
   const MODE_KEY = "tns_last_mode";
@@ -78,10 +78,9 @@
 
   function drawDots() {
     clearDots();
-    if (!elDots) return;
 
-    // draw bull (yellow)
-    if (bull) {
+    // bull (yellow)
+    if (bull && elDots) {
       const b = document.createElement("div");
       b.className = "dotBull";
       b.style.left = `${bull.xPct}%`;
@@ -89,13 +88,15 @@
       elDots.appendChild(b);
     }
 
-    // draw holes (green)
-    for (const h of holes) {
-      const d = document.createElement("div");
-      d.className = "dot";
-      d.style.left = `${h.xPct}%`;
-      d.style.top = `${h.yPct}%`;
-      elDots.appendChild(d);
+    // holes (green)
+    if (elDots) {
+      for (const h of holes) {
+        const d = document.createElement("div");
+        d.className = "dot";
+        d.style.left = `${h.xPct}%`;
+        d.style.top = `${h.yPct}%`;
+        elDots.appendChild(d);
+      }
     }
   }
 
@@ -128,16 +129,16 @@
       }
 
       setHint("Tap the bull (center) once. Then tap each bullet hole. Undo/Clear as needed.");
+      setButtons();
     });
   }
 
-  // --- Coordinate helper (returns {xPct,yPct} or null if not on image)
+  // --- Convert a screen coordinate to image-relative %
   function getPctFromClientXY(clientX, clientY) {
     if (!selectedFile || !elImg || elImg.style.display === "none") return null;
 
     const rect = elImg.getBoundingClientRect();
 
-    // must be inside image
     if (clientX < rect.left || clientX > rect.right || clientY < rect.top || clientY > rect.bottom) {
       return null;
     }
@@ -149,18 +150,6 @@
       xPct: Math.max(0, Math.min(100, x)),
       yPct: Math.max(0, Math.min(100, y)),
     };
-  }
-
-  // --- TAP FILTER (prevents scroll/drag "flyers")
-  const TAP_SLOP_PX = 10;      // movement threshold to still count as a tap
-  const TAP_MAX_MS = 650;      // optional time guard (long drags won't count)
-
-  let gesture = null;
-  // gesture = { id, startX, startY, startT, moved }
-
-  function isInteractiveTarget(evTarget) {
-    if (!evTarget || !evTarget.closest) return false;
-    return !!evTarget.closest("button, a, input, select, textarea, label");
   }
 
   function commitTap(clientX, clientY) {
@@ -177,118 +166,121 @@
 
     drawDots();
     setButtons();
-
     if (elResults) {
       elResults.style.display = "none";
       elResults.innerHTML = "";
     }
   }
 
-  // Prefer Pointer Events (best single-pipeline fix)
-  const supportsPointer = "PointerEvent" in window;
+  // ============================================================
+  // iPad finger “flyer tap” prevention
+  // - Only accept a tap if:
+  //   * movement <= TAP_SLOP_PX
+  //   * duration <= TAP_MAX_MS
+  //   * scrollY did not change during gesture
+  // - Use POINTER EVENTS only to avoid double-firing
+  // ============================================================
 
-  if (elWrap) {
-    if (supportsPointer) {
-      elWrap.addEventListener("pointerdown", (e) => {
-        if (!selectedFile) return;
-        if (isInteractiveTarget(e.target)) return;
+  const TAP_SLOP_PX = 5;   // tighter = fewer accidental taps on iPad
+  const TAP_MAX_MS = 300;  // long press / scroll won’t count
 
-        // only track primary pointer
-        if (gesture) return;
+  let gesture = null; // {id,startX,startY,startT,startScrollY,moved}
 
-        gesture = {
-          id: e.pointerId,
-          startX: e.clientX,
-          startY: e.clientY,
-          startT: performance.now(),
-          moved: false,
-        };
-      }, { passive: true });
+  function startGesture(e) {
+    // We only care about touch/pen/mouse, but iPad will be "touch"
+    gesture = {
+      id: e.pointerId,
+      startX: e.clientX,
+      startY: e.clientY,
+      startT: performance.now(),
+      startScrollY: window.scrollY,
+      moved: false,
+    };
+  }
 
-      elWrap.addEventListener("pointermove", (e) => {
-        if (!gesture || e.pointerId !== gesture.id) return;
+  function updateGesture(e) {
+    if (!gesture || e.pointerId !== gesture.id) return;
 
-        const dx = e.clientX - gesture.startX;
-        const dy = e.clientY - gesture.startY;
-        if ((dx * dx + dy * dy) > (TAP_SLOP_PX * TAP_SLOP_PX)) {
-          gesture.moved = true; // user is dragging/scrolling → do NOT tap
-        }
-      }, { passive: true });
-
-      elWrap.addEventListener("pointerup", (e) => {
-        if (!gesture || e.pointerId !== gesture.id) return;
-
-        const elapsed = performance.now() - gesture.startT;
-        const moved = gesture.moved;
-
-        // clear gesture first
-        const endX = e.clientX;
-        const endY = e.clientY;
-        gesture = null;
-
-        if (moved) return;
-        if (elapsed > TAP_MAX_MS) return;
-
-        commitTap(endX, endY);
-      }, { passive: true });
-
-      elWrap.addEventListener("pointercancel", (e) => {
-        if (gesture && e.pointerId === gesture.id) gesture = null;
-      }, { passive: true });
-    } else {
-      // Touch fallback (no double binding!)
-      let tGesture = null;
-
-      elWrap.addEventListener("touchstart", (e) => {
-        if (!selectedFile) return;
-        if (isInteractiveTarget(e.target)) return;
-        const t = e.touches && e.touches[0];
-        if (!t) return;
-        tGesture = {
-          startX: t.clientX,
-          startY: t.clientY,
-          startT: performance.now(),
-          moved: false,
-        };
-      }, { passive: true });
-
-      elWrap.addEventListener("touchmove", (e) => {
-        if (!tGesture) return;
-        const t = e.touches && e.touches[0];
-        if (!t) return;
-        const dx = t.clientX - tGesture.startX;
-        const dy = t.clientY - tGesture.startY;
-        if ((dx * dx + dy * dy) > (TAP_SLOP_PX * TAP_SLOP_PX)) {
-          tGesture.moved = true;
-        }
-      }, { passive: true });
-
-      elWrap.addEventListener("touchend", (e) => {
-        if (!tGesture) return;
-        const elapsed = performance.now() - tGesture.startT;
-        const moved = tGesture.moved;
-        const t = (e.changedTouches && e.changedTouches[0]) ? e.changedTouches[0] : null;
-        const endX = t ? t.clientX : null;
-        const endY = t ? t.clientY : null;
-
-        tGesture = null;
-
-        if (moved) return;
-        if (elapsed > TAP_MAX_MS) return;
-        if (endX == null || endY == null) return;
-
-        commitTap(endX, endY);
-      }, { passive: true });
-
-      // Desktop mouse fallback
-      elWrap.addEventListener("mousedown", (e) => {
-        if (!selectedFile) return;
-        if (isInteractiveTarget(e.target)) return;
-        commitTap(e.clientX, e.clientY);
-      });
+    const dx = e.clientX - gesture.startX;
+    const dy = e.clientY - gesture.startY;
+    if (Math.hypot(dx, dy) > TAP_SLOP_PX) {
+      gesture.moved = true;
     }
   }
 
+  function endGesture(e) {
+    if (!gesture || e.pointerId !== gesture.id) return;
+
+    const elapsed = performance.now() - gesture.startT;
+    const moved = gesture.moved;
+    const startScrollY = gesture.startScrollY;
+
+    const endX = e.clientX;
+    const endY = e.clientY;
+
+    // clear
+    gesture = null;
+
+    if (moved) return;
+    if (elapsed > TAP_MAX_MS) return;
+
+    // If the page scrolled even a little, this was not an intentional tap
+    if (Math.abs(window.scrollY - startScrollY) > 1) return;
+
+    commitTap(endX, endY);
+  }
+
+  function cancelGesture(e) {
+    if (!gesture) return;
+    // If pointer cancels, drop it
+    gesture = null;
+  }
+
+  if (elWrap) {
+    // pointerdown: start (passive false so we can preventDefault on iOS)
+    elWrap.addEventListener(
+      "pointerdown",
+      (e) => {
+        if (!selectedFile) return;
+
+        // prevent iOS “ghost click” / text selection / double-fire behavior
+        if (e.pointerType === "touch") e.preventDefault();
+
+        // capture pointer to keep consistent move/up
+        try { elWrap.setPointerCapture(e.pointerId); } catch {}
+
+        startGesture(e);
+      },
+      { passive: false }
+    );
+
+    // pointermove: mark moved if exceeded slop
+    elWrap.addEventListener(
+      "pointermove",
+      (e) => {
+        if (!gesture) return;
+        updateGesture(e);
+      },
+      { passive: true }
+    );
+
+    // pointerup: accept only if it’s a true tap
+    elWrap.addEventListener(
+      "pointerup",
+      (e) => {
+        endGesture(e);
+      },
+      { passive: true }
+    );
+
+    elWrap.addEventListener("pointercancel", cancelGesture, { passive: true });
+
+    // Optional: reduce browser touch behaviors inside the wrap (CSS can also do this)
+    // If your CSS already sets touch-action, this is fine to leave.
+    elWrap.style.touchAction = "manipulation";
+  }
+
+  // --- Undo / Clear / Results
   if (elUndo) {
     elUndo.addEventListener("click", () => {
       if (holes.length > 0) {
@@ -316,7 +308,7 @@
 
   if (elSee) {
     elSee.addEventListener("click", () => {
-      if (!selectedFile || !bull || holes.length === 0) return;
+      if (!selectedFile || !bull || holes.length === 0 || !elResults) return;
 
       const mode = elMode ? elMode.value : "rifle";
 
@@ -329,7 +321,6 @@
       const dx = (bull.xPct - poibX);
       const dy = (bull.yPct - poibY);
 
-      if (!elResults) return;
       elResults.style.display = "block";
       elResults.innerHTML = `
         <div style="font-weight:900; font-size:16px; margin-bottom:8px;">Session Summary</div>
