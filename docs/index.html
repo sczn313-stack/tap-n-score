@@ -1,4 +1,4 @@
-<!-- docs/index.html (FULL REPLACEMENT) — Clicks-only display (2 decimals) -->
+<!-- docs/index.html (FULL REPLACEMENT) — “TARGET” only appears on the button -->
 <!doctype html>
 <html lang="en">
 <head>
@@ -8,7 +8,7 @@
   <meta name="theme-color" content="#000000" />
   <title>Tap-n-Score™</title>
 
-  <link rel="stylesheet" href="./styles.css?v=20260121bs2" />
+  <link rel="stylesheet" href="./styles.css?v=20260122a" />
 </head>
 
 <body>
@@ -27,8 +27,10 @@
     <!-- CARD 1: Choose photo (disappears once image is loaded) -->
     <section id="chooseCard" class="card">
       <div id="chooseTargetRow" class="chooseRow">
-        <div class="chooseTitle">Choose Target Photo</div>
+        <!-- No “Target” here -->
+        <div class="chooseTitle">Choose Photo</div>
 
+        <!-- “TARGET” appears ONLY here -->
         <label class="chooseBtn">
           <input id="photoInput" type="file" accept="image/*" />
           <span>CHOOSE TARGET PHOTO</span>
@@ -60,13 +62,14 @@
         </div>
       </div>
 
-      <div id="instructionLine" class="instruction">Choose a target photo to begin.</div>
+      <!-- No “Target” in this line -->
+      <div id="instructionLine" class="instruction">Choose a photo to begin.</div>
     </section>
 
-    <!-- CARD 2: Target interaction -->
+    <!-- CARD 2: Photo interaction (no “Target” label anywhere) -->
     <section class="card">
-      <div id="targetWrap" class="targetWrap" aria-label="Target image and tap layer">
-        <img id="targetImg" class="targetImg" alt="Target" />
+      <div id="targetWrap" class="targetWrap" aria-label="Photo and tap layer">
+        <img id="targetImg" class="targetImg" alt="Photo" />
         <div id="dotsLayer" class="dotsLayer" aria-hidden="true"></div>
       </div>
 
@@ -148,14 +151,14 @@
 
       <div id="panelPrinters" class="tabPanel hidden">
         <ul class="bullets">
-          <li>Tap-n-Score turns paper targets into After-Shot Intelligence.</li>
+          <li>Tap-n-Score turns paper into After-Shot Intelligence.</li>
           <li>Receipts drive repeat sessions and measurable value.</li>
-          <li>Partner/print details are delivered through the target’s QR scan.</li>
+          <li>Partner/print details are delivered through the QR scan.</li>
         </ul>
       </div>
     </div>
   </section>
 
-  <script src="./index.js?v=20260121bs2"></script>
+  <script src="./index.js?v=20260122a"></script>
 </body>
 </html>
