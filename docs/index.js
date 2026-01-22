@@ -1,4 +1,4 @@
-/* docs/index.js (FULL REPLACEMENT) — Clicks-only display (2 decimals) */
+/* docs/index.js (FULL REPLACEMENT) — remove “target” from ALL UI text except the button */
 (() => {
   const $ = (id) => document.getElementById(id);
 
@@ -100,7 +100,8 @@
 
     if (!keepImage) elImg.src = "";
 
-    setInstruction(selectedFile ? "Tap bull first → then tap each hole." : "Choose a target photo to begin.");
+    // No “target” here
+    setInstruction(selectedFile ? "Tap bull first → then tap each hole." : "Choose a photo to begin.");
   }
 
   function updateStatus(){
@@ -154,12 +155,9 @@
     return { x01: sx / points.length, y01: sy / points.length };
   }
 
-  // Used only to output a word label (no numbers shown)
   function confidenceLabel(offsetIn, meanRadIn){
-    // simple bands tuned for “feel” (internal only)
     const tight = meanRadIn <= 0.60;
     const close = offsetIn <= 2.00;
-
     if (tight && close) return "HIGH";
     if (tight || close) return "MEDIUM";
     return "LOW";
@@ -274,9 +272,6 @@
     const { dxIn, dyIn } = normDeltaToInches(dx01, dy01);
 
     const windDir = dxIn >= 0 ? "RIGHT" : "LEFT";
-
-    // Screen y increases downward:
-    // bull above group => dyIn negative => dial UP
     const elevDir = dyIn <= 0 ? "UP" : "DOWN";
 
     const windAbsIn = Math.abs(dxIn);
@@ -289,17 +284,15 @@
     const windClicks = windMOA / click;
     const elevClicks = elevMOA / click;
 
-    // Render: direction + clicks only (2 decimals)
     rWindDir.textContent = windDir;
     rWindClk.textContent = `${fmtClicks(windClicks)} clicks`;
 
     rElevDir.textContent = elevDir;
     rElevClk.textContent = `${fmtClicks(elevClicks)} clicks`;
 
-    // Confidence word only (no numbers displayed)
+    // Confidence word only
     const offsetMagIn = Math.hypot(dxIn, dyIn);
 
-    // mean radius in inches (internal only)
     let meanRadIn = 0;
     {
       let sum = 0;
@@ -316,12 +309,11 @@
 
     elResults.classList.remove("hidden");
 
-    // Receipt PNG (no inches, no score numbers; clicks only show 2 decimals)
     try {
       const png = await buildReceiptPng({
         mode: getMode(),
-        distance,              // allowed
-        holesUsed: holes.length, // allowed
+        distance,
+        holesUsed: holes.length,
         windDir,
         windClicks,
         elevDir,
@@ -395,7 +387,6 @@
     ctx.fillStyle = "#0b0e0f";
     ctx.fillRect(0, 0, W, H);
 
-    // Title
     ctx.font = "900 56px system-ui, -apple-system, Segoe UI, Roboto, Arial";
     ctx.fillStyle = "#ff3b30"; ctx.fillText("TAP", 60, 90);
     ctx.fillStyle = "#ffffff"; ctx.fillText("-N-", 170, 90);
@@ -421,7 +412,6 @@
     ctx.font = "650 22px system-ui, -apple-system, Segoe UI, Roboto, Arial";
     let y = ly+95;
 
-    // Distance + holes are allowed as-is
     lineKV(ctx, lx+24, y, "Mode:", s.mode); y+=38;
     lineKV(ctx, lx+24, y, "Distance:", String(s.distance)); y+=38;
     lineKV(ctx, lx+24, y, "Holes:", String(s.holesUsed)); y+=52;
@@ -430,7 +420,6 @@
     ctx.fillStyle = "rgba(255,255,255,.92)";
     ctx.fillText("Corrections", lx+24, y); y+=42;
 
-    // Clicks only (2 decimals)
     ctx.font = "900 26px system-ui, -apple-system, Segoe UI, Roboto, Arial";
     ctx.fillText(`Windage: ${s.windDir} → ${fmtClicks(s.windClicks)} clicks`, lx+24, y); y+=42;
     ctx.fillText(`Elevation: ${s.elevDir} → ${fmtClicks(s.elevClicks)} clicks`, lx+24, y); y+=60;
@@ -439,7 +428,7 @@
     ctx.font = "750 22px system-ui, -apple-system, Segoe UI, Roboto, Arial";
     ctx.fillText("Next: confirm with a follow-up group.", lx+24, y);
 
-    // Right image box (thumb + dots)
+    // Right image box
     const rx=620, ry=170, rw=520, rh=430;
     roundRect(ctx, rx, ry, rw, rh, 22);
     ctx.fillStyle = "rgba(255,255,255,.03)"; ctx.fill();
