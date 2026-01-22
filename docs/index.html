@@ -1,4 +1,4 @@
-<!-- docs/index.html (FULL REPLACEMENT) — Cleaner: button is the hero; click/distance hidden -->
+<!-- docs/index.html (FULL REPLACEMENT) — Pilot clean: CHOOSE PHOTO hero; hides after load; SEC naming; no extra tip copy -->
 <!doctype html>
 <html lang="en">
 <head>
@@ -8,7 +8,7 @@
   <meta name="theme-color" content="#000000" />
   <title>Tap-n-Score™</title>
 
-  <link rel="stylesheet" href="./styles.css?v=20260122b" />
+  <link rel="stylesheet" href="./styles.css?v=20260122c" />
 </head>
 
 <body>
@@ -24,18 +24,18 @@
 
     <div class="subline">After-Shot Intelligence</div>
 
-    <!-- CARD 1: Choose photo (HERO) -->
-    <section class="card">
+    <!-- CARD 1: Choose photo (HERO) — hidden after photo loads -->
+    <section id="chooseCard" class="card">
       <div id="chooseTargetRow" class="chooseRow">
 
-        <!-- HERO button (only place “TARGET” appears) -->
+        <!-- HERO button -->
         <label class="chooseBtn">
           <input id="photoInput" type="file" accept="image/*" />
-          <span>CHOOSE TARGET PHOTO</span>
+          <span>CHOOSE PHOTO</span>
         </label>
 
         <div id="fileName" class="fileName">No photo selected</div>
-        <div class="hint">Tip: straight-on photo, fill the frame.</div>
+        <div class="hint">Tip: include the full target in the frame. Keep the camera straight.</div>
 
         <!-- Mode stays visible -->
         <div id="settingsRow" class="settingsRow">
@@ -57,12 +57,12 @@
           </div>
         </div>
 
-        <!-- Instruction line removed (kept as an empty node for layout safety) -->
+        <!-- kept empty for layout safety -->
         <div id="instructionLine" class="instruction" style="display:none"></div>
       </div>
     </section>
 
-    <!-- CARD 2: Photo interaction (no “Photo” label) -->
+    <!-- CARD 2: Photo interaction -->
     <section class="card">
       <div id="targetWrap" class="targetWrap" aria-label="Photo and tap layer">
         <img id="targetImg" class="targetImg" alt="Photo" />
@@ -79,8 +79,6 @@
         <button id="clearBtn" class="btn ghost" type="button">Clear</button>
         <button id="showBtn" class="btn primary" type="button" disabled>Show Results</button>
       </div>
-
-      <div class="tip">Bull first. Then holes. Scroll/drag won’t create dots.</div>
     </section>
 
     <!-- CARD 3: Results -->
@@ -88,7 +86,7 @@
       <div class="resultsTitle">Results</div>
 
       <div class="corrBlock">
-        <div class="corrHdr">Corrections</div>
+        <div class="corrHdr">Corrections (Scope)</div>
 
         <div class="corrLine">
           Windage: <strong id="rWindDir">—</strong>
@@ -104,11 +102,11 @@
       </div>
 
       <div class="scoreRow">
-        <a id="downloadReceiptLink" class="btn receiptBtn hidden" download="Receipt.png" href="#">Download Receipt (PNG)</a>
+        <a id="downloadSecLink" class="btn secBtn hidden" download="SEC.png" href="#">Download SEC (PNG)</a>
       </div>
     </section>
 
-    <!-- Bottom Sheet (optional later; button hidden until photo loads) -->
+    <!-- Bottom Sheet (Details) -->
     <div id="sheetBackdrop" class="sheetBackdrop hidden" aria-hidden="true"></div>
     <section id="bottomSheet" class="sheet hidden" role="dialog" aria-modal="true" aria-label="Details">
       <div class="sheetHandle" aria-hidden="true"></div>
@@ -125,8 +123,11 @@
       </div>
     </section>
 
+    <!-- Tiny version label for pilot support -->
+    <footer class="footerNote">v20260122c</footer>
+
   </main>
 
-  <script src="./index.js?v=20260122b"></script>
+  <script src="./index.js?v=20260122c"></script>
 </body>
 </html>
