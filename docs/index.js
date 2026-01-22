@@ -1,24 +1,29 @@
 /* ============================================================
-   tap-n-score/docs/index.js  (FULL REPLACEMENT)
-   Locked behaviors:
-   - iPad finger "ghost taps" are blocked (scroll/drag ≠ tap)
-   - 1 tap = 1 dot (single pipeline; no double-binding)
-   - Tap is only accepted if:
-       * touch begins on the IMAGE
-       * movement stays under TAP_MOVE_PX
-   New:
-   - Outlier (flyer) auto-filter for math (tapped vs used shown)
-   - Results summary: POIB + offset (image %) + counts
+   tap-n-score/docs/index.js  (FULL REPLACEMENT) — Shooter-Ready Results
+   Keeps (LOCKED):
+   - iPad ghost-tap prevention (drag/scroll ≠ tap)
+   - 1 tap = 1 dot (single event pipeline)
+   - Bull-first truth gate (no holes recorded until bull is set)
+   - Outlier (flyer) filter (math-only) with tapped vs used counts
 
-   REQUIREMENTS (existing HTML IDs):
-     photoInput, targetImg, dotsLayer, tapCount, bullStatus,
-     undoBtn, clearTapsBtn, seeResultsBtn, instructionLine,
-     targetWrap, resultsBox, modeSelect
+   Adds:
+   - Shooter-ready Results panel:
+       * Score100 (two decimals)
+       * Wind/Elev directions + clicks (two decimals)
+       * POIB offset in inches (two decimals)
+       * Mean radius (two decimals)
+       * Holes tapped vs used (filtered count)
+       * Next 5-Shot Challenge prompt
+   - Safe defaults if inputs don’t exist:
+       * Target size: 8.50" × 11.00"
+       * Distance: 100 yards
+       * Click value: 0.25 MOA/click (True MOA math)
 ============================================================ */
 
 (() => {
   const $ = (id) => document.getElementById(id);
 
+  // --- Elements expected by current page
   const elFile = $("photoInput");
   const elImg = $("targetImg");
   const elDots = $("dotsLayer");
@@ -32,12 +37,17 @@
   const elResults = $("resultsBox");
   const elMode = $("modeSelect");
 
+  // --- Optional inputs (if you add them later, this auto-uses them)
+  const elTargetSize = $("targetSize");   // e.g. "8.5x11"
+  const elDistance = $("distanceYds");    // e.g. 100
+  const elClickValue = $("clickValue");   // e.g. 0.25
+
   // --- State
   let selectedFile = null;
   let objectUrl = null;
 
-  let bull = null;     // {xPct,yPct}
-  let holes = [];      // [{xPct,yPct}...]
+  let bull = null;      // {xPct,yPct}
+  let holes = [];       // [{xPct,yPct}...]
 
   // --- Persist last mode
   const MODE_KEY = "tns_last_mode";
@@ -49,6 +59,10 @@
     elMode.addEventListener("change", () => {
       try { localStorage.setItem(MODE_KEY, elMode.value); } catch {}
     });
+  }
+
+  function clamp(v, lo, hi) {
+    return Math.max(lo, Math.min(hi, v));
   }
 
   function setHint(msg) {
@@ -67,7 +81,6 @@
     if (elBullStatus) elBullStatus.textContent = bull ? "set" : "not set";
 
     const hasAny = !!bull || holes.length > 0;
-
     if (elUndo) elUndo.disabled = !hasAny;
     if (elClear) elClear.disabled = !hasAny;
     if (elSee) elSee.disabled = !selectedFile || !bull || holes.length === 0;
@@ -81,7 +94,7 @@
     clearDots();
     if (!elDots) return;
 
-    // Bull (yellow)
+    // bull (yellow)
     if (bull) {
       const b = document.createElement("div");
       b.className = "dotBull";
@@ -90,7 +103,7 @@
       elDots.appendChild(b);
     }
 
-    // Holes (green)
+    // holes (green)
     for (const h of holes) {
       const d = document.createElement("div");
       d.className = "dot";
@@ -111,7 +124,7 @@
     }
   }
 
-  // --- iOS-safe file load
+  // --- iOS-safe: store File immediately
   if (elFile) {
     elFile.addEventListener("change", () => {
       const f = elFile.files && elFile.files[0];
@@ -132,19 +145,12 @@
     });
   }
 
-  // --- Helpers
-  function clamp(v, lo, hi) {
-    return Math.max(lo, Math.min(hi, v));
-  }
-
+  // --- Coordinate helper (returns {xPct,yPct} or null)
   function getPctFromPoint(clientX, clientY) {
     if (!selectedFile || !elImg || elImg.style.display === "none") return null;
 
     const rect = elImg.getBoundingClientRect();
-
-    if (clientX < rect.left || clientX > rect.right || clientY < rect.top || clientY > rect.bottom) {
-      return null;
-    }
+    if (clientX < rect.left || clientX > rect.right || clientY < rect.top || clientY > rect.bottom) return null;
 
     const x = ((clientX - rect.left) / rect.width) * 100;
     const y = ((clientY - rect.top) / rect.height) * 100;
@@ -155,11 +161,11 @@
   function pointInsideImage(clientX, clientY) {
     if (!elImg || elImg.style.display === "none") return false;
     const r = elImg.getBoundingClientRect();
-    return (clientX >= r.left && clientX <= r.right && clientY >= r.top && clientY <= r.bottom);
+    return clientX >= r.left && clientX <= r.right && clientY >= r.top && clientY <= r.bottom;
   }
 
   // ============================================================
-  // Outlier filter (flyer taps) — math-only
+  // Outlier filter (math-only)
   // Robust fence: threshold = Q3 + 1.5*IQR of radial distances from centroid
   // Ensures at least 3 points remain; otherwise uses all.
   // ============================================================
@@ -198,10 +204,52 @@
   }
 
   // ============================================================
-  // iPad finger tap gate — kills ghosts
-  // - Tap starts ONLY if touch begins on image
-  // - Any movement > TAP_MOVE_PX cancels
-  // - Commit happens on pointerup/touchend only
+  // Shooter math helpers (True MOA)
+  // ============================================================
+  function inchesPerMOA(distanceYds) {
+    // True MOA: 1.047" @ 100 yards
+    return 1.047 * (distanceYds / 100);
+  }
+
+  function getMode() {
+    return elMode ? String(elMode.value || "rifle") : "rifle";
+  }
+
+  function getDistanceYds() {
+    const n = elDistance ? Number(elDistance.value) : 100;
+    return Number.isFinite(n) && n > 0 ? n : 100;
+  }
+
+  function getClickMOA() {
+    const n = elClickValue ? Number(elClickValue.value) : 0.25;
+    return Number.isFinite(n) && n > 0 ? n : 0.25;
+  }
+
+  function getTargetDimsIn() {
+    // Default 8.5×11
+    if (!elTargetSize) return { w: 8.5, h: 11.0 };
+    const v = String(elTargetSize.value || "").toLowerCase().replace(/\s/g, "");
+    if (v.includes("8.5x11") || v.includes("8.5×11") || v.includes("11x8.5") || v.includes("11×8.5")) {
+      return { w: 8.5, h: 11.0 };
+    }
+    // If someone typed "12x18"
+    const m = v.match(/^(\d+(\.\d+)?)x(\d+(\.\d+)?)$/);
+    if (m) return { w: Number(m[1]), h: Number(m[3]) };
+    return { w: 8.5, h: 11.0 };
+  }
+
+  function pctToInches(ptPct, dims) {
+    return { xIn: (ptPct.xPct / 100) * dims.w, yIn: (ptPct.yPct / 100) * dims.h };
+  }
+
+  function distInches(a, b) {
+    const dx = a.xIn - b.xIn;
+    const dy = a.yIn - b.yIn;
+    return Math.sqrt(dx * dx + dy * dy);
+  }
+
+  // ============================================================
+  // iPad ghost-tap gate (drag/scroll cancels tap)
   // ============================================================
   const TAP_MOVE_PX = 10;
 
@@ -230,13 +278,14 @@
     if (!isDown) return;
     isDown = false;
 
-    // Must start on image + must not be a drag
+    // must begin on image + must not be a drag
     if (!startedOnImage) return;
     if (moved) return;
 
     const pt = getPctFromPoint(clientX, clientY);
     if (!pt) return;
 
+    // Bull-first: first tap sets bull; only then do we accept holes
     if (!bull) {
       bull = pt;
       setHint("Bull set ✅ Now tap each bullet hole. (Undo removes last hole, or bull if no holes.)");
@@ -254,20 +303,15 @@
     }
   }
 
-  // --- Events (Pointer Events preferred; NO double binding)
+  // --- Events (Pointer Events preferred; single binding)
   const supportsPointer = "PointerEvent" in window;
 
   if (elWrap) {
     if (supportsPointer) {
       elWrap.addEventListener("pointerdown", (e) => {
         if (!selectedFile) return;
-
-        // iPad touch: prevent Safari from turning image taps into scroll
         if (e.pointerType === "touch") e.preventDefault();
-
         beginGesture(e.clientX, e.clientY);
-
-        // Keep receiving move/up
         try { elWrap.setPointerCapture(e.pointerId); } catch {}
       }, { passive: false });
 
@@ -286,7 +330,6 @@
         startedOnImage = false;
       }, { passive: true });
     } else {
-      // Touch fallback
       elWrap.addEventListener("touchstart", (e) => {
         if (!selectedFile) return;
         const t = e.touches && e.touches[0];
@@ -317,7 +360,7 @@
         startedOnImage = false;
       }, { passive: true });
 
-      // Mouse fallback (desktop)
+      // mouse fallback
       elWrap.addEventListener("mousedown", (e) => {
         if (!selectedFile) return;
         beginGesture(e.clientX, e.clientY);
@@ -327,7 +370,7 @@
     }
   }
 
-  // --- Undo / Clear / Results
+  // --- Undo / Clear
   if (elUndo) {
     elUndo.addEventListener("click", () => {
       if (holes.length > 0) {
@@ -353,39 +396,103 @@
     });
   }
 
+  // ============================================================
+  // Shooter-ready Results
+  // ============================================================
   if (elSee) {
     elSee.addEventListener("click", () => {
       if (!selectedFile || !bull || holes.length === 0 || !elResults) return;
 
-      const mode = elMode ? elMode.value : "rifle";
+      const mode = getMode();
+      const dims = getTargetDimsIn();           // inches
+      const distanceYds = getDistanceYds();     // yards
+      const clickMOA = getClickMOA();           // MOA/click (default 0.25)
+      const ipm = inchesPerMOA(distanceYds);    // inches per MOA (True MOA)
 
       const tappedCount = holes.length;
       const { used: usedHoles, removed: removedHoles } = filterOutliers(holes);
       const usedCount = usedHoles.length;
 
-      // POIB from USED holes
+      // POIB (avg of USED holes) in %
       const sum = usedHoles.reduce((a, t) => ({ x: a.x + t.xPct, y: a.y + t.yPct }), { x: 0, y: 0 });
-      const poibX = sum.x / usedHoles.length;
-      const poibY = sum.y / usedHoles.length;
+      const poibPct = { xPct: sum.x / usedHoles.length, yPct: sum.y / usedHoles.length };
 
-      // Offset vector (bull - POIB) in image %
-      const dx = bull.xPct - poibX;
-      const dy = bull.yPct - poibY;
+      // Convert bull + POIB to inches
+      const bullIn = pctToInches(bull, dims);
+      const poibIn = pctToInches(poibPct, dims);
 
+      // Offset inches (bull - POIB)
+      // Note: y increases DOWN on screen; so +dyIn means POIB is ABOVE bull (needs DOWN correction).
+      const dxIn = bullIn.xIn - poibIn.xIn;  // + = need RIGHT
+      const dyIn = bullIn.yIn - poibIn.yIn;  // + = need DOWN
+
+      const windDir = dxIn >= 0 ? "RIGHT" : "LEFT";
+      const elevDir = dyIn >= 0 ? "DOWN" : "UP";
+
+      const windMOA = Math.abs(dxIn) / ipm;
+      const elevMOA = Math.abs(dyIn) / ipm;
+
+      const windClicks = windMOA / clickMOA;
+      const elevClicks = elevMOA / clickMOA;
+
+      const offsetMagIn = Math.sqrt(dxIn * dxIn + dyIn * dyIn);
+
+      // Consistency (mean radius) in inches using USED holes around POIB
+      const radii = usedHoles.map((h) => distInches(pctToInches(h, dims), poibIn));
+      const meanRadius = radii.reduce((a, r) => a + r, 0) / radii.length;
+
+      // Score100 (pilot): OffsetScore 60% + ConsistencyScore 40%
+      // Tunables (safe starting points)
+      const offsetMaxIn = 5.00;   // inches where offset score bottoms out
+      const consistMaxIn = 2.00;  // inches where consistency score bottoms out
+
+      const offsetScore = clamp(100 - (offsetMagIn / offsetMaxIn) * 100, 0, 100);
+      const consistencyScore = clamp(100 - (meanRadius / consistMaxIn) * 100, 0, 100);
+      const score100 = (0.60 * offsetScore) + (0.40 * consistencyScore);
+
+      // Render
       elResults.style.display = "block";
       elResults.innerHTML = `
-        <div style="font-weight:900; font-size:16px; margin-bottom:8px;">Session Summary</div>
-        <div><b>Mode:</b> ${mode}</div>
+        <div style="font-weight:900; font-size:16px; margin-bottom:10px;">Tap-n-Score Results</div>
 
-        <div style="margin-top:10px;"><b>Holes tapped:</b> ${tappedCount}</div>
-        <div><b>Holes used:</b> ${usedCount}${removedHoles.length ? ` (filtered ${removedHoles.length})` : ""}</div>
+        <div style="display:grid; gap:6px;">
+          <div><b>Mode:</b> ${mode}</div>
+          <div><b>Target size:</b> ${dims.w.toFixed(2)}" × ${dims.h.toFixed(2)}"</div>
+          <div><b>Distance:</b> ${distanceYds} yards</div>
+          <div><b>Click value:</b> ${clickMOA.toFixed(2)} MOA/click</div>
+        </div>
 
-        <div style="margin-top:10px;"><b>Bull (image %):</b> X ${bull.xPct.toFixed(2)}% • Y ${bull.yPct.toFixed(2)}%</div>
-        <div><b>POIB (used, image %):</b> X ${poibX.toFixed(2)}% • Y ${poibY.toFixed(2)}%</div>
-        <div><b>Offset (bull - POIB):</b> ΔX ${dx.toFixed(2)}% • ΔY ${dy.toFixed(2)}%</div>
+        <hr style="border:none; border-top:1px solid rgba(255,255,255,.10); margin:12px 0;" />
 
-        <div style="margin-top:10px; color:#b9b9b9;">
-          Next: convert % → inches using target size & calibration, then clicks + Score100.
+        <div style="display:grid; gap:6px;">
+          <div><b>Holes tapped:</b> ${tappedCount}</div>
+          <div><b>Holes used:</b> ${usedCount}${removedHoles.length ? ` (filtered ${removedHoles.length})` : ""}</div>
+        </div>
+
+        <hr style="border:none; border-top:1px solid rgba(255,255,255,.10); margin:12px 0;" />
+
+        <div style="display:grid; gap:8px;">
+          <div style="font-weight:900;">Corrections</div>
+          <div>Windage: <b>${windDir}</b> ${Math.abs(dxIn).toFixed(2)}" → <b>${windClicks.toFixed(2)}</b> clicks</div>
+          <div>Elevation: <b>${elevDir}</b> ${Math.abs(dyIn).toFixed(2)}" → <b>${elevClicks.toFixed(2)}</b> clicks</div>
+        </div>
+
+        <div style="margin-top:10px; display:grid; gap:6px;">
+          <div><b>POIB offset magnitude:</b> ${offsetMagIn.toFixed(2)}"</div>
+          <div><b>Mean radius (consistency):</b> ${meanRadius.toFixed(2)}"</div>
+        </div>
+
+        <hr style="border:none; border-top:1px solid rgba(255,255,255,.10); margin:12px 0;" />
+
+        <div style="display:grid; gap:6px;">
+          <div style="font-weight:900; font-size:16px;">Score100: ${score100.toFixed(2)}</div>
+          <div style="color:rgba(255,255,255,.70); font-size:13px;">
+            OffsetScore: ${offsetScore.toFixed(2)} • ConsistencyScore: ${consistencyScore.toFixed(2)}
+          </div>
+        </div>
+
+        <div style="margin-top:12px; color:rgba(255,255,255,.85); font-weight:850;">
+          Next: Shoot a 5-shot group, tap, and confirm the new zero.
         </div>
       `;
     });
