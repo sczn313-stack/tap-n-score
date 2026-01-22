@@ -1,11 +1,19 @@
 /* ============================================================
    tap-n-score/docs/index.js  (FULL REPLACEMENT)
-   Fixes:
-   - iPad/iOS finger scroll creating accidental dots (“flyers”)
-     ✅ Tap only registers if finger movement stays under threshold
-     ✅ Scroll/drag cancels tap (no dot)
-   - Bull-first workflow (bull then holes)
-   - Single event pipeline (no double-dots)
+   Locked behaviors:
+   - iPad finger "ghost taps" are blocked (scroll/drag ≠ tap)
+   - 1 tap = 1 dot (single pipeline; no double-binding)
+   - Tap is only accepted if:
+       * touch begins on the IMAGE
+       * movement stays under TAP_MOVE_PX
+   New:
+   - Outlier (flyer) auto-filter for math (tapped vs used shown)
+   - Results summary: POIB + offset (image %) + counts
+
+   REQUIREMENTS (existing HTML IDs):
+     photoInput, targetImg, dotsLayer, tapCount, bullStatus,
+     undoBtn, clearTapsBtn, seeResultsBtn, instructionLine,
+     targetWrap, resultsBox, modeSelect
 ============================================================ */
 
 (() => {
@@ -28,26 +36,23 @@
   let selectedFile = null;
   let objectUrl = null;
 
-  // Bull-first workflow:
-  // - bull = {xPct, yPct} or null
-  // - holes = array of {xPct, yPct}
-  let bull = null;
-  let holes = [];
+  let bull = null;     // {xPct,yPct}
+  let holes = [];      // [{xPct,yPct}...]
 
   // --- Persist last mode
   const MODE_KEY = "tns_last_mode";
   try {
     const last = localStorage.getItem(MODE_KEY);
-    if (last) elMode.value = last;
+    if (last && elMode) elMode.value = last;
   } catch {}
-  elMode.addEventListener("change", () => {
-    try {
-      localStorage.setItem(MODE_KEY, elMode.value);
-    } catch {}
-  });
+  if (elMode) {
+    elMode.addEventListener("change", () => {
+      try { localStorage.setItem(MODE_KEY, elMode.value); } catch {}
+    });
+  }
 
   function setHint(msg) {
-    elInstruction.textContent = msg;
+    if (elInstruction) elInstruction.textContent = msg;
   }
 
   function revokeObjectUrl() {
@@ -58,24 +63,25 @@
   }
 
   function setButtons() {
-    elHoleCount.textContent = String(holes.length);
-    elBullStatus.textContent = bull ? "set" : "not set";
+    if (elHoleCount) elHoleCount.textContent = String(holes.length);
+    if (elBullStatus) elBullStatus.textContent = bull ? "set" : "not set";
 
     const hasAny = !!bull || holes.length > 0;
 
-    elUndo.disabled = !hasAny;
-    elClear.disabled = !hasAny;
-    elSee.disabled = !selectedFile || !bull || holes.length === 0;
+    if (elUndo) elUndo.disabled = !hasAny;
+    if (elClear) elClear.disabled = !hasAny;
+    if (elSee) elSee.disabled = !selectedFile || !bull || holes.length === 0;
   }
 
   function clearDots() {
-    elDots.innerHTML = "";
+    if (elDots) elDots.innerHTML = "";
   }
 
   function drawDots() {
     clearDots();
+    if (!elDots) return;
 
-    // bull (yellow)
+    // Bull (yellow)
     if (bull) {
       const b = document.createElement("div");
       b.className = "dotBull";
@@ -84,7 +90,7 @@
       elDots.appendChild(b);
     }
 
-    // holes (green)
+    // Holes (green)
     for (const h of holes) {
       const d = document.createElement("div");
       d.className = "dot";
@@ -99,34 +105,43 @@
     holes = [];
     drawDots();
     setButtons();
-    elResults.style.display = "none";
-    elResults.innerHTML = "";
+    if (elResults) {
+      elResults.style.display = "none";
+      elResults.innerHTML = "";
+    }
   }
 
-  // --- iOS-safe: store File immediately on change
-  elFile.addEventListener("change", () => {
-    const f = elFile.files && elFile.files[0];
-    if (!f) return;
+  // --- iOS-safe file load
+  if (elFile) {
+    elFile.addEventListener("change", () => {
+      const f = elFile.files && elFile.files[0];
+      if (!f) return;
 
-    selectedFile = f;
+      selectedFile = f;
+      resetSession();
 
-    resetSession();
+      revokeObjectUrl();
+      objectUrl = URL.createObjectURL(f);
 
-    revokeObjectUrl();
-    objectUrl = URL.createObjectURL(f);
-    elImg.src = objectUrl;
-    elImg.style.display = "block";
+      if (elImg) {
+        elImg.src = objectUrl;
+        elImg.style.display = "block";
+      }
 
-    setHint("Tap the bull (center) once. Then tap each bullet hole. Undo/Clear as needed.");
-  });
+      setHint("Tap the bull (center) once. Then tap each bullet hole. Undo/Clear as needed.");
+    });
+  }
 
-  // --- Coordinate helper (returns {xPct,yPct} or null if not on image)
+  // --- Helpers
+  function clamp(v, lo, hi) {
+    return Math.max(lo, Math.min(hi, v));
+  }
+
   function getPctFromPoint(clientX, clientY) {
-    if (!selectedFile || elImg.style.display === "none") return null;
+    if (!selectedFile || !elImg || elImg.style.display === "none") return null;
 
     const rect = elImg.getBoundingClientRect();
 
-    // must be inside image
     if (clientX < rect.left || clientX > rect.right || clientY < rect.top || clientY > rect.bottom) {
       return null;
     }
@@ -134,31 +149,74 @@
     const x = ((clientX - rect.left) / rect.width) * 100;
     const y = ((clientY - rect.top) / rect.height) * 100;
 
-    return {
-      xPct: Math.max(0, Math.min(100, x)),
-      yPct: Math.max(0, Math.min(100, y)),
-    };
+    return { xPct: clamp(x, 0, 100), yPct: clamp(y, 0, 100) };
+  }
+
+  function pointInsideImage(clientX, clientY) {
+    if (!elImg || elImg.style.display === "none") return false;
+    const r = elImg.getBoundingClientRect();
+    return (clientX >= r.left && clientX <= r.right && clientY >= r.top && clientY <= r.bottom);
   }
 
   // ============================================================
-  // iPad “scroll = accidental dots” prevention
-  // We treat a dot as a TAP only if movement stays tiny.
-  // Any drag/scroll cancels the tap.
+  // Outlier filter (flyer taps) — math-only
+  // Robust fence: threshold = Q3 + 1.5*IQR of radial distances from centroid
+  // Ensures at least 3 points remain; otherwise uses all.
   // ============================================================
+  function filterOutliers(points) {
+    if (!points || points.length <= 3) return { used: points.slice(), removed: [] };
 
-  // Movement threshold in CSS pixels (tuned for iPad finger)
+    const cx = points.reduce((s, p) => s + p.xPct, 0) / points.length;
+    const cy = points.reduce((s, p) => s + p.yPct, 0) / points.length;
+
+    const withD = points.map((p) => {
+      const dx = p.xPct - cx;
+      const dy = p.yPct - cy;
+      return { p, d: Math.hypot(dx, dy) };
+    });
+
+    const ds = withD.map((x) => x.d).slice().sort((a, b) => a - b);
+
+    const quantile = (arr, t) => {
+      const idx = (arr.length - 1) * t;
+      const lo = Math.floor(idx);
+      const hi = Math.ceil(idx);
+      if (lo === hi) return arr[lo];
+      return arr[lo] + (arr[hi] - arr[lo]) * (idx - lo);
+    };
+
+    const q1 = quantile(ds, 0.25);
+    const q3 = quantile(ds, 0.75);
+    const iqr = Math.max(1e-6, q3 - q1);
+    const thresh = q3 + 1.5 * iqr;
+
+    const used = withD.filter((x) => x.d <= thresh).map((x) => x.p);
+    const removed = withD.filter((x) => x.d > thresh).map((x) => x.p);
+
+    if (used.length < 3) return { used: points.slice(), removed: [] };
+    return { used, removed };
+  }
+
+  // ============================================================
+  // iPad finger tap gate — kills ghosts
+  // - Tap starts ONLY if touch begins on image
+  // - Any movement > TAP_MOVE_PX cancels
+  // - Commit happens on pointerup/touchend only
+  // ============================================================
   const TAP_MOVE_PX = 10;
 
   let isDown = false;
   let moved = false;
   let startX = 0;
   let startY = 0;
+  let startedOnImage = false;
 
   function beginGesture(clientX, clientY) {
     isDown = true;
     moved = false;
     startX = clientX;
     startY = clientY;
+    startedOnImage = pointInsideImage(clientX, clientY);
   }
 
   function trackMove(clientX, clientY) {
@@ -168,17 +226,17 @@
     if (Math.hypot(dx, dy) > TAP_MOVE_PX) moved = true;
   }
 
-  function endGesture(clientX, clientY) {
+  function commitGesture(clientX, clientY) {
     if (!isDown) return;
     isDown = false;
 
-    // If finger moved (scroll/drag), DO NOT place a dot.
+    // Must start on image + must not be a drag
+    if (!startedOnImage) return;
     if (moved) return;
 
     const pt = getPctFromPoint(clientX, clientY);
     if (!pt) return;
 
-    // Bull-first: first tap sets bull, then holes
     if (!bull) {
       bull = pt;
       setHint("Bull set ✅ Now tap each bullet hole. (Undo removes last hole, or bull if no holes.)");
@@ -189,181 +247,149 @@
 
     drawDots();
     setButtons();
-    elResults.style.display = "none";
-    elResults.innerHTML = "";
+
+    if (elResults) {
+      elResults.style.display = "none";
+      elResults.innerHTML = "";
+    }
   }
 
-  // --- Event wiring (Pointer Events preferred)
+  // --- Events (Pointer Events preferred; NO double binding)
   const supportsPointer = "PointerEvent" in window;
 
-  if (supportsPointer) {
-    // IMPORTANT: do not block scrolling globally.
-    // We only prevent default on pointerdown if it’s touch AND we’re over the IMAGE.
-    elWrap.addEventListener(
-      "pointerdown",
-      (e) => {
+  if (elWrap) {
+    if (supportsPointer) {
+      elWrap.addEventListener("pointerdown", (e) => {
         if (!selectedFile) return;
 
-        // Only start if the pointer is on the image
-        const rect = elImg.getBoundingClientRect();
-        const inside =
-          e.clientX >= rect.left && e.clientX <= rect.right && e.clientY >= rect.top && e.clientY <= rect.bottom;
+        // iPad touch: prevent Safari from turning image taps into scroll
+        if (e.pointerType === "touch") e.preventDefault();
 
-        if (!inside) return;
-
-        // Start gesture
         beginGesture(e.clientX, e.clientY);
 
-        // Keep receiving move/up even if finger drifts
-        try {
-          e.target.setPointerCapture(e.pointerId);
-        } catch {}
+        // Keep receiving move/up
+        try { elWrap.setPointerCapture(e.pointerId); } catch {}
+      }, { passive: false });
 
-        // Prevent iOS from turning this into a scroll when we're actually tapping the image
-        if (e.pointerType === "touch") e.preventDefault();
-      },
-      { passive: false }
-    );
-
-    elWrap.addEventListener(
-      "pointermove",
-      (e) => {
+      elWrap.addEventListener("pointermove", (e) => {
         if (!isDown) return;
         trackMove(e.clientX, e.clientY);
-      },
-      { passive: true }
-    );
+      }, { passive: true });
 
-    elWrap.addEventListener(
-      "pointerup",
-      (e) => {
-        endGesture(e.clientX, e.clientY);
-      },
-      { passive: true }
-    );
+      elWrap.addEventListener("pointerup", (e) => {
+        commitGesture(e.clientX, e.clientY);
+      }, { passive: true });
 
-    elWrap.addEventListener(
-      "pointercancel",
-      () => {
+      elWrap.addEventListener("pointercancel", () => {
         isDown = false;
         moved = false;
-      },
-      { passive: true }
-    );
-  } else {
-    // Touch fallback
-    elWrap.addEventListener(
-      "touchstart",
-      (e) => {
+        startedOnImage = false;
+      }, { passive: true });
+    } else {
+      // Touch fallback
+      elWrap.addEventListener("touchstart", (e) => {
         if (!selectedFile) return;
         const t = e.touches && e.touches[0];
         if (!t) return;
-
-        // Only start if touch begins on the image
-        const rect = elImg.getBoundingClientRect();
-        const inside = t.clientX >= rect.left && t.clientX <= rect.right && t.clientY >= rect.top && t.clientY <= rect.bottom;
-        if (!inside) return;
-
         beginGesture(t.clientX, t.clientY);
         e.preventDefault();
-      },
-      { passive: false }
-    );
+      }, { passive: false });
 
-    elWrap.addEventListener(
-      "touchmove",
-      (e) => {
+      elWrap.addEventListener("touchmove", (e) => {
         if (!isDown) return;
         const t = e.touches && e.touches[0];
         if (!t) return;
         trackMove(t.clientX, t.clientY);
-      },
-      { passive: true }
-    );
+      }, { passive: true });
 
-    elWrap.addEventListener(
-      "touchend",
-      (e) => {
+      elWrap.addEventListener("touchend", (e) => {
         const t = e.changedTouches && e.changedTouches[0];
         if (!t) {
           isDown = false;
           return;
         }
-        endGesture(t.clientX, t.clientY);
-      },
-      { passive: true }
-    );
+        commitGesture(t.clientX, t.clientY);
+      }, { passive: true });
 
-    elWrap.addEventListener(
-      "touchcancel",
-      () => {
+      elWrap.addEventListener("touchcancel", () => {
         isDown = false;
         moved = false;
-      },
-      { passive: true }
-    );
+        startedOnImage = false;
+      }, { passive: true });
 
-    // Mouse fallback
-    elWrap.addEventListener("mousedown", (e) => {
-      if (!selectedFile) return;
-
-      const rect = elImg.getBoundingClientRect();
-      const inside = e.clientX >= rect.left && e.clientX <= rect.right && e.clientY >= rect.top && e.clientY <= rect.bottom;
-      if (!inside) return;
-
-      beginGesture(e.clientX, e.clientY);
-    });
-    window.addEventListener("mousemove", (e) => trackMove(e.clientX, e.clientY));
-    window.addEventListener("mouseup", (e) => endGesture(e.clientX, e.clientY));
+      // Mouse fallback (desktop)
+      elWrap.addEventListener("mousedown", (e) => {
+        if (!selectedFile) return;
+        beginGesture(e.clientX, e.clientY);
+      });
+      window.addEventListener("mousemove", (e) => trackMove(e.clientX, e.clientY));
+      window.addEventListener("mouseup", (e) => commitGesture(e.clientX, e.clientY));
+    }
   }
 
-  // --- Controls
-  elUndo.addEventListener("click", () => {
-    if (holes.length > 0) {
-      holes.pop();
-      setHint(holes.length === 0 ? "No holes left. Tap bullet holes again." : "Undid last hole.");
-    } else if (bull) {
-      bull = null;
-      setHint("Bull cleared. Tap the bull (center) again.");
-    }
-    drawDots();
-    setButtons();
-    elResults.style.display = "none";
-    elResults.innerHTML = "";
-  });
+  // --- Undo / Clear / Results
+  if (elUndo) {
+    elUndo.addEventListener("click", () => {
+      if (holes.length > 0) {
+        holes.pop();
+        setHint(holes.length === 0 ? "No holes left. Tap bullet holes again." : "Undid last hole.");
+      } else if (bull) {
+        bull = null;
+        setHint("Bull cleared. Tap the bull (center) again.");
+      }
+      drawDots();
+      setButtons();
+      if (elResults) {
+        elResults.style.display = "none";
+        elResults.innerHTML = "";
+      }
+    });
+  }
 
-  elClear.addEventListener("click", () => {
-    resetSession();
-    setHint("Cleared. Tap the bull (center) first, then bullet holes.");
-  });
+  if (elClear) {
+    elClear.addEventListener("click", () => {
+      resetSession();
+      setHint("Cleared. Tap the bull (center) first, then bullet holes.");
+    });
+  }
 
-  elSee.addEventListener("click", () => {
-    if (!selectedFile || !bull || holes.length === 0) return;
+  if (elSee) {
+    elSee.addEventListener("click", () => {
+      if (!selectedFile || !bull || holes.length === 0 || !elResults) return;
 
-    const mode = elMode.value;
+      const mode = elMode ? elMode.value : "rifle";
 
-    // POIB (avg of holes)
-    const sum = holes.reduce((a, t) => ({ x: a.x + t.xPct, y: a.y + t.yPct }), { x: 0, y: 0 });
-    const poibX = sum.x / holes.length;
-    const poibY = sum.y / holes.length;
+      const tappedCount = holes.length;
+      const { used: usedHoles, removed: removedHoles } = filterOutliers(holes);
+      const usedCount = usedHoles.length;
 
-    // Offset vector (bull - poib) in image %
-    const dx = bull.xPct - poibX;
-    const dy = bull.yPct - poibY;
+      // POIB from USED holes
+      const sum = usedHoles.reduce((a, t) => ({ x: a.x + t.xPct, y: a.y + t.yPct }), { x: 0, y: 0 });
+      const poibX = sum.x / usedHoles.length;
+      const poibY = sum.y / usedHoles.length;
 
-    elResults.style.display = "block";
-    elResults.innerHTML = `
-      <div style="font-weight:900; font-size:16px; margin-bottom:8px;">Session Summary</div>
-      <div><b>Mode:</b> ${mode}</div>
-      <div><b>Bull (image %):</b> X ${bull.xPct.toFixed(2)}% • Y ${bull.yPct.toFixed(2)}%</div>
-      <div><b>Holes:</b> ${holes.length}</div>
-      <div><b>POIB (image %):</b> X ${poibX.toFixed(2)}% • Y ${poibY.toFixed(2)}%</div>
-      <div><b>Offset (bull - POIB):</b> ΔX ${dx.toFixed(2)}% • ΔY ${dy.toFixed(2)}%</div>
-      <div style="margin-top:10px; color:#b9b9b9;">
-        Next: convert % → inches using target size & calibration, then clicks + Score100.
-      </div>
-    `;
-  });
+      // Offset vector (bull - POIB) in image %
+      const dx = bull.xPct - poibX;
+      const dy = bull.yPct - poibY;
+
+      elResults.style.display = "block";
+      elResults.innerHTML = `
+        <div style="font-weight:900; font-size:16px; margin-bottom:8px;">Session Summary</div>
+        <div><b>Mode:</b> ${mode}</div>
+
+        <div style="margin-top:10px;"><b>Holes tapped:</b> ${tappedCount}</div>
+        <div><b>Holes used:</b> ${usedCount}${removedHoles.length ? ` (filtered ${removedHoles.length})` : ""}</div>
+
+        <div style="margin-top:10px;"><b>Bull (image %):</b> X ${bull.xPct.toFixed(2)}% • Y ${bull.yPct.toFixed(2)}%</div>
+        <div><b>POIB (used, image %):</b> X ${poibX.toFixed(2)}% • Y ${poibY.toFixed(2)}%</div>
+        <div><b>Offset (bull - POIB):</b> ΔX ${dx.toFixed(2)}% • ΔY ${dy.toFixed(2)}%</div>
+
+        <div style="margin-top:10px; color:#b9b9b9;">
+          Next: convert % → inches using target size & calibration, then clicks + Score100.
+        </div>
+      `;
+    });
+  }
 
   // init
   setButtons();
