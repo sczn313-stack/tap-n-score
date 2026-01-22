@@ -1,4 +1,4 @@
-<!-- docs/index.html (FULL REPLACEMENT) — Bottom Sheet UX -->
+<!-- docs/index.html (FULL REPLACEMENT) — Clicks-only display (2 decimals) -->
 <!doctype html>
 <html lang="en">
 <head>
@@ -8,7 +8,7 @@
   <meta name="theme-color" content="#000000" />
   <title>Tap-n-Score™</title>
 
-  <link rel="stylesheet" href="./styles.css?v=20260121bs1" />
+  <link rel="stylesheet" href="./styles.css?v=20260121bs2" />
 </head>
 
 <body>
@@ -24,7 +24,7 @@
 
     <div class="subline">After-Shot Intelligence</div>
 
-    <!-- CARD 1: Choose photo (must disappear once image is loaded) -->
+    <!-- CARD 1: Choose photo (disappears once image is loaded) -->
     <section id="chooseCard" class="card">
       <div id="chooseTargetRow" class="chooseRow">
         <div class="chooseTitle">Choose Target Photo</div>
@@ -38,7 +38,7 @@
         <div class="hint">Tip: straight-on photo, fill the frame.</div>
       </div>
 
-      <!-- Minimal settings that matter (Mode matters; no target size; no MOA wording) -->
+      <!-- Minimal settings that matter -->
       <div id="settingsRow" class="settingsRow">
         <div class="seg">
           <button id="modeRifle" class="segBtn active" type="button">Rifle</button>
@@ -53,9 +53,9 @@
         <div class="mini">
           <label class="miniLabel" for="clickValue">Click</label>
           <select id="clickValue" class="miniSelect">
-            <option value="0.25" selected>1/4 per click</option>
-            <option value="0.5">1/2 per click</option>
-            <option value="0.125">1/8 per click</option>
+            <option value="0.25" selected>Quarter per click</option>
+            <option value="0.5">Half per click</option>
+            <option value="0.125">Eighth per click</option>
           </select>
         </div>
       </div>
@@ -73,6 +73,7 @@
       <div class="statusRow">
         <div class="chip">Bull: <span id="bullState">not set</span></div>
         <div class="chip">Holes: <span id="holeCount">0</span></div>
+        <div class="chip hidden" id="confidenceChip">Confidence: <span id="rConfidence">—</span></div>
       </div>
 
       <div class="btnRow">
@@ -84,22 +85,27 @@
       <div class="tip">Bull first. Then holes. Scroll/drag won’t create dots.</div>
     </section>
 
-    <!-- CARD 3: Results (tight) -->
+    <!-- CARD 3: Results (Clicks-only; 2 decimals) -->
     <section id="resultsCard" class="card hidden" aria-live="polite">
       <div class="resultsTitle">Results</div>
 
       <div class="corrBlock">
         <div class="corrHdr">Corrections</div>
-        <div class="corrLine">Windage: <strong id="rWindDir">—</strong> <span id="rWindIn">—</span> → <span id="rWindClk">—</span></div>
-        <div class="corrLine">Elevation: <strong id="rElevDir">—</strong> <span id="rElevIn">—</span> → <span id="rElevClk">—</span></div>
+
+        <div class="corrLine">
+          Windage: <strong id="rWindDir">—</strong>
+          <span class="arrow">→</span>
+          <span id="rWindClk">—</span>
+        </div>
+
+        <div class="corrLine">
+          Elevation: <strong id="rElevDir">—</strong>
+          <span class="arrow">→</span>
+          <span id="rElevClk">—</span>
+        </div>
       </div>
 
       <div class="scoreRow">
-        <div class="scoreBox">
-          <div class="scoreLbl">Score100</div>
-          <div id="rScore" class="scoreVal">—</div>
-        </div>
-
         <a id="downloadReceiptLink" class="btn receiptBtn hidden" download="Receipt.png" href="#">Download Receipt (PNG)</a>
       </div>
     </section>
@@ -128,7 +134,7 @@
         <ul class="bullets">
           <li>Tap the bull center.</li>
           <li>Tap each bullet hole.</li>
-          <li>We compute corrections and generate a downloadable receipt.</li>
+          <li>We output the correction as direction + clicks.</li>
         </ul>
       </div>
 
@@ -136,20 +142,20 @@
         <ol class="steps">
           <li>Bull sets your intended aim point.</li>
           <li>Holes produce the group center (POIB).</li>
-          <li>We convert the offset into clicks and show the correction.</li>
+          <li>We convert the offset into clicks.</li>
         </ol>
       </div>
 
       <div id="panelPrinters" class="tabPanel hidden">
         <ul class="bullets">
           <li>Tap-n-Score turns paper targets into After-Shot Intelligence.</li>
-          <li>Receipts + repeat sessions drive engagement and measurable value.</li>
+          <li>Receipts drive repeat sessions and measurable value.</li>
           <li>Partner/print details are delivered through the target’s QR scan.</li>
         </ul>
       </div>
     </div>
   </section>
 
-  <script src="./index.js?v=20260121bs1"></script>
+  <script src="./index.js?v=20260121bs2"></script>
 </body>
 </html>
