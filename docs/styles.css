@@ -1,4 +1,4 @@
-/* docs/styles.css (FULL REPLACEMENT) — Clicks-only display (2 decimals) */
+/* docs/styles.css (FULL REPLACEMENT) — Pilot clean: remove extra tap tip; SEC button; tiny version footer */
 :root{
   --bg:#050606;
   --card:rgba(255,255,255,.04);
@@ -84,11 +84,6 @@ body{
   gap:10px;
 }
 
-.chooseTitle{
-  font-weight:900;
-  font-size:18px;
-}
-
 .chooseBtn{
   display:block;
   width:100%;
@@ -143,19 +138,6 @@ body{
 .segBtn.active{
   background:rgba(255,255,255,.07);
   border:1px solid rgba(255,255,255,.10);
-}
-
-.mini{display:flex; flex-direction:column; gap:6px; min-width:140px}
-.miniLabel{font-size:12px; color:var(--muted)}
-.miniInput,.miniSelect{
-  width:100%;
-  padding:10px 12px;
-  border-radius:14px;
-  border:1px solid var(--stroke2);
-  background:rgba(0,0,0,.20);
-  color:var(--text);
-  font-size:15px;
-  outline:none;
 }
 
 .instruction{
@@ -245,8 +227,6 @@ body{
 }
 .btn:disabled{opacity:.45; cursor:not-allowed}
 
-.tip{margin-top:10px; color:var(--dim); font-size:13px}
-
 .resultsTitle{font-weight:950; font-size:18px; margin-bottom:10px}
 .corrBlock{
   padding:12px;
@@ -276,7 +256,7 @@ body{
   flex-wrap:wrap;
   align-items:stretch;
 }
-.receiptBtn{
+.secBtn{
   flex:1 1 260px;
   text-align:center;
   text-decoration:none;
@@ -284,6 +264,15 @@ body{
   align-items:center;
   justify-content:center;
 }
+
+/* Tiny footer version label */
+.footerNote{
+  margin-top:2px;
+  color:rgba(255,255,255,.38);
+  font-size:12px;
+  text-align:center;
+}
+
 .hidden{display:none !important}
 
 /* Bottom sheet */
@@ -337,33 +326,12 @@ body{
   cursor:pointer;
 }
 
-.sheetTabs{
-  display:flex;
-  gap:8px;
-  margin:6px 0 12px;
-}
-
-.tabBtn{
-  flex:1;
-  border-radius:14px;
-  padding:10px 10px;
-  border:1px solid rgba(255,255,255,.10);
-  background:rgba(0,0,0,.20);
-  color:var(--text);
-  font-weight:900;
-  cursor:pointer;
-}
-.tabBtn.active{
-  border-color:rgba(31,111,235,.55);
-  background:rgba(31,111,235,.18);
-}
-
 .sheetBody{
   padding:2px 2px 10px;
   color:var(--text);
 }
 
-.bullets, .steps{
+.bullets{
   margin:0;
   padding-left:18px;
   color:rgba(255,255,255,.86);
