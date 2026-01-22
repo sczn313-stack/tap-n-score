@@ -1,4 +1,4 @@
-<!-- docs/index.html (FULL REPLACEMENT) -->
+<!-- docs/index.html (FULL REPLACEMENT) — Bottom Sheet UX -->
 <!doctype html>
 <html lang="en">
 <head>
@@ -8,52 +8,51 @@
   <meta name="theme-color" content="#000000" />
   <title>Tap-n-Score™</title>
 
-  <link rel="manifest" href="./manifest.webmanifest" />
-  <link rel="icon" href="./icons/icon-192.png" />
-  <link rel="apple-touch-icon" href="./icons/icon-192.png" />
-
-  <link rel="stylesheet" href="./styles.css?v=20260121a" />
+  <link rel="stylesheet" href="./styles.css?v=20260121bs1" />
 </head>
 
 <body>
   <main class="page">
-    <header class="hero">
-      <div class="brandLine" aria-label="Tap-n-Score brand">
-        <span class="brandTap">TAP</span><span class="brandDash">-</span><span class="brandN">N</span><span class="brandDash">-</span><span class="brandScore">SCORE</span><span class="brandTm">™</span>
+
+    <!-- Top bar -->
+    <header class="topbar">
+      <div class="brand">
+        <span class="bRed">TAP</span><span class="bW">-N-</span><span class="bBlue">SCORE</span><span class="bW tm">™</span>
       </div>
-      <div class="tagline">Fast, clean After-Shot Intelligence.</div>
+      <button id="detailsBtn" class="detailsBtn hidden" type="button">Details</button>
     </header>
 
-    <!-- TOP: choose target FIRST (and hide after load) -->
-    <section class="card">
-      <div id="chooseTargetRow" class="chooseTargetRow">
+    <div class="subline">After-Shot Intelligence</div>
+
+    <!-- CARD 1: Choose photo (must disappear once image is loaded) -->
+    <section id="chooseCard" class="card">
+      <div id="chooseTargetRow" class="chooseRow">
         <div class="chooseTitle">Choose Target Photo</div>
-        <label class="fileBtn">
+
+        <label class="chooseBtn">
           <input id="photoInput" type="file" accept="image/*" />
-          <span class="fileBtnText">Choose Photo</span>
+          <span>CHOOSE TARGET PHOTO</span>
         </label>
-        <div id="fileName" class="fileName">No file selected</div>
-        <div class="chooseHint">Tip: take photo straight-on, fill the frame.</div>
+
+        <div id="fileName" class="fileName">No photo selected</div>
+        <div class="hint">Tip: straight-on photo, fill the frame.</div>
       </div>
 
-      <!-- Compact controls (no Target Size, no MOA wording) -->
-      <div class="controlsRow">
-        <div class="control">
-          <div class="controlLabel">Mode</div>
-          <select id="modeSel" class="select">
-            <option value="rifle" selected>Rifle</option>
-            <option value="pistol">Pistol</option>
-          </select>
+      <!-- Minimal settings that matter (Mode matters; no target size; no MOA wording) -->
+      <div id="settingsRow" class="settingsRow">
+        <div class="seg">
+          <button id="modeRifle" class="segBtn active" type="button">Rifle</button>
+          <button id="modePistol" class="segBtn" type="button">Pistol</button>
         </div>
 
-        <div class="control">
-          <div class="controlLabel">Distance (yards)</div>
-          <input id="distanceYds" class="input" type="number" inputmode="numeric" value="100" min="1" step="1" />
+        <div class="mini">
+          <label class="miniLabel" for="distanceYds">Distance</label>
+          <input id="distanceYds" class="miniInput" type="number" inputmode="numeric" min="1" step="1" value="100" />
         </div>
 
-        <div class="control">
-          <div class="controlLabel">Click value</div>
-          <select id="clickValue" class="select">
+        <div class="mini">
+          <label class="miniLabel" for="clickValue">Click</label>
+          <select id="clickValue" class="miniSelect">
             <option value="0.25" selected>1/4 per click</option>
             <option value="0.5">1/2 per click</option>
             <option value="0.125">1/8 per click</option>
@@ -61,66 +60,96 @@
         </div>
       </div>
 
-      <div id="instructionLine" class="instruction">
-        Choose a target photo to begin.
-      </div>
+      <div id="instructionLine" class="instruction">Choose a target photo to begin.</div>
     </section>
 
-    <!-- IMAGE + TAP LAYER -->
-    <section class="imageCard">
-      <div id="targetWrap" class="targetWrap">
+    <!-- CARD 2: Target interaction -->
+    <section class="card">
+      <div id="targetWrap" class="targetWrap" aria-label="Target image and tap layer">
         <img id="targetImg" class="targetImg" alt="Target" />
         <div id="dotsLayer" class="dotsLayer" aria-hidden="true"></div>
       </div>
 
-      <div class="actionRow">
-        <button id="bullSetBtn" class="btn ghost" type="button">Bull: <span id="bullState">not set</span></button>
-        <div class="pill">Holes: <span id="holeCount">0</span></div>
+      <div class="statusRow">
+        <div class="chip">Bull: <span id="bullState">not set</span></div>
+        <div class="chip">Holes: <span id="holeCount">0</span></div>
+      </div>
+
+      <div class="btnRow">
         <button id="undoBtn" class="btn ghost" type="button">Undo</button>
         <button id="clearBtn" class="btn ghost" type="button">Clear</button>
         <button id="showBtn" class="btn primary" type="button" disabled>Show Results</button>
       </div>
 
-      <div class="tipLine" id="tipLine">
-        Tip: Bull first. Then holes. Scroll/drag won’t create dots.
+      <div class="tip">Bull first. Then holes. Scroll/drag won’t create dots.</div>
+    </section>
+
+    <!-- CARD 3: Results (tight) -->
+    <section id="resultsCard" class="card hidden" aria-live="polite">
+      <div class="resultsTitle">Results</div>
+
+      <div class="corrBlock">
+        <div class="corrHdr">Corrections</div>
+        <div class="corrLine">Windage: <strong id="rWindDir">—</strong> <span id="rWindIn">—</span> → <span id="rWindClk">—</span></div>
+        <div class="corrLine">Elevation: <strong id="rElevDir">—</strong> <span id="rElevIn">—</span> → <span id="rElevClk">—</span></div>
+      </div>
+
+      <div class="scoreRow">
+        <div class="scoreBox">
+          <div class="scoreLbl">Score100</div>
+          <div id="rScore" class="scoreVal">—</div>
+        </div>
+
+        <a id="downloadReceiptLink" class="btn receiptBtn hidden" download="Receipt.png" href="#">Download Receipt (PNG)</a>
       </div>
     </section>
 
-    <!-- RESULTS -->
-    <section id="resultsCard" class="card results hidden" aria-live="polite">
-      <div class="resultsTitle">Tap-n-Score Results</div>
-
-      <div class="resultsGrid">
-        <div class="kv"><span class="k">Mode:</span> <span class="v" id="rMode">—</span></div>
-        <div class="kv"><span class="k">Distance:</span> <span class="v" id="rDist">—</span></div>
-        <div class="kv"><span class="k">Click value:</span> <span class="v" id="rClick">—</span></div>
-
-        <div class="kv"><span class="k">Holes tapped:</span> <span class="v" id="rTapped">—</span></div>
-        <div class="kv"><span class="k">Holes used:</span> <span class="v" id="rUsed">—</span></div>
-      </div>
-
-      <div class="divider"></div>
-
-      <div class="subTitle">Corrections</div>
-      <div class="corrLine">Windage: <strong id="rWindDir">—</strong> <span id="rWindIn">—</span> → <span id="rWindClk">—</span></div>
-      <div class="corrLine">Elevation: <strong id="rElevDir">—</strong> <span id="rElevIn">—</span> → <span id="rElevClk">—</span></div>
-
-      <div class="metrics">
-        <div class="kv"><span class="k">POIB offset magnitude:</span> <span class="v" id="rMag">—</span></div>
-        <div class="kv"><span class="k">Mean radius (consistency):</span> <span class="v" id="rMr">—</span></div>
-        <div class="kv"><span class="k">Score100:</span> <span class="v" id="rScore">—</span></div>
-      </div>
-
-      <div class="divider"></div>
-
-      <a id="downloadSecLink" class="downloadLink hidden" download="SEC.png" href="#">Download SEC (PNG)</a>
-
-      <div class="nextLine" id="nextLine">
-        Next: Shoot a 5-shot group, tap, and confirm the new zero.
-      </div>
-    </section>
   </main>
 
-  <script src="./index.js?v=20260121a"></script>
+  <!-- Bottom Sheet (Details) -->
+  <div id="sheetBackdrop" class="sheetBackdrop hidden" aria-hidden="true"></div>
+
+  <section id="bottomSheet" class="sheet hidden" role="dialog" aria-modal="true" aria-label="Details">
+    <div class="sheetHandle" aria-hidden="true"></div>
+
+    <div class="sheetHeader">
+      <div class="sheetTitle">Details</div>
+      <button id="sheetClose" class="sheetClose" type="button">Close</button>
+    </div>
+
+    <div class="sheetTabs">
+      <button id="tabWhat" class="tabBtn active" type="button">What is this?</button>
+      <button id="tabHow" class="tabBtn" type="button">How it works</button>
+      <button id="tabPrinters" class="tabBtn" type="button">Printers</button>
+    </div>
+
+    <div class="sheetBody">
+      <div id="panelWhat" class="tabPanel">
+        <ul class="bullets">
+          <li>Tap the bull center.</li>
+          <li>Tap each bullet hole.</li>
+          <li>We compute corrections and generate a downloadable receipt.</li>
+        </ul>
+      </div>
+
+      <div id="panelHow" class="tabPanel hidden">
+        <ol class="steps">
+          <li>Bull sets your intended aim point.</li>
+          <li>Holes produce the group center (POIB).</li>
+          <li>We convert the offset into clicks and show the correction.</li>
+        </ol>
+      </div>
+
+      <div id="panelPrinters" class="tabPanel hidden">
+        <ul class="bullets">
+          <li>Tap-n-Score turns paper targets into After-Shot Intelligence.</li>
+          <li>Receipts + repeat sessions drive engagement and measurable value.</li>
+          <li>Partner/print details are delivered through the target’s QR scan.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <script src="./index.js?v=20260121bs1"></script>
 </body>
 </html>
