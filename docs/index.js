@@ -1,363 +1,295 @@
-/* ============================================================
-   Tap-n-Score™ (docs/index.js) — FULL REPLACEMENT
-   - Adds Vendor B (vendor.json) to:
-     1) Input UI (vendor logo/link)
-     2) SEC PNG (stamped logo)
-   - Keeps basic flow:
-     Choose photo -> tap bull once -> tap holes -> show results -> download SEC
-   ============================================================ */
-
 (() => {
   const $ = (id) => document.getElementById(id);
 
-  // --- Elements
+  // Elements
   const elFile = $("photoInput");
   const elImg = $("targetImg");
   const elDots = $("dotsLayer");
-  const elTapCount = $("tapCount");
-  const elClear = $("clearTapsBtn");
-  const elUndo = $("undoBtn");
-  const elInstruction = $("instructionLine");
-  const elWrap = $("targetWrap");
+
   const elBullStatus = $("bullStatus");
-  const elShowResults = $("showResultsBtn");
+  const elTapCount = $("tapCount");
+
+  const elUndo = $("undoBtn");
+  const elClear = $("clearTapsBtn");
+  const elShow = $("showResultsBtn");
 
   const elWindDir = $("windDir");
-  const elElevDir = $("elevDir");
   const elWindClicks = $("windClicks");
+  const elElevDir = $("elevDir");
   const elElevClicks = $("elevClicks");
 
-  const elVendorLink = $("vendorLink");
-  const elVendorLogo = $("vendorLogo");
-
-  const elDownloadSEC = $("downloadSecBtn");
+  const elDownload = $("downloadSecBtn");
   const secCanvas = $("secCanvas");
   const secCtx = secCanvas.getContext("2d");
 
-  // --- State
-  let objectUrl = null;
-  let imageReady = false;
+  // Vendor UI (two places)
+  const elVendorLink1 = $("vendorLink");
+  const elVendorLogo1 = $("vendorLogo");
+  const elVendorLink2 = $("vendorLink2");
+  const elVendorLogo2 = $("vendorLogo2");
 
-  let bull = null;     // {x,y} in image-space (0..1)
-  let taps = [];       // holes: [{x,y} in image-space]
+  // State
+  let taps = [];       // {x01,y01} normalized 0..1
+  let bull = null;     // {x01,y01}
+  let imgLoaded = false;
+  let vendor = null;   // from vendor.json
+  let vendorLogoImg = null;
 
-  // Vendor B
-  let VENDOR = null;
-
-  // --- Helpers
-  const clamp01 = (v) => Math.max(0, Math.min(1, v));
-
-  function setText(el, txt) {
-    if (!el) return;
-    el.textContent = txt;
-  }
-
-  function setInstruction(txt) {
-    if (elInstruction) elInstruction.textContent = txt;
-  }
-
-  function setBullStatus() {
-    setText(elBullStatus, bull ? "set" : "not set");
-  }
-
-  function setTapCount() {
-    setText(elTapCount, String(taps.length));
-  }
-
-  function clearDots() {
-    if (elDots) elDots.innerHTML = "";
-  }
-
-  function dotAtNorm(x, y) {
-    // Dot positioned over image, using wrapper sizing.
-    // x,y are normalized to the displayed image area.
-    const dot = document.createElement("div");
-    dot.className = "tapDot";
-    dot.style.left = `${x * 100}%`;
-    dot.style.top = `${y * 100}%`;
-    elDots.appendChild(dot);
-  }
-
-  function bullAtNorm(x, y) {
-    const dot = document.createElement("div");
-    dot.className = "bullDot";
-    dot.style.left = `${x * 100}%`;
-    dot.style.top = `${y * 100}%`;
-    elDots.appendChild(dot);
-  }
-
-  function redrawDots() {
-    clearDots();
-    if (!imageReady) return;
-
-    if (bull) bullAtNorm(bull.x, bull.y);
-    taps.forEach(p => dotAtNorm(p.x, p.y));
-  }
-
-  function getNormFromEvent(evt) {
-    const rect = elWrap.getBoundingClientRect();
-    const x = clamp01((evt.clientX - rect.left) / rect.width);
-    const y = clamp01((evt.clientY - rect.top) / rect.height);
-    return { x, y };
-  }
-
-  function round2(n) {
-    return (Math.round(n * 100) / 100).toFixed(2);
-  }
-
-  // --- Vendor (B) loader (vendor.json is in docs root)
+  // ----------------------------
+  // Vendor load + apply
+  // ----------------------------
   async function loadVendor() {
     try {
       const res = await fetch("./vendor.json", { cache: "no-store" });
       if (!res.ok) throw new Error("vendor.json not found");
-      const data = await res.json();
+      vendor = await res.json();
 
-      const id = data.activeVendorId;
-      const v = data.vendors && data.vendors[id];
-      if (!v) throw new Error("activeVendorId not in vendors");
+      // Set links
+      const href = vendor.website || "#";
+      elVendorLink1.href = href;
+      elVendorLink2.href = href;
 
-      VENDOR = {
-        id,
-        name: String(v.name || ""),
-        website: String(v.website || ""),
-        logo: String(v.logo || "")
-      };
+      // Set logos
+      const logoSrc = vendor.logo || "";
+      if (logoSrc) {
+        elVendorLogo1.src = logoSrc;
+        elVendorLogo2.src = logoSrc;
+        elVendorLogo1.style.display = "block";
+        elVendorLogo2.style.display = "block";
+
+        // Preload for SEC stamping
+        vendorLogoImg = new Image();
+        vendorLogoImg.crossOrigin = "anonymous";
+        vendorLogoImg.src = logoSrc;
+        await vendorLogoImg.decode().catch(() => {});
+      }
     } catch (e) {
-      VENDOR = null;
+      // Leave vendor hidden if missing
+      elVendorLogo1.style.display = "none";
+      elVendorLogo2.style.display = "none";
     }
-
-    applyVendorToUI();
   }
 
-  function applyVendorToUI() {
-    if (!elVendorLink || !elVendorLogo) return;
-
-    if (!VENDOR || !VENDOR.logo) {
-      elVendorLink.style.display = "none";
-      return;
-    }
-
-    elVendorLogo.src = VENDOR.logo;
-    elVendorLogo.alt = VENDOR.name ? `${VENDOR.name} logo` : "Vendor logo";
-
-    if (VENDOR.website) {
-      elVendorLink.href = VENDOR.website;
-      elVendorLink.style.pointerEvents = "auto";
-    } else {
-      elVendorLink.href = "#";
-      elVendorLink.style.pointerEvents = "none";
-    }
-
-    elVendorLink.style.display = "inline-flex";
+  // ----------------------------
+  // Image + taps
+  // ----------------------------
+  function promptPickPhoto() {
+    elFile.click();
   }
 
-  // --- Math (simple, stable, click output already “fine” per you)
-  // Treat image-space taps as points; compute POI mean vector from bull.
-  function computeCorrections() {
-    if (!bull || taps.length === 0) {
-      return null;
-    }
-
-    const mean = taps.reduce((acc, p) => ({ x: acc.x + p.x, y: acc.y + p.y }), { x: 0, y: 0 });
-    const poi = { x: mean.x / taps.length, y: mean.y / taps.length };
-
-    // Vector bull - poi (move impacts to bull)
-    const dx = bull.x - poi.x; // + = move right
-    const dy = bull.y - poi.y; // + = move down in screen space
-
-    // Convert normalized deltas into "clicks" using a simple scale.
-    // (Your backend/calc may override; this is UI-only here.)
-    const clicksPerNorm = 40; // stable constant, tune later
-    const windClicks = dx * clicksPerNorm;
-    const elevClicks = dy * clicksPerNorm;
-
-    const windDir = windClicks >= 0 ? "RIGHT" : "LEFT";
-    const elevDir = elevClicks >= 0 ? "DOWN" : "UP";
-
-    return {
-      windDir,
-      elevDir,
-      windClicksAbs: Math.abs(windClicks),
-      elevClicksAbs: Math.abs(elevClicks),
-      poi,
-      dx,
-      dy
+  elFile.addEventListener("change", () => {
+    const f = elFile.files && elFile.files[0];
+    if (!f) return;
+    const url = URL.createObjectURL(f);
+    elImg.onload = () => {
+      imgLoaded = true;
+      resetSession();
+      renderDots();
     };
+    elImg.src = url;
+  });
+
+  function resetSession() {
+    taps = [];
+    bull = null;
+    elBullStatus.textContent = "Bull: not set";
+    elTapCount.textContent = "Holes: 0";
+    elWindDir.textContent = "—";
+    elWindClicks.textContent = "—";
+    elElevDir.textContent = "—";
+    elElevClicks.textContent = "—";
   }
 
-  function showResults() {
-    const r = computeCorrections();
-    if (!r) {
-      setText(elWindDir, "—");
-      setText(elElevDir, "—");
-      setText(elWindClicks, "—");
-      setText(elElevClicks, "—");
-      return;
+  // Tap to add holes; long-press (or 2-finger tap) to set bull (simple + reliable on iPad)
+  let pressTimer = null;
+
+  function clientXYToNorm(e) {
+    const rect = elImg.getBoundingClientRect();
+    const x = (e.clientX - rect.left) / rect.width;
+    const y = (e.clientY - rect.top) / rect.height;
+    return { x01: Math.max(0, Math.min(1, x)), y01: Math.max(0, Math.min(1, y)) };
+  }
+
+  function addTap(p) {
+    taps.push(p);
+    elTapCount.textContent = `Holes: ${taps.length}`;
+    renderDots();
+  }
+
+  function setBull(p) {
+    bull = p;
+    elBullStatus.textContent = "Bull: set";
+    renderDots();
+  }
+
+  elImg.addEventListener("pointerdown", (e) => {
+    if (!imgLoaded) return;
+
+    // Long press = set bull
+    pressTimer = setTimeout(() => {
+      setBull(clientXYToNorm(e));
+      pressTimer = null;
+    }, 450);
+  });
+
+  elImg.addEventListener("pointerup", (e) => {
+    if (!imgLoaded) return;
+    if (pressTimer) {
+      clearTimeout(pressTimer);
+      pressTimer = null;
+
+      // Normal tap = add hole
+      addTap(clientXYToNorm(e));
+    }
+  });
+
+  function renderDots() {
+    elDots.innerHTML = "";
+    const rect = elImg.getBoundingClientRect();
+
+    function dot(x01, y01, cls) {
+      const d = document.createElement("div");
+      d.className = cls;
+      d.style.position = "absolute";
+      d.style.left = `${x01 * rect.width}px`;
+      d.style.top = `${y01 * rect.height}px`;
+      d.style.width = "14px";
+      d.style.height = "14px";
+      d.style.borderRadius = "999px";
+      d.style.transform = "translate(-50%, -50%)";
+      d.style.border = "2px solid rgba(255,255,255,0.85)";
+      d.style.boxShadow = "0 0 0 4px rgba(0,0,0,0.25)";
+      return d;
     }
 
-    setText(elWindDir, r.windDir);
-    setText(elElevDir, r.elevDir);
-    setText(elWindClicks, round2(r.windClicksAbs));
-    setText(elElevClicks, round2(r.elevClicksAbs));
-  }
+    // Bull (yellow)
+    if (bull) {
+      const b = dot(bull.x01, bull.y01);
+      b.style.background = "rgba(255,215,0,0.95)";
+      elDots.appendChild(b);
+    }
 
-  // --- SEC generator (with vendor stamp)
-  function loadImage(src) {
-    return new Promise((resolve, reject) => {
-      const img = new Image();
-      img.onload = () => resolve(img);
-      img.onerror = reject;
-      img.src = src;
+    // Holes (green)
+    taps.forEach((p) => {
+      const h = dot(p.x01, p.y01);
+      h.style.background = "rgba(0,255,180,0.85)";
+      elDots.appendChild(h);
     });
   }
 
-  async function drawVendorOnSEC(ctx, W, H) {
-    if (!VENDOR || !VENDOR.logo) return;
+  // Controls
+  elUndo.addEventListener("click", () => {
+    if (taps.length) taps.pop();
+    elTapCount.textContent = `Holes: ${taps.length}`;
+    renderDots();
+  });
 
-    try {
-      const logo = await loadImage(VENDOR.logo);
+  elClear.addEventListener("click", () => {
+    resetSession();
+    renderDots();
+  });
 
-      const pad = 36;
-      const maxH = 70;
-      const scale = maxH / logo.height;
-      const w = logo.width * scale;
-      const h = logo.height * scale;
-
-      const x = W - w - pad;
-      const y = pad;
-
-      ctx.save();
-      ctx.globalAlpha = 0.95;
-      ctx.drawImage(logo, x, y, w, h);
-      ctx.restore();
-    } catch (e) {
-      // ignore
-    }
+  // ----------------------------
+  // Results (placeholder directions + two-decimals)
+  // Replace this section with your real math if needed.
+  // ----------------------------
+  function two(n) {
+    return (Math.round(n * 100) / 100).toFixed(2);
   }
 
-  async function downloadSEC() {
-    const r = computeCorrections();
-    if (!r) return;
+  elShow.addEventListener("click", () => {
+    if (!bull || taps.length < 1) return;
 
+    // Fake output (keeps your UI flowing). Swap with real computed clicks.
+    // Signed deltas: bull - avg
+    const avg = taps.reduce((a,p)=>({x:a.x+p.x01, y:a.y+p.y01}), {x:0,y:0});
+    avg.x /= taps.length; avg.y /= taps.length;
+
+    const dx = bull.x01 - avg.x;   // + = need RIGHT
+    const dy = bull.y01 - avg.y;   // + = need DOWN (screen space)
+
+    const windDir = dx >= 0 ? "RIGHT" : "LEFT";
+    const elevDir = dy >= 0 ? "DOWN" : "UP";
+
+    // Scale into “click-like” numbers just to show format (two decimals)
+    const windClicks = Math.abs(dx) * 20;
+    const elevClicks = Math.abs(dy) * 20;
+
+    elWindDir.textContent = windDir;
+    elWindClicks.textContent = `${two(windClicks)} clicks`;
+    elElevDir.textContent = elevDir;
+    elElevClicks.textContent = `${two(elevClicks)} clicks`;
+  });
+
+  // ----------------------------
+  // SEC download (stamps vendor in SEC)
+  // ----------------------------
+  function drawVendorStamp(ctx, W, H) {
+    if (!vendorLogoImg || !vendorLogoImg.naturalWidth) return;
+
+    // Bottom-right stamp
+    const pad = Math.round(W * 0.03);
+    const maxW = Math.round(W * 0.28);
+    const maxH = Math.round(H * 0.10);
+
+    const iw = vendorLogoImg.naturalWidth;
+    const ih = vendorLogoImg.naturalHeight;
+    const scale = Math.min(maxW / iw, maxH / ih);
+
+    const w = Math.round(iw * scale);
+    const h = Math.round(ih * scale);
+
+    const x = W - pad - w;
+    const y = H - pad - h;
+
+    ctx.globalAlpha = 0.95;
+    ctx.drawImage(vendorLogoImg, x, y, w, h);
+    ctx.globalAlpha = 1;
+  }
+
+  elDownload.addEventListener("click", () => {
+    // Build a simple SEC image
     const W = secCanvas.width;
     const H = secCanvas.height;
 
-    // Background
     secCtx.clearRect(0, 0, W, H);
     secCtx.fillStyle = "#0b0f14";
     secCtx.fillRect(0, 0, W, H);
 
     // Title
-    secCtx.fillStyle = "#e6eefc";
-    secCtx.font = "bold 54px system-ui, -apple-system, Segoe UI, Roboto, Arial";
-    secCtx.fillText("Shooter Experience Card", 60, 110);
+    secCtx.fillStyle = "#e6edf3";
+    secCtx.font = "bold 52px system-ui, -apple-system, Segoe UI, Roboto, Arial";
+    secCtx.fillText("Shooter Experience Card (SEC)", 60, 90);
 
-    // Vendor name line (optional)
-    if (VENDOR && VENDOR.name) {
-      secCtx.fillStyle = "#9db2d6";
-      secCtx.font = "28px system-ui, -apple-system, Segoe UI, Roboto, Arial";
-      secCtx.fillText(VENDOR.name, 60, 160);
+    // Vendor name (top-right)
+    if (vendor && vendor.name) {
+      secCtx.font = "bold 36px system-ui, -apple-system, Segoe UI, Roboto, Arial";
+      secCtx.textAlign = "right";
+      secCtx.fillText(vendor.name, W - 60, 90);
+      secCtx.textAlign = "left";
     }
 
-    // Corrections
-    secCtx.fillStyle = "#e6eefc";
+    // Results summary
     secCtx.font = "bold 40px system-ui, -apple-system, Segoe UI, Roboto, Arial";
-    secCtx.fillText("Corrections (Scope)", 60, 260);
+    secCtx.fillText(`Windage: ${elWindDir.textContent}  ${elWindClicks.textContent}`, 60, 170);
+    secCtx.fillText(`Elevation: ${elElevDir.textContent}  ${elElevClicks.textContent}`, 60, 235);
 
-    secCtx.font = "34px system-ui, -apple-system, Segoe UI, Roboto, Arial";
-    secCtx.fillText(`Windage:  ${r.windDir}  →  ${round2(r.windClicksAbs)} clicks`, 60, 340);
-    secCtx.fillText(`Elevation: ${r.elevDir}  →  ${round2(r.elevClicksAbs)} clicks`, 60, 400);
+    // Vendor logo stamp (SEC placement)
+    drawVendorStamp(secCtx, W, H);
 
-    // Stamp vendor logo (top-right)
-    await drawVendorOnSEC(secCtx, W, H);
-
-    // Export
-    const a = document.createElement("a");
-    a.download = "SEC.png";
-    a.href = secCanvas.toDataURL("image/png");
-    a.click();
-  }
-
-  // --- Events
-  function onPickFile(file) {
-    if (!file) return;
-
-    if (objectUrl) URL.revokeObjectURL(objectUrl);
-    objectUrl = URL.createObjectURL(file);
-
-    elImg.src = objectUrl;
-    imageReady = true;
-
-    bull = null;
-    taps = [];
-    setBullStatus();
-    setTapCount();
-    redrawDots();
-
-    setInstruction("Tap the bull (center) once. Then tap each hole.");
-  }
-
-  function onTap(evt) {
-    if (!imageReady) return;
-
-    const p = getNormFromEvent(evt);
-
-    if (!bull) {
-      bull = p;
-      setBullStatus();
-      redrawDots();
-      setInstruction("Now tap each hole.");
-      return;
-    }
-
-    taps.push(p);
-    setTapCount();
-    redrawDots();
-  }
-
-  // Wire input
-  elFile.addEventListener("change", (e) => onPickFile(e.target.files && e.target.files[0]));
-
-  // Tap handling (pointer)
-  elWrap.addEventListener("pointerdown", (e) => {
-    // Prevent iOS “double tap to zoom” weirdness
-    e.preventDefault();
-    onTap(e);
-  }, { passive: false });
-
-  elClear.addEventListener("click", () => {
-    bull = null;
-    taps = [];
-    setBullStatus();
-    setTapCount();
-    redrawDots();
-    setInstruction("Tap the bull (center) once. Then tap each hole.");
-    showResults();
+    // Download
+    secCanvas.toBlob((blob) => {
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = "SEC.png";
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(a.href), 1500);
+    }, "image/png");
   });
 
-  elUndo.addEventListener("click", () => {
-    if (taps.length > 0) {
-      taps.pop();
-      setTapCount();
-      redrawDots();
-      showResults();
-      return;
-    }
-    if (bull) {
-      bull = null;
-      setBullStatus();
-      redrawDots();
-      setInstruction("Tap the bull (center) once. Then tap each hole.");
-      showResults();
-    }
-  });
-
-  elShowResults.addEventListener("click", () => showResults());
-  elDownloadSEC.addEventListener("click", () => downloadSEC());
-
-  // --- Init
-  setBullStatus();
-  setTapCount();
-  setInstruction("Choose a photo. Then tap the bull (center) once, then tap each hole.");
+  // Boot
   loadVendor();
+
+  // If no image yet, prompt once (optional)
+  // promptPickPhoto();
 })();
