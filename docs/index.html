@@ -1,4 +1,4 @@
-<!-- docs/index.html (FULL REPLACEMENT) — Pilot clean: CHOOSE PHOTO hero; hides after load; SEC naming; no extra tip copy -->
+<!-- docs/index.html (FULL REPLACEMENT) — Adds Score, keeps “Target” only on button -->
 <!doctype html>
 <html lang="en">
 <head>
@@ -8,7 +8,7 @@
   <meta name="theme-color" content="#000000" />
   <title>Tap-n-Score™</title>
 
-  <link rel="stylesheet" href="./styles.css?v=20260122c" />
+  <link rel="stylesheet" href="./styles.css?v=20260124a" />
 </head>
 
 <body>
@@ -24,18 +24,16 @@
 
     <div class="subline">After-Shot Intelligence</div>
 
-    <!-- CARD 1: Choose photo (HERO) — hidden after photo loads -->
-    <section id="chooseCard" class="card">
+    <!-- CARD 1: Choose photo (HERO) -->
+    <section class="card">
       <div id="chooseTargetRow" class="chooseRow">
-
-        <!-- HERO button -->
         <label class="chooseBtn">
           <input id="photoInput" type="file" accept="image/*" />
-          <span>CHOOSE PHOTO</span>
+          <span>CHOOSE TARGET PHOTO</span>
         </label>
 
         <div id="fileName" class="fileName">No photo selected</div>
-        <div class="hint">Tip: include the full target in the frame. Keep the camera straight.</div>
+        <div class="hint">Tip: straight-on photo, fill the frame.</div>
 
         <!-- Mode stays visible -->
         <div id="settingsRow" class="settingsRow">
@@ -57,7 +55,6 @@
           </div>
         </div>
 
-        <!-- kept empty for layout safety -->
         <div id="instructionLine" class="instruction" style="display:none"></div>
       </div>
     </section>
@@ -79,14 +76,23 @@
         <button id="clearBtn" class="btn ghost" type="button">Clear</button>
         <button id="showBtn" class="btn primary" type="button" disabled>Show Results</button>
       </div>
+
+      <div class="tip">Bull first. Then holes. Scroll/drag won’t create dots.</div>
+      <div id="lockHint" class="lockHint hidden">Results locked. Undo/Clear to edit taps.</div>
     </section>
 
     <!-- CARD 3: Results -->
     <section id="resultsCard" class="card hidden" aria-live="polite">
       <div class="resultsTitle">Results</div>
 
+      <!-- Score first + most prominent -->
+      <div class="scoreBigRow">
+        <div class="scoreLabel">Score</div>
+        <div id="rScore" class="scoreBig scoreGood">—</div>
+      </div>
+
       <div class="corrBlock">
-        <div class="corrHdr">Corrections (Scope)</div>
+        <div class="corrHdr">Corrections</div>
 
         <div class="corrLine">
           Windage: <strong id="rWindDir">—</strong>
@@ -102,11 +108,11 @@
       </div>
 
       <div class="scoreRow">
-        <a id="downloadSecLink" class="btn secBtn hidden" download="SEC.png" href="#">Download SEC (PNG)</a>
+        <a id="downloadReceiptLink" class="btn receiptBtn hidden" download="SEC.png" href="#">Download/Keep SEC (PNG)</a>
       </div>
     </section>
 
-    <!-- Bottom Sheet (Details) -->
+    <!-- Bottom Sheet (optional) -->
     <div id="sheetBackdrop" class="sheetBackdrop hidden" aria-hidden="true"></div>
     <section id="bottomSheet" class="sheet hidden" role="dialog" aria-modal="true" aria-label="Details">
       <div class="sheetHandle" aria-hidden="true"></div>
@@ -123,11 +129,8 @@
       </div>
     </section>
 
-    <!-- Tiny version label for pilot support -->
-    <footer class="footerNote">v20260122c</footer>
-
   </main>
 
-  <script src="./index.js?v=20260122c"></script>
+  <script src="./index.js?v=20260124a"></script>
 </body>
 </html>
