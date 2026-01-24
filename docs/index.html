@@ -1,4 +1,3 @@
-<!-- docs/index.html (FULL REPLACEMENT) — Vendor card top + vendor card in results -->
 <!doctype html>
 <html lang="en">
 <head>
@@ -8,149 +7,111 @@
   <meta name="theme-color" content="#000000" />
   <title>Tap-n-Score™</title>
 
-  <link rel="stylesheet" href="./styles.css?v=20260124b" />
+  <link rel="stylesheet" href="./styles.css?v=20260124a" />
 </head>
 
 <body>
   <main class="page">
 
-    <!-- Top bar -->
     <header class="topbar">
-      <div class="brand">
-        <span class="bRed">TAP</span><span class="bW">-N-</span><span class="bBlue">SCORE</span><span class="bW tm">™</span>
+      <div class="brandBlock">
+        <div class="brand">
+          <span class="bRed">TAP</span><span class="bW">-N-</span><span class="bBlue">SCORE</span><span class="tm">™</span>
+        </div>
+        <div class="subline">After-Shot Intelligence</div>
+
+        <!-- Vendor row -->
+        <div class="vendorRow" aria-label="Vendor">
+          <span class="vendorLabel">Vendor</span>
+          <img id="vendorLogo" class="vendorLogo" alt="Vendor logo" />
+        </div>
       </div>
+
       <button id="detailsBtn" class="detailsBtn hidden" type="button">Details</button>
     </header>
 
-    <div class="subline">After-Shot Intelligence</div>
-
-    <!-- VENDOR CALLING CARD (TOP LOCATION) -->
-    <a id="vendorCardTop" class="vendorCard hidden" href="#" target="_blank" rel="noopener noreferrer" aria-label="Vendor link (top)">
-      <img id="vendorLogoTop" class="vendorLogo" alt="Vendor logo" />
-      <div class="vendorMeta">
-        <div id="vendorNameTop" class="vendorName">Vendor</div>
-        <div class="vendorLine">Tap-n-Score Pilot</div>
-      </div>
-      <div class="vendorChevron" aria-hidden="true">›</div>
-    </a>
-
-    <!-- CARD 1: Choose photo (HERO) -->
     <section class="card">
-      <div id="chooseTargetRow" class="chooseRow">
-        <label class="chooseBtn">
-          <input id="photoInput" type="file" accept="image/*" />
-          <span>CHOOSE TARGET PHOTO</span>
-        </label>
 
-        <div id="fileName" class="fileName">No photo selected</div>
-        <div class="hint">Tip: straight-on photo, fill the frame.</div>
-
-        <!-- Mode stays visible -->
-        <div id="settingsRow" class="settingsRow">
-          <div class="seg">
-            <button id="modeRifle" class="segBtn active" type="button">Rifle</button>
-            <button id="modePistol" class="segBtn" type="button">Pistol</button>
-          </div>
-
-          <!-- Hidden for now (behind the scenes) -->
-          <div id="hiddenSettings" style="display:none">
-            <label for="distanceYds">Distance</label>
-            <input id="distanceYds" type="number" value="100" />
-            <label for="clickValue">Click</label>
-            <select id="clickValue">
-              <option value="0.25" selected>Quarter per click</option>
-              <option value="0.5">Half per click</option>
-              <option value="0.125">Eighth per click</option>
-            </select>
-          </div>
-        </div>
-
-        <div id="instructionLine" class="instruction" style="display:none"></div>
+      <div class="chooseRow">
+        <label class="fileBtn" for="photoInput">Choose photo</label>
+        <input id="photoInput" type="file" accept="image/*" />
+        <div id="fileName" class="fileName" aria-live="polite">No photo selected</div>
       </div>
-    </section>
 
-    <!-- CARD 2: Photo interaction -->
-    <section class="card">
-      <div id="targetWrap" class="targetWrap" aria-label="Photo and tap layer">
-        <img id="targetImg" class="targetImg" alt="Photo" />
+      <div class="modeRow" aria-label="Mode">
+        <button id="modeRifle" class="modeBtn active" type="button">Rifle</button>
+        <button id="modePistol" class="modeBtn" type="button">Pistol</button>
+      </div>
+
+      <!-- Hidden behind-the-scenes inputs -->
+      <input id="distanceYds" type="number" value="100" style="display:none" />
+      <input id="clickValue" type="number" value="0.25" step="0.01" style="display:none" />
+
+      <div id="targetWrap" class="targetWrap" aria-label="Target image">
+        <img id="targetImg" class="targetImg" alt="" />
         <div id="dotsLayer" class="dotsLayer" aria-hidden="true"></div>
       </div>
 
       <div class="statusRow">
-        <div class="chip">Bull: <span id="bullState">not set</span></div>
-        <div class="chip">Holes: <span id="holeCount">0</span></div>
+        <div class="pill">Bull: <span id="bullState">not set</span></div>
+        <div class="pill">Holes: <span id="holeCount">0</span></div>
       </div>
 
       <div class="btnRow">
-        <button id="undoBtn" class="btn ghost" type="button">Undo</button>
-        <button id="clearBtn" class="btn ghost" type="button">Clear</button>
+        <button id="undoBtn" class="btn" type="button">Undo</button>
+        <button id="clearBtn" class="btn" type="button">Clear</button>
         <button id="showBtn" class="btn primary" type="button" disabled>Show Results</button>
       </div>
 
-      <div class="tip">Bull first. Then holes. Scroll/drag won’t create dots.</div>
-      <div id="lockHint" class="lockHint hidden">Results locked. Undo/Clear to edit taps.</div>
+      <div id="lockHint" class="lockHint hidden">Locked. Undo/Clear to edit.</div>
     </section>
 
-    <!-- CARD 3: Results -->
-    <section id="resultsCard" class="card hidden" aria-live="polite">
+    <section id="resultsCard" class="card hidden">
       <div class="resultsTitle">Results</div>
 
-      <!-- Score first + most prominent -->
-      <div class="scoreBigRow">
-        <div class="scoreLabel">Score</div>
-        <div id="rScore" class="scoreBig scoreGood">—</div>
-      </div>
-
-      <div class="corrBlock">
-        <div class="corrHdr">Corrections</div>
-
-        <div class="corrLine">
-          Windage: <strong id="rWindDir">—</strong>
-          <span class="arrow">→</span>
-          <span id="rWindClk">—</span>
+      <div class="resultsGrid">
+        <div class="scoreCard">
+          <div class="scoreLabel">Score</div>
+          <div id="rScore" class="scoreValue">0</div>
         </div>
 
-        <div class="corrLine">
-          Elevation: <strong id="rElevDir">—</strong>
-          <span class="arrow">→</span>
-          <span id="rElevClk">—</span>
+        <div class="corrCard">
+          <div class="corrTitle">Corrections (Scope)</div>
+
+          <div class="corrRow">
+            <div class="corrLabel">Windage:</div>
+            <div id="rWindDir" class="corrDir">—</div>
+            <div class="corrArrow">→</div>
+            <div id="rWindClk" class="corrClk">0.00 clicks</div>
+          </div>
+
+          <div class="corrRow">
+            <div class="corrLabel">Elevation:</div>
+            <div id="rElevDir" class="corrDir">—</div>
+            <div class="corrArrow">→</div>
+            <div id="rElevClk" class="corrClk">0.00 clicks</div>
+          </div>
         </div>
       </div>
 
-      <div class="scoreRow">
-        <a id="downloadReceiptLink" class="btn receiptBtn hidden" download="SEC.png" href="#">Download/Keep SEC (PNG)</a>
-      </div>
-
-      <!-- VENDOR CALLING CARD (RESULTS LOCATION) -->
-      <a id="vendorCardResults" class="vendorCard vendorCardResults hidden" href="#" target="_blank" rel="noopener noreferrer" aria-label="Vendor link (results)">
-        <img id="vendorLogoResults" class="vendorLogo" alt="Vendor logo" />
-        <div class="vendorMeta">
-          <div id="vendorNameResults" class="vendorName">Vendor</div>
-          <div class="vendorLine">Visit vendor site</div>
-        </div>
-        <div class="vendorChevron" aria-hidden="true">›</div>
-      </a>
+      <a id="downloadReceiptLink" class="dlBtn hidden" download="SEC.png" href="#">Download SEC (PNG)</a>
     </section>
 
-    <!-- Bottom Sheet (optional) -->
+    <!-- Bottom Sheet -->
     <div id="sheetBackdrop" class="sheetBackdrop hidden" aria-hidden="true"></div>
-    <section id="bottomSheet" class="sheet hidden" role="dialog" aria-modal="true" aria-label="Details">
-      <div class="sheetHandle" aria-hidden="true"></div>
-      <div class="sheetHeader">
+    <aside id="bottomSheet" class="bottomSheet hidden" role="dialog" aria-label="Details">
+      <div class="sheetHead">
         <div class="sheetTitle">Details</div>
-        <button id="sheetClose" class="sheetClose" type="button">Close</button>
+        <button id="sheetClose" class="sheetClose" type="button">✕</button>
       </div>
       <div class="sheetBody">
-        <ul class="bullets">
-          <li>Tap the bull center.</li>
-          <li>Tap each bullet hole.</li>
-          <li>We output direction + clicks.</li>
-        </ul>
+        <p class="sheetP"><b>Tap bull</b> once, then tap each hit.</p>
+        <p class="sheetP">Press <b>Show Results</b> to get click corrections and your SEC.</p>
       </div>
-    </section>
+    </aside>
 
   </main>
 
-  <script src="./index.js?v=20260124b"></script>
+  <script src="./index.js?v=20260124a"></script>
 </body>
 </html>
