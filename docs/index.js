@@ -1,4 +1,4 @@
-/* docs/index.js (FULL REPLACEMENT) — Locks Show Results + Adds Score on SEC */
+/* docs/index.js (FULL REPLACEMENT) — Vendor cards + Locks Show Results + Score on SEC */
 (() => {
   const $ = (id) => document.getElementById(id);
 
@@ -36,10 +36,64 @@
 
   const elReceiptLink = $("downloadReceiptLink");
 
+  // Vendor cards (TOP + RESULTS)
+  const elVendorCardTop = $("vendorCardTop");
+  const elVendorLogoTop = $("vendorLogoTop");
+  const elVendorNameTop = $("vendorNameTop");
+
+  const elVendorCardResults = $("vendorCardResults");
+  const elVendorLogoResults = $("vendorLogoResults");
+  const elVendorNameResults = $("vendorNameResults");
+
   // Bottom sheet
   const elBackdrop = $("sheetBackdrop");
   const elSheet = $("bottomSheet");
   const elSheetClose = $("sheetClose");
+
+  // --- Vendor config (NO guessing)
+  // Default uses your committed asset file + safe URL fallback.
+  // You can override via URL:
+  //   ?vendor=Baker%20Targets&vendorUrl=https%3A%2F%2Fexample.com
+  const VENDOR_LOGO_PATH = "./assets/vendor-baker-logo.png";
+
+  function getVendorConfig(){
+    const p = new URLSearchParams(location.search);
+    const name = (p.get("vendor") || "Baker Targets").trim(); // you can change later
+    const url = (p.get("vendorUrl") || "").trim();           // default empty => no external link
+    return { name, url, logoPath: VENDOR_LOGO_PATH };
+  }
+
+  function applyVendorUI(){
+    const v = getVendorConfig();
+
+    // Logo sources
+    if (elVendorLogoTop) elVendorLogoTop.src = v.logoPath;
+    if (elVendorLogoResults) elVendorLogoResults.src = v.logoPath;
+
+    // Names
+    if (elVendorNameTop) elVendorNameTop.textContent = v.name || "Vendor";
+    if (elVendorNameResults) elVendorNameResults.textContent = v.name || "Vendor";
+
+    // Links: if no vendorUrl, keep clickable but safe (no nav)
+    const href = v.url ? v.url : "#";
+    const enableLink = Boolean(v.url);
+
+    // Top card
+    if (elVendorCardTop){
+      elVendorCardTop.href = href;
+      elVendorCardTop.classList.remove("hidden");
+      elVendorCardTop.style.pointerEvents = enableLink ? "auto" : "none";
+      elVendorCardTop.style.opacity = enableLink ? "1" : ".92";
+    }
+
+    // Results card (shown later; we still wire now)
+    if (elVendorCardResults){
+      elVendorCardResults.href = href;
+      // visibility toggled when results show
+      elVendorCardResults.style.pointerEvents = enableLink ? "auto" : "none";
+      elVendorCardResults.style.opacity = enableLink ? "1" : ".92";
+    }
+  }
 
   // --- State
   let selectedFile = null;
@@ -117,6 +171,9 @@
     elResults.classList.add("hidden");
     elReceiptLink.classList.add("hidden");
     elReceiptLink.href = "#";
+
+    // Hide vendor results card until results return
+    if (elVendorCardResults) elVendorCardResults.classList.add("hidden");
   }
 
   function resetSession(keepImage){
@@ -168,7 +225,6 @@
 
   function applyScoreClass(score){
     rScore.classList.remove("scoreGood", "scoreMid", "scorePoor");
-    // Dark green for high, yellow for mid, red for low
     if (score >= 85) rScore.classList.add("scoreGood");
     else if (score >= 60) rScore.classList.add("scoreMid");
     else rScore.classList.add("scorePoor");
@@ -241,7 +297,6 @@
   elUndo.addEventListener("click", () => {
     if (!bull && holes.length === 0) return;
 
-    // Any edit unlocks results
     if (resultsLocked) unlockEdits();
 
     if (holes.length > 0){
@@ -258,7 +313,6 @@
   });
 
   elClear.addEventListener("click", () => {
-    // Clear is a hard reset; also unlocks
     resultsLocked = false;
 
     elFile.value = "";
@@ -276,11 +330,9 @@
     if (resultsLocked) return;
     if (!bull || holes.length < 1) return;
 
-    // LOCK immediately to prevent spam + poisoning
     resultsLocked = true;
     updateStatus();
 
-    // Behind-the-scenes values (UI hidden)
     const distance = Math.max(1, Number(elDistance?.value || 100));
     const click = Number(elClickValue?.value || 0.25);
 
@@ -321,13 +373,19 @@
 
     elResults.classList.remove("hidden");
 
-    // Build SEC PNG (includes Score first + colored)
+    // Show vendor calling card in results location
+    if (elVendorCardResults) elVendorCardResults.classList.remove("hidden");
+
+    // Build SEC PNG (includes Score first + vendor)
     try {
+      const v = getVendorConfig();
       const png = await buildSecPng({
         mode: getMode(),
         score,
         windDir, windClicks,
-        elevDir, elevClicks
+        elevDir, elevClicks,
+        vendorName: v.name,
+        vendorLogoPath: v.logoPath
       });
       elReceiptLink.href = png;
       elReceiptLink.classList.remove("hidden");
@@ -364,7 +422,7 @@
   elSheetClose?.addEventListener("click", closeSheet);
   elBackdrop?.addEventListener("click", closeSheet);
 
-  // --- SEC PNG builder
+  // --- SEC PNG builder (with vendor logo)
   async function buildSecPng(s) {
     const W = 1200, H = 675;
     const c = document.createElement("canvas");
@@ -386,6 +444,29 @@
     ctx.fillStyle = "rgba(255,255,255,.72)";
     ctx.font = "650 26px system-ui, -apple-system, Segoe UI, Roboto, Arial";
     ctx.fillText("Shooter Experience Card (SEC)", 60, 128);
+
+    // Vendor block (top-right) — uses your committed asset file
+    try {
+      const logo = await loadImage(s.vendorLogoPath);
+      // Logo background
+      roundRect(ctx, 920, 48, 220, 96, 18);
+      ctx.fillStyle = "rgba(255,255,255,.04)"; ctx.fill();
+      ctx.strokeStyle = "rgba(255,255,255,.10)"; ctx.lineWidth = 2; ctx.stroke();
+
+      // Draw logo
+      ctx.drawImage(logo, 936, 62, 68, 68);
+
+      // Vendor name
+      ctx.fillStyle = "rgba(255,255,255,.90)";
+      ctx.font = "900 22px system-ui, -apple-system, Segoe UI, Roboto, Arial";
+      ctx.fillText(String(s.vendorName || "Vendor"), 1014, 92);
+
+      ctx.fillStyle = "rgba(255,255,255,.62)";
+      ctx.font = "700 16px system-ui, -apple-system, Segoe UI, Roboto, Arial";
+      ctx.fillText("Pilot Vendor", 1014, 114);
+    } catch {
+      // If logo can't load, we simply omit the vendor box.
+    }
 
     // Panel
     const x=60, y=170, w=1080, h=450;
@@ -417,7 +498,7 @@
     ctx.fillText(`Windage: ${s.windDir} → ${fmtClicks(s.windClicks)} clicks`, x+34, y+290);
     ctx.fillText(`Elevation: ${s.elevDir} → ${fmtClicks(s.elevClicks)} clicks`, x+34, y+345);
 
-    // Mode (no decimals)
+    // Mode
     ctx.fillStyle = "rgba(255,255,255,.70)";
     ctx.font = "750 24px system-ui, -apple-system, Segoe UI, Roboto, Arial";
     ctx.fillText(`Mode: ${s.mode}`, x+34, y+410);
@@ -436,7 +517,17 @@
     ctx.closePath();
   }
 
+  function loadImage(src){
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = () => reject(new Error("image load failed"));
+      img.src = src;
+    });
+  }
+
   // --- init
+  applyVendorUI();
   setMode(getMode());
   resetSession(false);
 })();
