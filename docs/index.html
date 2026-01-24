@@ -6,89 +6,83 @@
   <meta name="color-scheme" content="dark" />
   <meta name="theme-color" content="#000000" />
   <title>Tap-n-Score™</title>
-
   <link rel="stylesheet" href="./styles.css" />
 </head>
 
 <body>
   <main class="page">
 
-    <!-- Header -->
-    <header class="topBar">
-      <div class="brandBlock">
-        <div class="brandTitle" aria-label="Tap-n-Score brand">
+    <!-- Top brand row -->
+    <header class="brandRow">
+      <div class="brandLeft">
+        <div class="brand">
           <span class="brandTap">TAP</span><span class="brandN">-N-</span><span class="brandScore">SCORE</span><span class="brandTm">™</span>
         </div>
-        <div class="brandSub">After-Shot Intelligence</div>
+        <div class="subtitle">After-Shot Intelligence</div>
       </div>
 
-      <div class="topRight">
-        <!-- Vendor (B: vendor.json) -->
-        <a id="vendorLink" class="vendorLink" href="#" target="_blank" rel="noopener" style="display:none;">
-          <img id="vendorLogo" class="vendorLogo" alt="Vendor logo" />
-        </a>
-
-        <button id="detailsBtn" class="detailsBtn" type="button">Details</button>
-      </div>
+      <!-- Vendor slot (INPUT page placement) -->
+      <a id="vendorLink" class="vendorSlot" href="#" target="_blank" rel="noopener">
+        <img id="vendorLogo" class="vendorLogo" alt="Vendor logo" />
+      </a>
     </header>
 
-    <!-- Image + tap area -->
+    <!-- Target area -->
     <section class="card">
-      <div id="targetWrap" class="targetWrap" aria-label="Target image tap area">
-        <img id="targetImg" class="targetImg" alt="Target preview" />
+      <div class="targetWrap" id="targetWrap">
+        <img id="targetImg" alt="Target" />
         <div id="dotsLayer" class="dotsLayer" aria-hidden="true"></div>
       </div>
 
-      <div class="controlsRow">
-        <label class="fileBtn">
-          <input id="photoInput" type="file" accept="image/*" />
-          Choose Photo
-        </label>
-
-        <div class="pillRow">
-          <div class="pill"><span class="pillLabel">Bull:</span> <span id="bullStatus">not set</span></div>
-          <div class="pill"><span class="pillLabel">Holes:</span> <span id="tapCount">0</span></div>
-        </div>
-      </div>
-
-      <div id="instructionLine" class="instructionLine">
-        Choose a photo. Then tap the bull (center) once, then tap each hole.
+      <div class="pillRow">
+        <div class="pill" id="bullStatus">Bull: not set</div>
+        <div class="pill" id="tapCount">Holes: 0</div>
       </div>
 
       <div class="btnRow">
-        <button id="undoBtn" class="btnGhost" type="button">Undo</button>
-        <button id="clearTapsBtn" class="btnGhost" type="button">Clear</button>
-        <button id="showResultsBtn" class="btnPrimary" type="button">Show Results</button>
+        <button id="undoBtn" class="btn">Undo</button>
+        <button id="clearTapsBtn" class="btn">Clear</button>
+        <button id="showResultsBtn" class="btnPrimary">Show Results</button>
       </div>
     </section>
 
     <!-- Results -->
-    <section class="card">
-      <h2 class="sectionTitle">Results</h2>
+    <section class="card" id="resultsCard">
+      <h2 class="h2">Results</h2>
 
-      <div class="resultBlock">
-        <div class="resultTitle">Corrections (Scope)</div>
+      <div class="resultsBlock">
+        <div class="resultsTitle">Corrections (Scope)</div>
 
         <div class="resultRow">
           <div class="resultLabel">Windage:</div>
-          <div class="resultDir"><span id="windDir">—</span></div>
+          <div class="resultDir" id="windDir">—</div>
           <div class="resultArrow">→</div>
-          <div class="resultVal"><span id="windClicks">—</span> clicks</div>
+          <div class="resultVal" id="windClicks">—</div>
         </div>
 
         <div class="resultRow">
           <div class="resultLabel">Elevation:</div>
-          <div class="resultDir"><span id="elevDir">—</span></div>
+          <div class="resultDir" id="elevDir">—</div>
           <div class="resultArrow">→</div>
-          <div class="resultVal"><span id="elevClicks">—</span> clicks</div>
+          <div class="resultVal" id="elevClicks">—</div>
         </div>
       </div>
 
-      <button id="downloadSecBtn" class="btnPrimary wide" type="button">Download SEC (PNG)</button>
+      <button id="downloadSecBtn" class="btnWide">Download SEC (PNG)</button>
+
+      <!-- Vendor slot (SEC placement) -->
+      <div class="secVendorRow">
+        <a id="vendorLink2" class="vendorSlot" href="#" target="_blank" rel="noopener">
+          <img id="vendorLogo2" class="vendorLogo" alt="Vendor logo" />
+        </a>
+      </div>
     </section>
 
-    <!-- Hidden canvas for SEC -->
-    <canvas id="secCanvas" width="1080" height="1350" style="display:none;"></canvas>
+    <!-- Hidden file input -->
+    <input id="photoInput" type="file" accept="image/*" />
+
+    <!-- Canvas for SEC -->
+    <canvas id="secCanvas" width="1400" height="900" style="display:none;"></canvas>
 
   </main>
 
