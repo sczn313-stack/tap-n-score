@@ -7,111 +7,91 @@
   <meta name="theme-color" content="#000000" />
   <title>Tap-n-Score™</title>
 
-  <link rel="stylesheet" href="./styles.css?v=20260124a" />
+  <link rel="stylesheet" href="./styles.css" />
 </head>
 
 <body>
   <main class="page">
 
-    <header class="topbar">
+    <!-- Header -->
+    <header class="topBar">
       <div class="brandBlock">
-        <div class="brand">
-          <span class="bRed">TAP</span><span class="bW">-N-</span><span class="bBlue">SCORE</span><span class="tm">™</span>
+        <div class="brandTitle" aria-label="Tap-n-Score brand">
+          <span class="brandTap">TAP</span><span class="brandN">-N-</span><span class="brandScore">SCORE</span><span class="brandTm">™</span>
         </div>
-        <div class="subline">After-Shot Intelligence</div>
-
-        <!-- Vendor row -->
-        <div class="vendorRow" aria-label="Vendor">
-          <span class="vendorLabel">Vendor</span>
-          <img id="vendorLogo" class="vendorLogo" alt="Vendor logo" />
-        </div>
+        <div class="brandSub">After-Shot Intelligence</div>
       </div>
 
-      <button id="detailsBtn" class="detailsBtn hidden" type="button">Details</button>
+      <div class="topRight">
+        <!-- Vendor (B: vendor.json) -->
+        <a id="vendorLink" class="vendorLink" href="#" target="_blank" rel="noopener" style="display:none;">
+          <img id="vendorLogo" class="vendorLogo" alt="Vendor logo" />
+        </a>
+
+        <button id="detailsBtn" class="detailsBtn" type="button">Details</button>
+      </div>
     </header>
 
+    <!-- Image + tap area -->
     <section class="card">
-
-      <div class="chooseRow">
-        <label class="fileBtn" for="photoInput">Choose photo</label>
-        <input id="photoInput" type="file" accept="image/*" />
-        <div id="fileName" class="fileName" aria-live="polite">No photo selected</div>
-      </div>
-
-      <div class="modeRow" aria-label="Mode">
-        <button id="modeRifle" class="modeBtn active" type="button">Rifle</button>
-        <button id="modePistol" class="modeBtn" type="button">Pistol</button>
-      </div>
-
-      <!-- Hidden behind-the-scenes inputs -->
-      <input id="distanceYds" type="number" value="100" style="display:none" />
-      <input id="clickValue" type="number" value="0.25" step="0.01" style="display:none" />
-
-      <div id="targetWrap" class="targetWrap" aria-label="Target image">
-        <img id="targetImg" class="targetImg" alt="" />
+      <div id="targetWrap" class="targetWrap" aria-label="Target image tap area">
+        <img id="targetImg" class="targetImg" alt="Target preview" />
         <div id="dotsLayer" class="dotsLayer" aria-hidden="true"></div>
       </div>
 
-      <div class="statusRow">
-        <div class="pill">Bull: <span id="bullState">not set</span></div>
-        <div class="pill">Holes: <span id="holeCount">0</span></div>
+      <div class="controlsRow">
+        <label class="fileBtn">
+          <input id="photoInput" type="file" accept="image/*" />
+          Choose Photo
+        </label>
+
+        <div class="pillRow">
+          <div class="pill"><span class="pillLabel">Bull:</span> <span id="bullStatus">not set</span></div>
+          <div class="pill"><span class="pillLabel">Holes:</span> <span id="tapCount">0</span></div>
+        </div>
+      </div>
+
+      <div id="instructionLine" class="instructionLine">
+        Choose a photo. Then tap the bull (center) once, then tap each hole.
       </div>
 
       <div class="btnRow">
-        <button id="undoBtn" class="btn" type="button">Undo</button>
-        <button id="clearBtn" class="btn" type="button">Clear</button>
-        <button id="showBtn" class="btn primary" type="button" disabled>Show Results</button>
+        <button id="undoBtn" class="btnGhost" type="button">Undo</button>
+        <button id="clearTapsBtn" class="btnGhost" type="button">Clear</button>
+        <button id="showResultsBtn" class="btnPrimary" type="button">Show Results</button>
       </div>
-
-      <div id="lockHint" class="lockHint hidden">Locked. Undo/Clear to edit.</div>
     </section>
 
-    <section id="resultsCard" class="card hidden">
-      <div class="resultsTitle">Results</div>
+    <!-- Results -->
+    <section class="card">
+      <h2 class="sectionTitle">Results</h2>
 
-      <div class="resultsGrid">
-        <div class="scoreCard">
-          <div class="scoreLabel">Score</div>
-          <div id="rScore" class="scoreValue">0</div>
+      <div class="resultBlock">
+        <div class="resultTitle">Corrections (Scope)</div>
+
+        <div class="resultRow">
+          <div class="resultLabel">Windage:</div>
+          <div class="resultDir"><span id="windDir">—</span></div>
+          <div class="resultArrow">→</div>
+          <div class="resultVal"><span id="windClicks">—</span> clicks</div>
         </div>
 
-        <div class="corrCard">
-          <div class="corrTitle">Corrections (Scope)</div>
-
-          <div class="corrRow">
-            <div class="corrLabel">Windage:</div>
-            <div id="rWindDir" class="corrDir">—</div>
-            <div class="corrArrow">→</div>
-            <div id="rWindClk" class="corrClk">0.00 clicks</div>
-          </div>
-
-          <div class="corrRow">
-            <div class="corrLabel">Elevation:</div>
-            <div id="rElevDir" class="corrDir">—</div>
-            <div class="corrArrow">→</div>
-            <div id="rElevClk" class="corrClk">0.00 clicks</div>
-          </div>
+        <div class="resultRow">
+          <div class="resultLabel">Elevation:</div>
+          <div class="resultDir"><span id="elevDir">—</span></div>
+          <div class="resultArrow">→</div>
+          <div class="resultVal"><span id="elevClicks">—</span> clicks</div>
         </div>
       </div>
 
-      <a id="downloadReceiptLink" class="dlBtn hidden" download="SEC.png" href="#">Download SEC (PNG)</a>
+      <button id="downloadSecBtn" class="btnPrimary wide" type="button">Download SEC (PNG)</button>
     </section>
 
-    <!-- Bottom Sheet -->
-    <div id="sheetBackdrop" class="sheetBackdrop hidden" aria-hidden="true"></div>
-    <aside id="bottomSheet" class="bottomSheet hidden" role="dialog" aria-label="Details">
-      <div class="sheetHead">
-        <div class="sheetTitle">Details</div>
-        <button id="sheetClose" class="sheetClose" type="button">✕</button>
-      </div>
-      <div class="sheetBody">
-        <p class="sheetP"><b>Tap bull</b> once, then tap each hit.</p>
-        <p class="sheetP">Press <b>Show Results</b> to get click corrections and your SEC.</p>
-      </div>
-    </aside>
+    <!-- Hidden canvas for SEC -->
+    <canvas id="secCanvas" width="1080" height="1350" style="display:none;"></canvas>
 
   </main>
 
-  <script src="./index.js?v=20260124a"></script>
+  <script src="./index.js"></script>
 </body>
 </html>
