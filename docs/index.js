@@ -1,533 +1,363 @@
-/* docs/index.js (FULL REPLACEMENT) — Vendor cards + Locks Show Results + Score on SEC */
+/* ============================================================
+   Tap-n-Score™ (docs/index.js) — FULL REPLACEMENT
+   - Adds Vendor B (vendor.json) to:
+     1) Input UI (vendor logo/link)
+     2) SEC PNG (stamped logo)
+   - Keeps basic flow:
+     Choose photo -> tap bull once -> tap holes -> show results -> download SEC
+   ============================================================ */
+
 (() => {
   const $ = (id) => document.getElementById(id);
 
-  // --- UI
-  const elDetailsBtn = $("detailsBtn");
+  // --- Elements
   const elFile = $("photoInput");
-  const elFileName = $("fileName");
-
-  const elModeRifle = $("modeRifle");
-  const elModePistol = $("modePistol");
-
-  // Hidden inputs (behind the scenes)
-  const elDistance = $("distanceYds");
-  const elClickValue = $("clickValue");
-
-  const elWrap = $("targetWrap");
   const elImg = $("targetImg");
   const elDots = $("dotsLayer");
-
-  const elBullState = $("bullState");
-  const elHoleCount = $("holeCount");
-
+  const elTapCount = $("tapCount");
+  const elClear = $("clearTapsBtn");
   const elUndo = $("undoBtn");
-  const elClear = $("clearBtn");
-  const elShow = $("showBtn");
+  const elInstruction = $("instructionLine");
+  const elWrap = $("targetWrap");
+  const elBullStatus = $("bullStatus");
+  const elShowResults = $("showResultsBtn");
 
-  const elResults = $("resultsCard");
-  const elLockHint = $("lockHint");
+  const elWindDir = $("windDir");
+  const elElevDir = $("elevDir");
+  const elWindClicks = $("windClicks");
+  const elElevClicks = $("elevClicks");
 
-  const rScore = $("rScore");
-  const rWindDir = $("rWindDir");
-  const rWindClk = $("rWindClk");
-  const rElevDir = $("rElevDir");
-  const rElevClk = $("rElevClk");
+  const elVendorLink = $("vendorLink");
+  const elVendorLogo = $("vendorLogo");
 
-  const elReceiptLink = $("downloadReceiptLink");
-
-  // Vendor cards (TOP + RESULTS)
-  const elVendorCardTop = $("vendorCardTop");
-  const elVendorLogoTop = $("vendorLogoTop");
-  const elVendorNameTop = $("vendorNameTop");
-
-  const elVendorCardResults = $("vendorCardResults");
-  const elVendorLogoResults = $("vendorLogoResults");
-  const elVendorNameResults = $("vendorNameResults");
-
-  // Bottom sheet
-  const elBackdrop = $("sheetBackdrop");
-  const elSheet = $("bottomSheet");
-  const elSheetClose = $("sheetClose");
-
-  // --- Vendor config (NO guessing)
-  // Default uses your committed asset file + safe URL fallback.
-  // You can override via URL:
-  //   ?vendor=Baker%20Targets&vendorUrl=https%3A%2F%2Fexample.com
-  const VENDOR_LOGO_PATH = "./assets/vendor-baker-logo.png";
-
-  function getVendorConfig(){
-    const p = new URLSearchParams(location.search);
-    const name = (p.get("vendor") || "Baker Targets").trim(); // you can change later
-    const url = (p.get("vendorUrl") || "").trim();           // default empty => no external link
-    return { name, url, logoPath: VENDOR_LOGO_PATH };
-  }
-
-  function applyVendorUI(){
-    const v = getVendorConfig();
-
-    // Logo sources
-    if (elVendorLogoTop) elVendorLogoTop.src = v.logoPath;
-    if (elVendorLogoResults) elVendorLogoResults.src = v.logoPath;
-
-    // Names
-    if (elVendorNameTop) elVendorNameTop.textContent = v.name || "Vendor";
-    if (elVendorNameResults) elVendorNameResults.textContent = v.name || "Vendor";
-
-    // Links: if no vendorUrl, keep clickable but safe (no nav)
-    const href = v.url ? v.url : "#";
-    const enableLink = Boolean(v.url);
-
-    // Top card
-    if (elVendorCardTop){
-      elVendorCardTop.href = href;
-      elVendorCardTop.classList.remove("hidden");
-      elVendorCardTop.style.pointerEvents = enableLink ? "auto" : "none";
-      elVendorCardTop.style.opacity = enableLink ? "1" : ".92";
-    }
-
-    // Results card (shown later; we still wire now)
-    if (elVendorCardResults){
-      elVendorCardResults.href = href;
-      // visibility toggled when results show
-      elVendorCardResults.style.pointerEvents = enableLink ? "auto" : "none";
-      elVendorCardResults.style.opacity = enableLink ? "1" : ".92";
-    }
-  }
+  const elDownloadSEC = $("downloadSecBtn");
+  const secCanvas = $("secCanvas");
+  const secCtx = secCanvas.getContext("2d");
 
   // --- State
-  let selectedFile = null;
   let objectUrl = null;
+  let imageReady = false;
 
-  let bull = null;   // {x01,y01}
-  let holes = [];    // [{x01,y01}...]
+  let bull = null;     // {x,y} in image-space (0..1)
+  let taps = [];       // holes: [{x,y} in image-space]
 
-  // Lock state: once results shown, freeze taps until Undo/Clear changes state
-  let resultsLocked = false;
+  // Vendor B
+  let VENDOR = null;
 
-  // Tap intent
-  let down = null;
-  const TAP_MAX_MOVE_PX = 12;
-  const TAP_MAX_MS = 450;
-  let lastTapTs = 0;
-
-  // Internal size proxy until QR payload replaces it (NOT displayed)
-  const PAPER_W_IN = 8.5;
-  const PAPER_H_IN = 11.0;
-
+  // --- Helpers
   const clamp01 = (v) => Math.max(0, Math.min(1, v));
-  const clamp = (n, a, b) => Math.max(a, Math.min(b, n));
 
-  const fmtClicks = (n) => (Number.isFinite(n) ? n.toFixed(2) : "0.00");
-
-  function setMode(mode){
-    const isRifle = mode === "rifle";
-    elModeRifle.classList.toggle("active", isRifle);
-    elModePistol.classList.toggle("active", !isRifle);
-    try { localStorage.setItem("tns_mode", mode); } catch {}
+  function setText(el, txt) {
+    if (!el) return;
+    el.textContent = txt;
   }
 
-  function getMode(){
+  function setInstruction(txt) {
+    if (elInstruction) elInstruction.textContent = txt;
+  }
+
+  function setBullStatus() {
+    setText(elBullStatus, bull ? "set" : "not set");
+  }
+
+  function setTapCount() {
+    setText(elTapCount, String(taps.length));
+  }
+
+  function clearDots() {
+    if (elDots) elDots.innerHTML = "";
+  }
+
+  function dotAtNorm(x, y) {
+    // Dot positioned over image, using wrapper sizing.
+    // x,y are normalized to the displayed image area.
+    const dot = document.createElement("div");
+    dot.className = "tapDot";
+    dot.style.left = `${x * 100}%`;
+    dot.style.top = `${y * 100}%`;
+    elDots.appendChild(dot);
+  }
+
+  function bullAtNorm(x, y) {
+    const dot = document.createElement("div");
+    dot.className = "bullDot";
+    dot.style.left = `${x * 100}%`;
+    dot.style.top = `${y * 100}%`;
+    elDots.appendChild(dot);
+  }
+
+  function redrawDots() {
+    clearDots();
+    if (!imageReady) return;
+
+    if (bull) bullAtNorm(bull.x, bull.y);
+    taps.forEach(p => dotAtNorm(p.x, p.y));
+  }
+
+  function getNormFromEvent(evt) {
+    const rect = elWrap.getBoundingClientRect();
+    const x = clamp01((evt.clientX - rect.left) / rect.width);
+    const y = clamp01((evt.clientY - rect.top) / rect.height);
+    return { x, y };
+  }
+
+  function round2(n) {
+    return (Math.round(n * 100) / 100).toFixed(2);
+  }
+
+  // --- Vendor (B) loader (vendor.json is in docs root)
+  async function loadVendor() {
     try {
-      const m = localStorage.getItem("tns_mode");
-      return (m === "pistol" || m === "rifle") ? m : "rifle";
-    } catch {
-      return "rifle";
+      const res = await fetch("./vendor.json", { cache: "no-store" });
+      if (!res.ok) throw new Error("vendor.json not found");
+      const data = await res.json();
+
+      const id = data.activeVendorId;
+      const v = data.vendors && data.vendors[id];
+      if (!v) throw new Error("activeVendorId not in vendors");
+
+      VENDOR = {
+        id,
+        name: String(v.name || ""),
+        website: String(v.website || ""),
+        logo: String(v.logo || "")
+      };
+    } catch (e) {
+      VENDOR = null;
     }
+
+    applyVendorToUI();
   }
 
-  function showDetailsBtn(){
-    elDetailsBtn.classList.remove("hidden");
+  function applyVendorToUI() {
+    if (!elVendorLink || !elVendorLogo) return;
+
+    if (!VENDOR || !VENDOR.logo) {
+      elVendorLink.style.display = "none";
+      return;
+    }
+
+    elVendorLogo.src = VENDOR.logo;
+    elVendorLogo.alt = VENDOR.name ? `${VENDOR.name} logo` : "Vendor logo";
+
+    if (VENDOR.website) {
+      elVendorLink.href = VENDOR.website;
+      elVendorLink.style.pointerEvents = "auto";
+    } else {
+      elVendorLink.href = "#";
+      elVendorLink.style.pointerEvents = "none";
+    }
+
+    elVendorLink.style.display = "inline-flex";
   }
 
-  function clearDots(){ elDots.innerHTML = ""; }
+  // --- Math (simple, stable, click output already “fine” per you)
+  // Treat image-space taps as points; compute POI mean vector from bull.
+  function computeCorrections() {
+    if (!bull || taps.length === 0) {
+      return null;
+    }
 
-  function addDot(p, isBull){
-    const d = document.createElement("div");
-    d.className = "dot" + (isBull ? " bull" : "");
-    d.style.left = `${(p.x01 * 100).toFixed(4)}%`;
-    d.style.top  = `${(p.y01 * 100).toFixed(4)}%`;
-    elDots.appendChild(d);
-  }
+    const mean = taps.reduce((acc, p) => ({ x: acc.x + p.x, y: acc.y + p.y }), { x: 0, y: 0 });
+    const poi = { x: mean.x / taps.length, y: mean.y / taps.length };
 
-  function renderDots(){
-    clearDots();
-    if (bull) addDot(bull, true);
-    for (const h of holes) addDot(h, false);
-  }
+    // Vector bull - poi (move impacts to bull)
+    const dx = bull.x - poi.x; // + = move right
+    const dy = bull.y - poi.y; // + = move down in screen space
 
-  function updateStatus(){
-    elBullState.textContent = bull ? "set" : "not set";
-    elHoleCount.textContent = String(holes.length);
+    // Convert normalized deltas into "clicks" using a simple scale.
+    // (Your backend/calc may override; this is UI-only here.)
+    const clicksPerNorm = 40; // stable constant, tune later
+    const windClicks = dx * clicksPerNorm;
+    const elevClicks = dy * clicksPerNorm;
 
-    const ready = bull && holes.length >= 1;
-    elShow.disabled = !(ready && !resultsLocked);
+    const windDir = windClicks >= 0 ? "RIGHT" : "LEFT";
+    const elevDir = elevClicks >= 0 ? "DOWN" : "UP";
 
-    if (resultsLocked) elLockHint.classList.remove("hidden");
-    else elLockHint.classList.add("hidden");
-  }
-
-  function hideResults(){
-    elResults.classList.add("hidden");
-    elReceiptLink.classList.add("hidden");
-    elReceiptLink.href = "#";
-
-    // Hide vendor results card until results return
-    if (elVendorCardResults) elVendorCardResults.classList.add("hidden");
-  }
-
-  function resetSession(keepImage){
-    bull = null;
-    holes = [];
-    resultsLocked = false;
-
-    clearDots();
-    hideResults();
-    updateStatus();
-
-    if (!keepImage) elImg.src = "";
-  }
-
-  function rectOfImage(){ return elImg.getBoundingClientRect(); }
-
-  function insideImage(x, y){
-    const r = rectOfImage();
-    return x >= r.left && x <= r.right && y >= r.top && y <= r.bottom;
-  }
-
-  function clientTo01(x, y){
-    const r = rectOfImage();
     return {
-      x01: clamp01((x - r.left) / r.width),
-      y01: clamp01((y - r.top) / r.height),
+      windDir,
+      elevDir,
+      windClicksAbs: Math.abs(windClicks),
+      elevClicksAbs: Math.abs(elevClicks),
+      poi,
+      dx,
+      dy
     };
   }
 
-  function inchesPerMOA(distanceYds){
-    return 1.047 * (distanceYds / 100); // True MOA
-  }
-
-  function meanPoint(points){
-    let sx = 0, sy = 0;
-    for (const p of points){ sx += p.x01; sy += p.y01; }
-    return { x01: sx / points.length, y01: sy / points.length };
-  }
-
-  // Score: integer 0..100, no decimals.
-  // Pilot scoring based on correction distance in inches (radial).
-  // 0 inches => 100, 6 inches => 0 (clamped).
-  function computeScoreFromOffset(dxIn, dyIn){
-    const err = Math.hypot(dxIn, dyIn);
-    const MAX_IN = 6.0; // pilot scale (tunable later per target profile)
-    const raw = 100 - (err / MAX_IN) * 100;
-    return Math.round(clamp(raw, 0, 100));
-  }
-
-  function applyScoreClass(score){
-    rScore.classList.remove("scoreGood", "scoreMid", "scorePoor");
-    if (score >= 85) rScore.classList.add("scoreGood");
-    else if (score >= 60) rScore.classList.add("scoreMid");
-    else rScore.classList.add("scorePoor");
-  }
-
-  function unlockEdits(){
-    resultsLocked = false;
-    hideResults();
-    updateStatus();
-  }
-
-  // --- File load
-  elFile.addEventListener("change", () => {
-    const f = elFile.files && elFile.files[0];
-    if (!f) return;
-
-    selectedFile = f;
-    elFileName.textContent = f.name || "Photo selected";
-
-    if (objectUrl) URL.revokeObjectURL(objectUrl);
-    objectUrl = URL.createObjectURL(f);
-
-    elImg.onload = () => {
-      resetSession(true);
-      showDetailsBtn();
-    };
-
-    elImg.src = objectUrl;
-  });
-
-  // --- Tap intent pipeline (blocked when resultsLocked)
-  elWrap.addEventListener("pointerdown", (e) => {
-    if (!elImg.src) return;
-    if (resultsLocked) return;
-    down = { x: e.clientX, y: e.clientY, t: performance.now() };
-  }, { passive: true });
-
-  elWrap.addEventListener("pointerup", (e) => {
-    if (!elImg.src || !down) return;
-    if (resultsLocked) return;
-
-    const up = { x: e.clientX, y: e.clientY, t: performance.now() };
-    const dt = up.t - down.t;
-    const dist = Math.hypot(up.x - down.x, up.y - down.y);
-    down = null;
-
-    const now = Date.now();
-    if (now - lastTapTs < 120) return;
-    lastTapTs = now;
-
-    if (dt > TAP_MAX_MS) return;
-    if (dist > TAP_MAX_MOVE_PX) return;
-    if (!insideImage(e.clientX, e.clientY)) return;
-
-    const p = clientTo01(e.clientX, e.clientY);
-
-    if (!bull){
-      bull = p;
-      renderDots();
-      updateStatus();
+  function showResults() {
+    const r = computeCorrections();
+    if (!r) {
+      setText(elWindDir, "—");
+      setText(elElevDir, "—");
+      setText(elWindClicks, "—");
+      setText(elElevClicks, "—");
       return;
     }
 
-    holes.push(p);
-    renderDots();
-    updateStatus();
-  }, { passive: true });
-
-  // --- Controls
-  elUndo.addEventListener("click", () => {
-    if (!bull && holes.length === 0) return;
-
-    if (resultsLocked) unlockEdits();
-
-    if (holes.length > 0){
-      holes.pop();
-      renderDots();
-      updateStatus();
-      return;
-    }
-    if (bull){
-      bull = null;
-      renderDots();
-      updateStatus();
-    }
-  });
-
-  elClear.addEventListener("click", () => {
-    resultsLocked = false;
-
-    elFile.value = "";
-    elFileName.textContent = "No photo selected";
-
-    if (objectUrl){ URL.revokeObjectURL(objectUrl); objectUrl = null; }
-    selectedFile = null;
-
-    resetSession(false);
-    elDetailsBtn.classList.add("hidden");
-  });
-
-  // --- Show results (LOCKS after first successful run)
-  elShow.addEventListener("click", async () => {
-    if (resultsLocked) return;
-    if (!bull || holes.length < 1) return;
-
-    resultsLocked = true;
-    updateStatus();
-
-    const distance = Math.max(1, Number(elDistance?.value || 100));
-    const click = Number(elClickValue?.value || 0.25);
-
-    const poib = meanPoint(holes);
-
-    // correction vector = bull - poib
-    const dx01 = bull.x01 - poib.x01;
-    const dy01 = bull.y01 - poib.y01;
-
-    const dxIn = dx01 * PAPER_W_IN;
-    const dyIn = dy01 * PAPER_H_IN;
-
-    const windDir = dxIn >= 0 ? "RIGHT" : "LEFT";
-    const elevDir = dyIn <= 0 ? "UP" : "DOWN";
-
-    const windAbsIn = Math.abs(dxIn);
-    const elevAbsIn = Math.abs(dyIn);
-
-    const ipm = inchesPerMOA(distance);
-    const windMOA = windAbsIn / ipm;
-    const elevMOA = elevAbsIn / ipm;
-
-    const windClicks = windMOA / click;
-    const elevClicks = elevMOA / click;
-
-    // Score (integer)
-    const score = computeScoreFromOffset(dxIn, dyIn);
-
-    // Render Results (Score first)
-    rScore.textContent = String(score);
-    applyScoreClass(score);
-
-    rWindDir.textContent = windDir;
-    rWindClk.textContent = `${fmtClicks(windClicks)} clicks`;
-
-    rElevDir.textContent = elevDir;
-    rElevClk.textContent = `${fmtClicks(elevClicks)} clicks`;
-
-    elResults.classList.remove("hidden");
-
-    // Show vendor calling card in results location
-    if (elVendorCardResults) elVendorCardResults.classList.remove("hidden");
-
-    // Build SEC PNG (includes Score first + vendor)
-    try {
-      const v = getVendorConfig();
-      const png = await buildSecPng({
-        mode: getMode(),
-        score,
-        windDir, windClicks,
-        elevDir, elevClicks,
-        vendorName: v.name,
-        vendorLogoPath: v.logoPath
-      });
-      elReceiptLink.href = png;
-      elReceiptLink.classList.remove("hidden");
-    } catch {
-      elReceiptLink.classList.add("hidden");
-    }
-
-    setTimeout(() => elResults.scrollIntoView({ behavior:"smooth", block:"start" }), 30);
-  });
-
-  // Mode toggle
-  elModeRifle.addEventListener("click", () => setMode("rifle"));
-  elModePistol.addEventListener("click", () => setMode("pistol"));
-
-  // --- Bottom sheet
-  function openSheet(){
-    if (elBackdrop && elSheet) {
-      elBackdrop.classList.remove("hidden");
-      elSheet.classList.remove("hidden");
-      elBackdrop.setAttribute("aria-hidden", "false");
-      document.body.style.overflow = "hidden";
-    }
-  }
-  function closeSheet(){
-    if (elBackdrop && elSheet) {
-      elBackdrop.classList.add("hidden");
-      elSheet.classList.add("hidden");
-      elBackdrop.setAttribute("aria-hidden", "true");
-      document.body.style.overflow = "";
-    }
+    setText(elWindDir, r.windDir);
+    setText(elElevDir, r.elevDir);
+    setText(elWindClicks, round2(r.windClicksAbs));
+    setText(elElevClicks, round2(r.elevClicksAbs));
   }
 
-  elDetailsBtn?.addEventListener("click", openSheet);
-  elSheetClose?.addEventListener("click", closeSheet);
-  elBackdrop?.addEventListener("click", closeSheet);
-
-  // --- SEC PNG builder (with vendor logo)
-  async function buildSecPng(s) {
-    const W = 1200, H = 675;
-    const c = document.createElement("canvas");
-    c.width = W; c.height = H;
-    const ctx = c.getContext("2d");
-
-    ctx.fillStyle = "#0b0e0f";
-    ctx.fillRect(0, 0, W, H);
-
-    // Header brand
-    ctx.font = "900 56px system-ui, -apple-system, Segoe UI, Roboto, Arial";
-    ctx.fillStyle = "#ff3b30"; ctx.fillText("TAP", 60, 90);
-    ctx.fillStyle = "#ffffff"; ctx.fillText("-N-", 170, 90);
-    ctx.fillStyle = "#1f6feb"; ctx.fillText("SCORE", 270, 90);
-    ctx.fillStyle = "rgba(255,255,255,.85)";
-    ctx.font = "900 34px system-ui, -apple-system, Segoe UI, Roboto, Arial";
-    ctx.fillText("™", 470, 78);
-
-    ctx.fillStyle = "rgba(255,255,255,.72)";
-    ctx.font = "650 26px system-ui, -apple-system, Segoe UI, Roboto, Arial";
-    ctx.fillText("Shooter Experience Card (SEC)", 60, 128);
-
-    // Vendor block (top-right) — uses your committed asset file
-    try {
-      const logo = await loadImage(s.vendorLogoPath);
-      // Logo background
-      roundRect(ctx, 920, 48, 220, 96, 18);
-      ctx.fillStyle = "rgba(255,255,255,.04)"; ctx.fill();
-      ctx.strokeStyle = "rgba(255,255,255,.10)"; ctx.lineWidth = 2; ctx.stroke();
-
-      // Draw logo
-      ctx.drawImage(logo, 936, 62, 68, 68);
-
-      // Vendor name
-      ctx.fillStyle = "rgba(255,255,255,.90)";
-      ctx.font = "900 22px system-ui, -apple-system, Segoe UI, Roboto, Arial";
-      ctx.fillText(String(s.vendorName || "Vendor"), 1014, 92);
-
-      ctx.fillStyle = "rgba(255,255,255,.62)";
-      ctx.font = "700 16px system-ui, -apple-system, Segoe UI, Roboto, Arial";
-      ctx.fillText("Pilot Vendor", 1014, 114);
-    } catch {
-      // If logo can't load, we simply omit the vendor box.
-    }
-
-    // Panel
-    const x=60, y=170, w=1080, h=450;
-    roundRect(ctx, x, y, w, h, 22);
-    ctx.fillStyle = "rgba(255,255,255,.04)"; ctx.fill();
-    ctx.strokeStyle = "rgba(255,255,255,.10)"; ctx.lineWidth=2; ctx.stroke();
-
-    // SCORE first, biggest
-    const scoreColor =
-      s.score >= 85 ? "rgba(0,180,90,.95)" :
-      s.score >= 60 ? "rgba(255,210,0,.95)" :
-                      "rgba(255,70,70,.95)";
-
-    ctx.fillStyle = "rgba(255,255,255,.80)";
-    ctx.font = "900 28px system-ui, -apple-system, Segoe UI, Roboto, Arial";
-    ctx.fillText("SCORE", x+34, y+64);
-
-    ctx.fillStyle = scoreColor;
-    ctx.font = "1000 96px system-ui, -apple-system, Segoe UI, Roboto, Arial";
-    ctx.fillText(String(s.score), x+34, y+152);
-
-    // Corrections header
-    ctx.fillStyle = "rgba(255,255,255,.92)";
-    ctx.font = "900 34px system-ui, -apple-system, Segoe UI, Roboto, Arial";
-    ctx.fillText("Corrections", x+34, y+220);
-
-    // Corrections lines (clicks only w/ 2 decimals)
-    ctx.font = "900 30px system-ui, -apple-system, Segoe UI, Roboto, Arial";
-    ctx.fillText(`Windage: ${s.windDir} → ${fmtClicks(s.windClicks)} clicks`, x+34, y+290);
-    ctx.fillText(`Elevation: ${s.elevDir} → ${fmtClicks(s.elevClicks)} clicks`, x+34, y+345);
-
-    // Mode
-    ctx.fillStyle = "rgba(255,255,255,.70)";
-    ctx.font = "750 24px system-ui, -apple-system, Segoe UI, Roboto, Arial";
-    ctx.fillText(`Mode: ${s.mode}`, x+34, y+410);
-
-    return c.toDataURL("image/png");
-  }
-
-  function roundRect(ctx, x, y, w, h, r){
-    const rr = Math.min(r, w/2, h/2);
-    ctx.beginPath();
-    ctx.moveTo(x+rr, y);
-    ctx.arcTo(x+w, y, x+w, y+h, rr);
-    ctx.arcTo(x+w, y+h, x, y+h, rr);
-    ctx.arcTo(x, y+h, x, y, rr);
-    ctx.arcTo(x, y, x+w, y, rr);
-    ctx.closePath();
-  }
-
-  function loadImage(src){
+  // --- SEC generator (with vendor stamp)
+  function loadImage(src) {
     return new Promise((resolve, reject) => {
       const img = new Image();
       img.onload = () => resolve(img);
-      img.onerror = () => reject(new Error("image load failed"));
+      img.onerror = reject;
       img.src = src;
     });
   }
 
-  // --- init
-  applyVendorUI();
-  setMode(getMode());
-  resetSession(false);
+  async function drawVendorOnSEC(ctx, W, H) {
+    if (!VENDOR || !VENDOR.logo) return;
+
+    try {
+      const logo = await loadImage(VENDOR.logo);
+
+      const pad = 36;
+      const maxH = 70;
+      const scale = maxH / logo.height;
+      const w = logo.width * scale;
+      const h = logo.height * scale;
+
+      const x = W - w - pad;
+      const y = pad;
+
+      ctx.save();
+      ctx.globalAlpha = 0.95;
+      ctx.drawImage(logo, x, y, w, h);
+      ctx.restore();
+    } catch (e) {
+      // ignore
+    }
+  }
+
+  async function downloadSEC() {
+    const r = computeCorrections();
+    if (!r) return;
+
+    const W = secCanvas.width;
+    const H = secCanvas.height;
+
+    // Background
+    secCtx.clearRect(0, 0, W, H);
+    secCtx.fillStyle = "#0b0f14";
+    secCtx.fillRect(0, 0, W, H);
+
+    // Title
+    secCtx.fillStyle = "#e6eefc";
+    secCtx.font = "bold 54px system-ui, -apple-system, Segoe UI, Roboto, Arial";
+    secCtx.fillText("Shooter Experience Card", 60, 110);
+
+    // Vendor name line (optional)
+    if (VENDOR && VENDOR.name) {
+      secCtx.fillStyle = "#9db2d6";
+      secCtx.font = "28px system-ui, -apple-system, Segoe UI, Roboto, Arial";
+      secCtx.fillText(VENDOR.name, 60, 160);
+    }
+
+    // Corrections
+    secCtx.fillStyle = "#e6eefc";
+    secCtx.font = "bold 40px system-ui, -apple-system, Segoe UI, Roboto, Arial";
+    secCtx.fillText("Corrections (Scope)", 60, 260);
+
+    secCtx.font = "34px system-ui, -apple-system, Segoe UI, Roboto, Arial";
+    secCtx.fillText(`Windage:  ${r.windDir}  →  ${round2(r.windClicksAbs)} clicks`, 60, 340);
+    secCtx.fillText(`Elevation: ${r.elevDir}  →  ${round2(r.elevClicksAbs)} clicks`, 60, 400);
+
+    // Stamp vendor logo (top-right)
+    await drawVendorOnSEC(secCtx, W, H);
+
+    // Export
+    const a = document.createElement("a");
+    a.download = "SEC.png";
+    a.href = secCanvas.toDataURL("image/png");
+    a.click();
+  }
+
+  // --- Events
+  function onPickFile(file) {
+    if (!file) return;
+
+    if (objectUrl) URL.revokeObjectURL(objectUrl);
+    objectUrl = URL.createObjectURL(file);
+
+    elImg.src = objectUrl;
+    imageReady = true;
+
+    bull = null;
+    taps = [];
+    setBullStatus();
+    setTapCount();
+    redrawDots();
+
+    setInstruction("Tap the bull (center) once. Then tap each hole.");
+  }
+
+  function onTap(evt) {
+    if (!imageReady) return;
+
+    const p = getNormFromEvent(evt);
+
+    if (!bull) {
+      bull = p;
+      setBullStatus();
+      redrawDots();
+      setInstruction("Now tap each hole.");
+      return;
+    }
+
+    taps.push(p);
+    setTapCount();
+    redrawDots();
+  }
+
+  // Wire input
+  elFile.addEventListener("change", (e) => onPickFile(e.target.files && e.target.files[0]));
+
+  // Tap handling (pointer)
+  elWrap.addEventListener("pointerdown", (e) => {
+    // Prevent iOS “double tap to zoom” weirdness
+    e.preventDefault();
+    onTap(e);
+  }, { passive: false });
+
+  elClear.addEventListener("click", () => {
+    bull = null;
+    taps = [];
+    setBullStatus();
+    setTapCount();
+    redrawDots();
+    setInstruction("Tap the bull (center) once. Then tap each hole.");
+    showResults();
+  });
+
+  elUndo.addEventListener("click", () => {
+    if (taps.length > 0) {
+      taps.pop();
+      setTapCount();
+      redrawDots();
+      showResults();
+      return;
+    }
+    if (bull) {
+      bull = null;
+      setBullStatus();
+      redrawDots();
+      setInstruction("Tap the bull (center) once. Then tap each hole.");
+      showResults();
+    }
+  });
+
+  elShowResults.addEventListener("click", () => showResults());
+  elDownloadSEC.addEventListener("click", () => downloadSEC());
+
+  // --- Init
+  setBullStatus();
+  setTapCount();
+  setInstruction("Choose a photo. Then tap the bull (center) once, then tap each hole.");
+  loadVendor();
 })();
