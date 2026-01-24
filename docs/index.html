@@ -1,5 +1,4 @@
-<!-- docs/index.html (FULL REPLACEMENT) — Adds Score, keeps “Target” only on button -->
-<!doctype html>
+ <!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
@@ -8,7 +7,7 @@
   <meta name="theme-color" content="#000000" />
   <title>Tap-n-Score™</title>
 
-  <link rel="stylesheet" href="./styles.css?v=20260124a" />
+  <link rel="stylesheet" href="./styles.css?v=20260124b" />
 </head>
 
 <body>
@@ -22,9 +21,18 @@
       <button id="detailsBtn" class="detailsBtn hidden" type="button">Details</button>
     </header>
 
+    <!-- Vendor calling card -->
+    <div class="vendorBar">
+      <img
+        src="./assets/vendor-baker-logo.png"
+        alt="Vendor logo"
+        class="vendorLogo"
+      />
+    </div>
+
     <div class="subline">After-Shot Intelligence</div>
 
-    <!-- CARD 1: Choose photo (HERO) -->
+    <!-- CARD 1: Choose photo -->
     <section class="card">
       <div id="chooseTargetRow" class="chooseRow">
         <label class="chooseBtn">
@@ -35,22 +43,18 @@
         <div id="fileName" class="fileName">No photo selected</div>
         <div class="hint">Tip: straight-on photo, fill the frame.</div>
 
-        <!-- Mode stays visible -->
         <div id="settingsRow" class="settingsRow">
           <div class="seg">
             <button id="modeRifle" class="segBtn active" type="button">Rifle</button>
             <button id="modePistol" class="segBtn" type="button">Pistol</button>
           </div>
 
-          <!-- Hidden for now (behind the scenes) -->
           <div id="hiddenSettings" style="display:none">
-            <label for="distanceYds">Distance</label>
             <input id="distanceYds" type="number" value="100" />
-            <label for="clickValue">Click</label>
             <select id="clickValue">
-              <option value="0.25" selected>Quarter per click</option>
-              <option value="0.5">Half per click</option>
-              <option value="0.125">Eighth per click</option>
+              <option value="0.25" selected>Quarter</option>
+              <option value="0.5">Half</option>
+              <option value="0.125">Eighth</option>
             </select>
           </div>
         </div>
@@ -61,9 +65,9 @@
 
     <!-- CARD 2: Photo interaction -->
     <section class="card">
-      <div id="targetWrap" class="targetWrap" aria-label="Photo and tap layer">
-        <img id="targetImg" class="targetImg" alt="Photo" />
-        <div id="dotsLayer" class="dotsLayer" aria-hidden="true"></div>
+      <div id="targetWrap" class="targetWrap">
+        <img id="targetImg" class="targetImg" />
+        <div id="dotsLayer" class="dotsLayer"></div>
       </div>
 
       <div class="statusRow">
@@ -72,23 +76,31 @@
       </div>
 
       <div class="btnRow">
-        <button id="undoBtn" class="btn ghost" type="button">Undo</button>
-        <button id="clearBtn" class="btn ghost" type="button">Clear</button>
-        <button id="showBtn" class="btn primary" type="button" disabled>Show Results</button>
+        <button id="undoBtn" class="btn ghost">Undo</button>
+        <button id="clearBtn" class="btn ghost">Clear</button>
+        <button id="showBtn" class="btn primary" disabled>Show Results</button>
       </div>
 
-      <div class="tip">Bull first. Then holes. Scroll/drag won’t create dots.</div>
-      <div id="lockHint" class="lockHint hidden">Results locked. Undo/Clear to edit taps.</div>
+      <div class="tip">Bull first. Then holes.</div>
+      <div id="lockHint" class="lockHint hidden">Results locked.</div>
     </section>
 
     <!-- CARD 3: Results -->
-    <section id="resultsCard" class="card hidden" aria-live="polite">
+    <section id="resultsCard" class="card hidden">
       <div class="resultsTitle">Results</div>
 
-      <!-- Score first + most prominent -->
+      <!-- Vendor calling card (results) -->
+      <div class="vendorBar resultsVendor">
+        <img
+          src="./assets/vendor-baker-logo.png"
+          alt="Vendor logo"
+          class="vendorLogo"
+        />
+      </div>
+
       <div class="scoreBigRow">
         <div class="scoreLabel">Score</div>
-        <div id="rScore" class="scoreBig scoreGood">—</div>
+        <div id="rScore" class="scoreBig">—</div>
       </div>
 
       <div class="corrBlock">
@@ -108,29 +120,12 @@
       </div>
 
       <div class="scoreRow">
-        <a id="downloadReceiptLink" class="btn receiptBtn hidden" download="SEC.png" href="#">Download/Keep SEC (PNG)</a>
-      </div>
-    </section>
-
-    <!-- Bottom Sheet (optional) -->
-    <div id="sheetBackdrop" class="sheetBackdrop hidden" aria-hidden="true"></div>
-    <section id="bottomSheet" class="sheet hidden" role="dialog" aria-modal="true" aria-label="Details">
-      <div class="sheetHandle" aria-hidden="true"></div>
-      <div class="sheetHeader">
-        <div class="sheetTitle">Details</div>
-        <button id="sheetClose" class="sheetClose" type="button">Close</button>
-      </div>
-      <div class="sheetBody">
-        <ul class="bullets">
-          <li>Tap the bull center.</li>
-          <li>Tap each bullet hole.</li>
-          <li>We output direction + clicks.</li>
-        </ul>
+        <a id="downloadReceiptLink" class="btn receiptBtn hidden" download="SEC.png">Download / Keep SEC</a>
       </div>
     </section>
 
   </main>
 
-  <script src="./index.js?v=20260124a"></script>
+  <script src="./index.js?v=20260124b"></script>
 </body>
 </html>
