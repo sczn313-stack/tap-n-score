@@ -1,4 +1,94 @@
-/* docs/styles.css (FULL REPLACEMENT) — Vendor cards + Score styling + lock hint */
+/<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="color-scheme" content="dark" />
+  <meta name="theme-color" content="#000000" />
+  <title>Tap-n-Score™</title>
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+
+<body>
+  <main class="page">
+
+    <!-- Top brand row -->
+    <header class="brandRow">
+      <div class="brandLeft">
+        <div class="brand">
+          <span class="brandTap">TAP</span><span class="brandN">-N-</span><span class="brandScore">SCORE</span><span class="brandTm">™</span>
+        </div>
+        <div class="subtitle">After-Shot Intelligence</div>
+      </div>
+
+      <!-- Vendor slot (INPUT page placement) -->
+      <a id="vendorLink" class="vendorSlot" href="#" target="_blank" rel="noopener">
+        <img id="vendorLogo" class="vendorLogo" alt="Vendor logo" />
+      </a>
+    </header>
+
+    <!-- Target area -->
+    <section class="card">
+      <div class="targetWrap" id="targetWrap">
+        <img id="targetImg" alt="Target" />
+        <div id="dotsLayer" class="dotsLayer" aria-hidden="true"></div>
+      </div>
+
+      <div class="pillRow">
+        <div class="pill" id="bullStatus">Bull: not set</div>
+        <div class="pill" id="tapCount">Holes: 0</div>
+      </div>
+
+      <div class="btnRow">
+        <button id="undoBtn" class="btn">Undo</button>
+        <button id="clearTapsBtn" class="btn">Clear</button>
+        <button id="showResultsBtn" class="btnPrimary">Show Results</button>
+      </div>
+    </section>
+
+    <!-- Results -->
+    <section class="card" id="resultsCard">
+      <h2 class="h2">Results</h2>
+
+      <div class="resultsBlock">
+        <div class="resultsTitle">Corrections (Scope)</div>
+
+        <div class="resultRow">
+          <div class="resultLabel">Windage:</div>
+          <div class="resultDir" id="windDir">—</div>
+          <div class="resultArrow">→</div>
+          <div class="resultVal" id="windClicks">—</div>
+        </div>
+
+        <div class="resultRow">
+          <div class="resultLabel">Elevation:</div>
+          <div class="resultDir" id="elevDir">—</div>
+          <div class="resultArrow">→</div>
+          <div class="resultVal" id="elevClicks">—</div>
+        </div>
+      </div>
+
+      <button id="downloadSecBtn" class="btnWide">Download SEC (PNG)</button>
+
+      <!-- Vendor slot (SEC placement) -->
+      <div class="secVendorRow">
+        <a id="vendorLink2" class="vendorSlot" href="#" target="_blank" rel="noopener">
+          <img id="vendorLogo2" class="vendorLogo" alt="Vendor logo" />
+        </a>
+      </div>
+    </section>
+
+    <!-- Hidden file input -->
+    <input id="photoInput" type="file" accept="image/*" />
+
+    <!-- Canvas for SEC -->
+    <canvas id="secCanvas" width="1400" height="900" style="display:none;"></canvas>
+
+  </main>
+
+  <script src="./index.js"></script>
+</body>
+</html>* docs/styles.css (FULL REPLACEMENT) — Vendor cards + Score styling + lock hint */
 :root{
   --bg:#050606;
   --card:rgba(255,255,255,.04);
