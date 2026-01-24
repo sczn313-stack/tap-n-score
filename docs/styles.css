@@ -1,87 +1,195 @@
-/* docs/styles.css (FULL REPLACEMENT) — Adds Score styling + lock hint */
-:root{
-  --bg:#050606;
-  --card:rgba(255,255,255,.04);
-  --stroke:rgba(255,255,255,.10);
-  --stroke2:rgba(255,255,255,.14);
-  --text:rgba(255,255,255,.92);
-  --muted:rgba(255,255,255,.72);
-  --dim:rgba(255,255,255,.58);
-
-  --blue:#1f6feb;
-  --red:#ff3b30;
-  --white:#ffffff;
-
-  --good:#00b45a;   /* dark green */
-  --mid:#ffd200;    /* yellow */
-  --poor:#ff4646;   /* red */
-
-  --radius:18px;
-  --shadow:0 18px 60px rgba(0,0,0,.55);
+* {
+  box-sizing: border-box;
 }
 
-*{box-sizing:border-box}
-html,body{height:100%}
-body{
-  margin:0;
-  background:
-    radial-gradient(1100px 700px at 10% -10%, rgba(31,111,235,.18), transparent 60%),
-    radial-gradient(900px 600px at 110% 0%, rgba(255,59,48,.12), transparent 60%),
-    var(--bg);
-  color:var(--text);
-  font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  background: #000;
+  color: #fff;
 }
 
-.page{
-  width:min(980px, 94vw);
-  margin:18px auto 40px;
-  display:flex;
-  flex-direction:column;
-  gap:14px;
+.page {
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 12px;
 }
 
-.topbar{
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap:12px;
+.topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
-.brand{
-  font-weight:900;
-  letter-spacing:.6px;
-  font-size:clamp(28px, 4.2vw, 44px);
-  line-height:1;
-}
-.bRed{color:var(--red)}
-.bBlue{color:var(--blue)}
-.bW{color:var(--white); opacity:.92}
-.tm{font-size:.6em; margin-left:4px; opacity:.85}
-
-.subline{
-  margin-top:-6px;
-  color:var(--muted);
-  font-weight:650;
+.brand {
+  font-weight: 800;
+  font-size: 20px;
 }
 
-.detailsBtn{
-  border-radius:999px;
-  padding:10px 14px;
-  border:1px solid var(--stroke);
-  background:rgba(0,0,0,.22);
-  color:var(--text);
-  font-weight:850;
-  cursor:pointer;
+.bRed { color: #c00; }
+.bBlue { color: #2a6df4; }
+.bW { color: #fff; }
+.tm { font-size: 12px; vertical-align: top; }
+
+.subline {
+  text-align: center;
+  opacity: 0.75;
+  margin-bottom: 8px;
 }
 
-.card{
-  background:linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.02));
-  border:1px solid var(--stroke);
-  border-radius:var(--radius);
-  box-shadow:var(--shadow);
-  padding:14px;
+/* Vendor calling card */
+.vendorBar {
+  display: flex;
+  justify-content: center;
+  margin: 6px 0 10px;
 }
 
-.chooseRow{
-  display:flex;
-  flex
+.vendorLogo {
+  max-height: 36px;
+  opacity: 0.85;
+}
+
+.resultsVendor {
+  margin-bottom: 12px;
+}
+
+.card {
+  background: #111;
+  border-radius: 12px;
+  padding: 12px;
+  margin-bottom: 12px;
+}
+
+.chooseBtn {
+  display: block;
+  text-align: center;
+  background: #222;
+  padding: 14px;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.chooseBtn input {
+  display: none;
+}
+
+.fileName,
+.hint {
+  text-align: center;
+  opacity: 0.7;
+  margin-top: 6px;
+}
+
+.seg {
+  display: flex;
+  justify-content: center;
+  margin-top: 10px;
+}
+
+.segBtn {
+  background: #222;
+  color: #fff;
+  border: none;
+  padding: 8px 14px;
+  margin: 0 4px;
+  border-radius: 8px;
+}
+
+.segBtn.active {
+  background: #2a6df4;
+}
+
+.targetWrap {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  background: #000;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.targetImg {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.dotsLayer {
+  position: absolute;
+  inset: 0;
+}
+
+.statusRow {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 8px;
+}
+
+.chip {
+  background: #222;
+  padding: 6px 10px;
+  border-radius: 20px;
+  font-size: 12px;
+}
+
+.btnRow {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 10px;
+}
+
+.btn {
+  flex: 1;
+  margin: 0 4px;
+  padding: 10px;
+  border-radius: 10px;
+  border: none;
+  cursor: pointer;
+}
+
+.btn.primary {
+  background: #2a6df4;
+  color: #fff;
+}
+
+.btn.ghost {
+  background: #222;
+  color: #fff;
+}
+
+.resultsTitle {
+  text-align: center;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.scoreBigRow {
+  text-align: center;
+  margin-bottom: 12px;
+}
+
+.scoreBig {
+  font-size: 48px;
+  font-weight: 800;
+}
+
+.corrBlock {
+  background: #181818;
+  border-radius: 10px;
+  padding: 10px;
+}
+
+.corrHdr {
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+
+.corrLine {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 4px;
+}
+
+.hidden {
+  display: none;
+}
