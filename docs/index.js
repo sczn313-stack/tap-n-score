@@ -1,11 +1,12 @@
 /* ============================================================
    Tap-n-Score™ — index.js (FULL REPLACEMENT)
 
-   Fixes / Adds:
-   - Loads vendor.json and shows vendor logo + name
-   - Bull marker is yellow (CSS class .dot.bull)
+   Fixes:
+   - Dots/taps are mapped to the *actual displayed image area*
+     (object-fit: contain creates gutters; we ignore those)
+   - Positions #dotsLayer to exactly cover the image rect
    - Scroll vs tap threshold (no dots while scrolling)
-   - Keeps iOS photo selection stable (store File immediately)
+   - Loads vendor.json and shows vendor logo + name
    ============================================================ */
 
 (() => {
@@ -15,13 +16,6 @@
   const elPhotoInput =
     qs("#photoInput") ||
     qs('input[type="file"]') ||
-    null;
-
-  const elChooseBtn =
-    qs("#choosePhotoBtn") ||
-    qs("#chooseTargetPhotoBtn") ||
-    qs('label[for="photoInput"]') ||
-    qs('button[data-action="choose-photo"]') ||
     null;
 
   const elImg =
@@ -49,7 +43,6 @@
   const elUndo = qs("#undoBtn") || qs('button[data-action="undo"]');
   const elClear = qs("#clearBtn") || qs('button[data-action="clear"]');
   const elShowResults = qs("#showResultsBtn") || qs('button[data-action="results"]');
-  const elDownloadSec = qs("#downloadSecBtn") || qs('button[data-action="download-sec"]');
 
   // vendor UI
   const elVendorPill = qs("#vendorPill") || qs(".vendorPill");
@@ -61,19 +54,16 @@
   let objectUrl = null;
 
   let mode = "holes"; // "bull" or "holes"
-  let bull = null;    // {xPct, yPct}
+  let bull = null;    // {xPct, yPct}   (PCT relative to displayed IMAGE RECT)
   let holes = [];     // [{xPct, yPct}, ...]
 
   // tap/scroll discrimination
-  let down = null; // {x, y, t, xPct, yPct}
+  let down = null; // {x, y, xPct, yPct}
   const MOVE_PX = 10; // threshold: above this is a scroll, not a tap
 
   // ---------- Vendor loading
   async function loadVendor() {
-    // vendor.json currently sits in /docs/vendor.json
-    // (If you move it to /docs/assets/vendor.json later, update this path.)
     const url = "./vendor.json?v=" + Date.now();
-
     try {
       const res = await fetch(url, { cache: "no-store" });
       if (!res.ok) throw new Error("vendor.json fetch failed: " + res.status);
@@ -96,7 +86,7 @@
         elVendorPill.rel = "noopener";
       }
     } catch (e) {
-      // silent fail is fine for now
+      // silent fail ok
       // console.warn(e);
     }
   }
@@ -107,17 +97,12 @@
   }
 
   function setChips() {
-    if (elBullChip) {
-      elBullChip.textContent = bull ? "Bull: set" : "Bull: not set";
-    }
-    if (elHolesChip) {
-      elHolesChip.textContent = "Holes: " + holes.length;
-    }
+    if (elBullChip) elBullChip.textContent = bull ? "Bull: set" : "Bull: not set";
+    if (elHolesChip) elHolesChip.textContent = "Holes: " + holes.length;
   }
 
   function clearDotsLayer() {
-    if (!elDots) return;
-    elDots.innerHTML = "";
+    if (elDots) elDots.innerHTML = "";
   }
 
   function drawDot(pt, kind) {
@@ -130,33 +115,87 @@
   }
 
   function redraw() {
+    positionDotsLayerToImage();
     clearDotsLayer();
-    if (bull) drawDot(bull, "bull");
+    if (bull) drawDot(bull, "bull"); // yellow via CSS
     for (const h of holes) drawDot(h, "hole");
     setChips();
   }
 
-  function pctFromEvent(clientX, clientY) {
-    if (!elWrap) return { xPct: 0, yPct: 0 };
+  // ---------- Critical Fix: find the displayed image rect inside wrapper
+  function getDisplayedImageRect() {
+    if (!elWrap || !elImg) return null;
 
-    const r = elWrap.getBoundingClientRect();
-    const x = Math.min(Math.max(clientX - r.left, 0), r.width);
-    const y = Math.min(Math.max(clientY - r.top, 0), r.height);
+    const wrapRect = elWrap.getBoundingClientRect();
+
+    // If image isn't loaded yet, bail
+    const naturalW = elImg.naturalWidth || 0;
+    const naturalH = elImg.naturalHeight || 0;
+    if (!naturalW || !naturalH) return null;
+
+    // wrapper's inner size
+    const wrapW = wrapRect.width;
+    const wrapH = wrapRect.height;
+
+    // contain scale
+    const scale = Math.min(wrapW / naturalW, wrapH / naturalH);
+
+    const dispW = naturalW * scale;
+    const dispH = naturalH * scale;
+
+    // centered (contain)
+    const left = (wrapW - dispW) / 2;
+    const top = (wrapH - dispH) / 2;
 
     return {
-      xPct: (x / r.width) * 100,
-      yPct: (y / r.height) * 100,
+      // coords relative to wrapper (not page)
+      left,
+      top,
+      width: dispW,
+      height: dispH
     };
   }
 
-  function ensureDotsLayerSizing() {
+  function positionDotsLayerToImage() {
     if (!elWrap || !elDots) return;
-    // make sure dots layer covers wrap exactly
+    const imgBox = getDisplayedImageRect();
+    if (!imgBox) return;
+
+    // Place dots layer exactly over displayed image area
     elDots.style.position = "absolute";
-    elDots.style.left = "0";
-    elDots.style.top = "0";
-    elDots.style.right = "0";
-    elDots.style.bottom = "0";
+    elDots.style.left = imgBox.left + "px";
+    elDots.style.top = imgBox.top + "px";
+    elDots.style.width = imgBox.width + "px";
+    elDots.style.height = imgBox.height + "px";
+    elDots.style.right = "auto";
+    elDots.style.bottom = "auto";
+  }
+
+  // Convert screen coords -> % within displayed IMAGE RECT
+  function pctFromEvent(clientX, clientY) {
+    if (!elWrap) return null;
+
+    const wrapRect = elWrap.getBoundingClientRect();
+    const imgBox = getDisplayedImageRect();
+    if (!imgBox) return null;
+
+    // convert to wrapper-local
+    const xLocal = clientX - wrapRect.left;
+    const yLocal = clientY - wrapRect.top;
+
+    // convert to image-local
+    const xImg = xLocal - imgBox.left;
+    const yImg = yLocal - imgBox.top;
+
+    // ignore taps outside the image (gutters)
+    if (xImg < 0 || yImg < 0 || xImg > imgBox.width || yImg > imgBox.height) {
+      return null;
+    }
+
+    return {
+      xPct: (xImg / imgBox.width) * 100,
+      yPct: (yImg / imgBox.height) * 100
+    };
   }
 
   // ---------- Photo selection
@@ -174,18 +213,25 @@
     holes = [];
     setInstruction("Set the bull first (tap Set Bull, then tap the bull).");
     setChips();
-    redraw();
+
+    // wait a tick so naturalWidth/Height are available, then position overlay
+    setTimeout(() => {
+      positionDotsLayerToImage();
+      redraw();
+    }, 60);
   }
 
-  // ---------- Tap handling (scroll-safe)
+  // ---------- Tap handling (scroll-safe + image-box-safe)
   function onPointerDown(ev) {
-    if (!elWrap) return;
-    // Only accept primary touch / pointer
     const pt = pctFromEvent(ev.clientX, ev.clientY);
+    if (!pt) {
+      down = null;
+      return;
+    }
+
     down = {
       x: ev.clientX,
       y: ev.clientY,
-      t: performance.now(),
       xPct: pt.xPct,
       yPct: pt.yPct
     };
@@ -198,19 +244,18 @@
     const dy = ev.clientY - down.y;
     const dist = Math.hypot(dx, dy);
 
-    // If user moved finger, treat as scroll — do NOT place dot
+    // If user moved finger, treat as scroll — no dot
     if (dist > MOVE_PX) {
       down = null;
       return;
     }
 
-    // if no photo loaded, ignore taps
+    // if no photo loaded, ignore
     if (!selectedFile || !elImg || !elImg.src) {
       down = null;
       return;
     }
 
-    // place point
     const pt = { xPct: down.xPct, yPct: down.yPct };
 
     if (mode === "bull") {
@@ -237,7 +282,6 @@
       redraw();
       return;
     }
-    // if no holes, allow undo bull
     if (bull) {
       bull = null;
       mode = "bull";
@@ -255,28 +299,24 @@
   }
 
   function showResults() {
-    // Placeholder: you already have your backend / calc logic elsewhere.
-    // This function is intentionally minimal to avoid breaking current flow.
-    // If you’re using an existing showResults handler in your HTML, keep it there.
+    // Leave your existing results logic intact elsewhere if you have it.
+    // This file focuses on stability + correct dot mapping.
   }
 
   // ---------- Init
   function init() {
     loadVendor();
-
-    ensureDotsLayerSizing();
     setChips();
 
-    // Make taps work while still allowing vertical scroll
     if (elWrap) {
       elWrap.style.position = elWrap.style.position || "relative";
-      // allow vertical scrolling, but we still capture "tap" when finger doesn't move
+
+      // vertical scrolling allowed; dots only if finger doesn't move
       elWrap.style.touchAction = "pan-y";
       elWrap.addEventListener("pointerdown", onPointerDown, { passive: true });
       elWrap.addEventListener("pointerup", onPointerUp, { passive: true });
     }
 
-    // File input: iOS-safe
     if (elPhotoInput) {
       elPhotoInput.addEventListener("change", (e) => {
         const f = e.target.files && e.target.files[0];
@@ -284,24 +324,24 @@
       });
     }
 
-    // If choose button is a custom button (not <label for>), trigger picker
-    if (elChooseBtn && elPhotoInput && elChooseBtn.tagName.toLowerCase() === "button") {
-      elChooseBtn.addEventListener("click", () => elPhotoInput.click());
-    }
-
     if (elSetBull) elSetBull.addEventListener("click", setBullMode);
     if (elUndo) elUndo.addEventListener("click", undo);
     if (elClear) elClear.addEventListener("click", clearAll);
     if (elShowResults) elShowResults.addEventListener("click", showResults);
-
-    // download button left as-is (your existing SEC generator likely attaches elsewhere)
-    // If you already wire it, we don’t override it.
   }
 
   window.addEventListener("resize", () => {
-    ensureDotsLayerSizing();
+    positionDotsLayerToImage();
     redraw();
   });
+
+  // When image finishes loading (so natural size is known)
+  if (elImg) {
+    elImg.addEventListener("load", () => {
+      positionDotsLayerToImage();
+      redraw();
+    });
+  }
 
   init();
 })();
