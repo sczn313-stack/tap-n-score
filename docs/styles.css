@@ -1,310 +1,354 @@
-/* =========================================================
-   Tap-n-Score™ — styles.css (FULL REPLACEMENT)
-   Restores UI polish + consistent buttons + vendor pill
-   ========================================================= */
+/* ============================================================
+   Tap-n-Score™ — docs/styles.css (FULL REPLACEMENT)
+   Goals:
+   - Center the displayed image inside the target frame (no “left dead zone” look)
+   - Keep object-fit: contain (no cropping)
+   - Make action buttons consistent (same color family as Choose Target Photo)
+   - Keep bull yellow + holes green
+   ============================================================ */
 
 :root{
   --bg0:#05070b;
-  --bg1:#0a0f1a;
-  --card:#0b1220cc;
-  --card2:#0b1220f2;
-  --stroke:#ffffff22;
-  --stroke2:#ffffff30;
-  --text:#e9eefc;
-  --muted:#aab4d6;
-  --blue1:#2b79ff;
-  --blue2:#1747ff;
-  --red1:#ff2b2b;
-  --red2:#b40d0d;
-  --shadow: 0 14px 40px rgba(0,0,0,.55);
+  --bg1:#0b1020;
+  --card:#0b0f18cc;
+  --stroke:#ffffff1f;
+  --stroke2:#ffffff26;
+  --text:#eef2ff;
+  --muted:#aab3c7;
+
+  --blue1:#2d7dff;
+  --blue2:#1b56d6;
+  --blue3:#0f3a9a;
+
+  --pill:#0f1422cc;
+
+  --good:#00e5a7;
+  --bull:#ffd400;
+
+  --shadow: 0 12px 30px rgba(0,0,0,.35);
   --radius: 18px;
+  --radius2: 14px;
 }
 
 *{ box-sizing:border-box; }
 html,body{ height:100%; }
+
 body{
   margin:0;
-  font-family: system-ui,-apple-system,Segoe UI,Roboto,Arial;
   color:var(--text);
   background:
-    radial-gradient(1200px 700px at 18% 0%, rgba(255,50,50,.20), transparent 55%),
-    radial-gradient(900px 650px at 55% 10%, rgba(55,120,255,.22), transparent 55%),
+    radial-gradient(1200px 800px at 20% 10%, rgba(255,0,0,.18), transparent 60%),
+    radial-gradient(1000px 700px at 60% 20%, rgba(0,120,255,.20), transparent 55%),
+    radial-gradient(900px 650px at 80% 70%, rgba(0,255,170,.08), transparent 60%),
     linear-gradient(180deg, var(--bg0), var(--bg1));
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
 }
 
-/* page width */
-.page{
+/* ---------- Layout container (safe default) */
+.page, main{
   width:min(1100px, 96vw);
-  margin: 18px auto 80px auto;
+  margin:18px auto 44px;
 }
 
-/* header */
-.topBar{
+/* ---------- Header area (doesn’t assume exact HTML, styles common patterns) */
+.headerRow, .topRow{
   display:flex;
-  align-items:flex-start;
+  align-items:center;
   justify-content:space-between;
-  gap:16px;
-  padding: 10px 6px 8px 6px;
+  gap:12px;
+  margin-bottom:10px;
 }
+
 .brandBlock{
   display:flex;
   flex-direction:column;
-  gap:4px;
-}
-.brandLine{
-  display:flex;
-  align-items:baseline;
   gap:2px;
-  letter-spacing:.5px;
-  user-select:none;
 }
-.brandTap{ font-weight:900; font-size:34px; color:#ff3c3c; }
-.brandDash, .brandN{ font-weight:900; font-size:34px; color:#ffffff; opacity:.75; }
-.brandScore{ font-weight:900; font-size:34px; color:#2b79ff; }
-.brandTm{ font-weight:800; font-size:16px; opacity:.85; margin-left:4px; }
-.subTitle{
+
+.brandTitle{
+  font-weight:900;
+  letter-spacing:.6px;
+  font-size:30px;
+  line-height:1;
+}
+
+.brandSub{
   color:var(--muted);
-  font-weight:650;
-  letter-spacing:.2px;
-}
-
-.headerRight{
-  display:flex;
-  align-items:center;
-  gap:10px;
-}
-
-/* vendor pill */
-.vendorPill{
-  display:flex;
-  align-items:center;
-  gap:10px;
-  padding: 10px 14px;
-  border-radius: 999px;
-  background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03));
-  border: 1px solid var(--stroke);
-  box-shadow: 0 10px 26px rgba(0,0,0,.25);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  text-decoration:none;
-  color: var(--text);
-}
-.vendorPill:hover{ border-color: var(--stroke2); }
-.vendorLogo{
-  width:28px;
-  height:28px;
-  border-radius: 50%;
-  background: rgba(255,255,255,.06);
-  border: 1px solid var(--stroke);
-  object-fit: cover;
-}
-.vendorName{
-  font-weight:800;
-  letter-spacing:.2px;
-  white-space:nowrap;
-}
-
-/* details button */
-.pillBtn{
-  appearance:none;
-  border:1px solid var(--stroke);
-  background: rgba(255,255,255,.05);
-  color: var(--text);
-  border-radius: 999px;
-  padding: 10px 14px;
-  font-weight:800;
-}
-.pillBtn:hover{ border-color: var(--stroke2); }
-
-/* card shell */
-.card{
-  background: var(--card);
-  border: 1px solid var(--stroke);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-}
-
-.mainCard{
-  padding: 18px;
-  margin-top: 10px;
-}
-
-/* top controls row */
-.controlsRow{
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap:12px;
-  flex-wrap:wrap;
-}
-.leftControls{
-  display:flex;
-  align-items:center;
-  gap:12px;
-  flex-wrap:wrap;
-}
-.rightChips{
-  display:flex;
-  align-items:center;
-  gap:10px;
-  flex-wrap:wrap;
-}
-.chip{
-  padding: 10px 14px;
-  border-radius: 999px;
-  border: 1px solid var(--stroke);
-  background: rgba(255,255,255,.04);
-  color: var(--muted);
-  font-weight:850;
-}
-
-/* instruction line */
-#instructionLine{
-  margin: 10px 0 12px 0;
-  color: #d9e2ff;
-  font-weight:750;
+  font-weight:600;
   opacity:.95;
 }
 
-/* action buttons — unified */
-.btn{
+/* Vendor pill */
+.vendorPill, #vendorPill{
+  display:inline-flex;
+  align-items:center;
+  gap:10px;
+  padding:10px 14px;
+  border-radius:999px;
+  background:var(--pill);
+  border:1px solid var(--stroke);
+  box-shadow: var(--shadow);
+  text-decoration:none;
+  color:var(--text);
+  white-space:nowrap;
+}
+
+.vendorPill img, #vendorLogo{
+  width:28px;
+  height:28px;
+  border-radius:999px;
+  object-fit:cover;
+  border:1px solid var(--stroke2);
+  background:#111827;
+}
+
+.vendorPill .vendorName, #vendorName{
+  font-weight:800;
+  letter-spacing:.2px;
+}
+
+.detailsBtn, #detailsBtn, .details{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  padding:10px 14px;
+  border-radius:999px;
+  background:var(--pill);
+  border:1px solid var(--stroke);
+  color:var(--text);
+  font-weight:800;
+}
+
+/* ---------- Buttons: ONE STYLE for all actions */
+button, .btn{
+  -webkit-tap-highlight-color: transparent;
   appearance:none;
-  border: 1px solid transparent;
-  border-radius: 14px;
-  padding: 12px 16px;
+  border:0;
+  border-radius:14px;
+  padding:12px 16px;
   font-weight:900;
   letter-spacing:.2px;
-  cursor:pointer;
-  user-select:none;
-  -webkit-tap-highlight-color: transparent;
-}
-.btnPrimary{
-  background: linear-gradient(180deg, var(--blue1), var(--blue2));
   color: white;
-  box-shadow: 0 10px 24px rgba(30,90,255,.28);
+  background: linear-gradient(180deg, var(--blue1), var(--blue2));
+  box-shadow: 0 10px 22px rgba(0,0,0,.28);
+  cursor:pointer;
 }
-.btnPrimary:hover{ filter: brightness(1.05); }
-.btnGhost{
-  background: rgba(255,255,255,.04);
-  color: var(--text);
-  border-color: var(--stroke);
-}
-.btnGhost:hover{ border-color: var(--stroke2); }
 
-/* secondary bottom row */
-.bottomControls{
+button:active, .btn:active{
+  transform: translateY(1px);
+}
+
+button.secondary, .btn.secondary{
+  background: rgba(255,255,255,.06);
+  border:1px solid var(--stroke);
+  box-shadow:none;
+  color:var(--text);
+}
+
+button:disabled{
+  opacity:.45;
+  cursor:not-allowed;
+  transform:none;
+}
+
+/* Make file input button look like your action button (if hidden input + label is used) */
+.fileBtn, #choosePhotoBtn{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+}
+
+/* ---------- Status chips */
+.chipsRow, .statusRow{
   display:flex;
   align-items:center;
-  justify-content:space-between;
-  gap:12px;
-  margin-top: 12px;
-  flex-wrap:wrap;
-}
-.bottomLeft{
-  display:flex;
   gap:10px;
   flex-wrap:wrap;
+  margin:10px 0 6px;
 }
 
-/* target image container */
-.targetWrap{
-  position:relative;
-  border-radius: 18px;
-  border: 1px solid var(--stroke);
-  background: rgba(0,0,0,.25);
-  overflow:hidden;
-  box-shadow: inset 0 0 0 1px rgba(255,255,255,.03);
+.chip{
+  display:inline-flex;
+  align-items:center;
+  padding:9px 12px;
+  border-radius:999px;
+  border:1px solid var(--stroke);
+  background: rgba(255,255,255,.06);
+  font-weight:900;
+  color:var(--text);
 }
-.targetLabel{
+
+/* ---------- Instruction line */
+#instructionLine, .instructionLine{
+  margin:8px 0 10px;
+  color:var(--text);
+  font-weight:800;
+  opacity:.95;
+}
+
+/* ============================================================
+   TARGET PHOTO FRAME (the big fix)
+   - Center the image within the frame
+   - Make the frame look like a single card
+   ============================================================ */
+
+#targetWrap, .targetWrap{
+  position:relative;
+  width:100%;
+  margin:10px 0 12px;
+  border-radius: var(--radius);
+  border: 1px solid var(--stroke);
+  background: rgba(0,0,0,.22);        /* less “black slab” */
+  box-shadow: var(--shadow);
+  overflow:hidden;
+
+  /* This is the key: center the image in the frame */
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+
+/* If you have a title bar like "Target photo" */
+.frameTitle, .targetTitle{
   position:absolute;
   top:10px;
   left:12px;
-  z-index:3;
+  z-index:5;
   font-weight:900;
-  color: rgba(255,255,255,.85);
-  text-shadow: 0 10px 25px rgba(0,0,0,.6);
-}
-#targetImg{
-  display:block;
-  width:100%;
-  height:auto;
-  max-height: 560px;
-  object-fit: contain;
-  background: rgba(0,0,0,.20);
+  color:rgba(255,255,255,.85);
+  text-shadow: 0 2px 10px rgba(0,0,0,.35);
 }
 
-/* dots layer */
-#dotsLayer{
-  position:absolute;
-  inset:0;
-  z-index:2;
-  pointer-events:none; /* dots don't block taps */
+/* The image itself */
+#targetImg, .targetImg{
+  display:block;
+  max-width:100%;
+  max-height:72vh;          /* keeps it visible on iPad */
+  width:auto;
+  height:auto;
+  object-fit:contain;
+  border-radius: 12px;
+  background: rgba(255,255,255,.03);
 }
+
+/* The dots layer will be positioned by JS to the displayed image rect */
+#dotsLayer, .dotsLayer{
+  position:absolute;
+  z-index:10;
+  pointer-events:none; /* IMPORTANT: never blocks scrolling/taps */
+}
+
+/* Dots */
 .dot{
   position:absolute;
+  transform: translate(-50%, -50%);
   width:18px;
   height:18px;
   border-radius:999px;
-  transform: translate(-50%, -50%);
-  background: rgba(0, 255, 160, .95);
-  border: 3px solid rgba(255,255,255,.90);
-  box-shadow: 0 8px 22px rgba(0,0,0,.50);
-}
-.dot.hole{
-  background: rgba(0, 255, 160, .90);
-}
-.dot.bull{
-  background: rgba(255, 230, 0, .95);       /* YELLOW bull */
-  border: 3px solid rgba(255,255,255,.92);  /* no red ring */
+  box-shadow: 0 8px 18px rgba(0,0,0,.30);
 }
 
-/* results */
-.resultsBlock{
-  margin-top: 16px;
-  padding: 16px;
+.dot.hole{
+  background: var(--good);
+  border: 3px solid rgba(255,255,255,.80);
 }
-.resultsTitle{
-  font-weight:950;
-  font-size: 28px;
-  margin: 0 0 10px 0;
+
+.dot.bull{
+  background: var(--bull);
+  border: 3px solid rgba(255,255,255,.95);
 }
-.resultsCard{
-  border-radius: 16px;
-  border: 1px solid var(--stroke);
-  background: rgba(0,0,0,.22);
-  padding: 14px;
-}
-.row{
+
+/* ---------- Bottom action row (Set Bull / Undo / Clear / Show Results) */
+.actionsRow, .bottomRow{
   display:flex;
   align-items:center;
   justify-content:space-between;
   gap:10px;
-  padding: 10px 6px;
-  border-bottom: 1px solid rgba(255,255,255,.08);
+  margin:10px 0 16px;
 }
-.row:last-child{ border-bottom:none; }
-.row .label{
-  color: var(--muted);
-  font-weight:850;
+
+.actionsRow .left, .bottomRow .left{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
 }
-.row .value{
-  font-weight:950;
+
+.actionsRow .right, .bottomRow .right{
+  display:flex;
+  gap:10px;
+}
+
+/* If your buttons are individual IDs, we still force same styling */
+#setBullBtn, #undoBtn, #clearBtn, #showResultsBtn{
+  background: linear-gradient(180deg, var(--blue1), var(--blue2));
+}
+
+/* ---------- Results panel */
+.resultsCard, #resultsCard, .results{
+  border-radius: var(--radius);
+  border:1px solid var(--stroke);
+  background: rgba(0,0,0,.22);
+  box-shadow: var(--shadow);
+  padding:16px 16px 18px;
+}
+
+.resultsCard h2, .results h2, .resultsTitle{
+  margin:0 0 10px;
+  font-size:30px;
   letter-spacing:.2px;
 }
 
-/* SEC download button */
-#downloadSecBtn{
-  margin-top: 12px;
-  background: linear-gradient(180deg, rgba(255,60,60,.95), rgba(20,80,255,.90));
-  border: 1px solid rgba(255,255,255,.10);
-  color: white;
+.correctionsCard, #correctionsCard{
+  border-radius: var(--radius2);
+  border:1px solid var(--stroke);
+  background: rgba(255,255,255,.05);
+  padding:14px;
 }
 
-/* responsive */
+.corrRow{
+  display:grid;
+  grid-template-columns: 120px 1fr 40px 120px;
+  align-items:center;
+  gap:10px;
+  padding:10px 0;
+  border-top:1px solid var(--stroke);
+}
+
+.corrRow:first-child{ border-top:0; }
+
+.corrLabel{
+  color:var(--muted);
+  font-weight:900;
+}
+
+.corrDir{
+  font-weight:1000;
+  letter-spacing:1px;
+}
+
+.corrArrow{
+  text-align:center;
+  opacity:.85;
+}
+
+.corrVal{
+  text-align:right;
+  font-weight:1000;
+}
+
+/* Download button: stop looking like a tiny link */
+#downloadSecBtn, .downloadSecBtn{
+  margin-top:12px;
+  width:fit-content;
+  background: linear-gradient(90deg, #d22, #fff, #1b56d6);
+  color:#10131a;
+  text-shadow:none;
+  border: 1px solid rgba(255,255,255,.35);
+}
+
+/* ---------- Mobile tightening */
 @media (max-width: 720px){
-  .brandTap,.brandDash,.brandN,.brandScore{ font-size: 28px; }
-  .resultsTitle{ font-size: 24px; }
-  .vendorName{ display:none; } /* keeps pill compact on iPhone */
+  .brandTitle{ font-size:26px; }
+  #targetImg, .targetImg{ max-height:62vh; }
+  .corrRow{ grid-template-columns: 105px 1fr 32px 100px; }
 }
