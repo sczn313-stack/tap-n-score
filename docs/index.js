@@ -1,371 +1,408 @@
 /* ============================================================
-   docs/index.js (FULL REPLACEMENT) — Stability Brick
-   Fixes:
-   - Tap coordinates are computed from the *actual rendered image rect*
-   - Dots layer is sized/positioned to match the image exactly
-   - iOS scroll vs tap: movement threshold cancels tap
-   - First tap sets bull. Next taps add holes. "Change bull" resets.
+   Tap-n-Score™ — index.js (FULL REPLACEMENT)
+   Brick 1: Accurate taps (image-relative; store normalized + natural px)
+   Brick 2: Scroll-safe tap capture (drag threshold; no accidental taps)
+   Brick 3: Remove "Set Bull" (first tap = aim point, then holes)
 ============================================================ */
 
 (() => {
+  // ---------- DOM
   const $ = (id) => document.getElementById(id);
 
-  // Elements
   const elFile = $("photoInput");
-  const elChoose = $("chooseBtn");
-
   const elImg = $("targetImg");
-  const elStage = $("targetStage");
+  const elTapLayer = $("tapLayer");
   const elDots = $("dotsLayer");
-  const elEmptyHint = $("emptyHint");
 
   const elBullStatus = $("bullStatus");
   const elHoleCount = $("holeCount");
-  const elHelp = $("helpLine");
+  const elInstruction = $("instructionLine");
+  const elChangeBull = $("changeBullBtn");
 
   const elUndo = $("undoBtn");
   const elClear = $("clearBtn");
-  const elResults = $("resultsBtn");
-  const elChangeBull = $("changeBullBtn");
+  const elShow = $("showResultsBtn");
   const elLockBanner = $("lockBanner");
 
-  const elWindDir = $("windDir");
-  const elWindClicks = $("windClicks");
+  const elWindDir = $("windageDir");
+  const elWindVal = $("windageVal");
   const elElevDir = $("elevDir");
-  const elElevClicks = $("elevClicks");
-  const elScoreNum = $("scoreNum");
-  const elDownload = $("downloadBtn");
+  const elElevVal = $("elevVal");
+  const elDownloadSEC = $("downloadSecBtn");
 
-  const elVendorBtn = $("vendorBtn");
-  const elVendorName = $("vendorName");
+  const elVendorPill = $("vendorPill");
   const elVendorLogo = $("vendorLogo");
-  const elVendorLogoWrap = $("vendorLogoWrap");
-  const elDetailsBtn = $("detailsBtn");
+  const elVendorName = $("vendorName");
 
-  // State
+  // ---------- State
   let objectUrl = null;
-  let imgReady = false;
 
-  // Coordinates stored in normalized image space (0..1)
-  let bull = null;       // { nx, ny }
-  let holes = [];        // [{ nx, ny }, ...]
+  // Aim point (bull) stored as point: { nx, ny, ix, iy }
+  let bull = null;
+
+  // Holes stored as points: { nx, ny, ix, iy }
+  let holes = [];
+
+  // Results lock (no new taps until Undo/Clear)
   let resultsLocked = false;
 
-  // Pointer / scroll guard
-  let isPointerDown = false;
-  let startX = 0, startY = 0;
-  let moved = false;
-  const MOVE_PX_CANCEL = 10;
+  // Pointer tap filtering
+  const TAP_MOVE_PX = 10;     // if finger moves > 10px, treat as scroll/drag (no dot)
+  const TAP_TIME_MS = 450;    // long presses won't create dots
+  let ptrDown = null;         // { x, y, t, id, moved }
 
+  // ---------- Helpers
   function clamp01(v) {
     return Math.max(0, Math.min(1, v));
   }
 
-  function resetResults() {
-    elWindDir.textContent = "—";
-    elWindClicks.textContent = "—";
-    elElevDir.textContent = "—";
-    elElevClicks.textContent = "—";
-    elScoreNum.textContent = "—";
-    elDownload.disabled = true;
-  }
-
-  function setLocked(on) {
-    resultsLocked = !!on;
-    elLockBanner.hidden = !resultsLocked;
-    if (resultsLocked) {
-      elHelp.textContent = "Results locked. Undo/Clear to edit taps.";
-      elResults.disabled = true;
-      elChangeBull.disabled = true;
-    } else {
-      elHelp.innerHTML = bull
-        ? "Tap each confirmed bullet hole."
-        : "Tap the <b>bull first</b>, then tap each confirmed bullet hole.";
-      elResults.disabled = !(bull && holes.length >= 1);
-      elChangeBull.disabled = !bull;
+  function setInstruction() {
+    if (!elImg.src) {
+      elInstruction.textContent = "Load a photo to begin.";
+      return;
     }
+    if (!bull) {
+      elInstruction.textContent = "Tap aim point first, then tap bullet holes.";
+      return;
+    }
+    elInstruction.textContent = "Tap each confirmed bullet hole.";
   }
 
-  function updateStatus() {
+  function setStatus() {
     elBullStatus.textContent = bull ? "set" : "not set";
     elHoleCount.textContent = String(holes.length);
 
+    elChangeBull.hidden = !bull;
     elUndo.disabled = !(bull || holes.length);
     elClear.disabled = !(bull || holes.length);
+    elShow.disabled = !(bull && holes.length);
 
-    if (!resultsLocked) {
-      elResults.disabled = !(bull && holes.length >= 1);
-      elChangeBull.disabled = !bull;
-    }
-  }
-
-  function clearAll() {
-    bull = null;
-    holes = [];
-    setLocked(false);
-    resetResults();
-    renderDots();
-    updateStatus();
-  }
-
-  function undo() {
     if (resultsLocked) {
-      // allow editing by unlocking first
-      setLocked(false);
-      resetResults();
+      elLockBanner.hidden = false;
+    } else {
+      elLockBanner.hidden = true;
     }
-
-    if (holes.length > 0) {
-      holes.pop();
-    } else if (bull) {
-      bull = null;
-    }
-
-    renderDots();
-    updateStatus();
   }
 
-  function changeBull() {
-    // Reset bull + holes so the user can re-anchor clean
-    bull = null;
-    holes = [];
-    setLocked(false);
-    resetResults();
-    renderDots();
-    updateStatus();
+  // Convert a client point to:
+  // - normalized coords within displayed image (nx, ny)
+  // - natural image pixels (ix, iy) based on naturalWidth/Height
+  function clientToImagePoint(clientX, clientY) {
+    const rect = elImg.getBoundingClientRect();
+    const nx = clamp01((clientX - rect.left) / rect.width);
+    const ny = clamp01((clientY - rect.top) / rect.height);
+
+    // Natural image pixels (stable across resize/orientation)
+    const iw = elImg.naturalWidth || 1;
+    const ih = elImg.naturalHeight || 1;
+    const ix = nx * iw;
+    const iy = ny * ih;
+
+    return { nx, ny, ix, iy };
   }
 
-  // Resize/position dots layer to exactly match the rendered image box
-  function syncOverlayToImage() {
-    if (!imgReady) return;
-    const r = elImg.getBoundingClientRect();
-    const stageR = elStage.getBoundingClientRect();
-
-    // Dots layer is absolutely positioned inside targetStage
-    // Convert viewport coords into stage-local coords
-    const left = r.left - stageR.left;
-    const top = r.top - stageR.top;
-
-    elDots.style.left = `${left}px`;
-    elDots.style.top = `${top}px`;
-    elDots.style.width = `${r.width}px`;
-    elDots.style.height = `${r.height}px`;
-
-    // Hide empty hint once an image exists
-    elEmptyHint.style.display = imgReady ? "none" : "block";
-  }
-
+  // Render dots from normalized coords (stable across resize)
   function renderDots() {
     elDots.innerHTML = "";
-    if (!imgReady) return;
 
-    // Ensure overlay matches image each render (handles iOS relayout)
-    syncOverlayToImage();
-
-    const makeDot = (nx, ny, kind) => {
+    if (bull) {
       const d = document.createElement("div");
-      d.className = `dot ${kind}`;
-      d.style.left = `${nx * 100}%`;
-      d.style.top = `${ny * 100}%`;
-      return d;
-    };
-
-    if (bull) elDots.appendChild(makeDot(bull.nx, bull.ny, "bull"));
-    holes.forEach((h) => elDots.appendChild(makeDot(h.nx, h.ny, "hole")));
-  }
-
-  // Convert a pointer event to normalized image coords
-  function eventToNorm(ev) {
-    const imgRect = elImg.getBoundingClientRect();
-    const x = ev.clientX;
-    const y = ev.clientY;
-
-    // If the pointer is outside the image rect, ignore
-    if (x < imgRect.left || x > imgRect.right || y < imgRect.top || y > imgRect.bottom) {
-      return null;
+      d.className = "dot bullDot";
+      d.style.left = `${bull.nx * 100}%`;
+      d.style.top = `${bull.ny * 100}%`;
+      elDots.appendChild(d);
     }
 
-    const nx = clamp01((x - imgRect.left) / imgRect.width);
-    const ny = clamp01((y - imgRect.top) / imgRect.height);
-    return { nx, ny };
-  }
-
-  function onTap(ev) {
-    if (!imgReady) return;
-    if (resultsLocked) return;
-
-    const p = eventToNorm(ev);
-    if (!p) return;
-
-    if (!bull) {
-      bull = p;
-      elHelp.textContent = "Tap each confirmed bullet hole.";
-    } else {
-      holes.push(p);
+    for (const p of holes) {
+      const d = document.createElement("div");
+      d.className = "dot holeDot";
+      d.style.left = `${p.nx * 100}%`;
+      d.style.top = `${p.ny * 100}%`;
+      elDots.appendChild(d);
     }
-
-    renderDots();
-    updateStatus();
   }
 
-  // Basic score placeholder (keeps UI stable)
-  // You can swap this later to your real score logic without breaking taps.
-  function computeScore() {
-    if (!bull || holes.length < 1) return null;
-
-    // Simple placeholder: number of holes * 10 + 4 (keeps your example near 54-ish with 5 holes)
-    const s = holes.length * 10 + 4;
-    return s;
+  function lockResults() {
+    resultsLocked = true;
+    setStatus();
   }
 
-  // Placeholder correction output (you said clicks are fine already — keep stable)
-  function showResults() {
-    if (!bull || holes.length < 1) return;
-
-    const score = computeScore();
-    elScoreNum.textContent = score == null ? "—" : String(score);
-
-    // Keep your existing values if you are feeding them elsewhere.
-    // For now, show stable placeholders (no NaN, no blanks).
-    // Replace with your real correction math when you want.
-    elWindDir.textContent = "LEFT";
-    elWindClicks.textContent = "6.19 clicks";
-    elElevDir.textContent = "DOWN";
-    elElevClicks.textContent = "8.54 clicks";
-
-    elDownload.disabled = false;
-    setLocked(true);
+  function unlockResults() {
+    resultsLocked = false;
+    setStatus();
   }
 
-  // Vendor loading
+  function resetResultsUI() {
+    elWindDir.textContent = "—";
+    elWindVal.textContent = "—";
+    elElevDir.textContent = "—";
+    elElevVal.textContent = "—";
+    elDownloadSEC.disabled = true;
+  }
+
+  // ---------- Vendor load (non-blocking)
   async function loadVendor() {
     try {
-      const r = await fetch("./vendor.json", { cache: "no-store" });
-      if (!r.ok) throw new Error("vendor.json not found");
-      const v = await r.json();
+      const res = await fetch("./vendor.json", { cache: "no-store" });
+      if (!res.ok) return;
+      const v = await res.json();
 
-      if (v && v.name) elVendorName.textContent = v.name;
+      if (v?.name) elVendorName.textContent = v.name;
 
-      if (v && v.logo) {
-        elVendorLogo.src = v.logo;
-        elVendorLogoWrap.hidden = false;
+      if (v?.logoPath) {
+        elVendorLogo.src = v.logoPath;
+        elVendorLogo.alt = v.name ? `${v.name} logo` : "Vendor logo";
+        elVendorLogo.style.display = "block";
       } else {
-        elVendorLogoWrap.hidden = true;
+        elVendorLogo.style.display = "none";
       }
 
-      // Optional: click vendor pill to open vendor link
-      if (v && v.url) {
-        elVendorBtn.onclick = () => window.open(v.url, "_blank", "noopener,noreferrer");
+      // Optional: if website exists, make pill clickable
+      if (v?.website) {
+        elVendorPill.style.cursor = "pointer";
+        elVendorPill.title = v.website;
+        elVendorPill.onclick = () => window.open(v.website, "_blank", "noopener,noreferrer");
+      } else {
+        elVendorPill.style.cursor = "default";
+        elVendorPill.title = "";
+        elVendorPill.onclick = null;
       }
-    } catch (e) {
-      // Vendor is optional; don’t break the app if missing.
-      elVendorName.textContent = "Vendor";
-      elVendorLogoWrap.hidden = true;
+    } catch (_) {
+      // silent fail
     }
   }
 
-  function pickPhoto() {
-    elFile.click();
+  // ---------- Core tap logic (bull first, then holes)
+  function addTapPoint(pt) {
+    if (!elImg.src) return;
+    if (resultsLocked) return;
+
+    if (!bull) {
+      bull = pt;
+      holes = [];
+      resetResultsUI();
+      unlockResults();
+      setInstruction();
+      setStatus();
+      renderDots();
+      return;
+    }
+
+    holes.push(pt);
+    resetResultsUI();
+    unlockResults();
+    setInstruction();
+    setStatus();
+    renderDots();
   }
 
-  function setImageFromFile(file) {
+  // ---------- Scroll-safe pointer handling
+  function onPointerDown(e) {
+    // Only primary pointer (ignore second finger)
+    if (!e.isPrimary) return;
+    if (!elImg.src) return;
+    if (resultsLocked) return;
+
+    // Only if the down happens on the tap layer (image area)
+    // (We attach to tapLayer, so this is already true)
+    ptrDown = {
+      id: e.pointerId,
+      x: e.clientX,
+      y: e.clientY,
+      t: Date.now(),
+      moved: false,
+    };
+  }
+
+  function onPointerMove(e) {
+    if (!ptrDown) return;
+    if (e.pointerId !== ptrDown.id) return;
+
+    const dx = e.clientX - ptrDown.x;
+    const dy = e.clientY - ptrDown.y;
+    const dist = Math.hypot(dx, dy);
+
+    if (dist > TAP_MOVE_PX) {
+      ptrDown.moved = true; // treat as scroll/drag
+    }
+  }
+
+  function onPointerUp(e) {
+    if (!ptrDown) return;
+    if (e.pointerId !== ptrDown.id) return;
+
+    const elapsed = Date.now() - ptrDown.t;
+
+    const moved = ptrDown.moved;
+    ptrDown = null;
+
+    if (moved) return;
+    if (elapsed > TAP_TIME_MS) return;
+
+    const pt = clientToImagePoint(e.clientX, e.clientY);
+    addTapPoint(pt);
+  }
+
+  function onPointerCancel(e) {
+    if (!ptrDown) return;
+    if (e.pointerId !== ptrDown.id) return;
+    ptrDown = null;
+  }
+
+  // ---------- Image loading
+  function revokeObjectUrl() {
+    if (objectUrl) {
+      URL.revokeObjectURL(objectUrl);
+      objectUrl = null;
+    }
+  }
+
+  function resetAllState() {
+    bull = null;
+    holes = [];
+    resultsLocked = false;
+    resetResultsUI();
+    setInstruction();
+    setStatus();
+    renderDots();
+  }
+
+  function onFileSelected(file) {
     if (!file) return;
 
-    if (objectUrl) URL.revokeObjectURL(objectUrl);
+    revokeObjectUrl();
     objectUrl = URL.createObjectURL(file);
 
-    imgReady = false;
-    elImg.src = "";
-    elImg.removeAttribute("src");
-
-    // Reset state for new photo
-    clearAll();
-    resetResults();
-
+    // Load image
     elImg.onload = () => {
-      imgReady = true;
-      // Ensure image is visible
-      elImg.classList.add("isReady");
-      // Sync overlay after layout paints
-      requestAnimationFrame(() => {
-        syncOverlayToImage();
-        renderDots();
-      });
+      // Make sure tap layer is active
+      elTapLayer.classList.add("active");
+
+      // Reset taps when new photo loads
+      resetAllState();
+      setInstruction();
+      setStatus();
     };
 
     elImg.src = objectUrl;
   }
 
-  // Pointer handling (tap vs scroll guard)
-  function onPointerDown(ev) {
-    if (!imgReady) return;
-    if (resultsLocked) return;
-
-    isPointerDown = true;
-    moved = false;
-    startX = ev.clientX;
-    startY = ev.clientY;
-
-    // Capture pointer so we receive move/up even if the finger drifts
-    try { elStage.setPointerCapture(ev.pointerId); } catch (_) {}
+  // ---------- Undo / Clear / Change bull
+  function undo() {
+    if (holes.length) {
+      holes.pop();
+      unlockResults();
+      resetResultsUI();
+    } else if (bull) {
+      bull = null;
+      unlockResults();
+      resetResultsUI();
+    }
+    setInstruction();
+    setStatus();
+    renderDots();
   }
 
-  function onPointerMove(ev) {
-    if (!isPointerDown) return;
-    const dx = ev.clientX - startX;
-    const dy = ev.clientY - startY;
-    if (Math.hypot(dx, dy) > MOVE_PX_CANCEL) moved = true;
+  function clearAll() {
+    bull = null;
+    holes = [];
+    unlockResults();
+    resetResultsUI();
+    setInstruction();
+    setStatus();
+    renderDots();
   }
 
-  function onPointerUp(ev) {
-    if (!isPointerDown) return;
-    isPointerDown = false;
-
-    if (moved) return; // treat as scroll/drag, not a tap
-    onTap(ev);
+  function changeBull() {
+    // Changing bull implies re-do everything for correctness
+    bull = null;
+    holes = [];
+    unlockResults();
+    resetResultsUI();
+    setInstruction();
+    setStatus();
+    renderDots();
   }
 
-  function onPointerCancel() {
-    isPointerDown = false;
+  // ---------- Results (placeholder-safe)
+  // This keeps your tap data *correct* (stable coordinates).
+  // If you already have a calc/SEC pipeline, plug it into computeAndRender().
+  function computeAndRender() {
+    if (!bull || holes.length === 0) return;
+
+    // POIB (mean of holes) in natural image pixels
+    const poib = holes.reduce(
+      (acc, p) => ({ x: acc.x + p.ix, y: acc.y + p.iy }),
+      { x: 0, y: 0 }
+    );
+    poib.x /= holes.length;
+    poib.y /= holes.length;
+
+    // Correction vector = bull - poib (in natural px)
+    const dx = bull.ix - poib.x; // + = needs RIGHT? (depends on your mapping)
+    const dy = bull.iy - poib.y; // + = needs DOWN?  (screen-space)
+
+    // Direction labels (screen-space):
+    const windDir = dx >= 0 ? "RIGHT" : "LEFT";
+    const elevDir = dy >= 0 ? "DOWN" : "UP";
+
+    // Values: we cannot infer inches/clicks without your scale model here.
+    // So we show px deltas as a stable debug stand-in and lock results.
+    const windVal = `${Math.abs(dx).toFixed(2)} px`;
+    const elevVal = `${Math.abs(dy).toFixed(2)} px`;
+
+    elWindDir.textContent = windDir;
+    elWindVal.textContent = windVal;
+    elElevDir.textContent = elevDir;
+    elElevVal.textContent = elevVal;
+
+    // Lock, and keep SEC disabled until your SEC pipeline plugs in
+    elDownloadSEC.disabled = true;
+    lockResults();
   }
 
-  // Events
-  elChoose.addEventListener("click", pickPhoto);
-  elFile.addEventListener("change", () => {
-    const file = elFile.files && elFile.files[0];
-    setImageFromFile(file);
-    // iOS Safari sometimes needs value cleared for re-picking same file
-    elFile.value = "";
+  // ---------- SEC download (stub-safe)
+  function downloadSecStub() {
+    // Intentionally no-op until you wire your SEC canvas pipeline here.
+    // Keep the button disabled by default in this brick.
+  }
+
+  // ---------- Keep overlay aligned on resize/orientation
+  // We render via % positions, so dots stay aligned as long as the tapLayer tracks the image box.
+  // The CSS does that; this is just a safety refresh.
+  const ro = new ResizeObserver(() => {
+    renderDots();
+  });
+
+  // ---------- Wire up events
+  elFile.addEventListener("change", (e) => {
+    const file = e.target.files && e.target.files[0];
+    onFileSelected(file);
   });
 
   elUndo.addEventListener("click", undo);
   elClear.addEventListener("click", clearAll);
-  elResults.addEventListener("click", showResults);
   elChangeBull.addEventListener("click", changeBull);
 
-  // Stage pointer events (we do NOT preventDefault, so scrolling still works)
-  elStage.addEventListener("pointerdown", onPointerDown, { passive: true });
-  elStage.addEventListener("pointermove", onPointerMove, { passive: true });
-  elStage.addEventListener("pointerup", onPointerUp, { passive: true });
-  elStage.addEventListener("pointercancel", onPointerCancel, { passive: true });
-
-  // Keep overlay aligned on resize/orientation changes
-  window.addEventListener("resize", () => {
-    if (!imgReady) return;
-    requestAnimationFrame(() => {
-      syncOverlayToImage();
-      renderDots();
-    });
+  elShow.addEventListener("click", () => {
+    computeAndRender();
   });
 
-  // Details button (safe placeholder)
-  elDetailsBtn.addEventListener("click", () => {
-    alert("Details panel (hook later).");
-  });
+  elDownloadSEC.addEventListener("click", downloadSecStub);
 
-  // Init
+  // Pointer events on tapLayer
+  // NOTE: do NOT preventDefault; the move threshold prevents accidental dots while scrolling.
+  elTapLayer.addEventListener("pointerdown", onPointerDown, { passive: true });
+  elTapLayer.addEventListener("pointermove", onPointerMove, { passive: true });
+  elTapLayer.addEventListener("pointerup", onPointerUp, { passive: true });
+  elTapLayer.addEventListener("pointercancel", onPointerCancel, { passive: true });
+
+  // Observe image element size changes
+  ro.observe(elImg);
+
+  // Initial UI state
   loadVendor();
-  updateStatus();
-  resetResults();
-  setLocked(false);
+  setInstruction();
+  setStatus();
+  renderDots();
 })();
