@@ -1,4 +1,4 @@
- :root{
+:root{
   --bg: #06070a;
   --panel: rgba(12,14,20,0.72);
   --panel2: rgba(16,18,28,0.82);
@@ -7,7 +7,6 @@
   --muted: rgba(255,255,255,0.62);
   --blue1: rgba(37,99,235,0.95);
   --blue2: rgba(37,99,235,0.60);
-  --blue3: rgba(14,165,233,0.60);
   --red1: rgba(220,38,38,0.95);
   --shadow: 0 18px 55px rgba(0,0,0,0.55);
   --radius: 18px;
@@ -113,9 +112,7 @@ body{
   font-weight: 850;
 }
 
-/* ===== ACTION BUTTONS =====
-   All action buttons = same blue as "Choose Target Photo"
-*/
+/* ===== ACTION BUTTONS (all match Choose Target Photo) ===== */
 .actionBtn{
   appearance:none;
   border: 1px solid rgba(255,255,255,0.16);
@@ -132,7 +129,6 @@ body{
 }
 .actionBtn:active{ transform: translateY(1px); }
 
-/* “secondary” keeps dark style */
 .actionBtn.secondaryBtn{
   background: rgba(255,255,255,0.06);
   color: var(--text);
@@ -258,7 +254,7 @@ body{
   .brandLine{ font-size: 24px; }
 }
 
-/* ===== SEC overlay ===== */
+/* ===== SEC overlay (POLISHED) ===== */
 .secOverlay{
   position: fixed;
   inset: 0;
@@ -266,18 +262,18 @@ body{
   display:none;
   align-items:center;
   justify-content:center;
-  background: rgba(0,0,0,0.72);
-  backdrop-filter: blur(10px);
-  padding: 18px;
+  background: rgba(0,0,0,0.78);
+  backdrop-filter: blur(12px);
+  padding: 16px;
 }
 .secOverlay.show{ display:flex; }
 
 .secPanel{
   width: min(980px, 100%);
   border-radius: 22px;
-  border: 1px solid rgba(255,255,255,0.14);
-  background: rgba(0,0,0,0.55);
-  box-shadow: 0 30px 120px rgba(0,0,0,0.65);
+  border: 1px solid rgba(255,255,255,0.16);
+  background: rgba(0,0,0,0.60);
+  box-shadow: 0 30px 120px rgba(0,0,0,0.70);
   overflow:hidden;
 }
 
