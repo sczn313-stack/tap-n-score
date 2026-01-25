@@ -6,11 +6,11 @@
   <meta name="color-scheme" content="dark" />
   <meta name="theme-color" content="#000000" />
   <title>Tap-n-Score™</title>
-  <link rel="stylesheet" href="./styles.css?v=20260125a" />
+  <link rel="stylesheet" href="./styles.css?v=20260125b" />
 </head>
 
 <body>
-  <!-- Top Brand Header (will hide in SEC mode via CSS) -->
+  <!-- Header (must disappear in SEC mode) -->
   <header class="topHeader tapnscoreHeader" aria-label="Tap-n-Score Header">
     <div class="brandLeft">
       <div class="brandLine">
@@ -19,23 +19,20 @@
       <div class="brandSub">After-Shot Intelligence</div>
     </div>
 
-    <!-- Vendor slot -->
-    <a id="vendorLink" class="vendorSlot" href="#" target="_blank" rel="noopener" aria-label="Vendor website link">
-      <img id="vendorLogo" class="vendorLogo" alt="Vendor Logo" />
-      <div class="vendorText">
-        <div id="vendorName" class="vendorName"></div>
-        <div class="vendorHint">Vendor</div>
-      </div>
-    </a>
+    <div class="headerRight">
+      <!-- Vendor pill -->
+      <a id="vendorLink" class="pillBtn vendorPill" href="#" aria-label="Vendor">
+        <img id="vendorLogo" class="vendorLogo" alt="Vendor Logo" />
+        <span id="vendorName" class="vendorName">Vendor</span>
+      </a>
 
-    <button id="detailsBtn" class="pillBtn" type="button">Details</button>
+      <button id="detailsBtn" class="pillBtn" type="button">Details</button>
+    </div>
   </header>
 
   <main class="page">
-    <!-- Photo input (hidden) -->
     <input id="photoInput" type="file" accept="image/*" hidden />
 
-    <!-- Action row -->
     <section class="actionsTop" aria-label="Actions">
       <button id="choosePhotoBtn" class="actionBtn" type="button">Choose Target Photo</button>
 
@@ -45,13 +42,13 @@
       </div>
     </section>
 
-    <!-- Target stage -->
     <section class="stage" aria-label="Target Stage">
       <div id="instructionLine" class="instructionLine">
         Choose a photo, then tap the bull once, then tap each confirmed hole.
       </div>
 
       <div id="targetWrap" class="targetWrap">
+        <div class="targetLabel">Target photo</div>
         <img id="targetImg" class="targetImg" alt="Target photo" />
         <div id="dotsLayer" class="dotsLayer" aria-hidden="true"></div>
       </div>
@@ -63,7 +60,7 @@
 
         <div class="spacer"></div>
 
-        <button id="showResultsBtn" class="actionBtn primaryBtn" type="button">Show Results</button>
+        <button id="showResultsBtn" class="actionBtn" type="button">Show Results</button>
       </section>
 
       <section class="results" aria-label="Results">
@@ -91,7 +88,7 @@
       </section>
     </section>
 
-    <!-- SEC overlay (generated canvas) -->
+    <!-- SEC overlay -->
     <div id="secOverlay" class="secOverlay" aria-hidden="true">
       <div class="secPanel">
         <canvas id="secCanvas" width="1080" height="1350"></canvas>
@@ -104,6 +101,6 @@
     </div>
   </main>
 
-  <script src="./index.js?v=20260125a"></script>
+  <script src="./index.js?v=20260125b"></script>
 </body>
 </html>
