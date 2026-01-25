@@ -1,24 +1,20 @@
 /* ============================================================
    /docs/index.js  (FULL REPLACEMENT)
-   STABILITY BRICK v2 — ANCHOR FIX
-   - Listen on targetImg (not wrap) so coords are always correct
-   - Use pointerdown + touchstart fallback for iOS Safari reliability
-   - Bull auto-sets on first tap if not set
-   - Set Bull button forces re-anchor (next tap sets bull)
-   - Holes only record after bull is set
-   - Results/SEC hard-gated: bull set + holes>=1
+   STABILITY BRICK v3 — TAP vs SCROLL FIX
+   - Bull dot / hole dots still work
+   - No “tap capture” while scrolling (drag threshold)
+   - Uses pointerdown/move/up + touch fallback
 ============================================================ */
 
 (() => {
   const $ = (id) => document.getElementById(id);
 
-  // ---- Elements (IDs must exist; if one is missing you’ll feel it immediately)
+  // ---- Elements
   const elFile = $("photoInput");
   const elChoose = $("choosePhotoBtn");
 
-  const elWrap = $("targetWrap");      // container (for layout only)
-  const elImg  = $("targetImg");       // IMPORTANT: tap surface
-  const elDots = $("dotsLayer");       // overlay (must be pointer-events:none via CSS)
+  const elImg  = $("targetImg");     // tap surface
+  const elDots = $("dotsLayer");     // overlay (pointer-events:none in CSS)
 
   const elInstruction = $("instructionLine");
   const elBullStatus  = $("bullStatus");
@@ -35,13 +31,18 @@
   let selectedFile = null;
   let objectUrl = null;
 
-  let bull = null;      // {x,y} in image natural pixels
+  let bull = null;      // {x,y} in natural pixels
   let holes = [];       // [{x,y},...]
   let reanchorMode = false;
 
+  // Tap-vs-scroll tracking
+  const DRAG_PX = 12;        // movement threshold to treat as scroll/drag
+  const TAP_MAX_MS = 800;    // optional: ignore very long presses
+
+  let down = null;           // {x,y,t, id}
+
   // ---- Helpers
   function setText(el, txt) { if (el) el.textContent = txt; }
-
   function setInstruction(txt) { setText(elInstruction, txt); }
 
   function updateStatus() {
@@ -52,7 +53,7 @@
     if (elShow) elShow.disabled = !ready;
     if (elDownloadSecBtn) elDownloadSecBtn.disabled = !ready;
 
-    if (!elImg.src) {
+    if (!elImg || !elImg.src) {
       setInstruction("Choose a photo, then tap the bull once, then tap each confirmed hole.");
       return;
     }
@@ -84,25 +85,24 @@
     }
   }
 
-  // Convert a client (page) point to IMAGE NATURAL PIXELS
+  // Convert client coords -> natural image pixels
   function clientToNatural(clientX, clientY) {
-    const imgRect = elImg.getBoundingClientRect();
-    const relX = clientX - imgRect.left;
-    const relY = clientY - imgRect.top;
+    const r = elImg.getBoundingClientRect();
+    const relX = clientX - r.left;
+    const relY = clientY - r.top;
 
-    // Ignore taps outside image (prevents “padding clicks”)
-    if (relX < 0 || relY < 0 || relX > imgRect.width || relY > imgRect.height) return null;
+    if (relX < 0 || relY < 0 || relX > r.width || relY > r.height) return null;
 
-    const nx = (relX / imgRect.width)  * elImg.naturalWidth;
-    const ny = (relY / imgRect.height) * elImg.naturalHeight;
+    const nx = (relX / r.width)  * elImg.naturalWidth;
+    const ny = (relY / r.height) * elImg.naturalHeight;
 
     return { x: nx, y: ny };
   }
 
   function addDotDisplay(natX, natY, kind) {
-    const imgRect = elImg.getBoundingClientRect();
-    const xDisp = (natX / elImg.naturalWidth)  * imgRect.width;
-    const yDisp = (natY / elImg.naturalHeight) * imgRect.height;
+    const r = elImg.getBoundingClientRect();
+    const xDisp = (natX / elImg.naturalWidth)  * r.width;
+    const yDisp = (natY / elImg.naturalHeight) * r.height;
 
     const dot = document.createElement("div");
     dot.className = kind === "bull" ? "dot dotBull" : "dot dotHole";
@@ -114,7 +114,7 @@
   function redrawDots() {
     if (!elDots) return;
     elDots.innerHTML = "";
-    if (!elImg.src) return;
+    if (!elImg || !elImg.src) return;
 
     if (bull) addDotDisplay(bull.x, bull.y, "bull");
     for (const h of holes) addDotDisplay(h.x, h.y, "hole");
@@ -137,11 +137,12 @@
     elImg.src = objectUrl;
   }
 
-  elImg.addEventListener("load", () => {
-    // Make sure overlay redraws after image layout is known
-    redrawDots();
-    updateStatus();
-  });
+  if (elImg) {
+    elImg.addEventListener("load", () => {
+      redrawDots();
+      updateStatus();
+    });
+  }
 
   // ---- Choose photo
   if (elChoose && elFile) elChoose.addEventListener("click", () => elFile.click());
@@ -154,13 +155,12 @@
     });
   }
 
-  // ---- Tap logic (ANCHOR FIX)
-  function handleTap(clientX, clientY) {
-    if (!elImg.src) return;
+  // ---- Core tap action
+  function applyTap(clientX, clientY) {
+    if (!elImg || !elImg.src) return;
     const pt = clientToNatural(clientX, clientY);
     if (!pt) return;
 
-    // If reanchor OR no bull -> set bull
     if (reanchorMode || !bull) {
       bull = { x: pt.x, y: pt.y };
       reanchorMode = false;
@@ -169,35 +169,79 @@
       return;
     }
 
-    // Otherwise record hole
     holes.push({ x: pt.x, y: pt.y });
     redrawDots();
     updateStatus();
   }
 
-  // Pointer events (best)
-  elImg.addEventListener("pointerdown", (ev) => {
-    // Important for iOS Safari: don’t let it “turn into a scroll/zoom gesture”
-    ev.preventDefault();
-    handleTap(ev.clientX, ev.clientY);
-  }, { passive: false });
+  // ---- Tap vs Scroll logic
+  function beginDown(x, y, id = "mouse") {
+    down = { x, y, t: Date.now(), id };
+  }
 
-  // Touch fallback (older iOS behaviors)
-  elImg.addEventListener("touchstart", (ev) => {
-    ev.preventDefault();
-    const t = ev.touches && ev.touches[0];
-    if (!t) return;
-    handleTap(t.clientX, t.clientY);
-  }, { passive: false });
+  function movedTooFar(x, y) {
+    if (!down) return true;
+    const dx = x - down.x;
+    const dy = y - down.y;
+    return (dx*dx + dy*dy) >= (DRAG_PX * DRAG_PX);
+  }
+
+  function endUp(x, y, id = "mouse") {
+    if (!down || down.id !== id) { down = null; return; }
+
+    const dt = Date.now() - down.t;
+    const dragged = movedTooFar(x, y);
+
+    const shouldTap = !dragged && dt <= TAP_MAX_MS;
+    down = null;
+
+    if (shouldTap) applyTap(x, y);
+  }
+
+  // ---- Pointer events (preferred)
+  if (elImg) {
+    elImg.addEventListener("pointerdown", (ev) => {
+      // Do NOT preventDefault => allows scroll
+      beginDown(ev.clientX, ev.clientY, ev.pointerId);
+    });
+
+    elImg.addEventListener("pointermove", (ev) => {
+      // nothing needed; movement measured on pointerup
+    });
+
+    elImg.addEventListener("pointerup", (ev) => {
+      endUp(ev.clientX, ev.clientY, ev.pointerId);
+    });
+
+    elImg.addEventListener("pointercancel", () => { down = null; });
+  }
+
+  // ---- Touch fallback (some iOS Safari combos)
+  if (elImg) {
+    elImg.addEventListener("touchstart", (ev) => {
+      const t = ev.touches && ev.touches[0];
+      if (!t) return;
+      beginDown(t.clientX, t.clientY, "touch");
+    }, { passive: true });
+
+    elImg.addEventListener("touchend", (ev) => {
+      const t = ev.changedTouches && ev.changedTouches[0];
+      if (!t) return;
+      endUp(t.clientX, t.clientY, "touch");
+    }, { passive: true });
+
+    elImg.addEventListener("touchcancel", () => { down = null; }, { passive: true });
+  }
 
   // ---- Buttons
   if (elSetBull) {
     elSetBull.addEventListener("click", () => {
-      if (!elImg.src) return;
+      if (!elImg || !elImg.src) return;
       reanchorMode = true;
       updateStatus();
     });
   }
+
   if (elUndo)  elUndo.addEventListener("click", undoLast);
   if (elClear) elClear.addEventListener("click", clearAll);
 
