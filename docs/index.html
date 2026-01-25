@@ -7,92 +7,153 @@
   <meta name="theme-color" content="#000000" />
   <title>Tap-n-Score™</title>
 
-  <link rel="stylesheet" href="./styles.css?v=20260125c" />
+  <link rel="stylesheet" href="./styles.css?v=hotfix-brick5" />
 </head>
 
 <body>
   <main class="page">
 
-    <!-- Header -->
-    <header class="topBar">
-      <div class="brandBlock">
-        <div class="brandLine">
-          <span class="brandTap">TAP</span><span class="brandN">-N-</span><span class="brandScore">SCORE</span><span class="brandTm">™</span>
-        </div>
-        <div class="subBrand">After-Shot Intelligence</div>
-      </div>
+    <!-- TOP: minimal. (We’ll keep brand small; shooter-forward) -->
+    <header class="topbar">
+      <div class="brandSmall">Tap-n-Score™</div>
 
-      <div class="vendorPill" id="vendorPill" aria-label="Vendor">
+      <!-- Vendor pill (INPUT location) -->
+      <div id="vendorPill" class="vendorPill" role="button" aria-label="Printer link">
         <img id="vendorLogo" class="vendorLogo" alt="" />
-        <span id="vendorName" class="vendorName">Vendor</span>
+        <div class="vendorTxt">
+          <div class="vendorLabel">Printer</div>
+          <div id="vendorName" class="vendorName">—</div>
+        </div>
       </div>
     </header>
 
-    <!-- Hero action -->
-    <section class="hero">
-      <label class="btn primary" for="photoInput" id="choosePhotoBtn">Take a photo of your target</label>
-      <input id="photoInput" class="fileInput" type="file" accept="image/*" capture="environment" />
-      <div class="tip" id="tipLine">Tip: include the full target. Keep it straight-on.</div>
+    <!-- CARD 1: Choose photo ONLY -->
+    <section class="card">
+      <div class="heroRow">
+        <label class="chooseBtn">
+          <input id="photoInput" type="file" accept="image/*" />
+          <span>TAKE / CHOOSE TARGET PHOTO</span>
+        </label>
+
+        <div class="heroHint">
+          Straight-on photo • Fill the frame • Good lighting
+        </div>
+      </div>
     </section>
 
-    <!-- Status + instruction -->
-    <section class="statusRow">
-      <div class="statusPill"><span class="muted">Aim point:</span> <strong id="bullStatus">not set</strong></div>
-      <div class="statusPill"><span class="muted">Holes:</span> <strong id="holeCount">0</strong></div>
-    </section>
+    <!-- CARD 2: Target + taps -->
+    <section class="card">
+      <!-- Instruction INSIDE target frame area (above image) -->
+      <div id="instructionLine" class="instructionLine">
+        Tap aim point first, then tap bullet holes.
+      </div>
 
-    <section class="instruction">
-      <div class="instructionText" id="instructionLine">Load a photo to begin.</div>
-      <button class="btn ghost small" id="changeBullBtn" type="button" hidden>Change aim point</button>
-    </section>
+      <div class="targetStage" aria-label="Target photo stage">
+        <div class="imgFrame">
+          <img id="targetImg" class="targetImg" alt="Target photo" />
 
-    <!-- Target frame -->
-    <section class="frame" id="targetFrame" aria-label="Target frame">
-      <div class="frameTitle">Target photo</div>
+          <!-- Tap capture layer -->
+          <div id="tapLayer" class="tapLayer" aria-hidden="true"></div>
 
-      <div class="targetWrap" id="targetWrap">
-        <img id="targetImg" alt="" />
-        <div id="tapLayer" class="tapLayer" aria-hidden="true">
-          <div id="dotsLayer" class="dotsLayer"></div>
+          <!-- Dots render layer -->
+          <div id="dotsLayer" class="dotsLayer" aria-hidden="true"></div>
         </div>
       </div>
 
-      <div class="controls">
-        <button class="btn" id="undoBtn" type="button" disabled>Undo</button>
-        <button class="btn" id="clearBtn" type="button" disabled>Clear</button>
-        <button class="btn primary" id="showResultsBtn" type="button" disabled>Show results</button>
+      <!-- Status: keep only what matters -->
+      <div class="statusRow">
+        <div class="chip">Holes: <span id="holeCount">0</span></div>
+
+        <!-- Hidden but REQUIRED by JS (we are removing “Bull set” UI) -->
+        <span id="bullStatus" class="hiddenInline">not set</span>
+        <button id="changeBullBtn" class="hiddenBtn" type="button" aria-hidden="true">Change Bull</button>
       </div>
 
-      <div class="lockBanner" id="lockBanner" hidden>Results locked. Undo/Clear to edit taps.</div>
+      <div class="btnRow">
+        <button id="undoBtn" class="btn ghost" type="button" disabled>Undo</button>
+        <button id="clearBtn" class="btn ghost" type="button" disabled>Clear</button>
+        <button id="showResultsBtn" class="btn primary" type="button" disabled>Show Results</button>
+      </div>
+
+      <div id="lockBanner" class="lockBanner" hidden>
+        Results locked. Use Undo or Clear to edit taps.
+      </div>
     </section>
 
-    <!-- Results -->
-    <section class="results" id="resultsSection">
-      <h2 class="resultsTitle">Results</h2>
-
-      <div class="resultsCard">
-        <div class="resultsHeader">Corrections (Scope)</div>
-
-        <div class="resultsRow">
-          <div class="resultsLabel">Windage:</div>
-          <div class="resultsMid" id="windageDir">—</div>
-          <div class="resultsArrow">→</div>
-          <div class="resultsVal" id="windageVal">—</div>
+    <!-- CARD 3: Results -->
+    <section class="card resultsCard">
+      <div class="resultsHdr">
+        <div class="secTitle">
+          <span class="secR">SHOOTER</span>
+          <span class="secW"> EXPERIENCE </span>
+          <span class="secB">CARD</span>
+          <span class="secMini">SEC</span>
         </div>
 
-        <div class="resultsRow">
-          <div class="resultsLabel">Elevation:</div>
-          <div class="resultsMid" id="elevDir">—</div>
-          <div class="resultsArrow">→</div>
-          <div class="resultsVal" id="elevVal">—</div>
+        <!-- Vendor pill (RESULTS location) -->
+        <div class="vendorPillMiniWrap">
+          <div id="vendorPillResults" class="vendorPillMini" aria-hidden="true">
+            <img id="vendorLogoResults" class="vendorLogoMini" alt="" />
+            <div id="vendorNameResults" class="vendorNameMini">—</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="corrBlock">
+        <div class="corrLine">
+          <div class="corrLabel">Windage</div>
+          <div class="corrValue">
+            <span id="windageDir" class="dir">—</span>
+            <span class="arrow">→</span>
+            <span id="windageVal" class="val">—</span>
+          </div>
         </div>
 
-        <button class="btn secBtn" id="downloadSecBtn" type="button" disabled>Download/Keep SEC (PNG)</button>
+        <div class="corrLine">
+          <div class="corrLabel">Elevation</div>
+          <div class="corrValue">
+            <span id="elevDir" class="dir">—</span>
+            <span class="arrow">→</span>
+            <span id="elevVal" class="val">—</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="btnRow">
+        <button id="downloadSecBtn" class="btn primary" type="button" disabled>Download/Keep SEC (PNG)</button>
       </div>
     </section>
 
   </main>
 
-  <script src="./index.js?v=20260125c"></script>
+  <script src="./index.js?v=hotfix-brick5"></script>
+
+  <!-- Mirror vendor pill data into RESULTS pill (no new JS file; tiny helper) -->
+  <script>
+    (function(){
+      const sync = () => {
+        const img1 = document.getElementById("vendorLogo");
+        const name1 = document.getElementById("vendorName");
+        const img2 = document.getElementById("vendorLogoResults");
+        const name2 = document.getElementById("vendorNameResults");
+        const wrap = document.getElementById("vendorPillResults");
+
+        if (!img1 || !name1 || !img2 || !name2 || !wrap) return;
+
+        // copy
+        img2.src = img1.src || "";
+        img2.style.display = img1.src ? "block" : "none";
+        name2.textContent = name1.textContent || "—";
+      };
+
+      // try a few times (vendor.json loads async)
+      let n = 0;
+      const t = setInterval(() => {
+        sync();
+        n++;
+        if (n > 20) clearInterval(t);
+      }, 150);
+    })();
+  </script>
 </body>
 </html>
