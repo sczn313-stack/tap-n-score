@@ -1,291 +1,443 @@
-:root{
-  --bg: #06070a;
-  --panel: rgba(12,14,20,0.72);
-  --panel2: rgba(16,18,28,0.82);
-  --stroke: rgba(255,255,255,0.10);
-  --text: rgba(255,255,255,0.92);
-  --muted: rgba(255,255,255,0.62);
-  --accent: #2563eb;        /* blue */
-  --accent2: #0ea5e9;       /* sky */
-  --danger: #dc2626;        /* red */
-  --good: #22c55e;          /* green */
-  --shadow: 0 18px 55px rgba(0,0,0,0.55);
-  --radius: 18px;
-  --radius2: 14px;
-  --font: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-}
+/* ============================================================
+   /docs/index.js  (FULL REPLACEMENT)
+   - Vendor pill shows logo + name (stable even without website)
+   - All action buttons are blue via CSS (Download SEC stays patriotic)
+   - Tap-n-Score header hides while SEC overlay is up (secMode)
+============================================================ */
 
-*{ box-sizing: border-box; }
-html,body{ height:100%; }
-body{
-  margin:0;
-  font-family: var(--font);
-  background:
-    radial-gradient(1200px 700px at 15% 5%, rgba(220,38,38,0.18), transparent 55%),
-    radial-gradient(1200px 700px at 55% 10%, rgba(37,99,235,0.20), transparent 55%),
-    radial-gradient(900px 600px at 85% 25%, rgba(14,165,233,0.12), transparent 55%),
-    var(--bg);
-  color: var(--text);
-}
+(() => {
+  const $ = (id) => document.getElementById(id);
 
-/* ===== Header ===== */
-.topHeader{
-  position: sticky;
-  top: 0;
-  z-index: 50;
-  display:flex;
-  align-items:center;
-  gap: 12px;
-  padding: 14px 14px;
-  background: rgba(0,0,0,0.55);
-  backdrop-filter: blur(10px);
-  border-bottom: 1px solid var(--stroke);
-}
+  // --- Elements
+  const elFile = $("photoInput");
+  const elChoose = $("choosePhotoBtn");
+  const elImg = $("targetImg");
+  const elWrap = $("targetWrap");
+  const elDots = $("dotsLayer");
+  const elInstruction = $("instructionLine");
 
-.brandLeft{ display:flex; flex-direction:column; gap:4px; }
-.brandLine{ font-weight: 900; letter-spacing: 1px; font-size: 28px; }
-.brandTap{ color:#ef4444; }
-.brandN{ color: rgba(255,255,255,0.85); }
-.brandScore{ color:#3b82f6; }
-.brandTm{ color: rgba(255,255,255,0.75); font-weight: 800; font-size: 18px; margin-left: 6px; }
-.brandSub{ color: var(--muted); font-weight: 600; }
+  const elBullStatus = $("bullStatus");
+  const elTapCount = $("tapCount");
 
-.vendorSlot{
-  margin-left: auto;
-  display:flex;
-  align-items:center;
-  gap: 10px;
-  padding: 8px 10px;
-  border-radius: 999px;
-  border: 1px solid var(--stroke);
-  background: rgba(255,255,255,0.06);
-  text-decoration:none;
-  color: var(--text);
-  min-height: 44px;
-}
-.vendorLogo{
-  width: 34px;
-  height: 34px;
-  object-fit: contain;
-  border-radius: 10px;
-  background: rgba(0,0,0,0.25);
-  border: 1px solid rgba(255,255,255,0.10);
-  display:none; /* shown when vendor.json loads */
-}
-.vendorText{ display:flex; flex-direction:column; line-height: 1.1; }
-.vendorName{ font-weight: 850; font-size: 14px; }
-.vendorHint{ color: var(--muted); font-size: 12px; }
+  const elSetBull = $("setBullBtn");
+  const elUndo = $("undoBtn");
+  const elClear = $("clearTapsBtn");
+  const elShow = $("showResultsBtn");
 
-.pillBtn{
-  border: 1px solid var(--stroke);
-  background: rgba(255,255,255,0.06);
-  color: var(--text);
-  padding: 10px 14px;
-  border-radius: 999px;
-  font-weight: 750;
-}
+  const elWindDir = $("windDir");
+  const elWindClicks = $("windClicks");
+  const elElevDir = $("elevDir");
+  const elElevClicks = $("elevClicks");
 
-/* ===== Page ===== */
-.page{
-  padding: 14px;
-  max-width: 980px;
-  margin: 0 auto;
-}
+  const elDownloadSecBtn = $("downloadSecBtn");
 
-.actionsTop{
-  display:flex;
-  align-items:center;
-  gap: 12px;
-  margin-top: 10px;
-}
+  const elVendorLogo = $("vendorLogo");
+  const elVendorName = $("vendorName");
+  const elVendorLink = $("vendorLink");
 
-.pillGroup{
-  margin-left: auto;
-  display:flex;
-  gap: 10px;
-}
-.pill{
-  display:inline-flex;
-  align-items:center;
-  padding: 10px 12px;
-  border-radius: 999px;
-  border: 1px solid var(--stroke);
-  background: rgba(255,255,255,0.05);
-  color: var(--muted);
-  font-weight: 750;
-}
+  const elSecOverlay = $("secOverlay");
+  const elSecCanvas = $("secCanvas");
+  const elCloseSec = $("closeSecBtn");
+  const elSaveSec = $("saveSecBtn");
 
-/* ===== Shared action button style (match by using this everywhere) ===== */
-.actionBtn{
-  appearance:none;
-  border: 1px solid rgba(255,255,255,0.16);
-  background: linear-gradient(180deg, rgba(37,99,235,0.85), rgba(37,99,235,0.55));
-  color: white;
-  padding: 12px 14px;
-  border-radius: 14px;
-  font-weight: 850;
-  letter-spacing: 0.2px;
-  box-shadow: 0 12px 35px rgba(0,0,0,0.45);
-  cursor: pointer;
-  user-select: none;
-  min-height: 44px;
-}
-.actionBtn:active{ transform: translateY(1px); }
+  // --- State
+  let objectUrl = null;
+  let imgLoaded = false;
 
-.actionBtn.secondaryBtn{
-  background: rgba(255,255,255,0.06);
-  color: var(--text);
-  border: 1px solid var(--stroke);
-  box-shadow: none;
-}
+  let mode = "holes"; // "bull" or "holes"
+  let bull = null;    // {x,y} in image pixel space
+  let holes = [];     // [{x,y}, ...]
 
-.actionBtn.primaryBtn{
-  background: linear-gradient(180deg, rgba(37,99,235,0.95), rgba(14,165,233,0.60));
-}
+  let vendor = {
+    id: "",
+    name: "Vendor",
+    website: "",
+    logoPath: ""
+  };
 
-.actionBtn.secBtn{
-  background: linear-gradient(180deg, rgba(220,38,38,0.95), rgba(37,99,235,0.65));
-}
+  // --- Constants (pilot defaults)
+  const DISTANCE_YARDS = 50;
+  const CLICK_MOA = 0.25;
 
-/* ===== Stage / target ===== */
-.stage{ margin-top: 12px; }
+  function inchesPerMOA(yards) {
+    return 1.047 * (yards / 100);
+  }
 
-.instructionLine{
-  color: var(--muted);
-  font-weight: 650;
-  margin: 10px 2px 12px;
-}
+  function to2(n) {
+    return (Math.round(n * 100) / 100).toFixed(2);
+  }
 
-.targetWrap{
-  position: relative;
-  background: var(--panel);
-  border: 1px solid var(--stroke);
-  border-radius: var(--radius);
-  overflow: hidden;
-  box-shadow: var(--shadow);
-}
+  function clamp01(v) {
+    return Math.max(0, Math.min(1, v));
+  }
 
-.targetImg{
-  display:block;
-  width:100%;
-  height:auto;
-  background: rgba(0,0,0,0.25);
-}
+  function resetAll() {
+    bull = null;
+    holes = [];
+    mode = "holes";
+    renderDots();
+    updatePills();
+    clearResultsUI();
+  }
 
-.dotsLayer{
-  position:absolute;
-  left:0; top:0; right:0; bottom:0;
-  pointer-events: none;
-}
+  function clearResultsUI() {
+    elWindDir.textContent = "—";
+    elWindClicks.textContent = "—";
+    elElevDir.textContent = "—";
+    elElevClicks.textContent = "—";
+  }
 
-.dot{
-  position:absolute;
-  width: 16px;
-  height: 16px;
-  border-radius: 999px;
-  transform: translate(-50%,-50%);
-  border: 3px solid rgba(255,255,255,0.90);
-  background: rgba(34,197,94,0.85);
-  box-shadow: 0 8px 18px rgba(0,0,0,0.45);
-}
-.dot.bull{
-  background: rgba(245,158,11,0.85);
-  border-color: rgba(255,255,255,0.90);
-}
+  function updatePills() {
+    elBullStatus.textContent = bull ? "Bull: set" : "Bull: not set";
+    elTapCount.textContent = `Holes: ${holes.length}`;
+  }
 
-.controlsRow{
-  display:flex;
-  align-items:center;
-  gap: 10px;
-  margin-top: 12px;
-  flex-wrap: wrap;
-}
-.spacer{ flex: 1; min-width: 10px; }
+  function getImagePointFromTap(clientX, clientY) {
+    const rect = elWrap.getBoundingClientRect();
+    const xN = clamp01((clientX - rect.left) / rect.width);
+    const yN = clamp01((clientY - rect.top) / rect.height);
 
-/* ===== Results ===== */
-.results{
-  margin-top: 18px;
-  padding-top: 8px;
-}
-.resultsTitle{
-  margin: 0 0 10px;
-  font-size: 20px;
-  font-weight: 900;
-  color: rgba(255,255,255,0.90);
-}
+    const iw = elImg.naturalWidth || 1;
+    const ih = elImg.naturalHeight || 1;
 
-.card{
-  border: 1px solid var(--stroke);
-  background: var(--panel2);
-  border-radius: var(--radius);
-  padding: 14px;
-  box-shadow: var(--shadow);
-}
+    return { x: xN * iw, y: yN * ih };
+  }
 
-.cardTitle{
-  font-weight: 900;
-  margin-bottom: 10px;
-  color: rgba(255,255,255,0.88);
-}
+  function renderDots() {
+    elDots.innerHTML = "";
+    if (!imgLoaded) return;
 
-.row{
-  display:grid;
-  grid-template-columns: 120px 1fr 40px 140px;
-  align-items:center;
-  gap: 8px;
-  padding: 10px 0;
-  border-top: 1px solid rgba(255,255,255,0.08);
-}
-.row:first-of-type{ border-top: none; }
+    const rect = elWrap.getBoundingClientRect();
+    const iw = elImg.naturalWidth || 1;
+    const ih = elImg.naturalHeight || 1;
 
-.label{ color: var(--muted); font-weight: 700; }
-.value{ font-weight: 950; letter-spacing: 0.8px; }
-.arrow{ color: rgba(255,255,255,0.55); text-align:center; }
-.right{ text-align:right; font-weight: 850; color: rgba(255,255,255,0.86); }
+    const placeDot = (pt, cls) => {
+      const xN = pt.x / iw;
+      const yN = pt.y / ih;
 
-@media (max-width: 520px){
-  .row{ grid-template-columns: 110px 1fr 28px 120px; }
-  .brandLine{ font-size: 24px; }
-}
+      const dot = document.createElement("div");
+      dot.className = `dot ${cls || ""}`.trim();
+      dot.style.left = `${xN * rect.width}px`;
+      dot.style.top = `${yN * rect.height}px`;
+      elDots.appendChild(dot);
+    };
 
-/* ===== SEC overlay ===== */
-.secOverlay{
-  position: fixed;
-  inset: 0;
-  z-index: 1000;
-  display:none;
-  align-items:center;
-  justify-content:center;
-  background: rgba(0,0,0,0.72);
-  backdrop-filter: blur(10px);
-  padding: 18px;
-}
-.secOverlay.show{ display:flex; }
+    if (bull) placeDot(bull, "bull");
+    holes.forEach((h) => placeDot(h, ""));
+  }
 
-.secPanel{
-  width: min(980px, 100%);
-  border-radius: 22px;
-  border: 1px solid rgba(255,255,255,0.14);
-  background: rgba(0,0,0,0.55);
-  box-shadow: 0 30px 120px rgba(0,0,0,0.65);
-  overflow:hidden;
-}
+  function computePOIB() {
+    if (!holes.length) return null;
+    let sx = 0, sy = 0;
+    for (const h of holes) { sx += h.x; sy += h.y; }
+    return { x: sx / holes.length, y: sy / holes.length };
+  }
 
-#secCanvas{
-  display:block;
-  width: 100%;
-  height: auto;
-  background: #0b0c10;
-}
+  function computeCorrections() {
+    if (!bull || holes.length < 1) return null;
 
-.secActions{
-  display:flex;
-  gap: 10px;
-  padding: 12px;
-  border-top: 1px solid rgba(255,255,255,0.10);
-}
+    const poib = computePOIB();
+    if (!poib) return null;
 
-/* ===== SEC MODE: Tap-n-Score disappears while SEC is shown ===== */
-body.secMode .tapnscoreHeader{
-  display:none !important;
-}
+    // correction = bull - POIB
+    const dxPx = bull.x - poib.x;
+    const dyPx = bull.y - poib.y;
+
+    const iw = elImg.naturalWidth || 1;
+    const pxPerUnit = iw / 12;
+
+    const dxIn = dxPx / pxPerUnit;
+    const dyIn = dyPx / pxPerUnit;
+
+    const ipm = inchesPerMOA(DISTANCE_YARDS);
+
+    const windMOA = Math.abs(dxIn) / ipm;
+    const elevMOA = Math.abs(dyIn) / ipm;
+
+    const windClicks = windMOA / CLICK_MOA;
+    const elevClicks = elevMOA / CLICK_MOA;
+
+    const windDir = dxIn > 0 ? "RIGHT" : (dxIn < 0 ? "LEFT" : "—");
+    const elevDir = dyIn < 0 ? "UP" : (dyIn > 0 ? "DOWN" : "—");
+
+    return { windDir, elevDir, windClicks, elevClicks };
+  }
+
+  function showResults() {
+    const r = computeCorrections();
+    if (!r) return;
+
+    elWindDir.textContent = r.windDir;
+    elElevDir.textContent = r.elevDir;
+
+    elWindClicks.textContent = `${to2(r.windClicks)} clicks`;
+    elElevClicks.textContent = `${to2(r.elevClicks)} clicks`;
+  }
+
+  // ===== Vendor =====
+  async function loadVendor() {
+    try {
+      const res = await fetch("./vendor.json", { cache: "no-store" });
+      if (!res.ok) return;
+
+      const data = await res.json();
+
+      vendor = {
+        id: String(data.id || ""),
+        name: String(data.name || "Vendor"),
+        website: String(data.website || ""),
+        logoPath: String(data.logoPath || "")
+      };
+
+      // Name
+      elVendorName.textContent = vendor.name || "Vendor";
+
+      // Website (optional)
+      if (vendor.website) {
+        elVendorLink.href = vendor.website;
+        elVendorLink.target = "_blank";
+        elVendorLink.rel = "noopener";
+        elVendorLink.style.opacity = "1";
+        elVendorLink.style.pointerEvents = "auto";
+      } else {
+        elVendorLink.href = "#";
+        elVendorLink.removeAttribute("target");
+        elVendorLink.removeAttribute("rel");
+        elVendorLink.style.opacity = "0.95";
+        elVendorLink.style.pointerEvents = "none";
+      }
+
+      // Logo
+      if (vendor.logoPath) {
+        const url = new URL(vendor.logoPath, window.location.href).toString();
+        elVendorLogo.src = url;
+        elVendorLogo.style.display = "block";
+      }
+    } catch (e) {
+      // silent
+    }
+  }
+
+  // ===== SEC overlay =====
+  function openSecOverlay() {
+    document.body.classList.add("secMode");
+    elSecOverlay.classList.add("show");
+    elSecOverlay.setAttribute("aria-hidden", "false");
+  }
+
+  function closeSecOverlay() {
+    elSecOverlay.classList.remove("show");
+    elSecOverlay.setAttribute("aria-hidden", "true");
+    document.body.classList.remove("secMode");
+  }
+
+  function roundRect(ctx, x, y, w, h, r, fill) {
+    const rr = Math.min(r, w / 2, h / 2);
+    ctx.beginPath();
+    ctx.moveTo(x + rr, y);
+    ctx.arcTo(x + w, y, x + w, y + h, rr);
+    ctx.arcTo(x + w, y + h, x, y + h, rr);
+    ctx.arcTo(x, y + h, x, y, rr);
+    ctx.arcTo(x, y, x + w, y, rr);
+    ctx.closePath();
+    if (fill) ctx.fill();
+  }
+
+  async function drawSecToCanvas() {
+    const r = computeCorrections();
+    if (!r) return;
+
+    const ctx = elSecCanvas.getContext("2d");
+    const W = elSecCanvas.width;
+    const H = elSecCanvas.height;
+
+    ctx.clearRect(0, 0, W, H);
+    ctx.fillStyle = "#0b0c10";
+    ctx.fillRect(0, 0, W, H);
+
+    // Patriot header
+    ctx.fillStyle = "#111827";
+    ctx.fillRect(0, 0, W, 190);
+
+    ctx.font = "900 56px system-ui, -apple-system, Segoe UI, Roboto, Arial";
+    ctx.fillStyle = "#ffffff";
+    ctx.fillText("SHOOTER EXPERIENCE CARD", 44, 92);
+
+    // SEC letters (R/W/B)
+    ctx.font = "900 84px system-ui, -apple-system, Segoe UI, Roboto, Arial";
+    ctx.fillStyle = "#dc2626"; ctx.fillText("S", 44, 165);
+    ctx.fillStyle = "#ffffff"; ctx.fillText("E", 104, 165);
+    ctx.fillStyle = "#2563eb"; ctx.fillText("C", 170, 165);
+
+    // Vendor name (top-right)
+    ctx.font = "850 26px system-ui, -apple-system, Segoe UI, Roboto, Arial";
+    ctx.fillStyle = "rgba(255,255,255,0.85)";
+    ctx.textAlign = "right";
+    ctx.fillText(vendor.name || "", W - 44, 175);
+    ctx.textAlign = "left";
+
+    // Target panel
+    const imgX = 44, imgY = 230, imgW = W - 88, imgH = 760;
+    ctx.fillStyle = "rgba(255,255,255,0.06)";
+    roundRect(ctx, imgX, imgY, imgW, imgH, 22, true);
+
+    // Draw the current photo (best effort)
+    if (elImg && elImg.src) {
+      try {
+        const tmp = new Image();
+        tmp.crossOrigin = "anonymous";
+        await new Promise((resolve, reject) => {
+          tmp.onload = resolve;
+          tmp.onerror = reject;
+          tmp.src = elImg.src;
+        });
+
+        const pad = 18;
+        const drawX = imgX + pad, drawY = imgY + pad;
+        const drawW = imgW - pad * 2, drawH = imgH - pad * 2;
+
+        const ratio = Math.min(drawW / tmp.width, drawH / tmp.height);
+        const rw = tmp.width * ratio;
+        const rh = tmp.height * ratio;
+
+        const cx = drawX + (drawW - rw) / 2;
+        const cy = drawY + (drawH - rh) / 2;
+
+        ctx.drawImage(tmp, cx, cy, rw, rh);
+      } catch {}
+    }
+
+    // Results panel
+    const cardX = 44, cardY = 1010, cardW = W - 88, cardH = 300;
+    ctx.fillStyle = "rgba(255,255,255,0.06)";
+    roundRect(ctx, cardX, cardY, cardW, cardH, 22, true);
+
+    ctx.font = "900 36px system-ui, -apple-system, Segoe UI, Roboto, Arial";
+    ctx.fillStyle = "rgba(255,255,255,0.92)";
+    ctx.fillText("Corrections (Scope)", cardX + 28, cardY + 60);
+
+    ctx.font = "800 30px system-ui, -apple-system, Segoe UI, Roboto, Arial";
+    ctx.fillStyle = "rgba(255,255,255,0.70)";
+    ctx.fillText("Windage:", cardX + 28, cardY + 125);
+    ctx.fillText("Elevation:", cardX + 28, cardY + 195);
+
+    ctx.fillStyle = "rgba(255,255,255,0.92)";
+    ctx.font = "950 34px system-ui, -apple-system, Segoe UI, Roboto, Arial";
+    ctx.fillText(`${r.windDir}`, cardX + 240, cardY + 125);
+    ctx.fillText(`${r.elevDir}`, cardX + 240, cardY + 195);
+
+    ctx.fillStyle = "rgba(255,255,255,0.85)";
+    ctx.font = "850 34px system-ui, -apple-system, Segoe UI, Roboto, Arial";
+    ctx.textAlign = "right";
+    ctx.fillText(`${to2(r.windClicks)} clicks`, cardX + cardW - 28, cardY + 125);
+    ctx.fillText(`${to2(r.elevClicks)} clicks`, cardX + cardW - 28, cardY + 195);
+    ctx.textAlign = "left";
+
+    ctx.font = "700 22px system-ui, -apple-system, Segoe UI, Roboto, Arial";
+    ctx.fillStyle = "rgba(255,255,255,0.55)";
+    ctx.fillText(`Distance: ${DISTANCE_YARDS} yd   •   Click: ${CLICK_MOA} MOA/click   •   True MOA`, cardX + 28, cardY + 265);
+  }
+
+  function saveCanvasAsPng() {
+    const a = document.createElement("a");
+    a.download = "SEC.png";
+    a.href = elSecCanvas.toDataURL("image/png");
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  }
+
+  // ===== Events =====
+  elChoose.addEventListener("click", () => elFile.click());
+
+  elFile.addEventListener("change", () => {
+    const f = elFile.files && elFile.files[0];
+    if (!f) return;
+
+    if (objectUrl) URL.revokeObjectURL(objectUrl);
+    objectUrl = URL.createObjectURL(f);
+
+    elImg.onload = () => {
+      imgLoaded = true;
+      resetAll();
+      renderDots();
+      elInstruction.textContent = "Tap bull once (Set Bull), then tap each confirmed hole.";
+    };
+
+    elImg.src = objectUrl;
+  });
+
+  elSetBull.addEventListener("click", () => {
+    mode = "bull";
+    elInstruction.textContent = "Tap the bull once.";
+  });
+
+  elUndo.addEventListener("click", () => {
+    if (mode === "bull") {
+      mode = "holes";
+      elInstruction.textContent = "Tap each confirmed hole.";
+      return;
+    }
+    if (holes.length) holes.pop();
+    renderDots();
+    updatePills();
+    clearResultsUI();
+  });
+
+  elClear.addEventListener("click", () => {
+    resetAll();
+    elInstruction.textContent = "Tap bull once (Set Bull), then tap each confirmed hole.";
+  });
+
+  elWrap.addEventListener("click", (ev) => {
+    if (!imgLoaded) return;
+
+    const pt = getImagePointFromTap(ev.clientX, ev.clientY);
+
+    if (mode === "bull") {
+      bull = { x: pt.x, y: pt.y };
+      mode = "holes";
+      elInstruction.textContent = "Bull set. Now tap each confirmed hole.";
+    } else {
+      holes.push({ x: pt.x, y: pt.y });
+    }
+
+    renderDots();
+    updatePills();
+    clearResultsUI();
+  });
+
+  elShow.addEventListener("click", () => {
+    if (!bull) {
+      elInstruction.textContent = "Set the bull first (tap Set Bull, then tap the bull).";
+      return;
+    }
+    if (holes.length < 1) {
+      elInstruction.textContent = "Tap at least 1 confirmed hole.";
+      return;
+    }
+    showResults();
+  });
+
+  elDownloadSecBtn.addEventListener("click", async () => {
+    if (!bull || holes.length < 1) {
+      elInstruction.textContent = "Set bull + tap at least 1 hole before generating SEC.";
+      return;
+    }
+    await drawSecToCanvas();
+    openSecOverlay();
+  });
+
+  elCloseSec.addEventListener("click", () => closeSecOverlay());
+  elSaveSec.addEventListener("click", () => saveCanvasAsPng());
+
+  elSecOverlay.addEventListener("click", (ev) => {
+    if (ev.target === elSecOverlay) closeSecOverlay();
+  });
+
+  window.addEventListener("resize", () => renderDots());
+
+  // Init
+  loadVendor();
+  updatePills();
+})();
