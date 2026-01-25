@@ -1,4 +1,4 @@
-<!-- docs/index.html (FULL REPLACEMENT) — Direction Truth Gate + Self-Test button -->
+<!-- docs/index.html (FULL REPLACEMENT) — Buttons unified + SEC screen hides TAP-N-SCORE -->
 <!doctype html>
 <html lang="en">
 <head>
@@ -15,21 +15,18 @@
   <main class="page">
 
     <!-- Top bar -->
-    <header class="topbar">
-      <div class="brand">
+    <header class="topbar" id="topbar">
+      <div class="brand" id="brandHeader">
         <span class="bRed">TAP</span><span class="bW">-N-</span><span class="bBlue">SCORE</span><span class="bW tm">™</span>
       </div>
       <button id="detailsBtn" class="detailsBtn hidden" type="button">Details</button>
     </header>
 
-    <div class="subline">After-Shot Intelligence</div>
-
-    <!-- Truth banner (used to BLOCK results if direction integrity fails) -->
-    <div id="truthBanner" class="truthBanner hidden" role="alert"></div>
+    <div class="subline" id="subline">After-Shot Intelligence</div>
 
     <!-- CARD 1: Choose photo (HERO) -->
     <section class="card">
-      <div class="chooseRow">
+      <div id="chooseTargetRow" class="chooseRow">
         <label class="chooseBtn">
           <input id="photoInput" type="file" accept="image/*" />
           <span>CHOOSE TARGET PHOTO</span>
@@ -39,13 +36,13 @@
         <div class="hint">Tip: straight-on photo, fill the frame.</div>
 
         <!-- Mode stays visible -->
-        <div class="settingsRow">
+        <div id="settingsRow" class="settingsRow">
           <div class="seg">
             <button id="modeRifle" class="segBtn active" type="button">Rifle</button>
             <button id="modePistol" class="segBtn" type="button">Pistol</button>
           </div>
 
-          <!-- Hidden for now (behind the scenes) -->
+          <!-- Hidden (behind the scenes) -->
           <div id="hiddenSettings" style="display:none">
             <label for="distanceYds">Distance</label>
             <input id="distanceYds" type="number" value="100" />
@@ -62,7 +59,7 @@
       </div>
     </section>
 
-    <!-- CARD 2: Photo interaction -->
+    <!-- CARD 2: Tap layer -->
     <section class="card">
       <div id="targetWrap" class="targetWrap" aria-label="Photo and tap layer">
         <img id="targetImg" class="targetImg" alt="Photo" />
@@ -75,9 +72,9 @@
       </div>
 
       <div class="btnRow">
-        <button id="undoBtn" class="btn ghost" type="button">Undo</button>
-        <button id="clearBtn" class="btn ghost" type="button">Clear</button>
-        <button id="showBtn" class="btn primary" type="button" disabled>Show Results</button>
+        <button id="undoBtn" class="btn actionBtn" type="button">Undo</button>
+        <button id="clearBtn" class="btn actionBtn" type="button">Clear</button>
+        <button id="showBtn" class="btn actionBtn" type="button" disabled>Show Results</button>
       </div>
 
       <div class="tip">Bull first. Then holes. Scroll/drag won’t create dots.</div>
@@ -86,7 +83,11 @@
 
     <!-- CARD 3: Results -->
     <section id="resultsCard" class="card hidden" aria-live="polite">
-      <div class="resultsTitle">Results</div>
+      <!-- SEC HEADER (R/W/B) -->
+      <div class="secHdr">
+        <span class="secS">S</span><span class="secE">E</span><span class="secC">C</span>
+        <span class="secLabel">Shooter Experience Card</span>
+      </div>
 
       <!-- Score first + most prominent -->
       <div class="scoreBigRow">
@@ -111,7 +112,7 @@
       </div>
 
       <div class="scoreRow">
-        <a id="downloadReceiptLink" class="btn receiptBtn hidden" download="SEC.png" href="#">Download/Keep SEC (PNG)</a>
+        <a id="downloadReceiptLink" class="btn actionBtn receiptBtn hidden" download="SEC.png" href="#">Download/Keep SEC (PNG)</a>
       </div>
     </section>
 
@@ -129,14 +130,6 @@
           <li>Tap each bullet hole.</li>
           <li>We output direction + clicks.</li>
         </ul>
-
-        <!-- Self-test (hidden “truth gate” helper) -->
-        <div class="sheetDivider"></div>
-        <button id="truthTestBtn" class="btn truthBtn" type="button">Run Direction Check</button>
-        <div id="truthTestOut" class="truthOut">—</div>
-
-        <!-- Hidden advanced inputs remain off-screen for now -->
-        <div id="advancedHint" class="truthTiny">If Direction Check fails, results will not render.</div>
       </div>
     </section>
 
