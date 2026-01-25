@@ -1,7 +1,8 @@
 /* ============================================================
    /docs/index.js  (FULL REPLACEMENT)
-   - Vendor pill shows logo + name (stable even without website)
-   - All action buttons are blue via CSS (Download SEC stays patriotic)
+   Brick #3 (POLISH):
+   - Bigger SEC header + cleaner spacing
+   - Draw vendor LOGO inside SEC (top-right) + vendor name
    - Tap-n-Score header hides while SEC overlay is up (secMode)
 ============================================================ */
 
@@ -54,6 +55,9 @@
     website: "",
     logoPath: ""
   };
+
+  // Cached vendor logo image (for SEC)
+  let vendorLogoImg = null;
 
   // --- Constants (pilot defaults)
   const DISTANCE_YARDS = 50;
@@ -143,6 +147,7 @@
     const dxPx = bull.x - poib.x;
     const dyPx = bull.y - poib.y;
 
+    // Keep your existing "12-inch wide reference" assumption
     const iw = elImg.naturalWidth || 1;
     const pxPerUnit = iw / 12;
 
@@ -175,6 +180,16 @@
   }
 
   // ===== Vendor =====
+  async function preloadVendorLogo(logoUrl) {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      img.onload = () => resolve(img);
+      img.onerror = () => resolve(null);
+      img.src = logoUrl;
+    });
+  }
+
   async function loadVendor() {
     try {
       const res = await fetch("./vendor.json", { cache: "no-store" });
@@ -207,13 +222,14 @@
         elVendorLink.style.pointerEvents = "none";
       }
 
-      // Logo
+      // Logo in UI + preload for SEC
       if (vendor.logoPath) {
         const url = new URL(vendor.logoPath, window.location.href).toString();
         elVendorLogo.src = url;
         elVendorLogo.style.display = "block";
+        vendorLogoImg = await preloadVendorLogo(url);
       }
-    } catch (e) {
+    } catch {
       // silent
     }
   }
@@ -255,33 +271,64 @@
     ctx.fillStyle = "#0b0c10";
     ctx.fillRect(0, 0, W, H);
 
-    // Patriot header
-    ctx.fillStyle = "#111827";
-    ctx.fillRect(0, 0, W, 190);
+    // ===== POLISHED HEADER =====
+    const headerH = 220;
+    ctx.fillStyle = "#0f172a";
+    ctx.fillRect(0, 0, W, headerH);
 
-    ctx.font = "900 56px system-ui, -apple-system, Segoe UI, Roboto, Arial";
+    // Main title (bigger + cleaner)
+    ctx.textAlign = "left";
+    ctx.font = "900 60px system-ui, -apple-system, Segoe UI, Roboto, Arial";
     ctx.fillStyle = "#ffffff";
     ctx.fillText("SHOOTER EXPERIENCE CARD", 44, 92);
 
-    // SEC letters (R/W/B)
-    ctx.font = "900 84px system-ui, -apple-system, Segoe UI, Roboto, Arial";
-    ctx.fillStyle = "#dc2626"; ctx.fillText("S", 44, 165);
-    ctx.fillStyle = "#ffffff"; ctx.fillText("E", 104, 165);
-    ctx.fillStyle = "#2563eb"; ctx.fillText("C", 170, 165);
+    // SEC letters (bigger, R/W/B)
+    ctx.font = "950 96px system-ui, -apple-system, Segoe UI, Roboto, Arial";
+    ctx.fillStyle = "#dc2626"; ctx.fillText("S", 44, 182);
+    ctx.fillStyle = "#ffffff"; ctx.fillText("E", 116, 182);
+    ctx.fillStyle = "#2563eb"; ctx.fillText("C", 190, 182);
 
-    // Vendor name (top-right)
-    ctx.font = "850 26px system-ui, -apple-system, Segoe UI, Roboto, Arial";
-    ctx.fillStyle = "rgba(255,255,255,0.85)";
+    // Vendor logo + name (top-right)
+    const rightPad = 44;
+    const logoBox = 86;
+    const logoX = W - rightPad - logoBox;
+    const logoY = 58;
+
+    // Logo background frame
+    ctx.fillStyle = "rgba(255,255,255,0.08)";
+    roundRect(ctx, logoX, logoY, logoBox, logoBox, 18, true);
+
+    if (vendorLogoImg) {
+      // Fit inside logo box
+      const pad = 10;
+      const maxW = logoBox - pad * 2;
+      const maxH = logoBox - pad * 2;
+
+      const ratio = Math.min(maxW / vendorLogoImg.width, maxH / vendorLogoImg.height);
+      const rw = vendorLogoImg.width * ratio;
+      const rh = vendorLogoImg.height * ratio;
+
+      const cx = logoX + (logoBox - rw) / 2;
+      const cy = logoY + (logoBox - rh) / 2;
+
+      ctx.drawImage(vendorLogoImg, cx, cy, rw, rh);
+    }
+
     ctx.textAlign = "right";
-    ctx.fillText(vendor.name || "", W - 44, 175);
+    ctx.font = "850 28px system-ui, -apple-system, Segoe UI, Roboto, Arial";
+    ctx.fillStyle = "rgba(255,255,255,0.88)";
+    ctx.fillText(vendor.name || "", logoX - 18, 112);
+    ctx.font = "700 22px system-ui, -apple-system, Segoe UI, Roboto, Arial";
+    ctx.fillStyle = "rgba(255,255,255,0.60)";
+    ctx.fillText("Vendor", logoX - 18, 146);
     ctx.textAlign = "left";
 
-    // Target panel
-    const imgX = 44, imgY = 230, imgW = W - 88, imgH = 760;
+    // ===== Target panel (more breathing room) =====
+    const imgX = 44, imgY = headerH + 24, imgW = W - 88, imgH = 740;
     ctx.fillStyle = "rgba(255,255,255,0.06)";
     roundRect(ctx, imgX, imgY, imgW, imgH, 22, true);
 
-    // Draw the current photo (best effort)
+    // Draw the photo (best effort)
     if (elImg && elImg.src) {
       try {
         const tmp = new Image();
@@ -307,35 +354,47 @@
       } catch {}
     }
 
-    // Results panel
-    const cardX = 44, cardY = 1010, cardW = W - 88, cardH = 300;
+    // ===== Results panel (cleaner layout) =====
+    const cardX = 44, cardY = imgY + imgH + 26, cardW = W - 88, cardH = 300;
     ctx.fillStyle = "rgba(255,255,255,0.06)";
     roundRect(ctx, cardX, cardY, cardW, cardH, 22, true);
 
-    ctx.font = "900 36px system-ui, -apple-system, Segoe UI, Roboto, Arial";
+    ctx.font = "900 40px system-ui, -apple-system, Segoe UI, Roboto, Arial";
     ctx.fillStyle = "rgba(255,255,255,0.92)";
-    ctx.fillText("Corrections (Scope)", cardX + 28, cardY + 60);
+    ctx.fillText("Corrections (Scope)", cardX + 28, cardY + 62);
 
+    // Divider lines
+    ctx.strokeStyle = "rgba(255,255,255,0.10)";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(cardX + 28, cardY + 96);
+    ctx.lineTo(cardX + cardW - 28, cardY + 96);
+    ctx.stroke();
+
+    // Labels
     ctx.font = "800 30px system-ui, -apple-system, Segoe UI, Roboto, Arial";
     ctx.fillStyle = "rgba(255,255,255,0.70)";
-    ctx.fillText("Windage:", cardX + 28, cardY + 125);
-    ctx.fillText("Elevation:", cardX + 28, cardY + 195);
+    ctx.fillText("Windage:", cardX + 28, cardY + 150);
+    ctx.fillText("Elevation:", cardX + 28, cardY + 220);
 
+    // Directions
     ctx.fillStyle = "rgba(255,255,255,0.92)";
-    ctx.font = "950 34px system-ui, -apple-system, Segoe UI, Roboto, Arial";
-    ctx.fillText(`${r.windDir}`, cardX + 240, cardY + 125);
-    ctx.fillText(`${r.elevDir}`, cardX + 240, cardY + 195);
+    ctx.font = "950 36px system-ui, -apple-system, Segoe UI, Roboto, Arial";
+    ctx.fillText(`${r.windDir}`, cardX + 270, cardY + 150);
+    ctx.fillText(`${r.elevDir}`, cardX + 270, cardY + 220);
 
-    ctx.fillStyle = "rgba(255,255,255,0.85)";
-    ctx.font = "850 34px system-ui, -apple-system, Segoe UI, Roboto, Arial";
+    // Clicks (right aligned)
     ctx.textAlign = "right";
-    ctx.fillText(`${to2(r.windClicks)} clicks`, cardX + cardW - 28, cardY + 125);
-    ctx.fillText(`${to2(r.elevClicks)} clicks`, cardX + cardW - 28, cardY + 195);
+    ctx.fillStyle = "rgba(255,255,255,0.88)";
+    ctx.font = "900 36px system-ui, -apple-system, Segoe UI, Roboto, Arial";
+    ctx.fillText(`${to2(r.windClicks)} clicks`, cardX + cardW - 28, cardY + 150);
+    ctx.fillText(`${to2(r.elevClicks)} clicks`, cardX + cardW - 28, cardY + 220);
     ctx.textAlign = "left";
 
+    // Footer meta line
     ctx.font = "700 22px system-ui, -apple-system, Segoe UI, Roboto, Arial";
-    ctx.fillStyle = "rgba(255,255,255,0.55)";
-    ctx.fillText(`Distance: ${DISTANCE_YARDS} yd   •   Click: ${CLICK_MOA} MOA/click   •   True MOA`, cardX + 28, cardY + 265);
+    ctx.fillStyle = "rgba(255,255,255,0.58)";
+    ctx.fillText(`Distance: ${DISTANCE_YARDS} yd   •   Click: ${CLICK_MOA} MOA/click   •   True MOA`, cardX + 28, cardY + 275);
   }
 
   function saveCanvasAsPng() {
