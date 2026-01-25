@@ -1,8 +1,11 @@
+/* docs/styles.css (FULL REPLACEMENT) — Vendor logo UI + Score styling + lock hint */
+
 :root{
   --bg:#050606;
   --card:rgba(255,255,255,.04);
   --stroke:rgba(255,255,255,.10);
   --stroke2:rgba(255,255,255,.14);
+
   --text:rgba(255,255,255,.92);
   --muted:rgba(255,255,255,.72);
   --dim:rgba(255,255,255,.58);
@@ -81,61 +84,105 @@ body{
   padding:14px;
 }
 
-.hidden{display:none !important}
+/* =========================
+   Vendor "Calling Card" block
+   Use for BOTH input + SEC.
+   Works with:
+     - .vendorCard wrapper
+     - .vendorLogo img
+     - .vendorName text
+     - .vendorCta (button/link)
+   ========================= */
 
-/* Vendor calling card */
 .vendorCard{
-  padding:12px;
-}
-.vendorLink{
   display:flex;
-  gap:12px;
   align-items:center;
-  text-decoration:none;
-  color:var(--text);
-}
-.vendorLogo{
-  width:54px;
-  height:54px;
-  object-fit:cover;
-  border-radius:14px;
-  border:1px solid rgba(255,255,255,.12);
-  background:rgba(255,255,255,.06);
-}
-.vendorText{display:flex; flex-direction:column; gap:2px}
-.vendorName{font-weight:950; font-size:16px}
-.vendorCta{color:var(--muted); font-weight:750; font-size:13px}
-
-/* Inline vendor (inside results/SEC area) */
-.vendorInline{
-  margin-bottom:12px;
-  padding:12px;
+  gap:12px;
+  padding:12px 12px;
   border-radius:16px;
   border:1px solid rgba(255,255,255,.10);
-  background:rgba(0,0,0,.18);
+  background:linear-gradient(180deg, rgba(255,255,255,.04), rgba(0,0,0,.18));
 }
-.vendorInlineLink{
-  display:flex;
-  gap:12px;
-  align-items:center;
-  text-decoration:none;
-  color:var(--text);
-}
-.vendorInlineLogo{
-  width:46px;
-  height:46px;
-  object-fit:cover;
+
+.vendorLogoWrap{
+  width:52px;
+  height:52px;
+  flex:0 0 52px;
   border-radius:14px;
   border:1px solid rgba(255,255,255,.12);
-  background:rgba(255,255,255,.06);
+  background:rgba(0,0,0,.25);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  overflow:hidden;
 }
-.vendorInlineText{display:flex; flex-direction:column; gap:2px}
-.vendorInlineNameRow{display:flex; gap:8px; align-items:baseline; flex-wrap:wrap}
-.vendorInlineLabel{color:var(--muted); font-weight:800; font-size:13px}
-.vendorInlineName{font-weight:950; font-size:15px}
-.vendorInlineCta{color:var(--muted); font-weight:750; font-size:13px}
 
-/* Choose card */
+.vendorLogo{
+  width:100%;
+  height:100%;
+  object-fit:contain;
+  display:block;
+  padding:6px;
+}
+
+.vendorMeta{
+  flex:1 1 auto;
+  min-width:0;
+}
+
+.vendorKicker{
+  color:var(--dim);
+  font-weight:800;
+  font-size:12px;
+  letter-spacing:.4px;
+  text-transform:uppercase;
+}
+
+.vendorName{
+  margin-top:2px;
+  font-weight:950;
+  font-size:16px;
+  letter-spacing:.2px;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+
+.vendorNote{
+  margin-top:2px;
+  color:var(--muted);
+  font-size:12px;
+  line-height:1.25;
+}
+
+.vendorCta{
+  flex:0 0 auto;
+  border-radius:14px;
+  padding:10px 12px;
+  border:1px solid rgba(31,111,235,.55);
+  background:linear-gradient(180deg, rgba(31,111,235,.50), rgba(31,111,235,.22));
+  color:var(--white);
+  font-weight:950;
+  cursor:pointer;
+  text-decoration:none;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  white-space:nowrap;
+}
+
+.vendorCta:active{transform:translateY(1px)}
+
+/* Mobile tighten */
+@media (max-width:420px){
+  .vendorLogoWrap{width:46px;height:46px;flex-basis:46px}
+  .vendorCta{padding:10px 10px; font-size:14px}
+}
+
+/* =========================
+   Choose section
+   ========================= */
+
 .chooseRow{
   display:flex;
   flex-direction:column;
@@ -207,7 +254,10 @@ body{
   color:var(--muted);
 }
 
-/* Image + dots */
+/* =========================
+   Photo area + dots
+   ========================= */
+
 .targetWrap{
   position:relative;
   width:100%;
@@ -286,41 +336,58 @@ body{
 }
 .btn:disabled{opacity:.45; cursor:not-allowed}
 
-.tip{margin-top:10px; color:var(--dim); font-size:13px}
-.lockHint{margin-top:10px; color:rgba(255,255,255,.70); font-size:13px}
+.tip{
+  margin-top:10px;
+  color:var(--dim);
+  font-size:13px;
+}
 
-/* Results */
+.lockHint{
+  margin-top:10px;
+  padding:10px 12px;
+  border-radius:14px;
+  border:1px solid rgba(255,210,0,.20);
+  background:rgba(255,210,0,.08);
+  color:rgba(255,255,255,.82);
+  font-weight:850;
+  font-size:13px;
+}
+
+/* =========================
+   Results + Score
+   ========================= */
+
 .resultsTitle{font-weight:950; font-size:18px; margin-bottom:10px}
 
 .scoreBigRow{
   display:flex;
-  align-items:flex-end;
+  align-items:baseline;
   justify-content:space-between;
-  gap:10px;
+  gap:12px;
   padding:12px;
   border-radius:16px;
-  border:1px solid rgba(255,255,255,.10);
+  border:1px solid var(--stroke);
   background:rgba(0,0,0,.18);
   margin-bottom:12px;
 }
+
 .scoreLabel{
   color:var(--muted);
-  font-weight:900;
+  font-weight:950;
   letter-spacing:.6px;
   text-transform:uppercase;
 }
+
 .scoreBig{
   font-weight:1000;
-  font-size:44px;
+  font-size:48px;
   line-height:1;
-  padding:6px 12px;
-  border-radius:14px;
-  border:1px solid rgba(255,255,255,.10);
-  background:rgba(0,0,0,.20);
+  letter-spacing:.6px;
 }
-.scoreGood{color:var(--good)}
-.scoreMid{color:var(--mid)}
-.scorePoor{color:var(--poor)}
+
+.scoreGood{ color:var(--good) }
+.scoreMid{  color:var(--mid)  }
+.scorePoor{ color:var(--poor) }
 
 .corrBlock{
   padding:12px;
@@ -329,6 +396,7 @@ body{
   background:rgba(0,0,0,.18);
 }
 .corrHdr{font-weight:950; margin-bottom:8px}
+
 .corrLine{
   padding:12px 12px;
   border-radius:14px;
@@ -350,6 +418,7 @@ body{
   flex-wrap:wrap;
   align-items:stretch;
 }
+
 .receiptBtn{
   flex:1 1 260px;
   text-align:center;
@@ -359,7 +428,12 @@ body{
   justify-content:center;
 }
 
-/* Bottom sheet */
+.hidden{display:none !important}
+
+/* =========================
+   Bottom sheet
+   ========================= */
+
 .sheetBackdrop{
   position:fixed;
   inset:0;
@@ -400,6 +474,7 @@ body{
 }
 
 .sheetTitle{font-weight:950; font-size:18px}
+
 .sheetClose{
   border-radius:999px;
   padding:10px 14px;
