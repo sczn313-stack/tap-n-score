@@ -1,4 +1,3 @@
-<!-- docs/index.html (FULL REPLACEMENT) — No “Set Bull” button; instruction inside target frame -->
 <!doctype html>
 <html lang="en">
 <head>
@@ -7,138 +6,116 @@
   <meta name="color-scheme" content="dark" />
   <meta name="theme-color" content="#000000" />
   <title>Tap-n-Score™</title>
-
-  <link rel="stylesheet" href="./styles.css?v=20260125a" />
+  <link rel="stylesheet" href="./styles.css?v=20260125-stability-1" />
 </head>
 
 <body>
   <main class="page">
 
-    <!-- Top bar -->
-    <header class="topbar">
-      <div class="brand">
-        <span class="bRed">TAP</span><span class="bW">-N-</span><span class="bBlue">SCORE</span><span class="bW tm">™</span>
+    <!-- Header -->
+    <header class="topBar">
+      <div class="brandBlock">
+        <div class="brandLine">
+          <span class="brandTap">TAP</span><span class="brandN">-N-</span><span class="brandScore">SCORE</span><span class="brandTm">™</span>
+        </div>
+        <div class="tagLine">After-Shot Intelligence</div>
       </div>
-      <button id="detailsBtn" class="detailsBtn hidden" type="button">Details</button>
+
+      <div class="topRight">
+        <button id="vendorBtn" class="pillBtn" type="button" aria-label="Vendor">
+          <span id="vendorLogoWrap" class="vendorLogoWrap" hidden>
+            <img id="vendorLogo" alt="Vendor logo" />
+          </span>
+          <span id="vendorName">Vendor</span>
+        </button>
+
+        <button id="detailsBtn" class="pillBtn" type="button">Details</button>
+      </div>
     </header>
 
-    <div class="subline">After-Shot Intelligence</div>
+    <!-- Controls -->
+    <section class="panel">
+      <div class="row">
+        <input id="photoInput" type="file" accept="image/*" hidden />
+        <button id="chooseBtn" class="primaryBtn" type="button">Choose Target Photo</button>
 
-    <!-- CARD 1: Choose photo (HERO) -->
-    <section class="card">
-      <div class="chooseRow">
-
-        <!-- HERO button (only place “TARGET” appears) -->
-        <label class="chooseBtn">
-          <input id="photoInput" type="file" accept="image/*" />
-          <span>CHOOSE TARGET PHOTO</span>
-        </label>
-
-        <div id="fileName" class="fileName">No photo selected</div>
-        <div class="hint">Tip: include the full target. Keep it straight-on.</div>
-
-        <!-- Mode stays visible -->
-        <div class="settingsRow">
-          <div class="seg">
-            <button id="modeRifle" class="segBtn active" type="button">Rifle</button>
-            <button id="modePistol" class="segBtn" type="button">Pistol</button>
-          </div>
-
-          <!-- Hidden for now (behind the scenes) -->
-          <div id="hiddenSettings" style="display:none">
-            <label for="distanceYds">Distance</label>
-            <input id="distanceYds" type="number" value="100" />
-            <label for="clickValue">Click</label>
-            <select id="clickValue">
-              <option value="0.25" selected>Quarter per click</option>
-              <option value="0.5">Half per click</option>
-              <option value="0.125">Eighth per click</option>
-            </select>
-          </div>
+        <div class="statusPills">
+          <div class="statusPill"><span class="muted">Bull:</span> <span id="bullStatus">not set</span></div>
+          <div class="statusPill"><span class="muted">Holes:</span> <span id="holeCount">0</span></div>
         </div>
+      </div>
 
-        <div id="instructionLine" class="instruction hidden"></div>
+      <div class="helpLine" id="helpLine">
+        Tap the <b>bull first</b>, then tap each confirmed bullet hole.
       </div>
     </section>
 
-    <!-- CARD 2: Interaction -->
-    <section class="card">
+    <!-- Target Frame -->
+    <section class="targetFrame">
+      <div class="frameHeader">
+        <div class="frameTitle">Target photo</div>
+        <button id="changeBullBtn" class="miniBtn" type="button" disabled>Change bull</button>
+      </div>
 
-      <div id="targetWrap" class="targetWrap" aria-label="Photo and tap layer">
-        <!-- Instruction INSIDE the frame -->
-        <div class="frameTopRow">
-          <div id="frameInstruction" class="frameInstruction">Tap the bull first, then tap bullet holes.</div>
-          <button id="changeBullBtn" class="changeBullBtn hidden" type="button">Change bull</button>
-        </div>
-
-        <img id="targetImg" class="targetImg" alt="Photo" />
+      <div id="targetStage" class="targetStage">
+        <!-- IMPORTANT: dotsLayer overlays ONLY the image area -->
+        <img id="targetImg" alt="Target" />
         <div id="dotsLayer" class="dotsLayer" aria-hidden="true"></div>
+
+        <div id="emptyHint" class="emptyHint">
+          Choose a photo to begin.
+        </div>
       </div>
 
-      <div class="statusRow">
-        <div class="chip">Bull: <span id="bullState">not set</span></div>
-        <div class="chip">Holes: <span id="holeCount">0</span></div>
+      <div class="actionsRow">
+        <button id="undoBtn" class="primaryBtn" type="button" disabled>Undo</button>
+        <button id="clearBtn" class="primaryBtn" type="button" disabled>Clear</button>
+        <button id="resultsBtn" class="primaryBtn" type="button" disabled>Show Results</button>
       </div>
 
-      <div class="btnRow">
-        <button id="undoBtn" class="btn ghost" type="button">Undo</button>
-        <button id="clearBtn" class="btn ghost" type="button">Clear</button>
-        <button id="showBtn" class="btn primary" type="button" disabled>Show Results</button>
+      <div id="lockBanner" class="lockBanner" hidden>
+        Results locked. Undo/Clear to edit taps.
       </div>
-
-      <div id="lockHint" class="lockHint hidden">Results locked. Undo/Clear to edit taps.</div>
     </section>
 
-    <!-- CARD 3: Results -->
-    <section id="resultsCard" class="card hidden" aria-live="polite">
+    <!-- Results -->
+    <section class="resultsCard">
       <div class="resultsTitle">Results</div>
 
-      <!-- Score first + most prominent -->
-      <div class="scoreBigRow">
-        <div class="scoreLabel">Score</div>
-        <div id="rScore" class="scoreBig scoreGood">—</div>
-      </div>
+      <div class="resultsInner">
+        <div class="resultsLeft">
+          <div class="subTitle">Corrections (Scope)</div>
 
-      <div class="corrBlock">
-        <div class="corrHdr">Corrections</div>
+          <div class="kvRow">
+            <div class="kvLabel">Windage:</div>
+            <div class="kvValue" id="windDir">—</div>
+            <div class="kvArrow">→</div>
+            <div class="kvValueRight" id="windClicks">—</div>
+          </div>
 
-        <div class="corrLine">
-          Windage: <strong id="rWindDir">—</strong>
-          <span class="arrow">→</span>
-          <span id="rWindClk">—</span>
+          <div class="kvRow">
+            <div class="kvLabel">Elevation:</div>
+            <div class="kvValue" id="elevDir">—</div>
+            <div class="kvArrow">→</div>
+            <div class="kvValueRight" id="elevClicks">—</div>
+          </div>
         </div>
 
-        <div class="corrLine">
-          Elevation: <strong id="rElevDir">—</strong>
-          <span class="arrow">→</span>
-          <span id="rElevClk">—</span>
+        <div class="resultsRight">
+          <div class="scoreBox">
+            <div class="scoreLabel">SCORE</div>
+            <div id="scoreNum" class="scoreNum">—</div>
+          </div>
         </div>
       </div>
 
-      <div class="scoreRow">
-        <a id="downloadReceiptLink" class="btn receiptBtn hidden" download="SEC.png" href="#">Download/Keep SEC (PNG)</a>
-      </div>
-    </section>
-
-    <!-- Bottom Sheet (optional) -->
-    <div id="sheetBackdrop" class="sheetBackdrop hidden" aria-hidden="true"></div>
-    <section id="bottomSheet" class="sheet hidden" role="dialog" aria-modal="true" aria-label="Details">
-      <div class="sheetHandle" aria-hidden="true"></div>
-      <div class="sheetHeader">
-        <div class="sheetTitle">Details</div>
-        <button id="sheetClose" class="sheetClose" type="button">Close</button>
-      </div>
-      <div class="sheetBody">
-        <ul class="bullets">
-          <li>Tap the bull center first.</li>
-          <li>Then tap each confirmed bullet hole.</li>
-          <li>We output direction + scope clicks.</li>
-        </ul>
-      </div>
+      <button id="downloadBtn" class="secBtn" type="button" disabled>
+        Download/Keep SEC (PNG)
+      </button>
     </section>
 
   </main>
 
-  <script src="./index.js?v=20260125a"></script>
+  <script src="./index.js?v=20260125-stability-1"></script>
 </body>
 </html>
