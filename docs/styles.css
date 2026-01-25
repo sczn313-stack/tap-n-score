@@ -1,11 +1,9 @@
-/* docs/styles.css (FULL REPLACEMENT) — Vendor logo UI + Score styling + lock hint */
-
+/* docs/styles.css (FULL REPLACEMENT) — All action buttons match CHOOSE; SEC screen R/W/B; hide TAP-N-SCORE in SEC mode */
 :root{
   --bg:#050606;
   --card:rgba(255,255,255,.04);
   --stroke:rgba(255,255,255,.10);
   --stroke2:rgba(255,255,255,.14);
-
   --text:rgba(255,255,255,.92);
   --muted:rgba(255,255,255,.72);
   --dim:rgba(255,255,255,.58);
@@ -17,6 +15,11 @@
   --good:#00b45a;   /* dark green */
   --mid:#ffd200;    /* yellow */
   --poor:#ff4646;   /* red */
+
+  /* The CHOOSE button look becomes the universal action look */
+  --cta_bg1: rgba(31,111,235,.30);
+  --cta_bg2: rgba(31,111,235,.12);
+  --cta_border: rgba(31,111,235,.50);
 
   --radius:18px;
   --shadow:0 18px 60px rgba(0,0,0,.55);
@@ -66,16 +69,6 @@ body{
   font-weight:650;
 }
 
-.detailsBtn{
-  border-radius:999px;
-  padding:10px 14px;
-  border:1px solid var(--stroke);
-  background:rgba(0,0,0,.22);
-  color:var(--text);
-  font-weight:850;
-  cursor:pointer;
-}
-
 .card{
   background:linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.02));
   border:1px solid var(--stroke);
@@ -83,105 +76,6 @@ body{
   box-shadow:var(--shadow);
   padding:14px;
 }
-
-/* =========================
-   Vendor "Calling Card" block
-   Use for BOTH input + SEC.
-   Works with:
-     - .vendorCard wrapper
-     - .vendorLogo img
-     - .vendorName text
-     - .vendorCta (button/link)
-   ========================= */
-
-.vendorCard{
-  display:flex;
-  align-items:center;
-  gap:12px;
-  padding:12px 12px;
-  border-radius:16px;
-  border:1px solid rgba(255,255,255,.10);
-  background:linear-gradient(180deg, rgba(255,255,255,.04), rgba(0,0,0,.18));
-}
-
-.vendorLogoWrap{
-  width:52px;
-  height:52px;
-  flex:0 0 52px;
-  border-radius:14px;
-  border:1px solid rgba(255,255,255,.12);
-  background:rgba(0,0,0,.25);
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  overflow:hidden;
-}
-
-.vendorLogo{
-  width:100%;
-  height:100%;
-  object-fit:contain;
-  display:block;
-  padding:6px;
-}
-
-.vendorMeta{
-  flex:1 1 auto;
-  min-width:0;
-}
-
-.vendorKicker{
-  color:var(--dim);
-  font-weight:800;
-  font-size:12px;
-  letter-spacing:.4px;
-  text-transform:uppercase;
-}
-
-.vendorName{
-  margin-top:2px;
-  font-weight:950;
-  font-size:16px;
-  letter-spacing:.2px;
-  white-space:nowrap;
-  overflow:hidden;
-  text-overflow:ellipsis;
-}
-
-.vendorNote{
-  margin-top:2px;
-  color:var(--muted);
-  font-size:12px;
-  line-height:1.25;
-}
-
-.vendorCta{
-  flex:0 0 auto;
-  border-radius:14px;
-  padding:10px 12px;
-  border:1px solid rgba(31,111,235,.55);
-  background:linear-gradient(180deg, rgba(31,111,235,.50), rgba(31,111,235,.22));
-  color:var(--white);
-  font-weight:950;
-  cursor:pointer;
-  text-decoration:none;
-  display:inline-flex;
-  align-items:center;
-  justify-content:center;
-  white-space:nowrap;
-}
-
-.vendorCta:active{transform:translateY(1px)}
-
-/* Mobile tighten */
-@media (max-width:420px){
-  .vendorLogoWrap{width:46px;height:46px;flex-basis:46px}
-  .vendorCta{padding:10px 10px; font-size:14px}
-}
-
-/* =========================
-   Choose section
-   ========================= */
 
 .chooseRow{
   display:flex;
@@ -197,8 +91,8 @@ body{
   cursor:pointer;
   padding:16px 14px;
   border-radius:16px;
-  background:linear-gradient(180deg, rgba(31,111,235,.30), rgba(31,111,235,.12));
-  border:1px solid rgba(31,111,235,.50);
+  background:linear-gradient(180deg, var(--cta_bg1), var(--cta_bg2));
+  border:1px solid var(--cta_border);
   color:var(--white);
   font-weight:950;
   letter-spacing:1px;
@@ -244,19 +138,6 @@ body{
   background:rgba(255,255,255,.07);
   border:1px solid rgba(255,255,255,.10);
 }
-
-.instruction{
-  margin-top:12px;
-  padding:10px 12px;
-  border-radius:14px;
-  border:1px solid var(--stroke);
-  background:rgba(0,0,0,.18);
-  color:var(--muted);
-}
-
-/* =========================
-   Photo area + dots
-   ========================= */
 
 .targetWrap{
   position:relative;
@@ -319,75 +200,95 @@ body{
   gap:10px;
   flex-wrap:wrap;
 }
+
+/* UNIVERSAL ACTION BUTTON = CHOOSE BUTTON STYLE */
 .btn{
   border-radius:14px;
   padding:12px 14px;
-  border:1px solid var(--stroke);
-  background:rgba(0,0,0,.18);
-  color:var(--text);
-  font-weight:900;
+  border:1px solid var(--cta_border);
+  background:linear-gradient(180deg, var(--cta_bg1), var(--cta_bg2));
+  color:var(--white);
+  font-weight:950;
   cursor:pointer;
   flex:1 1 140px;
+  text-align:center;
 }
-.btn.primary{
-  background:linear-gradient(180deg, rgba(31,111,235,.55), rgba(31,111,235,.25));
-  border:1px solid rgba(31,111,235,.55);
-  color:var(--white);
-}
-.btn:disabled{opacity:.45; cursor:not-allowed}
 
-.tip{
-  margin-top:10px;
-  color:var(--dim);
-  font-size:13px;
+.btn:disabled{
+  opacity:.45;
+  cursor:not-allowed;
 }
+
+.detailsBtn,
+.sheetClose{
+  border-radius:999px;
+  padding:10px 14px;
+  border:1px solid var(--cta_border);
+  background:linear-gradient(180deg, var(--cta_bg1), var(--cta_bg2));
+  color:var(--white);
+  font-weight:950;
+  cursor:pointer;
+}
+
+.tip{margin-top:10px; color:var(--dim); font-size:13px}
 
 .lockHint{
   margin-top:10px;
+  color:rgba(255,255,255,.75);
+  font-size:13px;
   padding:10px 12px;
   border-radius:14px;
-  border:1px solid rgba(255,210,0,.20);
-  background:rgba(255,210,0,.08);
-  color:rgba(255,255,255,.82);
-  font-weight:850;
-  font-size:13px;
+  border:1px solid rgba(255,255,255,.10);
+  background:rgba(0,0,0,.18);
 }
 
-/* =========================
-   Results + Score
-   ========================= */
+.hidden{display:none !important}
 
-.resultsTitle{font-weight:950; font-size:18px; margin-bottom:10px}
+/* RESULTS / SEC */
+.secHdr{
+  display:flex;
+  align-items:baseline;
+  gap:10px;
+  margin-bottom:10px;
+}
+
+.secS{ color:var(--red); font-weight:1000; font-size:30px; letter-spacing:.3px;}
+.secE{ color:var(--white); font-weight:1000; font-size:30px; letter-spacing:.3px; opacity:.95;}
+.secC{ color:var(--blue); font-weight:1000; font-size:30px; letter-spacing:.3px;}
+
+.secLabel{
+  color:rgba(255,255,255,.78);
+  font-weight:850;
+}
 
 .scoreBigRow{
   display:flex;
-  align-items:baseline;
+  align-items:flex-end;
   justify-content:space-between;
-  gap:12px;
+  gap:14px;
   padding:12px;
   border-radius:16px;
-  border:1px solid var(--stroke);
+  border:1px solid rgba(255,255,255,.10);
   background:rgba(0,0,0,.18);
   margin-bottom:12px;
 }
 
 .scoreLabel{
-  color:var(--muted);
-  font-weight:950;
-  letter-spacing:.6px;
-  text-transform:uppercase;
+  color:rgba(255,255,255,.78);
+  font-weight:900;
+  letter-spacing:.4px;
 }
 
 .scoreBig{
   font-weight:1000;
-  font-size:48px;
+  font-size:58px;
   line-height:1;
   letter-spacing:.6px;
 }
 
-.scoreGood{ color:var(--good) }
-.scoreMid{  color:var(--mid)  }
-.scorePoor{ color:var(--poor) }
+.scoreGood{ color: var(--good); }
+.scoreMid{ color: var(--mid); }
+.scorePoor{ color: var(--poor); }
 
 .corrBlock{
   padding:12px;
@@ -395,6 +296,7 @@ body{
   border:1px solid var(--stroke);
   background:rgba(0,0,0,.18);
 }
+
 .corrHdr{font-weight:950; margin-bottom:8px}
 
 .corrLine{
@@ -421,26 +323,19 @@ body{
 
 .receiptBtn{
   flex:1 1 260px;
-  text-align:center;
   text-decoration:none;
   display:flex;
   align-items:center;
   justify-content:center;
 }
 
-.hidden{display:none !important}
-
-/* =========================
-   Bottom sheet
-   ========================= */
-
+/* Bottom sheet */
 .sheetBackdrop{
   position:fixed;
   inset:0;
   background:rgba(0,0,0,.55);
   z-index:50;
 }
-
 .sheet{
   position:fixed;
   left:0;
@@ -456,7 +351,6 @@ body{
   max-height:78vh;
   overflow:auto;
 }
-
 .sheetHandle{
   width:44px;
   height:5px;
@@ -464,7 +358,6 @@ body{
   background:rgba(255,255,255,.25);
   margin:6px auto 10px;
 }
-
 .sheetHeader{
   display:flex;
   align-items:center;
@@ -472,27 +365,20 @@ body{
   gap:10px;
   padding:6px 0 10px;
 }
-
 .sheetTitle{font-weight:950; font-size:18px}
-
-.sheetClose{
-  border-radius:999px;
-  padding:10px 14px;
-  border:1px solid var(--stroke);
-  background:rgba(0,0,0,.22);
-  color:var(--text);
-  font-weight:900;
-  cursor:pointer;
-}
-
 .sheetBody{
   padding:2px 2px 10px;
   color:var(--text);
 }
-
 .bullets{
   margin:0;
   padding-left:18px;
   color:rgba(255,255,255,.86);
   line-height:1.6;
+}
+
+/* ✅ THE KEY: when SEC is visible, Tap-n-Score header disappears */
+body.secMode .topbar,
+body.secMode #subline{
+  display:none !important;
 }
