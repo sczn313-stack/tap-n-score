@@ -6,101 +6,106 @@
   <meta name="color-scheme" content="dark" />
   <meta name="theme-color" content="#000000" />
   <title>Tap-n-Score™</title>
-  <link rel="stylesheet" href="./styles.css?v=20260125b" />
+
+  <link rel="stylesheet" href="./styles.css" />
 </head>
 
 <body>
-  <!-- Header (must disappear in SEC mode) -->
-  <header class="topHeader tapnscoreHeader" aria-label="Tap-n-Score Header">
-    <div class="brandLeft">
-      <div class="brandLine">
-        <span class="brandTap">TAP</span><span class="brandN">-N-</span><span class="brandScore">SCORE</span><span class="brandTm">™</span>
-      </div>
-      <div class="brandSub">After-Shot Intelligence</div>
-    </div>
-
-    <div class="headerRight">
-      <!-- Vendor pill -->
-      <a id="vendorLink" class="pillBtn vendorPill" href="#" aria-label="Vendor">
-        <img id="vendorLogo" class="vendorLogo" alt="Vendor Logo" />
-        <span id="vendorName" class="vendorName">Vendor</span>
-      </a>
-
-      <button id="detailsBtn" class="pillBtn" type="button">Details</button>
-    </div>
-  </header>
-
   <main class="page">
-    <input id="photoInput" type="file" accept="image/*" hidden />
 
-    <section class="actionsTop" aria-label="Actions">
-      <button id="choosePhotoBtn" class="actionBtn" type="button">Choose Target Photo</button>
-
-      <div class="pillGroup">
-        <span class="pill" id="bullStatus">Bull: not set</span>
-        <span class="pill" id="tapCount">Holes: 0</span>
-      </div>
-    </section>
-
-    <section class="stage" aria-label="Target Stage">
-      <div id="instructionLine" class="instructionLine">
-        Choose a photo, then tap the bull once, then tap each confirmed hole.
+    <!-- =========================
+         Header
+    ========================== -->
+    <div class="headerRow">
+      <div class="brandBlock">
+        <div class="brandTitle">TAP-N-SCORE™</div>
+        <div class="brandSub">After-Shot Intelligence</div>
       </div>
 
-      <div id="targetWrap" class="targetWrap">
-        <div class="targetLabel">Target photo</div>
-        <img id="targetImg" class="targetImg" alt="Target photo" />
-        <div id="dotsLayer" class="dotsLayer" aria-hidden="true"></div>
-      </div>
+      <div style="display:flex; gap:10px; align-items:center;">
+        <!-- Vendor pill (clickable) -->
+        <a id="vendorLink" class="vendorPill" href="#" target="_blank" rel="noopener">
+          <img id="vendorLogo" alt="" src="" />
+          <span id="vendorName" class="vendorName">Vendor</span>
+        </a>
 
-      <section class="controlsRow" aria-label="Controls">
-        <button id="setBullBtn" class="actionBtn secondaryBtn" type="button">Set Bull</button>
-        <button id="undoBtn" class="actionBtn secondaryBtn" type="button">Undo</button>
-        <button id="clearTapsBtn" class="actionBtn secondaryBtn" type="button">Clear</button>
-
-        <div class="spacer"></div>
-
-        <button id="showResultsBtn" class="actionBtn" type="button">Show Results</button>
-      </section>
-
-      <section class="results" aria-label="Results">
-        <h2 class="resultsTitle">Results</h2>
-
-        <div class="card">
-          <div class="cardTitle">Corrections (Scope)</div>
-
-          <div class="row">
-            <div class="label">Windage:</div>
-            <div class="value" id="windDir">—</div>
-            <div class="arrow">→</div>
-            <div class="right" id="windClicks">—</div>
-          </div>
-
-          <div class="row">
-            <div class="label">Elevation:</div>
-            <div class="value" id="elevDir">—</div>
-            <div class="arrow">→</div>
-            <div class="right" id="elevClicks">—</div>
-          </div>
-        </div>
-
-        <button id="downloadSecBtn" class="actionBtn secBtn" type="button">Download SEC (PNG)</button>
-      </section>
-    </section>
-
-    <!-- SEC overlay -->
-    <div id="secOverlay" class="secOverlay" aria-hidden="true">
-      <div class="secPanel">
-        <canvas id="secCanvas" width="1080" height="1350"></canvas>
-
-        <div class="secActions">
-          <button id="closeSecBtn" class="actionBtn secondaryBtn" type="button">Close</button>
-          <button id="saveSecBtn" class="actionBtn secBtn" type="button">Save SEC.png</button>
-        </div>
+        <button id="detailsBtn" class="detailsBtn" type="button">Details</button>
       </div>
     </div>
+
+    <!-- =========================
+         Top controls
+    ========================== -->
+    <div class="chipsRow">
+      <label class="btn fileBtn" for="photoInput">Choose Target Photo</label>
+      <input id="photoInput" type="file" accept="image/*" style="display:none;" />
+
+      <span class="chip">Bull: <span id="bullStatus">not set</span></span>
+      <span class="chip">Holes: <span id="tapCount">0</span></span>
+    </div>
+
+    <div id="instructionLine" class="instructionLine">
+      Choose a photo, then tap the bull once, then tap each confirmed hole.
+    </div>
+
+    <!-- =========================
+         Target photo frame (stable)
+    ========================== -->
+    <div id="targetWrap" class="targetWrap" aria-label="Target photo frame" style="min-height: 320px;">
+      <!-- ONE title only -->
+      <div class="frameTitle">Target photo</div>
+
+      <!-- The displayed image -->
+      <img id="targetImg" class="targetImg" alt="" />
+
+      <!-- Dots overlay (positioned by JS) -->
+      <div id="dotsLayer" class="dotsLayer"></div>
+    </div>
+
+    <!-- =========================
+         Bottom action buttons
+    ========================== -->
+    <div class="actionsRow">
+      <div class="left">
+        <button id="setBullBtn" type="button">Set Bull</button>
+        <button id="undoBtn" type="button" class="secondary">Undo</button>
+        <button id="clearBtn" type="button" class="secondary">Clear</button>
+      </div>
+
+      <div class="right">
+        <button id="showResultsBtn" type="button">Show Results</button>
+      </div>
+    </div>
+
+    <!-- =========================
+         Results
+    ========================== -->
+    <section id="resultsCard" class="resultsCard">
+      <h2 class="resultsTitle">Results</h2>
+
+      <div id="correctionsCard" class="correctionsCard">
+        <div style="font-weight:900; margin-bottom:8px;">Corrections (Scope)</div>
+
+        <div class="corrRow">
+          <div class="corrLabel">Windage:</div>
+          <div id="windDir" class="corrDir">—</div>
+          <div class="corrArrow">→</div>
+          <div id="windClicks" class="corrVal">—</div>
+        </div>
+
+        <div class="corrRow">
+          <div class="corrLabel">Elevation:</div>
+          <div id="elevDir" class="corrDir">—</div>
+          <div class="corrArrow">→</div>
+          <div id="elevClicks" class="corrVal">—</div>
+        </div>
+
+        <button id="downloadSecBtn" class="downloadSecBtn" type="button">Download SEC (PNG)</button>
+      </div>
+    </section>
+
   </main>
 
-  <script src="./index.js?v=20260125b"></script>
+  <script src="./index.js"></script>
 </body>
 </html>
