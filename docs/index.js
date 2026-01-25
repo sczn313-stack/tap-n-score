@@ -1,141 +1,63 @@
 /* ============================================================
    /docs/index.js  (FULL REPLACEMENT)
-   STABILITY BRICK:
-   A) INPUT STABILITY (Bull cannot be "lost")
-      - If bull is NOT set, the NEXT tap auto-sets bull.
-      - Set Bull button forces "next tap sets bull" (re-anchor).
-      - Holes cannot be recorded until bull is set.
-
-   B) SEC STABILITY (Hard gate)
-      - SEC download + results only allowed when:
-          bull is set AND holes >= 1
-
-   Notes:
-   - Requires these IDs in index.html:
-     photoInput, choosePhotoBtn, targetWrap, targetImg, dotsLayer,
-     instructionLine, bullStatus, tapCount,
-     setBullBtn, undoBtn, clearTapsBtn, showResultsBtn,
-     downloadSecBtn (or downloadSecLink)
+   STABILITY BRICK v2 — ANCHOR FIX
+   - Listen on targetImg (not wrap) so coords are always correct
+   - Use pointerdown + touchstart fallback for iOS Safari reliability
+   - Bull auto-sets on first tap if not set
+   - Set Bull button forces re-anchor (next tap sets bull)
+   - Holes only record after bull is set
+   - Results/SEC hard-gated: bull set + holes>=1
 ============================================================ */
 
 (() => {
   const $ = (id) => document.getElementById(id);
 
-  // ---- Elements (must exist)
+  // ---- Elements (IDs must exist; if one is missing you’ll feel it immediately)
   const elFile = $("photoInput");
   const elChoose = $("choosePhotoBtn");
-  const elWrap = $("targetWrap");
-  const elImg = $("targetImg");
-  const elDots = $("dotsLayer");
-  const elInstruction = $("instructionLine");
 
-  const elBullStatus = $("bullStatus");
-  const elTapCount = $("tapCount");
+  const elWrap = $("targetWrap");      // container (for layout only)
+  const elImg  = $("targetImg");       // IMPORTANT: tap surface
+  const elDots = $("dotsLayer");       // overlay (must be pointer-events:none via CSS)
+
+  const elInstruction = $("instructionLine");
+  const elBullStatus  = $("bullStatus");
+  const elTapCount    = $("tapCount");
 
   const elSetBull = $("setBullBtn");
-  const elUndo = $("undoBtn");
-  const elClear = $("clearTapsBtn");
-  const elShow = $("showResultsBtn");
+  const elUndo    = $("undoBtn");
+  const elClear   = $("clearTapsBtn");
+  const elShow    = $("showResultsBtn");
 
-  // SEC download control can be a button or a link depending on your HTML
   const elDownloadSecBtn = $("downloadSecBtn") || $("downloadSecLink");
 
   // ---- State
   let selectedFile = null;
   let objectUrl = null;
 
-  let bull = null;       // { x, y } in image pixels (natural coords)
-  let holes = [];        // array of { x, y }
-  let reanchorMode = false; // if true, next tap sets bull (even if bull exists)
+  let bull = null;      // {x,y} in image natural pixels
+  let holes = [];       // [{x,y},...]
+  let reanchorMode = false;
 
   // ---- Helpers
-  function clampNum(n, fallback = 0) {
-    const x = Number(n);
-    return Number.isFinite(x) ? x : fallback;
-  }
+  function setText(el, txt) { if (el) el.textContent = txt; }
 
-  // Convert a pointer event on wrapper to image "natural" pixel coords
-  function getImageCoordsFromEvent(ev) {
-    const img = elImg;
-    const wrapRect = elWrap.getBoundingClientRect();
-    const imgRect = img.getBoundingClientRect();
-
-    // click position in viewport
-    const clientX = ev.clientX;
-    const clientY = ev.clientY;
-
-    // position relative to displayed image rect
-    const relX = clientX - imgRect.left;
-    const relY = clientY - imgRect.top;
-
-    // if tap is outside the displayed image area, ignore
-    if (relX < 0 || relY < 0 || relX > imgRect.width || relY > imgRect.height) {
-      return null;
-    }
-
-    const scaleX = img.naturalWidth / imgRect.width;
-    const scaleY = img.naturalHeight / imgRect.height;
-
-    return {
-      x: relX * scaleX,
-      y: relY * scaleY,
-    };
-  }
-
-  // Draw a dot on overlay in display coordinates
-  function addDotDisplay(xNatural, yNatural, kind) {
-    const img = elImg;
-    const imgRect = img.getBoundingClientRect();
-
-    const scaleX = imgRect.width / img.naturalWidth;
-    const scaleY = imgRect.height / img.naturalHeight;
-
-    const xDisp = xNatural * scaleX;
-    const yDisp = yNatural * scaleY;
-
-    const dot = document.createElement("div");
-    dot.className = kind === "bull" ? "dot dotBull" : "dot dotHole";
-    dot.style.left = `${xDisp}px`;
-    dot.style.top = `${yDisp}px`;
-    elDots.appendChild(dot);
-  }
-
-  function redrawDots() {
-    elDots.innerHTML = "";
-    if (!elImg.src) return;
-    if (bull) addDotDisplay(bull.x, bull.y, "bull");
-    for (const h of holes) addDotDisplay(h.x, h.y, "hole");
-  }
-
-  function setInstruction(text) {
-    if (elInstruction) elInstruction.textContent = text;
-  }
+  function setInstruction(txt) { setText(elInstruction, txt); }
 
   function updateStatus() {
-    if (elBullStatus) elBullStatus.textContent = bull ? "Bull: set" : "Bull: not set";
-    if (elTapCount) elTapCount.textContent = `Holes: ${holes.length}`;
+    setText(elBullStatus, bull ? "Bull: set" : "Bull: not set");
+    setText(elTapCount, `Holes: ${holes.length}`);
 
     const ready = !!bull && holes.length >= 1;
-
     if (elShow) elShow.disabled = !ready;
     if (elDownloadSecBtn) elDownloadSecBtn.disabled = !ready;
 
-    // Instruction priority
     if (!elImg.src) {
       setInstruction("Choose a photo, then tap the bull once, then tap each confirmed hole.");
       return;
     }
-
-    if (reanchorMode) {
-      setInstruction("Tap the bull now to re-anchor.");
-      return;
-    }
-
-    if (!bull) {
-      setInstruction("Tap the bull once to set it (auto).");
-      return;
-    }
-
+    if (reanchorMode) { setInstruction("Tap the bull now to re-anchor."); return; }
+    if (!bull) { setInstruction("Tap the bull once to set it."); return; }
     setInstruction("Tap each confirmed hole.");
   }
 
@@ -154,13 +76,48 @@
       updateStatus();
       return;
     }
-    // If no holes, undo can clear bull (optional, but stable)
     if (bull) {
       bull = null;
       reanchorMode = false;
       redrawDots();
       updateStatus();
     }
+  }
+
+  // Convert a client (page) point to IMAGE NATURAL PIXELS
+  function clientToNatural(clientX, clientY) {
+    const imgRect = elImg.getBoundingClientRect();
+    const relX = clientX - imgRect.left;
+    const relY = clientY - imgRect.top;
+
+    // Ignore taps outside image (prevents “padding clicks”)
+    if (relX < 0 || relY < 0 || relX > imgRect.width || relY > imgRect.height) return null;
+
+    const nx = (relX / imgRect.width)  * elImg.naturalWidth;
+    const ny = (relY / imgRect.height) * elImg.naturalHeight;
+
+    return { x: nx, y: ny };
+  }
+
+  function addDotDisplay(natX, natY, kind) {
+    const imgRect = elImg.getBoundingClientRect();
+    const xDisp = (natX / elImg.naturalWidth)  * imgRect.width;
+    const yDisp = (natY / elImg.naturalHeight) * imgRect.height;
+
+    const dot = document.createElement("div");
+    dot.className = kind === "bull" ? "dot dotBull" : "dot dotHole";
+    dot.style.left = `${xDisp}px`;
+    dot.style.top  = `${yDisp}px`;
+    elDots.appendChild(dot);
+  }
+
+  function redrawDots() {
+    if (!elDots) return;
+    elDots.innerHTML = "";
+    if (!elImg.src) return;
+
+    if (bull) addDotDisplay(bull.x, bull.y, "bull");
+    for (const h of holes) addDotDisplay(h.x, h.y, "hole");
   }
 
   // ---- Photo handling
@@ -180,18 +137,14 @@
     elImg.src = objectUrl;
   }
 
-  // When image loads, rebuild overlay sizing + redraw dots
   elImg.addEventListener("load", () => {
-    // Ensure overlay matches image displayed box
-    // (CSS handles the overlay positioning; we just redraw)
+    // Make sure overlay redraws after image layout is known
     redrawDots();
     updateStatus();
   });
 
-  // Choose photo (button triggers hidden input on iOS reliably)
-  if (elChoose && elFile) {
-    elChoose.addEventListener("click", () => elFile.click());
-  }
+  // ---- Choose photo
+  if (elChoose && elFile) elChoose.addEventListener("click", () => elFile.click());
 
   if (elFile) {
     elFile.addEventListener("change", (e) => {
@@ -201,14 +154,13 @@
     });
   }
 
-  // ---- Tap handling (STABILITY: bull auto-capture)
-  elWrap.addEventListener("click", (ev) => {
+  // ---- Tap logic (ANCHOR FIX)
+  function handleTap(clientX, clientY) {
     if (!elImg.src) return;
-
-    const pt = getImageCoordsFromEvent(ev);
+    const pt = clientToNatural(clientX, clientY);
     if (!pt) return;
 
-    // If reanchor mode OR bull not set => this tap is bull
+    // If reanchor OR no bull -> set bull
     if (reanchorMode || !bull) {
       bull = { x: pt.x, y: pt.y };
       reanchorMode = false;
@@ -217,11 +169,26 @@
       return;
     }
 
-    // Otherwise this tap is a hole
+    // Otherwise record hole
     holes.push({ x: pt.x, y: pt.y });
     redrawDots();
     updateStatus();
-  });
+  }
+
+  // Pointer events (best)
+  elImg.addEventListener("pointerdown", (ev) => {
+    // Important for iOS Safari: don’t let it “turn into a scroll/zoom gesture”
+    ev.preventDefault();
+    handleTap(ev.clientX, ev.clientY);
+  }, { passive: false });
+
+  // Touch fallback (older iOS behaviors)
+  elImg.addEventListener("touchstart", (ev) => {
+    ev.preventDefault();
+    const t = ev.touches && ev.touches[0];
+    if (!t) return;
+    handleTap(t.clientX, t.clientY);
+  }, { passive: false });
 
   // ---- Buttons
   if (elSetBull) {
@@ -231,47 +198,29 @@
       updateStatus();
     });
   }
-
-  if (elUndo) elUndo.addEventListener("click", undoLast);
+  if (elUndo)  elUndo.addEventListener("click", undoLast);
   if (elClear) elClear.addEventListener("click", clearAll);
 
-  // ---- Results / SEC (STABILITY: hard gate)
-  function requireReadyOrToast() {
-    const ready = !!bull && holes.length >= 1;
-    if (ready) return true;
-
-    // Minimal “toast” style message (no alerts)
-    const msg = !bull ? "Set bull first (tap bull once)." : "Tap at least 1 hole.";
-    setInstruction(msg);
+  function requireReadyOrNudge() {
+    if (!!bull && holes.length >= 1) return true;
+    if (!bull) setInstruction("Set bull first (tap bull once).");
+    else setInstruction("Tap at least 1 hole.");
     return false;
   }
 
   if (elShow) {
     elShow.addEventListener("click", () => {
-      if (!requireReadyOrToast()) return;
-
-      // Your existing results logic goes here.
-      // Keep everything you already do — but now you can rely on bull+holes being valid.
-      // Example placeholder:
-      window.__SCZN3_TAP_STATE__ = { bull, holes };
-      // If you already call onSeeResults() in your current build, keep that call instead.
+      if (!requireReadyOrNudge()) return;
       if (typeof window.onSeeResults === "function") window.onSeeResults({ bull, holes });
+      else window.__SCZN3_TAP_STATE__ = { bull, holes };
     });
   }
 
   if (elDownloadSecBtn) {
     elDownloadSecBtn.addEventListener("click", () => {
-      if (!requireReadyOrToast()) return;
-
-      // If you already generate SEC via a function, call it here.
-      // This is the “hard gate” so generation never runs with missing bull.
-      if (typeof window.downloadSEC === "function") {
-        window.downloadSEC({ bull, holes });
-        return;
-      }
-
-      // If your SEC generation is inside onSeeResults(), just trigger results first.
-      if (typeof window.onSeeResults === "function") window.onSeeResults({ bull, holes });
+      if (!requireReadyOrNudge()) return;
+      if (typeof window.downloadSEC === "function") window.downloadSEC({ bull, holes });
+      else if (typeof window.onSeeResults === "function") window.onSeeResults({ bull, holes });
     });
   }
 
