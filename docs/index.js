@@ -1,4 +1,4 @@
-/* docs/index.js (FULL REPLACEMENT) — Truth Gate + Self-Test + Locks Show Results + Adds Score on SEC */
+/* docs/index.js (FULL REPLACEMENT) — Locks Show Results + Score + SEC mode hides TAP-N-SCORE */
 (() => {
   const $ = (id) => document.getElementById(id);
 
@@ -10,7 +10,7 @@
   const elModeRifle = $("modeRifle");
   const elModePistol = $("modePistol");
 
-  // Hidden inputs (behind the scenes)
+  // Hidden inputs
   const elDistance = $("distanceYds");
   const elClickValue = $("clickValue");
 
@@ -28,8 +28,6 @@
   const elResults = $("resultsCard");
   const elLockHint = $("lockHint");
 
-  const elTruthBanner = $("truthBanner");
-
   const rScore = $("rScore");
   const rWindDir = $("rWindDir");
   const rWindClk = $("rWindClk");
@@ -42,17 +40,14 @@
   const elBackdrop = $("sheetBackdrop");
   const elSheet = $("bottomSheet");
   const elSheetClose = $("sheetClose");
-  const elTruthTestBtn = $("truthTestBtn");
-  const elTruthTestOut = $("truthTestOut");
 
   // --- State
-  let selectedFile = null;
   let objectUrl = null;
 
   let bull = null;   // {x01,y01}
   let holes = [];    // [{x01,y01}...]
 
-  // Lock state: once results shown, freeze taps until Undo/Clear changes state
+  // Lock state
   let resultsLocked = false;
 
   // Tap intent
@@ -61,73 +56,14 @@
   const TAP_MAX_MS = 450;
   let lastTapTs = 0;
 
-  // Internal size proxy until QR payload replaces it (NOT displayed)
+  // Internal size proxy until QR payload replaces it
   const PAPER_W_IN = 8.5;
   const PAPER_H_IN = 11.0;
 
   const clamp01 = (v) => Math.max(0, Math.min(1, v));
   const clamp = (n, a, b) => Math.max(a, Math.min(b, n));
+
   const fmtClicks = (n) => (Number.isFinite(n) ? n.toFixed(2) : "0.00");
-
-  // ===== Direction TRUTH RULES (the covenant)
-  // With browser coordinates: x grows RIGHT, y grows DOWN.
-  // correction vector = bull - poib
-  // dxIn >= 0 => move RIGHT, else LEFT
-  // dyIn >= 0 => move DOWN, else UP
-  function expectedWindDir(dxIn){ return dxIn >= 0 ? "RIGHT" : "LEFT"; }
-  function expectedElevDir(dyIn){ return dyIn >= 0 ? "DOWN" : "UP"; }
-
-  // These are the ONLY mapping functions used for display.
-  // If anything ever “inverts,” the self-test will fail and results will be blocked.
-  function mapWindDir(dxIn){ return dxIn >= 0 ? "RIGHT" : "LEFT"; }
-  function mapElevDir(dyIn){ return dyIn >= 0 ? "DOWN" : "UP"; }
-
-  function showTruthBanner(msg){
-    if (!elTruthBanner) return;
-    elTruthBanner.textContent = msg;
-    elTruthBanner.classList.remove("hidden");
-  }
-  function hideTruthBanner(){
-    if (!elTruthBanner) return;
-    elTruthBanner.textContent = "";
-    elTruthBanner.classList.add("hidden");
-  }
-
-  // “Truth gate” check for a single computed dxIn/dyIn
-  function directionIntegrityPass(dxIn, dyIn){
-    const gotW = mapWindDir(dxIn);
-    const gotE = mapElevDir(dyIn);
-
-    const expW = expectedWindDir(dxIn);
-    const expE = expectedElevDir(dyIn);
-
-    return (gotW === expW) && (gotE === expE);
-  }
-
-  // Built-in quadrant self-test (4 cases)
-  function runDirectionSelfTest(){
-    // Use pure signed deltas (inches), no image needed.
-    const cases = [
-      { name:"POI left/up of bull → RIGHT + DOWN", dxIn:+1, dyIn:+1, w:"RIGHT", e:"DOWN" },
-      { name:"POI right/up of bull → LEFT + DOWN", dxIn:-1, dyIn:+1, w:"LEFT",  e:"DOWN" },
-      { name:"POI left/down of bull → RIGHT + UP", dxIn:+1, dyIn:-1, w:"RIGHT", e:"UP"   },
-      { name:"POI right/down of bull → LEFT + UP", dxIn:-1, dyIn:-1, w:"LEFT",  e:"UP"   },
-    ];
-
-    let ok = true;
-    const lines = [];
-
-    for (const c of cases){
-      const gotW = mapWindDir(c.dxIn);
-      const gotE = mapElevDir(c.dyIn);
-      const pass = (gotW === c.w) && (gotE === c.e);
-      if (!pass) ok = false;
-
-      lines.push(`${pass ? "PASS" : "FAIL"} — ${c.name} (got ${gotW}/${gotE})`);
-    }
-
-    return { ok, lines };
-  }
 
   function setMode(mode){
     const isRifle = mode === "rifle";
@@ -135,7 +71,6 @@
     elModePistol.classList.toggle("active", !isRifle);
     try { localStorage.setItem("tns_mode", mode); } catch {}
   }
-
   function getMode(){
     try {
       const m = localStorage.getItem("tns_mode");
@@ -147,6 +82,10 @@
 
   function showDetailsBtn(){
     elDetailsBtn.classList.remove("hidden");
+  }
+
+  function setSecMode(on){
+    document.body.classList.toggle("secMode", !!on); // CSS hides TAP-N-SCORE header when SEC is visible
   }
 
   function clearDots(){ elDots.innerHTML = ""; }
@@ -180,6 +119,7 @@
     elResults.classList.add("hidden");
     elReceiptLink.classList.add("hidden");
     elReceiptLink.href = "#";
+    setSecMode(false);
   }
 
   function resetSession(keepImage){
@@ -189,7 +129,6 @@
 
     clearDots();
     hideResults();
-    hideTruthBanner();
     updateStatus();
 
     if (!keepImage) elImg.src = "";
@@ -240,7 +179,6 @@
   function unlockEdits(){
     resultsLocked = false;
     hideResults();
-    hideTruthBanner();
     updateStatus();
   }
 
@@ -249,7 +187,6 @@
     const f = elFile.files && elFile.files[0];
     if (!f) return;
 
-    selectedFile = f;
     elFileName.textContent = f.name || "Photo selected";
 
     if (objectUrl) URL.revokeObjectURL(objectUrl);
@@ -263,7 +200,7 @@
     elImg.src = objectUrl;
   });
 
-  // --- Tap intent pipeline (blocked when resultsLocked)
+  // --- Tap pipeline (blocked when locked)
   elWrap.addEventListener("pointerdown", (e) => {
     if (!elImg.src) return;
     if (resultsLocked) return;
@@ -326,46 +263,33 @@
     elFileName.textContent = "No photo selected";
 
     if (objectUrl){ URL.revokeObjectURL(objectUrl); objectUrl = null; }
-    selectedFile = null;
 
     resetSession(false);
     elDetailsBtn.classList.add("hidden");
   });
 
-  // --- Show results (LOCKS after first successful run)
+  // --- Show results (LOCKS after first run)
   elShow.addEventListener("click", async () => {
     if (resultsLocked) return;
     if (!bull || holes.length < 1) return;
 
-    // LOCK immediately to prevent spam + poisoning
     resultsLocked = true;
-    hideTruthBanner();
     updateStatus();
 
-    // Behind-the-scenes values (UI hidden)
     const distance = Math.max(1, Number(elDistance?.value || 100));
     const click = Number(elClickValue?.value || 0.25);
 
     const poib = meanPoint(holes);
 
-    // correction vector = bull - poib (SIGNED)
+    // correction vector = bull - poib
     const dx01 = bull.x01 - poib.x01;
     const dy01 = bull.y01 - poib.y01;
 
     const dxIn = dx01 * PAPER_W_IN;
     const dyIn = dy01 * PAPER_H_IN;
 
-    // ===== TRUTH GATE (BLOCK OUTPUT IF FAIL)
-    if (!directionIntegrityPass(dxIn, dyIn)){
-      showTruthBanner("Direction integrity failed. Results blocked. (Truth Gate)");
-      // stay locked so they can’t keep spamming results; they must Undo/Clear to retry
-      hideResults();
-      return;
-    }
-
-    // Directions (from the only mapping functions)
-    const windDir = mapWindDir(dxIn);
-    const elevDir = mapElevDir(dyIn);
+    const windDir = dxIn >= 0 ? "RIGHT" : "LEFT";
+    const elevDir = dyIn <= 0 ? "UP" : "DOWN";
 
     const windAbsIn = Math.abs(dxIn);
     const elevAbsIn = Math.abs(dyIn);
@@ -380,7 +304,7 @@
     // Score (integer)
     const score = computeScoreFromOffset(dxIn, dyIn);
 
-    // Render Results (Score first)
+    // Render Results
     rScore.textContent = String(score);
     applyScoreClass(score);
 
@@ -391,8 +315,9 @@
     rElevClk.textContent = `${fmtClicks(elevClicks)} clicks`;
 
     elResults.classList.remove("hidden");
+    setSecMode(true);
 
-    // Build SEC PNG (includes Score first + colored)
+    // SEC PNG (kept simple for Brick #1 — styling polish comes after stability)
     try {
       const png = await buildSecPng({
         mode: getMode(),
@@ -435,25 +360,7 @@
   elSheetClose?.addEventListener("click", closeSheet);
   elBackdrop?.addEventListener("click", closeSheet);
 
-  // --- Self-test button
-  elTruthTestBtn?.addEventListener("click", () => {
-    const r = runDirectionSelfTest();
-    if (!elTruthTestOut) return;
-
-    if (r.ok){
-      elTruthTestOut.textContent = "PASS — Direction mapping matches signed deltas (RIGHT/LEFT + UP/DOWN).";
-      elTruthTestOut.classList.remove("truthFail");
-      elTruthTestOut.classList.add("truthPass");
-      hideTruthBanner();
-    } else {
-      elTruthTestOut.textContent = "FAIL — " + r.lines.join(" | ");
-      elTruthTestOut.classList.remove("truthPass");
-      elTruthTestOut.classList.add("truthFail");
-      showTruthBanner("Direction Check FAILED. Fix direction before pilot.");
-    }
-  });
-
-  // --- SEC PNG builder
+  // --- SEC PNG builder (score colored; clicks 2 decimals)
   async function buildSecPng(s) {
     const W = 1200, H = 675;
     const c = document.createElement("canvas");
@@ -463,26 +370,23 @@
     ctx.fillStyle = "#0b0e0f";
     ctx.fillRect(0, 0, W, H);
 
-    // Header brand
+    // Header (R/W/B)
     ctx.font = "900 56px system-ui, -apple-system, Segoe UI, Roboto, Arial";
-    ctx.fillStyle = "#ff3b30"; ctx.fillText("TAP", 60, 90);
-    ctx.fillStyle = "#ffffff"; ctx.fillText("-N-", 170, 90);
-    ctx.fillStyle = "#1f6feb"; ctx.fillText("SCORE", 270, 90);
-    ctx.fillStyle = "rgba(255,255,255,.85)";
-    ctx.font = "900 34px system-ui, -apple-system, Segoe UI, Roboto, Arial";
-    ctx.fillText("™", 470, 78);
+    ctx.fillStyle = "#ff3b30"; ctx.fillText("S", 60, 90);
+    ctx.fillStyle = "#ffffff"; ctx.fillText("E", 110, 90);
+    ctx.fillStyle = "#1f6feb"; ctx.fillText("C", 160, 90);
 
     ctx.fillStyle = "rgba(255,255,255,.72)";
-    ctx.font = "650 26px system-ui, -apple-system, Segoe UI, Roboto, Arial";
-    ctx.fillText("Shooter Experience Card (SEC)", 60, 128);
+    ctx.font = "750 28px system-ui, -apple-system, Segoe UI, Roboto, Arial";
+    ctx.fillText("Shooter Experience Card", 220, 90);
 
     // Panel
-    const x=60, y=170, w=1080, h=450;
+    const x=60, y=150, w=1080, h=470;
     roundRect(ctx, x, y, w, h, 22);
     ctx.fillStyle = "rgba(255,255,255,.04)"; ctx.fill();
     ctx.strokeStyle = "rgba(255,255,255,.10)"; ctx.lineWidth=2; ctx.stroke();
 
-    // SCORE first, biggest
+    // SCORE
     const scoreColor =
       s.score >= 85 ? "rgba(0,180,90,.95)" :
       s.score >= 60 ? "rgba(255,210,0,.95)" :
@@ -490,17 +394,40 @@
 
     ctx.fillStyle = "rgba(255,255,255,.80)";
     ctx.font = "900 28px system-ui, -apple-system, Segoe UI, Roboto, Arial";
-    ctx.fillText("SCORE", x+34, y+64);
+    ctx.fillText("SCORE", x+34, y+70);
 
     ctx.fillStyle = scoreColor;
     ctx.font = "1000 96px system-ui, -apple-system, Segoe UI, Roboto, Arial";
-    ctx.fillText(String(s.score), x+34, y+152);
+    ctx.fillText(String(s.score), x+34, y+160);
 
-    // Corrections header
+    // Corrections
     ctx.fillStyle = "rgba(255,255,255,.92)";
     ctx.font = "900 34px system-ui, -apple-system, Segoe UI, Roboto, Arial";
-    ctx.fillText("Corrections", x+34, y+220);
+    ctx.fillText("Corrections", x+34, y+235);
 
-    // Corrections lines (clicks only w/ 2 decimals)
     ctx.font = "900 30px system-ui, -apple-system, Segoe UI, Roboto, Arial";
-    ctx.fillText(`Windage: ${s.windDir} → ${fmtClicks(s.windClicks)} clicks`, x+
+    ctx.fillText(`Windage: ${s.windDir} → ${fmtClicks(s.windClicks)} clicks`, x+34, y+305);
+    ctx.fillText(`Elevation: ${s.elevDir} → ${fmtClicks(s.elevClicks)} clicks`, x+34, y+360);
+
+    ctx.fillStyle = "rgba(255,255,255,.70)";
+    ctx.font = "750 24px system-ui, -apple-system, Segoe UI, Roboto, Arial";
+    ctx.fillText(`Mode: ${s.mode}`, x+34, y+430);
+
+    return c.toDataURL("image/png");
+  }
+
+  function roundRect(ctx, x, y, w, h, r){
+    const rr = Math.min(r, w/2, h/2);
+    ctx.beginPath();
+    ctx.moveTo(x+rr, y);
+    ctx.arcTo(x+w, y, x+w, y+h, rr);
+    ctx.arcTo(x+w, y+h, x, y+h, rr);
+    ctx.arcTo(x, y+h, x, y, rr);
+    ctx.arcTo(x, y, x+w, y, rr);
+    ctx.closePath();
+  }
+
+  // --- init
+  setMode(getMode());
+  resetSession(false);
+})();
