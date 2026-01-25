@@ -1,17 +1,16 @@
-:root{
+ :root{
   --bg: #06070a;
   --panel: rgba(12,14,20,0.72);
   --panel2: rgba(16,18,28,0.82);
   --stroke: rgba(255,255,255,0.10);
   --text: rgba(255,255,255,0.92);
   --muted: rgba(255,255,255,0.62);
-  --accent: #2563eb;        /* blue */
-  --accent2: #0ea5e9;       /* sky */
-  --danger: #dc2626;        /* red */
-  --good: #22c55e;          /* green */
+  --blue1: rgba(37,99,235,0.95);
+  --blue2: rgba(37,99,235,0.60);
+  --blue3: rgba(14,165,233,0.60);
+  --red1: rgba(220,38,38,0.95);
   --shadow: 0 18px 55px rgba(0,0,0,0.55);
   --radius: 18px;
-  --radius2: 14px;
   --font: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
 }
 
@@ -35,6 +34,7 @@ body{
   z-index: 50;
   display:flex;
   align-items:center;
+  justify-content: space-between;
   gap: 12px;
   padding: 14px 14px;
   background: rgba(0,0,0,0.55);
@@ -50,40 +50,38 @@ body{
 .brandTm{ color: rgba(255,255,255,0.75); font-weight: 800; font-size: 18px; margin-left: 6px; }
 .brandSub{ color: var(--muted); font-weight: 600; }
 
-.vendorSlot{
-  margin-left: auto;
+.headerRight{
   display:flex;
   align-items:center;
   gap: 10px;
-  padding: 8px 10px;
-  border-radius: 999px;
-  border: 1px solid var(--stroke);
-  background: rgba(255,255,255,0.06);
-  text-decoration:none;
-  color: var(--text);
-  min-height: 44px;
 }
-.vendorLogo{
-  width: 34px;
-  height: 34px;
-  object-fit: contain;
-  border-radius: 10px;
-  background: rgba(0,0,0,0.25);
-  border: 1px solid rgba(255,255,255,0.10);
-  display:none; /* shown when vendor.json loads */
-}
-.vendorText{ display:flex; flex-direction:column; line-height: 1.1; }
-.vendorName{ font-weight: 850; font-size: 14px; }
-.vendorHint{ color: var(--muted); font-size: 12px; }
 
+/* Pills (Vendor + Details) */
 .pillBtn{
   border: 1px solid var(--stroke);
   background: rgba(255,255,255,0.06);
   color: var(--text);
   padding: 10px 14px;
   border-radius: 999px;
-  font-weight: 750;
+  font-weight: 800;
+  text-decoration:none;
+  min-height: 44px;
+  display:inline-flex;
+  align-items:center;
+  gap: 10px;
 }
+
+.vendorPill{ padding: 8px 12px; }
+.vendorLogo{
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+  border-radius: 10px;
+  background: rgba(0,0,0,0.25);
+  border: 1px solid rgba(255,255,255,0.10);
+  display:none;
+}
+.vendorName{ font-weight: 900; }
 
 /* ===== Page ===== */
 .page{
@@ -112,18 +110,20 @@ body{
   border: 1px solid var(--stroke);
   background: rgba(255,255,255,0.05);
   color: var(--muted);
-  font-weight: 750;
+  font-weight: 850;
 }
 
-/* ===== Shared action button style (match by using this everywhere) ===== */
+/* ===== ACTION BUTTONS =====
+   All action buttons = same blue as "Choose Target Photo"
+*/
 .actionBtn{
   appearance:none;
   border: 1px solid rgba(255,255,255,0.16);
-  background: linear-gradient(180deg, rgba(37,99,235,0.85), rgba(37,99,235,0.55));
+  background: linear-gradient(180deg, var(--blue1), var(--blue2));
   color: white;
   padding: 12px 14px;
   border-radius: 14px;
-  font-weight: 850;
+  font-weight: 900;
   letter-spacing: 0.2px;
   box-shadow: 0 12px 35px rgba(0,0,0,0.45);
   cursor: pointer;
@@ -132,6 +132,7 @@ body{
 }
 .actionBtn:active{ transform: translateY(1px); }
 
+/* “secondary” keeps dark style */
 .actionBtn.secondaryBtn{
   background: rgba(255,255,255,0.06);
   color: var(--text);
@@ -139,12 +140,9 @@ body{
   box-shadow: none;
 }
 
-.actionBtn.primaryBtn{
-  background: linear-gradient(180deg, rgba(37,99,235,0.95), rgba(14,165,233,0.60));
-}
-
+/* SEC button stays patriotic */
 .actionBtn.secBtn{
-  background: linear-gradient(180deg, rgba(220,38,38,0.95), rgba(37,99,235,0.65));
+  background: linear-gradient(180deg, var(--red1), rgba(37,99,235,0.65));
 }
 
 /* ===== Stage / target ===== */
@@ -152,7 +150,7 @@ body{
 
 .instructionLine{
   color: var(--muted);
-  font-weight: 650;
+  font-weight: 700;
   margin: 10px 2px 12px;
 }
 
@@ -163,6 +161,17 @@ body{
   border-radius: var(--radius);
   overflow: hidden;
   box-shadow: var(--shadow);
+  min-height: 220px;
+}
+
+.targetLabel{
+  position:absolute;
+  top: 10px;
+  left: 12px;
+  z-index: 3;
+  font-weight: 800;
+  color: rgba(255,255,255,0.85);
+  text-shadow: 0 10px 28px rgba(0,0,0,0.65);
 }
 
 .targetImg{
@@ -176,6 +185,7 @@ body{
   position:absolute;
   left:0; top:0; right:0; bottom:0;
   pointer-events: none;
+  z-index: 2;
 }
 
 .dot{
@@ -209,9 +219,9 @@ body{
 }
 .resultsTitle{
   margin: 0 0 10px;
-  font-size: 20px;
-  font-weight: 900;
-  color: rgba(255,255,255,0.90);
+  font-size: 28px;
+  font-weight: 950;
+  color: rgba(255,255,255,0.92);
 }
 
 .card{
@@ -223,7 +233,7 @@ body{
 }
 
 .cardTitle{
-  font-weight: 900;
+  font-weight: 950;
   margin-bottom: 10px;
   color: rgba(255,255,255,0.88);
 }
@@ -238,10 +248,10 @@ body{
 }
 .row:first-of-type{ border-top: none; }
 
-.label{ color: var(--muted); font-weight: 700; }
+.label{ color: var(--muted); font-weight: 750; }
 .value{ font-weight: 950; letter-spacing: 0.8px; }
 .arrow{ color: rgba(255,255,255,0.55); text-align:center; }
-.right{ text-align:right; font-weight: 850; color: rgba(255,255,255,0.86); }
+.right{ text-align:right; font-weight: 900; color: rgba(255,255,255,0.86); }
 
 @media (max-width: 520px){
   .row{ grid-template-columns: 110px 1fr 28px 120px; }
@@ -285,7 +295,7 @@ body{
   border-top: 1px solid rgba(255,255,255,0.10);
 }
 
-/* ===== SEC MODE: Tap-n-Score disappears while SEC is shown ===== */
+/* Tap-n-Score MUST disappear while SEC is shown */
 body.secMode .tapnscoreHeader{
   display:none !important;
 }
