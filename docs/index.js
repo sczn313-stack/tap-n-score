@@ -1,4 +1,4 @@
-/* docs/index.js (FULL REPLACEMENT) — Truth Lock + Vendor calling card (top + SEC) + Score + Show Results lock */
+/* docs/index.js (FULL REPLACEMENT) — Brick-2: Content-Rect mapping + TruthLock + Vendor + Score + ShowResults lock */
 (() => {
   const $ = (id) => document.getElementById(id);
 
@@ -95,8 +95,6 @@
 
   // ---------------------------
   // Vendor (loaded from docs/vendor.json)
-  // Expected shape:
-  // { "name":"Baker Targets", "url":"https://...", "logo":"./assets/baker.png" }
   const vendor = {
     name: "Baker Targets",
     url: "https://bakertargets.com",
@@ -119,7 +117,6 @@
   }
 
   function applyVendor(){
-    // Top card
     if (elVendorTop && elVendorLinkTop && elVendorLogoTop && elVendorNameTop) {
       elVendorNameTop.textContent = vendor.name || "—";
       elVendorLogoTop.src = vendor.logo || "";
@@ -128,7 +125,6 @@
       if (vendor.url) elVendorTop.classList.remove("hidden");
     }
 
-    // SEC/Results card
     if (elVendorSec && elVendorLinkSec && elVendorLogoSec && elVendorNameSec) {
       elVendorNameSec.textContent = vendor.name || "—";
       elVendorLogoSec.src = vendor.logo || "";
@@ -193,22 +189,62 @@
   }
 
   // ---------------------------
-  // Geometry
-  function rectOfImage(){ return elImg.getBoundingClientRect(); }
+  // BRICK-2: CONTENT-RECT MAPPING (object-fit: contain safe)
+  // Returns the actual rectangle (in client coords) where the image pixels are drawn.
+  function contentRectOfImage(){
+    const r = elImg.getBoundingClientRect();
 
-  function insideImage(x, y){
-    const r = rectOfImage();
+    const iw = elImg.naturalWidth || 0;
+    const ih = elImg.naturalHeight || 0;
+
+    // If no natural size yet, fall back to full rect (should be rare after load)
+    if (!iw || !ih || !r.width || !r.height) return r;
+
+    const imgAR = iw / ih;
+    const boxAR = r.width / r.height;
+
+    // object-fit: contain
+    let drawW, drawH, left, top;
+
+    if (imgAR > boxAR) {
+      // constrained by width
+      drawW = r.width;
+      drawH = r.width / imgAR;
+      left = r.left;
+      top = r.top + (r.height - drawH) / 2;
+    } else {
+      // constrained by height
+      drawH = r.height;
+      drawW = r.height * imgAR;
+      top = r.top;
+      left = r.left + (r.width - drawW) / 2;
+    }
+
+    return {
+      left,
+      top,
+      width: drawW,
+      height: drawH,
+      right: left + drawW,
+      bottom: top + drawH
+    };
+  }
+
+  function insideImagePixels(x, y){
+    const r = contentRectOfImage();
     return x >= r.left && x <= r.right && y >= r.top && y <= r.bottom;
   }
 
   function clientTo01(x, y){
-    const r = rectOfImage();
+    const r = contentRectOfImage();
     return {
       x01: clamp01((x - r.left) / r.width),
       y01: clamp01((y - r.top) / r.height),
     };
   }
 
+  // ---------------------------
+  // Math helpers
   function inchesPerMOA(distanceYds){
     return 1.047 * (distanceYds / 100); // True MOA
   }
@@ -219,42 +255,35 @@
     return { x01: sx / points.length, y01: sy / points.length };
   }
 
-  // ---------------------------
   // Score (integer 0..100, no decimals)
-  // Pilot scoring based on correction distance in inches (radial).
-  // 0 inches => 100, 6 inches => 0 (clamped).
   function computeScoreFromOffset(dxIn, dyIn){
     const err = Math.hypot(dxIn, dyIn);
-    const MAX_IN = 6.0; // pilot scale (tunable later per target profile)
+    const MAX_IN = 6.0;
     const raw = 100 - (err / MAX_IN) * 100;
     return Math.round(clamp(raw, 0, 100));
   }
 
   function applyScoreClass(score){
     rScore.classList.remove("scoreGood", "scoreMid", "scorePoor");
-    if (score >= 85) rScore.classList.add("scoreGood");        // dark green
-    else if (score >= 60) rScore.classList.add("scoreMid");    // yellow
-    else rScore.classList.add("scorePoor");                    // red
+    if (score >= 85) rScore.classList.add("scoreGood");
+    else if (score >= 60) rScore.classList.add("scoreMid");
+    else rScore.classList.add("scorePoor");
   }
 
   // ---------------------------
-  // BRICK 1: TRUTH LOCK (direction can ONLY come from signed deltas)
-  // If dx == 0 or dy == 0, we refuse to speak direction ("—")
+  // BRICK-1: TRUTH LOCK (direction only from signed deltas; refuse if zero)
   function dirFromDx(dxIn){
     if (!Number.isFinite(dxIn) || dxIn === 0) return null;
     return dxIn > 0 ? "RIGHT" : "LEFT";
   }
   function dirFromDy(dyIn){
     if (!Number.isFinite(dyIn) || dyIn === 0) return null;
-    // dyIn is in image space (down is +)
+    // dyIn is image space (down is +)
     return dyIn > 0 ? "DOWN" : "UP";
   }
-
   function truthGuardDirection(dxIn, dyIn){
     const wind = dirFromDx(dxIn);
     const elev = dirFromDy(dyIn);
-
-    // internal-only log for diagnosis (never shown to shooter)
     if (!wind || !elev) {
       console.warn("[TNS TruthLock] Refused direction (zero delta)", { dxIn, dyIn, wind, elev });
     }
@@ -274,6 +303,7 @@
     objectUrl = URL.createObjectURL(f);
 
     elImg.onload = () => {
+      // ensure natural sizes available before first tap
       resetSession(true);
       showDetailsBtn();
     };
@@ -304,7 +334,9 @@
 
     if (dt > TAP_MAX_MS) return;
     if (dist > TAP_MAX_MOVE_PX) return;
-    if (!insideImage(e.clientX, e.clientY)) return;
+
+    // Brick-2: MUST be inside actual rendered image pixels
+    if (!insideImagePixels(e.clientX, e.clientY)) return;
 
     const p = clientTo01(e.clientX, e.clientY);
 
@@ -325,7 +357,6 @@
   elUndo.addEventListener("click", () => {
     if (!bull && holes.length === 0) return;
 
-    // Any edit unlocks results
     if (resultsLocked) unlockEdits();
 
     if (holes.length > 0){
@@ -364,7 +395,6 @@
     resultsLocked = true;
     updateStatus();
 
-    // Behind-the-scenes values (UI hidden)
     const distance = Math.max(1, Number(elDistance?.value || 100));
     const click = Number(elClickValue?.value || 0.25);
 
@@ -377,24 +407,19 @@
     const dxIn = dx01 * PAPER_W_IN;
     const dyIn = dy01 * PAPER_H_IN;
 
-    // Truth lock directions
     const { wind, elev } = truthGuardDirection(dxIn, dyIn);
 
-    // clicks (always computed; only displayed if direction is speakable)
     const ipm = inchesPerMOA(distance);
     const windMOA = Math.abs(dxIn) / ipm;
     const elevMOA = Math.abs(dyIn) / ipm;
     const windClicks = windMOA / click;
     const elevClicks = elevMOA / click;
 
-    // Score (integer)
     const score = computeScoreFromOffset(dxIn, dyIn);
 
-    // Render Results (Score first)
     rScore.textContent = String(score);
     applyScoreClass(score);
 
-    // If truth lock refuses, we refuse to speak direction.
     rWindDir.textContent = wind || "—";
     rWindClk.textContent = wind ? `${fmtClicks(windClicks)} clicks` : "—";
 
@@ -403,13 +428,11 @@
 
     elResults.classList.remove("hidden");
 
-    // Build SEC PNG (includes vendor calling card + score first)
     try {
       const png = await buildSecPng({
         mode: getMode(),
         vendorName: vendor.name,
         vendorLogo: vendor.logo,
-        vendorUrl: vendor.url,
         score,
         windDir: wind,
         windClicks,
@@ -455,7 +478,7 @@
   elBackdrop?.addEventListener("click", closeSheet);
 
   // ---------------------------
-  // SEC PNG builder
+  // SEC PNG builder (Score first + vendor strip)
   async function buildSecPng(s) {
     const W = 1200, H = 675;
     const c = document.createElement("canvas");
@@ -478,55 +501,38 @@
     ctx.font = "650 26px system-ui, -apple-system, Segoe UI, Roboto, Arial";
     ctx.fillText("Shooter Experience Card (SEC)", 60, 128);
 
-    // Vendor strip (logo + printed by)
-    const vendorY = 150;
-    const vendX = 60;
-
-    // Try load logo
-    let logoImg = null;
-    if (s.vendorLogo) {
-      try {
-        logoImg = await loadImage(s.vendorLogo);
-      } catch {
-        logoImg = null;
-      }
-    }
-
-    // Draw vendor block
-    roundRect(ctx, vendX, vendorY, 1080, 64, 16);
+    // Vendor strip
+    const vendX = 60, vendY = 150;
+    roundRect(ctx, vendX, vendY, 1080, 64, 16);
     ctx.fillStyle = "rgba(255,255,255,.04)"; ctx.fill();
     ctx.strokeStyle = "rgba(255,255,255,.10)"; ctx.lineWidth=2; ctx.stroke();
 
+    // Logo
+    let logoImg = null;
+    try { logoImg = await loadImage(s.vendorLogo); } catch {}
     if (logoImg) {
-      // fit into 44x44
       ctx.save();
       ctx.beginPath();
-      roundRect(ctx, vendX + 14, vendorY + 10, 44, 44, 10);
+      roundRect(ctx, vendX + 14, vendY + 10, 44, 44, 10);
       ctx.clip();
-      ctx.drawImage(logoImg, vendX + 14, vendorY + 10, 44, 44);
+      ctx.drawImage(logoImg, vendX + 14, vendY + 10, 44, 44);
       ctx.restore();
-    } else {
-      // placeholder
-      ctx.fillStyle = "rgba(255,255,255,.10)";
-      roundRect(ctx, vendX + 14, vendorY + 10, 44, 44, 10);
-      ctx.fill();
     }
 
     ctx.fillStyle = "rgba(255,255,255,.78)";
     ctx.font = "800 22px system-ui, -apple-system, Segoe UI, Roboto, Arial";
-    ctx.fillText("Printed by", vendX + 70, vendorY + 38);
+    ctx.fillText("Printed by", vendX + 70, vendY + 38);
 
     ctx.fillStyle = "rgba(255,255,255,.92)";
     ctx.font = "900 22px system-ui, -apple-system, Segoe UI, Roboto, Arial";
-    ctx.fillText(String(s.vendorName || "—"), vendX + 165, vendorY + 38);
+    ctx.fillText(String(s.vendorName || "—"), vendX + 165, vendY + 38);
 
-    // Panel
+    // Main panel
     const x=60, y=230, w=1080, h=400;
     roundRect(ctx, x, y, w, h, 22);
     ctx.fillStyle = "rgba(255,255,255,.04)"; ctx.fill();
     ctx.strokeStyle = "rgba(255,255,255,.10)"; ctx.lineWidth=2; ctx.stroke();
 
-    // SCORE first, biggest
     const scoreColor =
       s.score >= 85 ? "rgba(0,180,90,.95)" :
       s.score >= 60 ? "rgba(255,210,0,.95)" :
@@ -540,12 +546,10 @@
     ctx.font = "1000 96px system-ui, -apple-system, Segoe UI, Roboto, Arial";
     ctx.fillText(String(s.score), x+34, y+152);
 
-    // Corrections header
     ctx.fillStyle = "rgba(255,255,255,.92)";
     ctx.font = "900 34px system-ui, -apple-system, Segoe UI, Roboto, Arial";
     ctx.fillText("Corrections", x+34, y+220);
 
-    // Corrections lines (direction refused => em dash)
     ctx.font = "900 30px system-ui, -apple-system, Segoe UI, Roboto, Arial";
 
     const windDir = s.windDir || "—";
@@ -562,7 +566,6 @@
     ctx.fillText(windLine, x+34, y+290);
     ctx.fillText(elevLine, x+34, y+345);
 
-    // Mode (no decimals)
     ctx.fillStyle = "rgba(255,255,255,.70)";
     ctx.font = "750 24px system-ui, -apple-system, Segoe UI, Roboto, Arial";
     ctx.fillText(`Mode: ${String(s.mode || "rifle")}`, x+34, y+410);
