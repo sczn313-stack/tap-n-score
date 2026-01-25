@@ -1,433 +1,291 @@
-/* docs/index.js (FULL REPLACEMENT) — Locks Show Results + Score + SEC mode hides TAP-N-SCORE */
-(() => {
-  const $ = (id) => document.getElementById(id);
-
-  // --- UI
-  const elDetailsBtn = $("detailsBtn");
-  const elFile = $("photoInput");
-  const elFileName = $("fileName");
-
-  const elModeRifle = $("modeRifle");
-  const elModePistol = $("modePistol");
-
-  // Hidden inputs
-  const elDistance = $("distanceYds");
-  const elClickValue = $("clickValue");
-
-  const elWrap = $("targetWrap");
-  const elImg = $("targetImg");
-  const elDots = $("dotsLayer");
-
-  const elBullState = $("bullState");
-  const elHoleCount = $("holeCount");
-
-  const elUndo = $("undoBtn");
-  const elClear = $("clearBtn");
-  const elShow = $("showBtn");
-
-  const elResults = $("resultsCard");
-  const elLockHint = $("lockHint");
-
-  const rScore = $("rScore");
-  const rWindDir = $("rWindDir");
-  const rWindClk = $("rWindClk");
-  const rElevDir = $("rElevDir");
-  const rElevClk = $("rElevClk");
-
-  const elReceiptLink = $("downloadReceiptLink");
-
-  // Bottom sheet
-  const elBackdrop = $("sheetBackdrop");
-  const elSheet = $("bottomSheet");
-  const elSheetClose = $("sheetClose");
-
-  // --- State
-  let objectUrl = null;
-
-  let bull = null;   // {x01,y01}
-  let holes = [];    // [{x01,y01}...]
-
-  // Lock state
-  let resultsLocked = false;
-
-  // Tap intent
-  let down = null;
-  const TAP_MAX_MOVE_PX = 12;
-  const TAP_MAX_MS = 450;
-  let lastTapTs = 0;
-
-  // Internal size proxy until QR payload replaces it
-  const PAPER_W_IN = 8.5;
-  const PAPER_H_IN = 11.0;
-
-  const clamp01 = (v) => Math.max(0, Math.min(1, v));
-  const clamp = (n, a, b) => Math.max(a, Math.min(b, n));
-
-  const fmtClicks = (n) => (Number.isFinite(n) ? n.toFixed(2) : "0.00");
-
-  function setMode(mode){
-    const isRifle = mode === "rifle";
-    elModeRifle.classList.toggle("active", isRifle);
-    elModePistol.classList.toggle("active", !isRifle);
-    try { localStorage.setItem("tns_mode", mode); } catch {}
-  }
-  function getMode(){
-    try {
-      const m = localStorage.getItem("tns_mode");
-      return (m === "pistol" || m === "rifle") ? m : "rifle";
-    } catch {
-      return "rifle";
-    }
-  }
-
-  function showDetailsBtn(){
-    elDetailsBtn.classList.remove("hidden");
-  }
-
-  function setSecMode(on){
-    document.body.classList.toggle("secMode", !!on); // CSS hides TAP-N-SCORE header when SEC is visible
-  }
-
-  function clearDots(){ elDots.innerHTML = ""; }
-
-  function addDot(p, isBull){
-    const d = document.createElement("div");
-    d.className = "dot" + (isBull ? " bull" : "");
-    d.style.left = `${(p.x01 * 100).toFixed(4)}%`;
-    d.style.top  = `${(p.y01 * 100).toFixed(4)}%`;
-    elDots.appendChild(d);
-  }
-
-  function renderDots(){
-    clearDots();
-    if (bull) addDot(bull, true);
-    for (const h of holes) addDot(h, false);
-  }
-
-  function updateStatus(){
-    elBullState.textContent = bull ? "set" : "not set";
-    elHoleCount.textContent = String(holes.length);
-
-    const ready = bull && holes.length >= 1;
-    elShow.disabled = !(ready && !resultsLocked);
-
-    if (resultsLocked) elLockHint.classList.remove("hidden");
-    else elLockHint.classList.add("hidden");
-  }
-
-  function hideResults(){
-    elResults.classList.add("hidden");
-    elReceiptLink.classList.add("hidden");
-    elReceiptLink.href = "#";
-    setSecMode(false);
-  }
-
-  function resetSession(keepImage){
-    bull = null;
-    holes = [];
-    resultsLocked = false;
-
-    clearDots();
-    hideResults();
-    updateStatus();
-
-    if (!keepImage) elImg.src = "";
-  }
-
-  function rectOfImage(){ return elImg.getBoundingClientRect(); }
-
-  function insideImage(x, y){
-    const r = rectOfImage();
-    return x >= r.left && x <= r.right && y >= r.top && y <= r.bottom;
-  }
-
-  function clientTo01(x, y){
-    const r = rectOfImage();
-    return {
-      x01: clamp01((x - r.left) / r.width),
-      y01: clamp01((y - r.top) / r.height),
-    };
-  }
-
-  function inchesPerMOA(distanceYds){
-    return 1.047 * (distanceYds / 100); // True MOA
-  }
-
-  function meanPoint(points){
-    let sx = 0, sy = 0;
-    for (const p of points){ sx += p.x01; sy += p.y01; }
-    return { x01: sx / points.length, y01: sy / points.length };
-  }
-
-  // Score: integer 0..100, no decimals.
-  // Pilot scoring based on correction distance in inches (radial).
-  // 0 inches => 100, 6 inches => 0 (clamped).
-  function computeScoreFromOffset(dxIn, dyIn){
-    const err = Math.hypot(dxIn, dyIn);
-    const MAX_IN = 6.0;
-    const raw = 100 - (err / MAX_IN) * 100;
-    return Math.round(clamp(raw, 0, 100));
-  }
-
-  function applyScoreClass(score){
-    rScore.classList.remove("scoreGood", "scoreMid", "scorePoor");
-    if (score >= 85) rScore.classList.add("scoreGood");
-    else if (score >= 60) rScore.classList.add("scoreMid");
-    else rScore.classList.add("scorePoor");
-  }
-
-  function unlockEdits(){
-    resultsLocked = false;
-    hideResults();
-    updateStatus();
-  }
-
-  // --- File load
-  elFile.addEventListener("change", () => {
-    const f = elFile.files && elFile.files[0];
-    if (!f) return;
-
-    elFileName.textContent = f.name || "Photo selected";
-
-    if (objectUrl) URL.revokeObjectURL(objectUrl);
-    objectUrl = URL.createObjectURL(f);
-
-    elImg.onload = () => {
-      resetSession(true);
-      showDetailsBtn();
-    };
-
-    elImg.src = objectUrl;
-  });
-
-  // --- Tap pipeline (blocked when locked)
-  elWrap.addEventListener("pointerdown", (e) => {
-    if (!elImg.src) return;
-    if (resultsLocked) return;
-    down = { x: e.clientX, y: e.clientY, t: performance.now() };
-  }, { passive: true });
-
-  elWrap.addEventListener("pointerup", (e) => {
-    if (!elImg.src || !down) return;
-    if (resultsLocked) return;
-
-    const up = { x: e.clientX, y: e.clientY, t: performance.now() };
-    const dt = up.t - down.t;
-    const dist = Math.hypot(up.x - down.x, up.y - down.y);
-    down = null;
-
-    const now = Date.now();
-    if (now - lastTapTs < 120) return;
-    lastTapTs = now;
-
-    if (dt > TAP_MAX_MS) return;
-    if (dist > TAP_MAX_MOVE_PX) return;
-    if (!insideImage(e.clientX, e.clientY)) return;
-
-    const p = clientTo01(e.clientX, e.clientY);
-
-    if (!bull){
-      bull = p;
-      renderDots();
-      updateStatus();
-      return;
-    }
-
-    holes.push(p);
-    renderDots();
-    updateStatus();
-  }, { passive: true });
-
-  // --- Controls
-  elUndo.addEventListener("click", () => {
-    if (!bull && holes.length === 0) return;
-    if (resultsLocked) unlockEdits();
-
-    if (holes.length > 0){
-      holes.pop();
-      renderDots();
-      updateStatus();
-      return;
-    }
-    if (bull){
-      bull = null;
-      renderDots();
-      updateStatus();
-    }
-  });
-
-  elClear.addEventListener("click", () => {
-    resultsLocked = false;
-
-    elFile.value = "";
-    elFileName.textContent = "No photo selected";
-
-    if (objectUrl){ URL.revokeObjectURL(objectUrl); objectUrl = null; }
-
-    resetSession(false);
-    elDetailsBtn.classList.add("hidden");
-  });
-
-  // --- Show results (LOCKS after first run)
-  elShow.addEventListener("click", async () => {
-    if (resultsLocked) return;
-    if (!bull || holes.length < 1) return;
-
-    resultsLocked = true;
-    updateStatus();
-
-    const distance = Math.max(1, Number(elDistance?.value || 100));
-    const click = Number(elClickValue?.value || 0.25);
-
-    const poib = meanPoint(holes);
-
-    // correction vector = bull - poib
-    const dx01 = bull.x01 - poib.x01;
-    const dy01 = bull.y01 - poib.y01;
-
-    const dxIn = dx01 * PAPER_W_IN;
-    const dyIn = dy01 * PAPER_H_IN;
-
-    const windDir = dxIn >= 0 ? "RIGHT" : "LEFT";
-    const elevDir = dyIn <= 0 ? "UP" : "DOWN";
-
-    const windAbsIn = Math.abs(dxIn);
-    const elevAbsIn = Math.abs(dyIn);
-
-    const ipm = inchesPerMOA(distance);
-    const windMOA = windAbsIn / ipm;
-    const elevMOA = elevAbsIn / ipm;
-
-    const windClicks = windMOA / click;
-    const elevClicks = elevMOA / click;
-
-    // Score (integer)
-    const score = computeScoreFromOffset(dxIn, dyIn);
-
-    // Render Results
-    rScore.textContent = String(score);
-    applyScoreClass(score);
-
-    rWindDir.textContent = windDir;
-    rWindClk.textContent = `${fmtClicks(windClicks)} clicks`;
-
-    rElevDir.textContent = elevDir;
-    rElevClk.textContent = `${fmtClicks(elevClicks)} clicks`;
-
-    elResults.classList.remove("hidden");
-    setSecMode(true);
-
-    // SEC PNG (kept simple for Brick #1 — styling polish comes after stability)
-    try {
-      const png = await buildSecPng({
-        mode: getMode(),
-        score,
-        windDir, windClicks,
-        elevDir, elevClicks
-      });
-      elReceiptLink.href = png;
-      elReceiptLink.classList.remove("hidden");
-    } catch {
-      elReceiptLink.classList.add("hidden");
-    }
-
-    setTimeout(() => elResults.scrollIntoView({ behavior:"smooth", block:"start" }), 30);
-  });
-
-  // Mode toggle
-  elModeRifle.addEventListener("click", () => setMode("rifle"));
-  elModePistol.addEventListener("click", () => setMode("pistol"));
-
-  // --- Bottom sheet
-  function openSheet(){
-    if (elBackdrop && elSheet) {
-      elBackdrop.classList.remove("hidden");
-      elSheet.classList.remove("hidden");
-      elBackdrop.setAttribute("aria-hidden", "false");
-      document.body.style.overflow = "hidden";
-    }
-  }
-  function closeSheet(){
-    if (elBackdrop && elSheet) {
-      elBackdrop.classList.add("hidden");
-      elSheet.classList.add("hidden");
-      elBackdrop.setAttribute("aria-hidden", "true");
-      document.body.style.overflow = "";
-    }
-  }
-
-  elDetailsBtn?.addEventListener("click", openSheet);
-  elSheetClose?.addEventListener("click", closeSheet);
-  elBackdrop?.addEventListener("click", closeSheet);
-
-  // --- SEC PNG builder (score colored; clicks 2 decimals)
-  async function buildSecPng(s) {
-    const W = 1200, H = 675;
-    const c = document.createElement("canvas");
-    c.width = W; c.height = H;
-    const ctx = c.getContext("2d");
-
-    ctx.fillStyle = "#0b0e0f";
-    ctx.fillRect(0, 0, W, H);
-
-    // Header (R/W/B)
-    ctx.font = "900 56px system-ui, -apple-system, Segoe UI, Roboto, Arial";
-    ctx.fillStyle = "#ff3b30"; ctx.fillText("S", 60, 90);
-    ctx.fillStyle = "#ffffff"; ctx.fillText("E", 110, 90);
-    ctx.fillStyle = "#1f6feb"; ctx.fillText("C", 160, 90);
-
-    ctx.fillStyle = "rgba(255,255,255,.72)";
-    ctx.font = "750 28px system-ui, -apple-system, Segoe UI, Roboto, Arial";
-    ctx.fillText("Shooter Experience Card", 220, 90);
-
-    // Panel
-    const x=60, y=150, w=1080, h=470;
-    roundRect(ctx, x, y, w, h, 22);
-    ctx.fillStyle = "rgba(255,255,255,.04)"; ctx.fill();
-    ctx.strokeStyle = "rgba(255,255,255,.10)"; ctx.lineWidth=2; ctx.stroke();
-
-    // SCORE
-    const scoreColor =
-      s.score >= 85 ? "rgba(0,180,90,.95)" :
-      s.score >= 60 ? "rgba(255,210,0,.95)" :
-                      "rgba(255,70,70,.95)";
-
-    ctx.fillStyle = "rgba(255,255,255,.80)";
-    ctx.font = "900 28px system-ui, -apple-system, Segoe UI, Roboto, Arial";
-    ctx.fillText("SCORE", x+34, y+70);
-
-    ctx.fillStyle = scoreColor;
-    ctx.font = "1000 96px system-ui, -apple-system, Segoe UI, Roboto, Arial";
-    ctx.fillText(String(s.score), x+34, y+160);
-
-    // Corrections
-    ctx.fillStyle = "rgba(255,255,255,.92)";
-    ctx.font = "900 34px system-ui, -apple-system, Segoe UI, Roboto, Arial";
-    ctx.fillText("Corrections", x+34, y+235);
-
-    ctx.font = "900 30px system-ui, -apple-system, Segoe UI, Roboto, Arial";
-    ctx.fillText(`Windage: ${s.windDir} → ${fmtClicks(s.windClicks)} clicks`, x+34, y+305);
-    ctx.fillText(`Elevation: ${s.elevDir} → ${fmtClicks(s.elevClicks)} clicks`, x+34, y+360);
-
-    ctx.fillStyle = "rgba(255,255,255,.70)";
-    ctx.font = "750 24px system-ui, -apple-system, Segoe UI, Roboto, Arial";
-    ctx.fillText(`Mode: ${s.mode}`, x+34, y+430);
-
-    return c.toDataURL("image/png");
-  }
-
-  function roundRect(ctx, x, y, w, h, r){
-    const rr = Math.min(r, w/2, h/2);
-    ctx.beginPath();
-    ctx.moveTo(x+rr, y);
-    ctx.arcTo(x+w, y, x+w, y+h, rr);
-    ctx.arcTo(x+w, y+h, x, y+h, rr);
-    ctx.arcTo(x, y+h, x, y, rr);
-    ctx.arcTo(x, y, x+w, y, rr);
-    ctx.closePath();
-  }
-
-  // --- init
-  setMode(getMode());
-  resetSession(false);
-})();
+:root{
+  --bg: #06070a;
+  --panel: rgba(12,14,20,0.72);
+  --panel2: rgba(16,18,28,0.82);
+  --stroke: rgba(255,255,255,0.10);
+  --text: rgba(255,255,255,0.92);
+  --muted: rgba(255,255,255,0.62);
+  --accent: #2563eb;        /* blue */
+  --accent2: #0ea5e9;       /* sky */
+  --danger: #dc2626;        /* red */
+  --good: #22c55e;          /* green */
+  --shadow: 0 18px 55px rgba(0,0,0,0.55);
+  --radius: 18px;
+  --radius2: 14px;
+  --font: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+}
+
+*{ box-sizing: border-box; }
+html,body{ height:100%; }
+body{
+  margin:0;
+  font-family: var(--font);
+  background:
+    radial-gradient(1200px 700px at 15% 5%, rgba(220,38,38,0.18), transparent 55%),
+    radial-gradient(1200px 700px at 55% 10%, rgba(37,99,235,0.20), transparent 55%),
+    radial-gradient(900px 600px at 85% 25%, rgba(14,165,233,0.12), transparent 55%),
+    var(--bg);
+  color: var(--text);
+}
+
+/* ===== Header ===== */
+.topHeader{
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  display:flex;
+  align-items:center;
+  gap: 12px;
+  padding: 14px 14px;
+  background: rgba(0,0,0,0.55);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--stroke);
+}
+
+.brandLeft{ display:flex; flex-direction:column; gap:4px; }
+.brandLine{ font-weight: 900; letter-spacing: 1px; font-size: 28px; }
+.brandTap{ color:#ef4444; }
+.brandN{ color: rgba(255,255,255,0.85); }
+.brandScore{ color:#3b82f6; }
+.brandTm{ color: rgba(255,255,255,0.75); font-weight: 800; font-size: 18px; margin-left: 6px; }
+.brandSub{ color: var(--muted); font-weight: 600; }
+
+.vendorSlot{
+  margin-left: auto;
+  display:flex;
+  align-items:center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--stroke);
+  background: rgba(255,255,255,0.06);
+  text-decoration:none;
+  color: var(--text);
+  min-height: 44px;
+}
+.vendorLogo{
+  width: 34px;
+  height: 34px;
+  object-fit: contain;
+  border-radius: 10px;
+  background: rgba(0,0,0,0.25);
+  border: 1px solid rgba(255,255,255,0.10);
+  display:none; /* shown when vendor.json loads */
+}
+.vendorText{ display:flex; flex-direction:column; line-height: 1.1; }
+.vendorName{ font-weight: 850; font-size: 14px; }
+.vendorHint{ color: var(--muted); font-size: 12px; }
+
+.pillBtn{
+  border: 1px solid var(--stroke);
+  background: rgba(255,255,255,0.06);
+  color: var(--text);
+  padding: 10px 14px;
+  border-radius: 999px;
+  font-weight: 750;
+}
+
+/* ===== Page ===== */
+.page{
+  padding: 14px;
+  max-width: 980px;
+  margin: 0 auto;
+}
+
+.actionsTop{
+  display:flex;
+  align-items:center;
+  gap: 12px;
+  margin-top: 10px;
+}
+
+.pillGroup{
+  margin-left: auto;
+  display:flex;
+  gap: 10px;
+}
+.pill{
+  display:inline-flex;
+  align-items:center;
+  padding: 10px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--stroke);
+  background: rgba(255,255,255,0.05);
+  color: var(--muted);
+  font-weight: 750;
+}
+
+/* ===== Shared action button style (match by using this everywhere) ===== */
+.actionBtn{
+  appearance:none;
+  border: 1px solid rgba(255,255,255,0.16);
+  background: linear-gradient(180deg, rgba(37,99,235,0.85), rgba(37,99,235,0.55));
+  color: white;
+  padding: 12px 14px;
+  border-radius: 14px;
+  font-weight: 850;
+  letter-spacing: 0.2px;
+  box-shadow: 0 12px 35px rgba(0,0,0,0.45);
+  cursor: pointer;
+  user-select: none;
+  min-height: 44px;
+}
+.actionBtn:active{ transform: translateY(1px); }
+
+.actionBtn.secondaryBtn{
+  background: rgba(255,255,255,0.06);
+  color: var(--text);
+  border: 1px solid var(--stroke);
+  box-shadow: none;
+}
+
+.actionBtn.primaryBtn{
+  background: linear-gradient(180deg, rgba(37,99,235,0.95), rgba(14,165,233,0.60));
+}
+
+.actionBtn.secBtn{
+  background: linear-gradient(180deg, rgba(220,38,38,0.95), rgba(37,99,235,0.65));
+}
+
+/* ===== Stage / target ===== */
+.stage{ margin-top: 12px; }
+
+.instructionLine{
+  color: var(--muted);
+  font-weight: 650;
+  margin: 10px 2px 12px;
+}
+
+.targetWrap{
+  position: relative;
+  background: var(--panel);
+  border: 1px solid var(--stroke);
+  border-radius: var(--radius);
+  overflow: hidden;
+  box-shadow: var(--shadow);
+}
+
+.targetImg{
+  display:block;
+  width:100%;
+  height:auto;
+  background: rgba(0,0,0,0.25);
+}
+
+.dotsLayer{
+  position:absolute;
+  left:0; top:0; right:0; bottom:0;
+  pointer-events: none;
+}
+
+.dot{
+  position:absolute;
+  width: 16px;
+  height: 16px;
+  border-radius: 999px;
+  transform: translate(-50%,-50%);
+  border: 3px solid rgba(255,255,255,0.90);
+  background: rgba(34,197,94,0.85);
+  box-shadow: 0 8px 18px rgba(0,0,0,0.45);
+}
+.dot.bull{
+  background: rgba(245,158,11,0.85);
+  border-color: rgba(255,255,255,0.90);
+}
+
+.controlsRow{
+  display:flex;
+  align-items:center;
+  gap: 10px;
+  margin-top: 12px;
+  flex-wrap: wrap;
+}
+.spacer{ flex: 1; min-width: 10px; }
+
+/* ===== Results ===== */
+.results{
+  margin-top: 18px;
+  padding-top: 8px;
+}
+.resultsTitle{
+  margin: 0 0 10px;
+  font-size: 20px;
+  font-weight: 900;
+  color: rgba(255,255,255,0.90);
+}
+
+.card{
+  border: 1px solid var(--stroke);
+  background: var(--panel2);
+  border-radius: var(--radius);
+  padding: 14px;
+  box-shadow: var(--shadow);
+}
+
+.cardTitle{
+  font-weight: 900;
+  margin-bottom: 10px;
+  color: rgba(255,255,255,0.88);
+}
+
+.row{
+  display:grid;
+  grid-template-columns: 120px 1fr 40px 140px;
+  align-items:center;
+  gap: 8px;
+  padding: 10px 0;
+  border-top: 1px solid rgba(255,255,255,0.08);
+}
+.row:first-of-type{ border-top: none; }
+
+.label{ color: var(--muted); font-weight: 700; }
+.value{ font-weight: 950; letter-spacing: 0.8px; }
+.arrow{ color: rgba(255,255,255,0.55); text-align:center; }
+.right{ text-align:right; font-weight: 850; color: rgba(255,255,255,0.86); }
+
+@media (max-width: 520px){
+  .row{ grid-template-columns: 110px 1fr 28px 120px; }
+  .brandLine{ font-size: 24px; }
+}
+
+/* ===== SEC overlay ===== */
+.secOverlay{
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display:none;
+  align-items:center;
+  justify-content:center;
+  background: rgba(0,0,0,0.72);
+  backdrop-filter: blur(10px);
+  padding: 18px;
+}
+.secOverlay.show{ display:flex; }
+
+.secPanel{
+  width: min(980px, 100%);
+  border-radius: 22px;
+  border: 1px solid rgba(255,255,255,0.14);
+  background: rgba(0,0,0,0.55);
+  box-shadow: 0 30px 120px rgba(0,0,0,0.65);
+  overflow:hidden;
+}
+
+#secCanvas{
+  display:block;
+  width: 100%;
+  height: auto;
+  background: #0b0c10;
+}
+
+.secActions{
+  display:flex;
+  gap: 10px;
+  padding: 12px;
+  border-top: 1px solid rgba(255,255,255,0.10);
+}
+
+/* ===== SEC MODE: Tap-n-Score disappears while SEC is shown ===== */
+body.secMode .tapnscoreHeader{
+  display:none !important;
+}
