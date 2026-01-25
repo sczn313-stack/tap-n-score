@@ -1,7 +1,7 @@
 {
   "id": "baker",
   "name": "Baker Targets",
-  "website": "",
-  "logoPath": "assets/vendor-baker-logo.png",
+  "url": "",
+  "logo": "assets/vendor-baker-logo.png",
   "theme": "baker"
 }
