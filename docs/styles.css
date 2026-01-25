@@ -1,448 +1,351 @@
-/* docs/styles.css (FULL REPLACEMENT) — Stability + Bull Yellow + Buttons Unified + Hide header during SEC */
+/* ============================================================
+   docs/styles.css (FULL REPLACEMENT) — Stability + Polish
+============================================================ */
+
 :root{
-  --bg:#050606;
-  --card:rgba(255,255,255,.04);
-  --stroke:rgba(255,255,255,.10);
-  --stroke2:rgba(255,255,255,.14);
-  --text:rgba(255,255,255,.92);
-  --muted:rgba(255,255,255,.72);
-  --dim:rgba(255,255,255,.58);
-
-  --blue:#1f6feb;
-  --red:#ff3b30;
-  --white:#ffffff;
-
-  --good:#00b45a;   /* dark green */
-  --mid:#ffd200;    /* yellow */
-  --poor:#ff4646;   /* red */
-
-  --bull:#ffd200;   /* BULL = yellow */
-  --hole:#00ffa0;   /* holes = green */
-
-  --radius:18px;
-  --shadow:0 18px 60px rgba(0,0,0,.55);
+  --bg: #05070b;
+  --panel: rgba(255,255,255,0.06);
+  --panel2: rgba(255,255,255,0.08);
+  --stroke: rgba(255,255,255,0.10);
+  --text: rgba(255,255,255,0.92);
+  --muted: rgba(255,255,255,0.62);
+  --blue: #2d6bff;
+  --blue2: #1d4bd6;
+  --pill: rgba(255,255,255,0.07);
+  --shadow: 0 16px 50px rgba(0,0,0,0.55);
 }
 
-*{box-sizing:border-box}
-html,body{height:100%}
-
+*{ box-sizing:border-box; }
+html,body{ height:100%; }
 body{
   margin:0;
-  background:
-    radial-gradient(1100px 700px at 10% -10%, rgba(31,111,235,.18), transparent 60%),
-    radial-gradient(900px 600px at 110% 0%, rgba(255,59,48,.12), transparent 60%),
-    var(--bg);
+  background: radial-gradient(1200px 500px at 15% 10%, rgba(255,0,0,0.20), transparent 55%),
+              radial-gradient(1200px 500px at 70% 25%, rgba(0,120,255,0.20), transparent 55%),
+              linear-gradient(180deg, #04060a 0%, #020309 100%);
   color:var(--text);
-  font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
 }
 
 .page{
-  width:min(980px, 94vw);
-  margin:18px auto 40px;
+  width:min(1120px, 96vw);
+  margin: 22px auto 80px;
+}
+
+/* Header */
+.topBar{
   display:flex;
-  flex-direction:column;
-  gap:14px;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:16px;
+  padding: 8px 2px 18px;
 }
 
-/* Hide Tap-n-Score header/subline while SEC is visible (CSS-only) */
-body:has(#resultsCard:not(.hidden)) .topbar,
-body:has(#resultsCard:not(.hidden)) .subline{
-  display:none !important;
+.brandLine{
+  font-weight:800;
+  letter-spacing: 2px;
+  font-size: 34px;
+  line-height:1.05;
+}
+.brandTap{ color:#ff3b3b; }
+.brandN{ color:rgba(255,255,255,0.85); }
+.brandScore{ color:#3a8bff; }
+.brandTm{ color:rgba(255,255,255,0.70); font-size:16px; vertical-align: super; margin-left:4px; }
+
+.tagLine{
+  margin-top:6px;
+  color: var(--muted);
+  font-weight:600;
+  letter-spacing:0.3px;
 }
 
-/* Topbar */
-.topbar{
+.topRight{
+  display:flex;
+  gap:10px;
+  align-items:center;
+}
+
+.pillBtn{
+  display:inline-flex;
+  align-items:center;
+  gap:10px;
+  padding:10px 14px;
+  border-radius:999px;
+  background: var(--pill);
+  border:1px solid var(--stroke);
+  color: var(--text);
+  font-weight:700;
+  cursor:pointer;
+}
+
+.vendorLogoWrap{
+  width:26px;
+  height:26px;
+  border-radius:999px;
+  overflow:hidden;
+  border:1px solid rgba(255,255,255,0.18);
+  background: rgba(0,0,0,0.4);
+  flex: 0 0 auto;
+}
+.vendorLogoWrap img{
+  width:100%;
+  height:100%;
+  object-fit:cover;
+}
+
+/* Panels */
+.panel{
+  background: var(--panel);
+  border:1px solid var(--stroke);
+  border-radius: 18px;
+  box-shadow: var(--shadow);
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.row{
   display:flex;
   align-items:center;
   justify-content:space-between;
-  gap:12px;
+  gap: 14px;
+  flex-wrap: wrap;
 }
 
-.brand{
-  font-weight:900;
-  letter-spacing:.6px;
-  font-size:clamp(28px, 4.2vw, 44px);
-  line-height:1;
-}
-.bRed{color:var(--red)}
-.bBlue{color:var(--blue)}
-.bW{color:var(--white); opacity:.92}
-.tm{font-size:.6em; margin-left:4px; opacity:.85}
-
-.subline{
-  margin-top:-6px;
-  color:var(--muted);
-  font-weight:650;
-}
-
-.detailsBtn{
-  border-radius:999px;
-  padding:10px 14px;
-  border:1px solid var(--stroke);
-  background:rgba(0,0,0,.22);
-  color:var(--text);
-  font-weight:850;
-  cursor:pointer;
-}
-
-/* Cards */
-.card{
-  background:linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.02));
-  border:1px solid var(--stroke);
-  border-radius:var(--radius);
-  box-shadow:var(--shadow);
-  padding:14px;
-}
-
-.chooseRow{
-  display:flex;
-  flex-direction:column;
-  gap:10px;
-}
-
-/* HERO choose button */
-.chooseBtn{
-  display:block;
-  width:100%;
-  text-align:center;
-  user-select:none;
-  cursor:pointer;
-  padding:16px 14px;
-  border-radius:16px;
-  background:linear-gradient(180deg, rgba(31,111,235,.30), rgba(31,111,235,.12));
-  border:1px solid rgba(31,111,235,.50);
-  color:var(--white);
-  font-weight:950;
-  letter-spacing:1px;
-  -webkit-tap-highlight-color: transparent;
-}
-
-.chooseBtn input{
-  position:absolute;
-  width:1px; height:1px;
-  opacity:0;
-  pointer-events:none;
-}
-
-.fileName{color:var(--muted); font-size:13px}
-.hint{color:var(--dim); font-size:13px}
-
-/* Mode toggle */
-.settingsRow{
-  margin-top:12px;
+.statusPills{
   display:flex;
   gap:10px;
-  flex-wrap:wrap;
-  align-items:flex-end;
+  flex-wrap: wrap;
 }
 
-.seg{
-  display:flex;
-  gap:8px;
-  padding:6px;
-  border-radius:16px;
-  border:1px solid var(--stroke);
-  background:rgba(0,0,0,.20);
+.statusPill{
+  background: rgba(0,0,0,0.35);
+  border:1px solid rgba(255,255,255,0.10);
+  padding: 10px 12px;
+  border-radius: 999px;
+  font-weight:800;
+}
+.muted{ color: var(--muted); font-weight:700; }
+
+.helpLine{
+  margin-top: 10px;
+  color: rgba(255,255,255,0.82);
+  font-weight: 650;
 }
 
-.segBtn{
+/* Buttons — unify color with Choose Target Photo */
+.primaryBtn{
+  appearance:none;
   border:none;
-  border-radius:12px;
-  padding:10px 12px;
-  font-weight:900;
-  color:var(--text);
-  background:transparent;
   cursor:pointer;
-  -webkit-tap-highlight-color: transparent;
+  color:white;
+  font-weight:850;
+  letter-spacing:0.4px;
+  padding: 12px 16px;
+  border-radius: 14px;
+  background: linear-gradient(180deg, var(--blue) 0%, var(--blue2) 100%);
+  box-shadow: 0 10px 22px rgba(0,0,0,0.35);
 }
-.segBtn.active{
-  background:rgba(255,255,255,.07);
-  border:1px solid rgba(255,255,255,.10);
+.primaryBtn:disabled{
+  opacity:0.45;
+  cursor:not-allowed;
 }
 
-/* Image/tap area */
-.targetWrap{
-  position:relative;
-  width:100%;
-  aspect-ratio: 4 / 3;
-  border-radius:18px;
-  overflow:hidden;
-  background:rgba(255,255,255,.03);
+.miniBtn{
+  padding: 8px 12px;
+  border-radius: 12px;
   border:1px solid var(--stroke);
-
-  /* This helps scrolling on iPhone without accidental “tap” feeling */
-  touch-action: pan-y pinch-zoom;
+  background: rgba(255,255,255,0.06);
+  color: rgba(255,255,255,0.85);
+  font-weight:800;
+  cursor:pointer;
+}
+.miniBtn:disabled{
+  opacity:0.4;
+  cursor:not-allowed;
 }
 
-.targetImg{
-  width:100%;
-  height:100%;
-  object-fit:contain;
+/* Target frame */
+.targetFrame{
+  background: var(--panel);
+  border:1px solid var(--stroke);
+  border-radius: 18px;
+  box-shadow: var(--shadow);
+  padding: 14px;
+}
+
+.frameHeader{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  margin-bottom: 10px;
+}
+
+.frameTitle{
+  font-weight:900;
+  letter-spacing:0.4px;
+  color: rgba(255,255,255,0.88);
+}
+
+/* Stage: image + overlay aligned */
+.targetStage{
+  position:relative;
+  border-radius: 16px;
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(0,0,0,0.45);
+  overflow:hidden;
+  min-height: 260px;
+}
+
+/* IMPORTANT: keep the image layout stable (no object-fit shifting) */
+#targetImg{
   display:block;
-  background:#0a0c0d;
-
-  /* same scroll intent */
-  touch-action: pan-y pinch-zoom;
+  width: 100%;
+  height: auto;
+  max-height: 72vh;
+  margin: 0 auto;
+  opacity: 0;
+  transition: opacity 120ms ease;
 }
+#targetImg.isReady{ opacity: 1; }
 
 .dotsLayer{
   position:absolute;
-  inset:0;
+  /* left/top/width/height are set in JS to match rendered image rect */
   pointer-events:none;
+}
+
+.emptyHint{
+  position:absolute;
+  inset:0;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  color: rgba(255,255,255,0.55);
+  font-weight:800;
+  letter-spacing:0.3px;
+  padding: 18px;
+  text-align:center;
+}
+
+.actionsRow{
+  display:flex;
+  gap: 10px;
+  margin-top: 12px;
+  flex-wrap: wrap;
+}
+
+/* Locked banner */
+.lockBanner{
+  margin-top: 10px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  border:1px solid rgba(255,255,255,0.10);
+  background: rgba(0,0,0,0.35);
+  color: rgba(255,255,255,0.80);
+  font-weight:800;
 }
 
 /* Dots */
 .dot{
   position:absolute;
-  width:18px;
-  height:18px;
-  border-radius:999px;
-  transform:translate(-50%,-50%);
-
-  /* Neutral ring */
-  border:2px solid rgba(255,255,255,.80);
-
-  box-shadow:0 10px 24px rgba(0,0,0,.45);
-  background:rgba(0,0,0,.25);
+  transform: translate(-50%, -50%);
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  box-shadow: 0 10px 22px rgba(0,0,0,0.45);
 }
 
-.dot::after{
-  content:"";
-  position:absolute;
-  inset:3px;
-  border-radius:999px;
-  background:rgba(0,255,160,.92); /* holes default */
-}
-
-/* BULL = yellow (no red ring) */
+/* Bull = YELLOW */
 .dot.bull{
-  border-color: rgba(255,210,0,.95);
-}
-.dot.bull::after{
-  background: rgba(255,210,0,.95);
-}
-
-.statusRow{
-  display:flex;
-  gap:10px;
-  flex-wrap:wrap;
-  margin-top:12px;
+  background: #ffd84a;
+  border: 3px solid rgba(0,0,0,0.55);
+  box-shadow: 0 0 0 2px rgba(255,216,74,0.45), 0 10px 22px rgba(0,0,0,0.45);
 }
 
-.chip{
-  padding:10px 12px;
-  border-radius:999px;
+/* Holes = GREEN */
+.dot.hole{
+  background: #2dffb0;
+  border: 3px solid rgba(255,255,255,0.78);
+}
+
+/* Results card */
+.resultsCard{
+  margin-top: 16px;
+  background: var(--panel);
   border:1px solid var(--stroke);
-  background:rgba(0,0,0,.18);
-  font-weight:850;
+  border-radius: 18px;
+  box-shadow: var(--shadow);
+  padding: 16px;
 }
 
-/* Buttons — ALL MATCH HERO STYLE */
-.btnRow{
-  margin-top:12px;
-  display:flex;
-  gap:10px;
-  flex-wrap:wrap;
-}
-
-.btn{
-  border-radius:14px;
-  padding:12px 14px;
-  border:1px solid rgba(31,111,235,.50);
-  background:linear-gradient(180deg, rgba(31,111,235,.30), rgba(31,111,235,.12));
-  color:var(--white);
-  font-weight:950;
-  cursor:pointer;
-  flex:1 1 140px;
-  letter-spacing:.4px;
-  -webkit-tap-highlight-color: transparent;
-}
-
-.btn:disabled{
-  opacity:.45;
-  cursor:not-allowed;
-}
-
-/* Keep ghost class but same family */
-.btn.ghost{
-  border-color: rgba(31,111,235,.40);
-  background:linear-gradient(180deg, rgba(31,111,235,.22), rgba(31,111,235,.08));
-}
-
-/* Primary matches too (no separate color) */
-.btn.primary{
-  border-color: rgba(31,111,235,.55);
-  background:linear-gradient(180deg, rgba(31,111,235,.34), rgba(31,111,235,.12));
-}
-
-.tip{
-  margin-top:10px;
-  color:var(--dim);
-  font-size:13px;
-}
-
-.lockHint{
-  margin-top:10px;
-  padding:10px 12px;
-  border-radius:14px;
-  border:1px solid rgba(255,255,255,.10);
-  background:rgba(0,0,0,.18);
-  color:rgba(255,255,255,.70);
-  font-weight:800;
-}
-
-/* Results */
 .resultsTitle{
-  font-weight:1000;
-  font-size:18px;
-  margin-bottom:10px;
-  letter-spacing:.8px;
-  text-transform:uppercase;
-
-  /* R/W/B look without changing HTML */
-  background: linear-gradient(90deg, var(--red), var(--white), var(--blue));
-  -webkit-background-clip: text;
-  background-clip:text;
-  color: transparent;
-}
-
-/* Big Score block */
-.scoreBigRow{
-  display:flex;
-  align-items:baseline;
-  justify-content:space-between;
-  gap:12px;
-  padding:12px;
-  border-radius:16px;
-  border:1px solid var(--stroke);
-  background:rgba(0,0,0,.18);
-  margin-bottom:12px;
-}
-
-.scoreLabel{
-  color:rgba(255,255,255,.75);
-  font-weight:900;
-  letter-spacing:.6px;
-  text-transform:uppercase;
-}
-
-.scoreBig{
-  font-weight:1000;
-  font-size:52px;
-  line-height:1;
-}
-
-.scoreGood{ color: var(--good); }
-.scoreMid{  color: var(--mid); }
-.scorePoor{ color: var(--poor); }
-
-.corrBlock{
-  padding:12px;
-  border-radius:16px;
-  border:1px solid var(--stroke);
-  background:rgba(0,0,0,.18);
-}
-
-.corrHdr{
   font-weight:950;
-  margin-bottom:8px;
+  letter-spacing:1.2px;
+  color: #ff3b3b;
+  margin-bottom: 12px;
 }
 
-.corrLine{
-  padding:12px 12px;
-  border-radius:14px;
-  border:1px solid rgba(255,255,255,.08);
-  background:rgba(0,0,0,.18);
-  margin-top:8px;
+.resultsInner{
   display:flex;
-  align-items:center;
+  gap:16px;
   justify-content:space-between;
-  gap:10px;
-}
-
-.corrLine strong{letter-spacing:.3px}
-.arrow{opacity:.7; font-weight:900}
-
-/* Download/Keep SEC button uses same family */
-.scoreRow{
-  margin-top:12px;
-  display:flex;
-  gap:10px;
-  flex-wrap:wrap;
   align-items:stretch;
+  flex-wrap: wrap;
 }
 
-.receiptBtn{
-  flex:1 1 260px;
-  text-align:center;
-  text-decoration:none;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-}
-
-/* Sheet */
-.sheetBackdrop{
-  position:fixed;
-  inset:0;
-  background:rgba(0,0,0,.55);
-  z-index:50;
-}
-
-.sheet{
-  position:fixed;
-  left:0;
-  right:0;
-  bottom:0;
-  z-index:60;
-  background:rgba(12,14,15,.96);
-  border-top:1px solid rgba(255,255,255,.12);
-  border-top-left-radius:22px;
-  border-top-right-radius:22px;
-  box-shadow:0 -18px 60px rgba(0,0,0,.65);
-  padding:10px 14px 16px;
-  max-height:78vh;
-  overflow:auto;
-}
-
-.sheetHandle{
-  width:44px;
-  height:5px;
-  border-radius:999px;
-  background:rgba(255,255,255,.25);
-  margin:6px auto 10px;
-}
-
-.sheetHeader{
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap:10px;
-  padding:6px 0 10px;
-}
-
-.sheetTitle{font-weight:950; font-size:18px}
-
-.sheetClose{
-  border-radius:999px;
-  padding:10px 14px;
-  border:1px solid var(--stroke);
-  background:rgba(0,0,0,.22);
-  color:var(--text);
+.subTitle{
   font-weight:900;
+  color: rgba(255,255,255,0.88);
+  margin-bottom: 10px;
+}
+
+.kvRow{
+  display:grid;
+  grid-template-columns: 110px 110px 40px 1fr;
+  gap:10px;
+  align-items:center;
+  padding: 10px 12px;
+  border-radius: 14px;
+  border:1px solid rgba(255,255,255,0.10);
+  background: rgba(0,0,0,0.32);
+  margin-bottom: 10px;
+}
+.kvLabel{ color: rgba(255,255,255,0.75); font-weight:850; }
+.kvValue{ font-weight:950; }
+.kvArrow{ text-align:center; color: rgba(255,255,255,0.60); font-weight:900; }
+.kvValueRight{ text-align:right; font-weight:900; color: rgba(255,255,255,0.86); }
+
+.scoreBox{
+  min-width: 180px;
+  border-radius: 16px;
+  border:1px solid rgba(255,255,255,0.10);
+  background: rgba(0,0,0,0.32);
+  padding: 12px 14px;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  gap:6px;
+}
+.scoreLabel{ color: rgba(255,255,255,0.70); font-weight:900; letter-spacing:0.8px; }
+.scoreNum{ font-size: 56px; font-weight: 1000; color:#ff3b3b; line-height:1; }
+
+.secBtn{
+  margin-top: 12px;
+  width:100%;
+  padding: 14px 16px;
+  border-radius: 16px;
+  border:none;
   cursor:pointer;
+  font-weight:1000;
+  letter-spacing:0.6px;
+  color:white;
+  background: linear-gradient(90deg, rgba(255,0,0,0.70), rgba(255,255,255,0.20), rgba(0,110,255,0.70));
+  box-shadow: 0 14px 30px rgba(0,0,0,0.45);
 }
+.secBtn:disabled{ opacity:0.45; cursor:not-allowed; }
 
-.sheetBody{
-  padding:2px 2px 10px;
-  color:var(--text);
+/* Mobile tweaks */
+@media (max-width: 560px){
+  .brandLine{ font-size: 28px; }
+  .kvRow{ grid-template-columns: 90px 90px 36px 1fr; }
+  .scoreNum{ font-size: 48px; }
 }
-
-.bullets{
-  margin:0;
-  padding-left:18px;
-  color:rgba(255,255,255,.86);
-  line-height:1.6;
-}
-
-.hidden{display:none !important}
