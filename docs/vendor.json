@@ -1,6 +1,5 @@
 {
-  "vendorKey": "baker",
   "name": "Baker Targets",
-  "logo": "./assets/vendor-baker-logo.png",
-  "website": "https://bakertargets.com"
+  "url": "https://bakertargets.com",
+  "logo": "./assets/baker.png"
 }
