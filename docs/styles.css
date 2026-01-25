@@ -1,4 +1,56 @@
-/* ============================================================
+/*/* ============================================================
+   /docs/styles.css  (FULL REPLACEMENT)
+   - Bull dot = YELLOW
+   - No red ring
+   - Dots overlay does not capture touches
+============================================================ */
+
+/* --- Safety: overlay never steals taps/scroll --- */
+#dotsLayer { pointer-events: none; }
+
+/* --- Tap surface: allow normal scrolling gestures --- */
+#targetImg {
+  display: block;
+  width: 100%;
+  height: auto;
+  /* DO NOT disable scrolling here */
+  touch-action: auto;
+}
+
+/* --- Dot base --- */
+.dot{
+  position: absolute;
+  transform: translate(-50%, -50%);
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  box-sizing: border-box;
+  z-index: 50;
+}
+
+/* --- Hole dots (keep your green look) --- */
+.dotHole{
+  background: rgba(0, 255, 150, 0.95);
+  border: 2px solid rgba(255, 255, 255, 0.95);
+  box-shadow: 0 6px 16px rgba(0,0,0,0.35);
+}
+
+/* --- Bull dot (YELLOW) --- */
+.dotBull{
+  background: rgba(255, 215, 0, 0.98); /* gold/yellow */
+  border: 2px solid rgba(0,0,0,0.75);
+  box-shadow: 0 6px 18px rgba(0,0,0,0.40);
+}
+
+/* Optional: if you have a “ring” class anywhere, neutralize it */
+.dotBull::after{ content:none !important; }
+
+/* ------------------------------------------------------------
+   Keep the rest of your existing CSS BELOW this line if you
+   already have lots of layout styling.
+   If this file previously included full page styling, paste it
+   below and keep these dot rules at the TOP so they win.
+------------------------------------------------------------ */ ============================================================
    /docs/styles.css (FULL REPLACEMENT)
    STABILITY BRICK:
    - targetWrap is the tap surface
