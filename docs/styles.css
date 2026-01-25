@@ -1,331 +1,337 @@
-/* ============================================================
-   Tap-n-Score™ — styles.css (FULL REPLACEMENT)
-   - Stable tap layer & dot rendering
-   - Bull = Yellow, Holes = Green
-   - Touch behavior: allow scroll; tap only when still
-============================================================ */
+:root{
+  --bg:#050606;
+  --card:rgba(255,255,255,.04);
+  --stroke:rgba(255,255,255,.10);
+  --stroke2:rgba(255,255,255,.14);
+  --text:rgba(255,255,255,.92);
+  --muted:rgba(255,255,255,.72);
+  --dim:rgba(255,255,255,.58);
 
-:root {
-  --bg: #05070b;
-  --panel: rgba(255,255,255,0.06);
-  --panel2: rgba(255,255,255,0.08);
-  --stroke: rgba(255,255,255,0.12);
-  --text: rgba(255,255,255,0.92);
-  --muted: rgba(255,255,255,0.62);
+  --blue:#1f6feb;
+  --red:#ff3b30;
+  --white:#ffffff;
 
-  --blue: #2f7dff;
-  --blue2: #1f4fff;
+  --primary: var(--blue); /* choose button + actions unified */
 
-  --green: #22e0b6;
-  --yellow: #ffd84a;
+  --bull:#ffd200;         /* YELLOW bull */
+  --hole:#00b45a;
 
-  --shadow: 0 20px 60px rgba(0,0,0,0.55);
-  --r: 18px;
-  --r2: 14px;
-
-  --font: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  --radius:18px;
+  --shadow:0 18px 60px rgba(0,0,0,.55);
 }
 
-* { box-sizing: border-box; }
-
-html, body {
-  margin: 0;
-  padding: 0;
-  background: radial-gradient(1200px 600px at 20% 10%, rgba(255,0,0,0.22), transparent 60%),
-              radial-gradient(1200px 600px at 70% 20%, rgba(0,80,255,0.25), transparent 60%),
-              var(--bg);
-  color: var(--text);
-  font-family: var(--font);
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0;
+  background:
+    radial-gradient(1100px 700px at 10% -10%, rgba(31,111,235,.18), transparent 60%),
+    radial-gradient(900px 600px at 110% 0%, rgba(255,59,48,.12), transparent 60%),
+    var(--bg);
+  color:var(--text);
+  font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
 }
 
-.page {
-  max-width: 980px;
-  margin: 0 auto;
-  padding: 18px 14px 36px;
+.page{
+  width:min(980px, 94vw);
+  margin:18px auto 40px;
+  display:flex;
+  flex-direction:column;
+  gap:14px;
 }
 
-.topBar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 12px;
-  padding: 10px 10px 14px;
+.card{
+  background:linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.02));
+  border:1px solid var(--stroke);
+  border-radius:var(--radius);
+  box-shadow:var(--shadow);
+  padding:14px;
 }
 
-.brandLine {
-  font-weight: 900;
-  letter-spacing: 1px;
-  font-size: 32px;
-  line-height: 1.05;
-}
-.brandTap { color: #ff4a4a; }
-.brandN { color: rgba(255,255,255,0.9); }
-.brandScore { color: #3a86ff; }
-.brandTm { color: rgba(255,255,255,0.7); font-size: 18px; vertical-align: top; margin-left: 4px; }
-
-.subBrand {
-  margin-top: 4px;
-  color: var(--muted);
-  font-weight: 600;
+.topbar{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
 }
 
-.vendorPill {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 12px;
-  border-radius: 999px;
-  background: rgba(255,255,255,0.06);
-  border: 1px solid rgba(255,255,255,0.10);
-  box-shadow: 0 10px 30px rgba(0,0,0,0.35);
-  user-select: none;
+.brandSmall{
+  font-weight:900;
+  letter-spacing:.4px;
+  color:rgba(255,255,255,.78);
+  font-size:14px;
 }
 
-.vendorLogo {
-  width: 30px;
-  height: 30px;
-  border-radius: 999px;
-  object-fit: cover;
-  display: none;
+/* Vendor pill (INPUT) */
+.vendorPill{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding:10px 12px;
+  border:1px solid var(--stroke);
+  border-radius:999px;
+  background:rgba(0,0,0,.22);
+  user-select:none;
 }
 
-.vendorName {
-  font-weight: 800;
-  letter-spacing: 0.2px;
-  white-space: nowrap;
+.vendorLogo{
+  width:34px;
+  height:34px;
+  border-radius:999px;
+  display:none;
+  object-fit:cover;
+  border:1px solid rgba(255,255,255,.14);
 }
 
-.hero {
-  margin-top: 10px;
-  padding: 14px;
-  border-radius: var(--r);
-  background: var(--panel);
-  border: 1px solid var(--stroke);
-  box-shadow: var(--shadow);
+.vendorTxt{display:flex; flex-direction:column; line-height:1.05}
+.vendorLabel{
+  font-size:11px;
+  color:rgba(255,255,255,.58);
+  font-weight:800;
+  letter-spacing:.3px;
+}
+.vendorName{
+  font-size:13px;
+  color:rgba(255,255,255,.88);
+  font-weight:900;
 }
 
-.fileInput { display: none; }
-
-.tip {
-  margin-top: 10px;
-  color: var(--muted);
-  font-weight: 600;
-  font-size: 14px;
+/* Choose */
+.heroRow{display:flex; flex-direction:column; gap:10px}
+.chooseBtn{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  border-radius:14px;
+  border:1px solid rgba(255,255,255,.12);
+  background:rgba(31,111,235,.20);
+  padding:14px 14px;
+  font-weight:1000;
+  letter-spacing:.6px;
+  cursor:pointer;
+}
+.chooseBtn input{display:none}
+.chooseBtn span{color:rgba(255,255,255,.92)}
+.heroHint{
+  color:rgba(255,255,255,.62);
+  font-weight:700;
+  font-size:13px;
 }
 
-.statusRow {
-  display: flex;
-  gap: 10px;
-  margin-top: 14px;
-  flex-wrap: wrap;
+/* Instruction inside target frame */
+.instructionLine{
+  padding:10px 12px;
+  border-radius:14px;
+  border:1px solid rgba(255,255,255,.10);
+  background:rgba(0,0,0,.22);
+  font-weight:900;
+  color:rgba(255,255,255,.86);
+  margin-bottom:12px;
 }
 
-.statusPill {
-  background: rgba(255,255,255,0.06);
-  border: 1px solid rgba(255,255,255,0.10);
-  border-radius: 999px;
-  padding: 10px 12px;
-  font-weight: 800;
+/* TARGET STAGE
+   Key: overlays MUST share the same coordinate space as the image.
+   - imgFrame is relative
+   - img is display:block; width:100%; height:auto
+   - overlay layers are absolute 0/0/0/0
+*/
+.targetStage{width:100%}
+.imgFrame{
+  position:relative;
+  width:100%;
+  border-radius:16px;
+  overflow:hidden;
+  border:1px solid rgba(255,255,255,.10);
+  background:rgba(0,0,0,.25);
 }
 
-.muted { color: var(--muted); font-weight: 700; }
-
-.instruction {
-  margin-top: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 10px 12px;
-  border-radius: var(--r2);
-  background: rgba(255,255,255,0.05);
-  border: 1px solid rgba(255,255,255,0.10);
+.targetImg{
+  width:100%;
+  height:auto;
+  display:block;          /* removes baseline gap */
+  user-select:none;
+  -webkit-user-drag:none;
+  touch-action:manipulation;
 }
 
-.instructionText {
-  font-weight: 800;
-  color: rgba(255,255,255,0.90);
+.tapLayer{
+  position:absolute;
+  inset:0;
+  z-index:2;
+  touch-action:pan-y;     /* allow scroll */
 }
 
-.frame {
-  margin-top: 14px;
-  padding: 14px;
-  border-radius: var(--r);
-  background: rgba(0,0,0,0.32);
-  border: 1px solid rgba(255,255,255,0.12);
-  box-shadow: var(--shadow);
+.tapLayer.active{
+  pointer-events:auto;
 }
 
-.frameTitle {
-  color: rgba(255,255,255,0.82);
-  font-weight: 900;
-  margin-bottom: 10px;
-  letter-spacing: 0.2px;
-}
-
-.targetWrap {
-  position: relative;
-  border-radius: 18px;
-  overflow: hidden;
-  border: 1px solid rgba(255,255,255,0.12);
-  background: rgba(0,0,0,0.30);
-}
-
-#targetImg {
-  display: block;
-  width: 100%;
-  height: auto;
-  max-height: 560px;
-  object-fit: contain;
-  background: rgba(0,0,0,0.25);
-}
-
-/* Tap layer matches the image box exactly */
-.tapLayer {
-  position: absolute;
-  inset: 0;
-  pointer-events: none; /* disabled until active */
-}
-
-/* Active: allow pointer events */
-.tapLayer.active {
-  pointer-events: auto;
-  /* Allow scrolling on mobile; we filter taps by movement threshold in JS */
-  touch-action: pan-y pinch-zoom;
-}
-
-.dotsLayer {
-  position: absolute;
-  inset: 0;
+.dotsLayer{
+  position:absolute;
+  inset:0;
+  z-index:3;
+  pointer-events:none;
 }
 
 /* Dots */
-.dot {
-  position: absolute;
-  transform: translate(-50%, -50%);
-  width: 18px;
-  height: 18px;
-  border-radius: 999px;
-  box-shadow: 0 8px 18px rgba(0,0,0,0.55);
+.dot{
+  position:absolute;
+  width:18px;
+  height:18px;
+  border-radius:999px;
+  transform:translate(-50%,-50%);
 }
 
-/* Bull = yellow */
-.bullDot {
-  background: var(--yellow);
-  border: 3px solid rgba(0,0,0,0.55);
-  box-shadow: 0 0 0 3px rgba(255,216,74,0.35), 0 12px 26px rgba(0,0,0,0.55);
+.bullDot{
+  background:rgba(255,210,0,.95); /* YELLOW */
+  box-shadow:0 0 0 3px rgba(0,0,0,.45), 0 0 0 1px rgba(255,255,255,.12);
 }
 
-/* Hole = green */
-.holeDot {
-  background: var(--green);
-  border: 3px solid rgba(0,0,0,0.50);
-  box-shadow: 0 0 0 3px rgba(34,224,182,0.25), 0 12px 26px rgba(0,0,0,0.55);
+.holeDot{
+  background:rgba(0,180,90,.92);
+  box-shadow:0 0 0 3px rgba(0,0,0,.45), 0 0 0 1px rgba(255,255,255,.12);
 }
 
-.controls {
-  display: flex;
-  gap: 10px;
-  margin-top: 12px;
-  flex-wrap: wrap;
+/* Status + controls */
+.statusRow{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  margin-top:12px;
 }
 
-.btn {
-  appearance: none;
-  border: 1px solid rgba(255,255,255,0.14);
-  background: rgba(255,255,255,0.06);
-  color: rgba(255,255,255,0.92);
-  padding: 12px 14px;
-  border-radius: 14px;
-  font-weight: 900;
-  letter-spacing: 0.3px;
-  cursor: pointer;
-  user-select: none;
+.chip{
+  padding:9px 12px;
+  border-radius:999px;
+  border:1px solid rgba(255,255,255,.10);
+  background:rgba(0,0,0,.18);
+  font-weight:900;
+  color:rgba(255,255,255,.82);
 }
 
-.btn:disabled {
-  opacity: 0.45;
-  cursor: not-allowed;
+.btnRow{
+  display:flex;
+  gap:10px;
+  margin-top:12px;
 }
 
-.btn.primary {
-  background: linear-gradient(180deg, rgba(47,125,255,0.95), rgba(31,79,255,0.55));
-  border: 1px solid rgba(47,125,255,0.55);
-  box-shadow: 0 10px 30px rgba(0,0,0,0.45);
+.btn{
+  border-radius:14px;
+  padding:12px 12px;
+  border:1px solid rgba(255,255,255,.12);
+  background:rgba(0,0,0,.22);
+  color:rgba(255,255,255,.90);
+  font-weight:1000;
+  letter-spacing:.4px;
+  cursor:pointer;
+  flex:1;
 }
 
-.btn.ghost {
-  background: transparent;
-  border: 1px solid rgba(255,255,255,0.18);
+.btn:disabled{
+  opacity:.45;
+  cursor:not-allowed;
 }
 
-.btn.small {
-  padding: 8px 10px;
-  border-radius: 12px;
-  font-size: 13px;
-  font-weight: 900;
+.btn.ghost{
+  background:rgba(0,0,0,.18);
 }
 
-.lockBanner {
-  margin-top: 10px;
-  padding: 10px 12px;
-  border-radius: 14px;
-  border: 1px solid rgba(255,255,255,0.14);
-  background: rgba(255,255,255,0.06);
-  color: rgba(255,255,255,0.82);
-  font-weight: 800;
+.btn.primary{
+  background:rgba(31,111,235,.20);
+  border-color:rgba(31,111,235,.28);
+}
+
+.lockBanner{
+  margin-top:12px;
+  padding:10px 12px;
+  border-radius:14px;
+  border:1px solid rgba(255,255,255,.10);
+  background:rgba(255,59,48,.12);
+  color:rgba(255,255,255,.88);
+  font-weight:900;
 }
 
 /* Results */
-.results {
-  margin-top: 18px;
-  padding: 6px 2px;
+.resultsCard{padding-top:16px}
+.resultsHdr{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:10px;
+  margin-bottom:12px;
 }
 
-.resultsTitle {
-  margin: 0 0 10px;
-  font-size: 28px;
-  letter-spacing: 0.4px;
+.secTitle{
+  font-weight:1000;
+  letter-spacing:.3px;
+  line-height:1.05;
+}
+.secR{color:var(--red)}
+.secW{color:rgba(255,255,255,.90)}
+.secB{color:var(--blue)}
+.secMini{
+  display:block;
+  margin-top:6px;
+  font-size:18px;
+  color:rgba(255,255,255,.70);
+  font-weight:950;
 }
 
-.resultsCard {
-  border-radius: var(--r);
-  background: rgba(0,0,0,0.30);
-  border: 1px solid rgba(255,255,255,0.12);
-  box-shadow: var(--shadow);
-  padding: 14px;
+.vendorPillMiniWrap{display:flex; justify-content:flex-end}
+.vendorPillMini{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  padding:8px 10px;
+  border:1px solid rgba(255,255,255,.10);
+  border-radius:999px;
+  background:rgba(0,0,0,.18);
+}
+.vendorLogoMini{
+  width:26px;
+  height:26px;
+  border-radius:999px;
+  object-fit:cover;
+  border:1px solid rgba(255,255,255,.14);
+  display:none;
+}
+.vendorNameMini{
+  font-weight:950;
+  font-size:12px;
+  color:rgba(255,255,255,.82);
 }
 
-.resultsHeader {
-  font-weight: 900;
-  color: rgba(255,255,255,0.84);
-  margin-bottom: 10px;
+/* Corrections block */
+.corrBlock{
+  border:1px solid rgba(255,255,255,.10);
+  border-radius:16px;
+  padding:12px;
+  background:rgba(0,0,0,.16);
 }
 
-.resultsRow {
-  display: grid;
-  grid-template-columns: 110px 1fr 30px 1fr;
-  gap: 10px;
-  align-items: center;
-  padding: 10px 0;
-  border-top: 1px solid rgba(255,255,255,0.08);
+.corrLine{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  padding:10px 6px;
+  border-bottom:1px solid rgba(255,255,255,.06);
 }
+.corrLine:last-child{border-bottom:none}
 
-.resultsRow:first-of-type {
-  border-top: 0;
+.corrLabel{
+  color:rgba(255,255,255,.70);
+  font-weight:950;
+  letter-spacing:.3px;
 }
-
-.resultsLabel { color: rgba(255,255,255,0.75); font-weight: 900; }
-.resultsMid { font-weight: 900; }
-.resultsArrow { text-align: center; color: rgba(255,255,255,0.55); font-weight: 900; }
-.resultsVal { text-align: right; font-weight: 900; }
-
-.secBtn {
-  width: 100%;
-  margin-top: 12px;
-  padding: 14px 14px;
-  border-radius: 16px;
-  background: linear-gradient(90deg, rgba(255,70,70,0.9), rgba(255,255,255,0.18), rgba(60,140,255,0.75));
-  border: 1px solid rgba(255,255,255,0.16);
-  font-weight: 1000;
+.corrValue{
+  font-weight:1000;
+  color:rgba(255,255,255,.92);
 }
+.arrow{opacity:.75; padding:0 8px}
+.dir{color:rgba(255,255,255,.92)}
+.val{color:rgba(255,255,255,.88)}
+
+/* Hidden required nodes */
+.hiddenInline{display:none !important}
+.hiddenBtn{display:none !important}
