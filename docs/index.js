@@ -1,8 +1,10 @@
 /* ============================================================
    Tap-n-Score™ — index.js (FULL REPLACEMENT)
-   Brick 1: Accurate taps (image-relative; store normalized + natural px)
-   Brick 2: Scroll-safe tap capture (drag threshold; no accidental taps)
-   Brick 3: Remove "Set Bull" (first tap = aim point, then holes)
+   Brick #4:
+   - Keep the new accurate tap system (nx/ny + natural px)
+   - Restore True MOA click math (8.5x11 baseline for pilot)
+   - HARD "Truth Gate": app will NOT emit direction if it fails sign-check
+   - Generate SEC PNG (Shooter Experience Card) with Vendor logo
 ============================================================ */
 
 (() => {
@@ -34,27 +36,40 @@
   const elVendorLogo = $("vendorLogo");
   const elVendorName = $("vendorName");
 
+  // ---------- Pilot constants (locked baseline)
+  const PAPER_W_IN = 8.5;
+  const PAPER_H_IN = 11.0;
+
+  // Pilot defaults (we’ll expose later, not now)
+  const DISTANCE_YDS = 100;
+  const CLICK_MOA = 0.25; // 1/4 MOA per click
+
+  // True MOA inches per MOA at distance
+  const inchesPerMOA = (yds) => 1.047 * (yds / 100);
+
   // ---------- State
   let objectUrl = null;
 
-  // Aim point (bull) stored as point: { nx, ny, ix, iy }
+  // Points store: normalized within image + natural px
+  // { nx, ny, ix, iy }
   let bull = null;
-
-  // Holes stored as points: { nx, ny, ix, iy }
   let holes = [];
 
-  // Results lock (no new taps until Undo/Clear)
   let resultsLocked = false;
 
-  // Pointer tap filtering
-  const TAP_MOVE_PX = 10;     // if finger moves > 10px, treat as scroll/drag (no dot)
-  const TAP_TIME_MS = 450;    // long presses won't create dots
-  let ptrDown = null;         // { x, y, t, id, moved }
+  // Vendor
+  let vendor = null;         // vendor.json contents
+  let vendorLogoImg = null;  // Image() preloaded for SEC
+
+  // Pointer tap filtering (scroll-safe)
+  const TAP_MOVE_PX = 10;
+  const TAP_TIME_MS = 450;
+  let ptrDown = null;
 
   // ---------- Helpers
-  function clamp01(v) {
-    return Math.max(0, Math.min(1, v));
-  }
+  const clamp01 = (v) => Math.max(0, Math.min(1, v));
+
+  const fmt2 = (n) => (Number.isFinite(n) ? n.toFixed(2) : "0.00");
 
   function setInstruction() {
     if (!elImg.src) {
@@ -73,35 +88,25 @@
     elHoleCount.textContent = String(holes.length);
 
     elChangeBull.hidden = !bull;
+
     elUndo.disabled = !(bull || holes.length);
     elClear.disabled = !(bull || holes.length);
-    elShow.disabled = !(bull && holes.length);
 
-    if (resultsLocked) {
-      elLockBanner.hidden = false;
-    } else {
-      elLockBanner.hidden = true;
-    }
+    // Show Results disabled if not ready OR locked
+    const ready = !!bull && holes.length > 0;
+    elShow.disabled = !(ready && !resultsLocked);
+
+    elLockBanner.hidden = !resultsLocked;
   }
 
-  // Convert a client point to:
-  // - normalized coords within displayed image (nx, ny)
-  // - natural image pixels (ix, iy) based on naturalWidth/Height
-  function clientToImagePoint(clientX, clientY) {
-    const rect = elImg.getBoundingClientRect();
-    const nx = clamp01((clientX - rect.left) / rect.width);
-    const ny = clamp01((clientY - rect.top) / rect.height);
-
-    // Natural image pixels (stable across resize/orientation)
-    const iw = elImg.naturalWidth || 1;
-    const ih = elImg.naturalHeight || 1;
-    const ix = nx * iw;
-    const iy = ny * ih;
-
-    return { nx, ny, ix, iy };
+  function resetResultsUI() {
+    elWindDir.textContent = "—";
+    elWindVal.textContent = "—";
+    elElevDir.textContent = "—";
+    elElevVal.textContent = "—";
+    elDownloadSEC.disabled = true;
   }
 
-  // Render dots from normalized coords (stable across resize)
   function renderDots() {
     elDots.innerHTML = "";
 
@@ -132,12 +137,39 @@
     setStatus();
   }
 
-  function resetResultsUI() {
-    elWindDir.textContent = "—";
-    elWindVal.textContent = "—";
-    elElevDir.textContent = "—";
-    elElevVal.textContent = "—";
-    elDownloadSEC.disabled = true;
+  // Convert a client coordinate to normalized + natural px
+  function clientToImagePoint(clientX, clientY) {
+    const rect = elImg.getBoundingClientRect();
+    const nx = clamp01((clientX - rect.left) / rect.width);
+    const ny = clamp01((clientY - rect.top) / rect.height);
+
+    const iw = elImg.naturalWidth || 1;
+    const ih = elImg.naturalHeight || 1;
+    const ix = nx * iw;
+    const iy = ny * ih;
+
+    return { nx, ny, ix, iy };
+  }
+
+  // Mean point in normalized space (for stable inches mapping to PAPER_W/H)
+  function meanPointNorm(points) {
+    let sx = 0, sy = 0;
+    for (const p of points) { sx += p.nx; sy += p.ny; }
+    return { nx: sx / points.length, ny: sy / points.length };
+  }
+
+  // ---------- HARD Truth Gate
+  // We only emit directions that match the sign of signed deltas.
+  // dxIn > 0 => RIGHT, dxIn < 0 => LEFT
+  // dyIn < 0 => UP,   dyIn > 0 => DOWN   (because screen Y increases downward)
+  function truthGateDirections(dxIn, dyIn, windDir, elevDir) {
+    const wantWind = dxIn >= 0 ? "RIGHT" : "LEFT";
+    const wantElev = dyIn <= 0 ? "UP" : "DOWN";
+
+    const okWind = windDir === wantWind;
+    const okElev = elevDir === wantElev;
+
+    return { ok: okWind && okElev, wantWind, wantElev };
   }
 
   // ---------- Vendor load (non-blocking)
@@ -145,23 +177,28 @@
     try {
       const res = await fetch("./vendor.json", { cache: "no-store" });
       if (!res.ok) return;
-      const v = await res.json();
+      vendor = await res.json();
 
-      if (v?.name) elVendorName.textContent = v.name;
+      if (vendor?.name) elVendorName.textContent = vendor.name;
 
-      if (v?.logoPath) {
-        elVendorLogo.src = v.logoPath;
-        elVendorLogo.alt = v.name ? `${v.name} logo` : "Vendor logo";
+      if (vendor?.logoPath) {
+        elVendorLogo.src = vendor.logoPath;
+        elVendorLogo.alt = vendor.name ? `${vendor.name} logo` : "Vendor logo";
         elVendorLogo.style.display = "block";
+
+        // Preload for SEC canvas
+        vendorLogoImg = new Image();
+        vendorLogoImg.src = vendor.logoPath;
+        // If it fails, SEC will still render without it.
       } else {
         elVendorLogo.style.display = "none";
       }
 
-      // Optional: if website exists, make pill clickable
-      if (v?.website) {
+      // Optional click-through
+      if (vendor?.website) {
         elVendorPill.style.cursor = "pointer";
-        elVendorPill.title = v.website;
-        elVendorPill.onclick = () => window.open(v.website, "_blank", "noopener,noreferrer");
+        elVendorPill.title = vendor.website;
+        elVendorPill.onclick = () => window.open(vendor.website, "_blank", "noopener,noreferrer");
       } else {
         elVendorPill.style.cursor = "default";
         elVendorPill.title = "";
@@ -172,11 +209,12 @@
     }
   }
 
-  // ---------- Core tap logic (bull first, then holes)
+  // ---------- Tap logic (bull first, then holes)
   function addTapPoint(pt) {
     if (!elImg.src) return;
     if (resultsLocked) return;
 
+    // First tap sets bull
     if (!bull) {
       bull = pt;
       holes = [];
@@ -188,6 +226,7 @@
       return;
     }
 
+    // Remaining taps are holes
     holes.push(pt);
     resetResultsUI();
     unlockResults();
@@ -198,13 +237,10 @@
 
   // ---------- Scroll-safe pointer handling
   function onPointerDown(e) {
-    // Only primary pointer (ignore second finger)
     if (!e.isPrimary) return;
     if (!elImg.src) return;
     if (resultsLocked) return;
 
-    // Only if the down happens on the tap layer (image area)
-    // (We attach to tapLayer, so this is already true)
     ptrDown = {
       id: e.pointerId,
       x: e.clientX,
@@ -220,11 +256,7 @@
 
     const dx = e.clientX - ptrDown.x;
     const dy = e.clientY - ptrDown.y;
-    const dist = Math.hypot(dx, dy);
-
-    if (dist > TAP_MOVE_PX) {
-      ptrDown.moved = true; // treat as scroll/drag
-    }
+    if (Math.hypot(dx, dy) > TAP_MOVE_PX) ptrDown.moved = true;
   }
 
   function onPointerUp(e) {
@@ -232,15 +264,13 @@
     if (e.pointerId !== ptrDown.id) return;
 
     const elapsed = Date.now() - ptrDown.t;
-
     const moved = ptrDown.moved;
     ptrDown = null;
 
     if (moved) return;
     if (elapsed > TAP_TIME_MS) return;
 
-    const pt = clientToImagePoint(e.clientX, e.clientY);
-    addTapPoint(pt);
+    addTapPoint(clientToImagePoint(e.clientX, e.clientY));
   }
 
   function onPointerCancel(e) {
@@ -249,7 +279,7 @@
     ptrDown = null;
   }
 
-  // ---------- Image loading
+  // ---------- File load
   function revokeObjectUrl() {
     if (objectUrl) {
       URL.revokeObjectURL(objectUrl);
@@ -273,12 +303,8 @@
     revokeObjectUrl();
     objectUrl = URL.createObjectURL(file);
 
-    // Load image
     elImg.onload = () => {
-      // Make sure tap layer is active
       elTapLayer.classList.add("active");
-
-      // Reset taps when new photo loads
       resetAllState();
       setInstruction();
       setStatus();
@@ -314,7 +340,6 @@
   }
 
   function changeBull() {
-    // Changing bull implies re-do everything for correctness
     bull = null;
     holes = [];
     unlockResults();
@@ -324,83 +349,244 @@
     renderDots();
   }
 
-  // ---------- Results (placeholder-safe)
-  // This keeps your tap data *correct* (stable coordinates).
-  // If you already have a calc/SEC pipeline, plug it into computeAndRender().
+  // ---------- Compute + Render (real clicks)
   function computeAndRender() {
     if (!bull || holes.length === 0) return;
 
-    // POIB (mean of holes) in natural image pixels
-    const poib = holes.reduce(
-      (acc, p) => ({ x: acc.x + p.ix, y: acc.y + p.iy }),
-      { x: 0, y: 0 }
-    );
-    poib.x /= holes.length;
-    poib.y /= holes.length;
+    // POIB in normalized space
+    const poib = meanPointNorm(holes);
 
-    // Correction vector = bull - poib (in natural px)
-    const dx = bull.ix - poib.x; // + = needs RIGHT? (depends on your mapping)
-    const dy = bull.iy - poib.y; // + = needs DOWN?  (screen-space)
+    // correction vector = bull - poib (normalized)
+    const dx01 = bull.nx - poib.nx;
+    const dy01 = bull.ny - poib.ny;
 
-    // Direction labels (screen-space):
-    const windDir = dx >= 0 ? "RIGHT" : "LEFT";
-    const elevDir = dy >= 0 ? "DOWN" : "UP";
+    // Convert to inches using pilot baseline paper dimensions
+    const dxIn = dx01 * PAPER_W_IN;
+    const dyIn = dy01 * PAPER_H_IN;
 
-    // Values: we cannot infer inches/clicks without your scale model here.
-    // So we show px deltas as a stable debug stand-in and lock results.
-    const windVal = `${Math.abs(dx).toFixed(2)} px`;
-    const elevVal = `${Math.abs(dy).toFixed(2)} px`;
+    // Direction labels derived ONLY from signed inches
+    const windDir = dxIn >= 0 ? "RIGHT" : "LEFT";
+    const elevDir = dyIn <= 0 ? "UP" : "DOWN"; // IMPORTANT: screen-space truth
 
+    // Truth gate (paranoid by design)
+    const gate = truthGateDirections(dxIn, dyIn, windDir, elevDir);
+    if (!gate.ok) {
+      resetResultsUI();
+      elWindDir.textContent = "DIRECTION ERROR";
+      elWindVal.textContent = "LOCKED";
+      elElevDir.textContent = "DIRECTION ERROR";
+      elElevVal.textContent = "LOCKED";
+      elDownloadSEC.disabled = true;
+      // Do NOT lock results; allow edits immediately
+      resultsLocked = false;
+      setStatus();
+      return;
+    }
+
+    // Magnitudes
+    const windAbsIn = Math.abs(dxIn);
+    const elevAbsIn = Math.abs(dyIn);
+
+    // True MOA math
+    const ipm = inchesPerMOA(DISTANCE_YDS);
+    const windMOA = windAbsIn / ipm;
+    const elevMOA = elevAbsIn / ipm;
+
+    const windClicks = windMOA / CLICK_MOA;
+    const elevClicks = elevMOA / CLICK_MOA;
+
+    // Render UI (two decimals on clicks)
     elWindDir.textContent = windDir;
-    elWindVal.textContent = windVal;
+    elWindVal.textContent = `${fmt2(windClicks)} clicks`;
     elElevDir.textContent = elevDir;
-    elElevVal.textContent = elevVal;
+    elElevVal.textContent = `${fmt2(elevClicks)} clicks`;
 
-    // Lock, and keep SEC disabled until your SEC pipeline plugs in
-    elDownloadSEC.disabled = true;
+    // Enable SEC
+    elDownloadSEC.disabled = false;
+
+    // LOCK after first successful show
     lockResults();
   }
 
-  // ---------- SEC download (stub-safe)
-  function downloadSecStub() {
-    // Intentionally no-op until you wire your SEC canvas pipeline here.
-    // Keep the button disabled by default in this brick.
+  // ---------- SEC PNG builder (Shooter Experience Card)
+  async function buildSecPng(payload) {
+    const W = 1200, H = 675;
+    const canvas = document.createElement("canvas");
+    canvas.width = W;
+    canvas.height = H;
+    const ctx = canvas.getContext("2d");
+
+    // Background
+    ctx.fillStyle = "#0b0e0f";
+    ctx.fillRect(0, 0, W, H);
+
+    // Top line: "Shooter Experience Card" in red/white/blue (no TAP-N-SCORE on SEC)
+    ctx.font = "1000 54px system-ui, -apple-system, Segoe UI, Roboto, Arial";
+    ctx.fillStyle = "#ff3b30";
+    ctx.fillText("SHOOTER", 60, 86);
+    ctx.fillStyle = "rgba(255,255,255,.92)";
+    ctx.fillText(" EXPERIENCE ", 315, 86);
+    ctx.fillStyle = "#1f6feb";
+    ctx.fillText("CARD", 720, 86);
+
+    // "SEC" in red/white/blue beneath (same size feel)
+    ctx.font = "1000 46px system-ui, -apple-system, Segoe UI, Roboto, Arial";
+    ctx.fillStyle = "#ff3b30";
+    ctx.fillText("S", 60, 132);
+    ctx.fillStyle = "rgba(255,255,255,.92)";
+    ctx.fillText("E", 92, 132);
+    ctx.fillStyle = "#1f6feb";
+    ctx.fillText("C", 124, 132);
+
+    // Vendor block top-right
+    const vName = vendor?.name || "Printer";
+    ctx.font = "850 26px system-ui, -apple-system, Segoe UI, Roboto, Arial";
+    ctx.fillStyle = "rgba(255,255,255,.78)";
+    ctx.textAlign = "right";
+    ctx.fillText(vName, W - 70, 120);
+    ctx.textAlign = "left";
+
+    // Draw vendor logo if available + loaded
+    if (vendorLogoImg && vendorLogoImg.complete) {
+      const size = 64;
+      const x = W - 70 - size;
+      const y = 38;
+      // Circle mask
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(x + size / 2, y + size / 2, size / 2, 0, Math.PI * 2);
+      ctx.clip();
+      ctx.drawImage(vendorLogoImg, x, y, size, size);
+      ctx.restore();
+
+      // Ring
+      ctx.strokeStyle = "rgba(255,255,255,.18)";
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(x + size / 2, y + size / 2, size / 2 + 1, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+
+    // Main panel
+    const px = 60, py = 170, pw = 1080, ph = 440;
+    roundRect(ctx, px, py, pw, ph, 22);
+    ctx.fillStyle = "rgba(255,255,255,.04)";
+    ctx.fill();
+    ctx.strokeStyle = "rgba(255,255,255,.10)";
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // Corrections
+    ctx.fillStyle = "rgba(255,255,255,.92)";
+    ctx.font = "950 34px system-ui, -apple-system, Segoe UI, Roboto, Arial";
+    ctx.fillText("Corrections", px + 34, py + 72);
+
+    ctx.font = "900 30px system-ui, -apple-system, Segoe UI, Roboto, Arial";
+    ctx.fillText(`Windage: ${payload.windDir} → ${fmt2(payload.windClicks)} clicks`, px + 34, py + 140);
+    ctx.fillText(`Elevation: ${payload.elevDir} → ${fmt2(payload.elevClicks)} clicks`, px + 34, py + 200);
+
+    // Footer line (quiet)
+    ctx.fillStyle = "rgba(255,255,255,.55)";
+    ctx.font = "750 22px system-ui, -apple-system, Segoe UI, Roboto, Arial";
+    ctx.fillText(`True MOA • ${DISTANCE_YDS} yards • ${CLICK_MOA} MOA/click`, px + 34, py + ph - 34);
+
+    return canvas.toDataURL("image/png");
+
+    function roundRect(c, x, y, w, h, r) {
+      const rr = Math.min(r, w / 2, h / 2);
+      c.beginPath();
+      c.moveTo(x + rr, y);
+      c.arcTo(x + w, y, x + w, y + h, rr);
+      c.arcTo(x + w, y + h, x, y + h, rr);
+      c.arcTo(x, y + h, x, y, rr);
+      c.arcTo(x, y, x + w, y, rr);
+      c.closePath();
+    }
   }
 
-  // ---------- Keep overlay aligned on resize/orientation
-  // We render via % positions, so dots stay aligned as long as the tapLayer tracks the image box.
-  // The CSS does that; this is just a safety refresh.
-  const ro = new ResizeObserver(() => {
-    renderDots();
-  });
+  // Download helper
+  async function downloadSec() {
+    if (!bull || holes.length === 0) return;
 
-  // ---------- Wire up events
+    // Recompute from current dots (must match UI)
+    const poib = meanPointNorm(holes);
+    const dx01 = bull.nx - poib.nx;
+    const dy01 = bull.ny - poib.ny;
+
+    const dxIn = dx01 * PAPER_W_IN;
+    const dyIn = dy01 * PAPER_H_IN;
+
+    const windDir = dxIn >= 0 ? "RIGHT" : "LEFT";
+    const elevDir = dyIn <= 0 ? "UP" : "DOWN";
+
+    const gate = truthGateDirections(dxIn, dyIn, windDir, elevDir);
+    if (!gate.ok) return;
+
+    const ipm = inchesPerMOA(DISTANCE_YDS);
+    const windClicks = (Math.abs(dxIn) / ipm) / CLICK_MOA;
+    const elevClicks = (Math.abs(dyIn) / ipm) / CLICK_MOA;
+
+    // Ensure logo is loaded if possible (wait briefly)
+    if (vendorLogoImg && !vendorLogoImg.complete) {
+      await new Promise((resolve) => {
+        const t = setTimeout(resolve, 250);
+        vendorLogoImg.onload = () => { clearTimeout(t); resolve(); };
+        vendorLogoImg.onerror = () => { clearTimeout(t); resolve(); };
+      });
+    }
+
+    const dataUrl = await buildSecPng({
+      windDir, windClicks,
+      elevDir, elevClicks
+    });
+
+    // Force download
+    const a = document.createElement("a");
+    a.href = dataUrl;
+    a.download = "SEC.png";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  }
+
+  // ---------- Wire up
   elFile.addEventListener("change", (e) => {
     const file = e.target.files && e.target.files[0];
     onFileSelected(file);
   });
 
-  elUndo.addEventListener("click", undo);
-  elClear.addEventListener("click", clearAll);
-  elChangeBull.addEventListener("click", changeBull);
+  elUndo.addEventListener("click", () => {
+    // Any edit unlocks results
+    if (resultsLocked) { unlockResults(); resetResultsUI(); }
+    undo();
+  });
+
+  elClear.addEventListener("click", () => {
+    if (resultsLocked) { unlockResults(); resetResultsUI(); }
+    clearAll();
+  });
+
+  elChangeBull.addEventListener("click", () => {
+    if (resultsLocked) { unlockResults(); resetResultsUI(); }
+    changeBull();
+  });
 
   elShow.addEventListener("click", () => {
+    // LOCK happens only after a successful compute
     computeAndRender();
   });
 
-  elDownloadSEC.addEventListener("click", downloadSecStub);
+  elDownloadSEC.addEventListener("click", () => {
+    downloadSec();
+  });
 
-  // Pointer events on tapLayer
-  // NOTE: do NOT preventDefault; the move threshold prevents accidental dots while scrolling.
+  // Pointer events live on tapLayer
   elTapLayer.addEventListener("pointerdown", onPointerDown, { passive: true });
   elTapLayer.addEventListener("pointermove", onPointerMove, { passive: true });
   elTapLayer.addEventListener("pointerup", onPointerUp, { passive: true });
   elTapLayer.addEventListener("pointercancel", onPointerCancel, { passive: true });
 
-  // Observe image element size changes
-  ro.observe(elImg);
-
-  // Initial UI state
+  // ---------- Init
   loadVendor();
   setInstruction();
   setStatus();
