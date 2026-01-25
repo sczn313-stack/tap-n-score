@@ -6,7 +6,8 @@
   <meta name="color-scheme" content="dark" />
   <meta name="theme-color" content="#000000" />
   <title>Tap-n-Score™</title>
-  <link rel="stylesheet" href="./styles.css?v=20260125-stability-1" />
+
+  <link rel="stylesheet" href="./styles.css?v=20260125c" />
 </head>
 
 <body>
@@ -18,104 +19,80 @@
         <div class="brandLine">
           <span class="brandTap">TAP</span><span class="brandN">-N-</span><span class="brandScore">SCORE</span><span class="brandTm">™</span>
         </div>
-        <div class="tagLine">After-Shot Intelligence</div>
+        <div class="subBrand">After-Shot Intelligence</div>
       </div>
 
-      <div class="topRight">
-        <button id="vendorBtn" class="pillBtn" type="button" aria-label="Vendor">
-          <span id="vendorLogoWrap" class="vendorLogoWrap" hidden>
-            <img id="vendorLogo" alt="Vendor logo" />
-          </span>
-          <span id="vendorName">Vendor</span>
-        </button>
-
-        <button id="detailsBtn" class="pillBtn" type="button">Details</button>
+      <div class="vendorPill" id="vendorPill" aria-label="Vendor">
+        <img id="vendorLogo" class="vendorLogo" alt="" />
+        <span id="vendorName" class="vendorName">Vendor</span>
       </div>
     </header>
 
-    <!-- Controls -->
-    <section class="panel">
-      <div class="row">
-        <input id="photoInput" type="file" accept="image/*" hidden />
-        <button id="chooseBtn" class="primaryBtn" type="button">Choose Target Photo</button>
-
-        <div class="statusPills">
-          <div class="statusPill"><span class="muted">Bull:</span> <span id="bullStatus">not set</span></div>
-          <div class="statusPill"><span class="muted">Holes:</span> <span id="holeCount">0</span></div>
-        </div>
-      </div>
-
-      <div class="helpLine" id="helpLine">
-        Tap the <b>bull first</b>, then tap each confirmed bullet hole.
-      </div>
+    <!-- Hero action -->
+    <section class="hero">
+      <label class="btn primary" for="photoInput" id="choosePhotoBtn">Take a photo of your target</label>
+      <input id="photoInput" class="fileInput" type="file" accept="image/*" capture="environment" />
+      <div class="tip" id="tipLine">Tip: include the full target. Keep it straight-on.</div>
     </section>
 
-    <!-- Target Frame -->
-    <section class="targetFrame">
-      <div class="frameHeader">
-        <div class="frameTitle">Target photo</div>
-        <button id="changeBullBtn" class="miniBtn" type="button" disabled>Change bull</button>
-      </div>
+    <!-- Status + instruction -->
+    <section class="statusRow">
+      <div class="statusPill"><span class="muted">Aim point:</span> <strong id="bullStatus">not set</strong></div>
+      <div class="statusPill"><span class="muted">Holes:</span> <strong id="holeCount">0</strong></div>
+    </section>
 
-      <div id="targetStage" class="targetStage">
-        <!-- IMPORTANT: dotsLayer overlays ONLY the image area -->
-        <img id="targetImg" alt="Target" />
-        <div id="dotsLayer" class="dotsLayer" aria-hidden="true"></div>
+    <section class="instruction">
+      <div class="instructionText" id="instructionLine">Load a photo to begin.</div>
+      <button class="btn ghost small" id="changeBullBtn" type="button" hidden>Change aim point</button>
+    </section>
 
-        <div id="emptyHint" class="emptyHint">
-          Choose a photo to begin.
+    <!-- Target frame -->
+    <section class="frame" id="targetFrame" aria-label="Target frame">
+      <div class="frameTitle">Target photo</div>
+
+      <div class="targetWrap" id="targetWrap">
+        <img id="targetImg" alt="" />
+        <div id="tapLayer" class="tapLayer" aria-hidden="true">
+          <div id="dotsLayer" class="dotsLayer"></div>
         </div>
       </div>
 
-      <div class="actionsRow">
-        <button id="undoBtn" class="primaryBtn" type="button" disabled>Undo</button>
-        <button id="clearBtn" class="primaryBtn" type="button" disabled>Clear</button>
-        <button id="resultsBtn" class="primaryBtn" type="button" disabled>Show Results</button>
+      <div class="controls">
+        <button class="btn" id="undoBtn" type="button" disabled>Undo</button>
+        <button class="btn" id="clearBtn" type="button" disabled>Clear</button>
+        <button class="btn primary" id="showResultsBtn" type="button" disabled>Show results</button>
       </div>
 
-      <div id="lockBanner" class="lockBanner" hidden>
-        Results locked. Undo/Clear to edit taps.
-      </div>
+      <div class="lockBanner" id="lockBanner" hidden>Results locked. Undo/Clear to edit taps.</div>
     </section>
 
     <!-- Results -->
-    <section class="resultsCard">
-      <div class="resultsTitle">Results</div>
+    <section class="results" id="resultsSection">
+      <h2 class="resultsTitle">Results</h2>
 
-      <div class="resultsInner">
-        <div class="resultsLeft">
-          <div class="subTitle">Corrections (Scope)</div>
+      <div class="resultsCard">
+        <div class="resultsHeader">Corrections (Scope)</div>
 
-          <div class="kvRow">
-            <div class="kvLabel">Windage:</div>
-            <div class="kvValue" id="windDir">—</div>
-            <div class="kvArrow">→</div>
-            <div class="kvValueRight" id="windClicks">—</div>
-          </div>
-
-          <div class="kvRow">
-            <div class="kvLabel">Elevation:</div>
-            <div class="kvValue" id="elevDir">—</div>
-            <div class="kvArrow">→</div>
-            <div class="kvValueRight" id="elevClicks">—</div>
-          </div>
+        <div class="resultsRow">
+          <div class="resultsLabel">Windage:</div>
+          <div class="resultsMid" id="windageDir">—</div>
+          <div class="resultsArrow">→</div>
+          <div class="resultsVal" id="windageVal">—</div>
         </div>
 
-        <div class="resultsRight">
-          <div class="scoreBox">
-            <div class="scoreLabel">SCORE</div>
-            <div id="scoreNum" class="scoreNum">—</div>
-          </div>
+        <div class="resultsRow">
+          <div class="resultsLabel">Elevation:</div>
+          <div class="resultsMid" id="elevDir">—</div>
+          <div class="resultsArrow">→</div>
+          <div class="resultsVal" id="elevVal">—</div>
         </div>
+
+        <button class="btn secBtn" id="downloadSecBtn" type="button" disabled>Download/Keep SEC (PNG)</button>
       </div>
-
-      <button id="downloadBtn" class="secBtn" type="button" disabled>
-        Download/Keep SEC (PNG)
-      </button>
     </section>
 
   </main>
 
-  <script src="./index.js?v=20260125-stability-1"></script>
+  <script src="./index.js?v=20260125c"></script>
 </body>
 </html>
