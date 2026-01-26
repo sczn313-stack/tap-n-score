@@ -1,93 +1,84 @@
-<!-- ============================================================
-     docs/index.html (FULL REPLACEMENT)
-     BRICK 2 — Photo Picker Stability (Camera + Photos/Files)
-     - Primary button: Take Target Photo (camera)
-     - Secondary: Choose from Photos/Files (library/files)
-============================================================ -->
 <!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+
+  <!-- BRICK 4: stop iOS double-tap zoom + keep layout stable -->
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no" />
+
   <meta name="color-scheme" content="dark" />
   <meta name="theme-color" content="#000000" />
+
   <title>Tap-n-Score™</title>
+
   <link rel="stylesheet" href="./styles.css?v=20260126b" />
 </head>
 
 <body>
   <main class="page">
 
-    <!-- Vendor pill (input page) -->
-    <section class="card">
-      <div id="vendorPill" class="vendorPill" aria-label="Printer">
-        <img id="vendorLogo" class="vendorLogo" alt="Vendor logo" />
-        <div class="vendorTxt">
-          <div class="vendorLabel">PRINTER</div>
-          <div id="vendorName" class="vendorName">—</div>
+    <!-- Top -->
+    <section class="card topCard">
+      <div class="topbar">
+        <div class="brandSmall">Tap-n-Score™</div>
+
+        <!-- Vendor pill (input) -->
+        <div id="vendorPill" class="vendorPill" role="button" aria-label="Printer link">
+          <img id="vendorLogo" class="vendorLogo" alt="Printer logo" />
+          <div class="vendorTxt">
+            <div class="vendorLabel">PRINTER</div>
+            <div id="vendorName" class="vendorName">—</div>
+          </div>
         </div>
       </div>
-    </section>
 
-    <!-- HERO: Choose photo -->
-    <section class="card">
       <div class="heroRow">
-
-        <!-- CAMERA input (forces camera) -->
-        <label class="chooseBtn" for="photoInputCamera">
-          <input
-            id="photoInputCamera"
-            type="file"
-            accept="image/*"
-            capture="environment"
-          />
+        <label class="chooseBtn">
+          <input id="photoInputCamera" type="file" accept="image/*" capture="environment" />
           <span>TAKE TARGET PHOTO</span>
         </label>
 
-        <!-- LIBRARY/FILES input (NO capture => Photos/Files options) -->
-        <label class="chooseBtn" for="photoInputLibrary" style="background:rgba(31,111,235,.12)">
-          <input
-            id="photoInputLibrary"
-            type="file"
-            accept="image/*"
-          />
-          <span>CHOOSE FROM PHOTOS / FILES</span>
+        <label class="chooseBtn">
+          <input id="photoInputLibrary" type="file" accept="image/*" />
+          <span>CHOOSE FROM LIBRARY</span>
         </label>
 
-        <div class="heroHint">Take a straight-on photo. Fill the frame.</div>
+        <div class="heroHint">Tip: straight-on photo, fill the frame.</div>
       </div>
     </section>
 
-    <!-- TARGET + TAPS -->
+    <!-- Target -->
     <section class="card">
-      <div class="instructionLine" id="instructionLine">Take a photo of your target.</div>
-
       <div class="targetStage">
         <div class="imgFrame" id="imgFrame">
+          <div id="instructionLine" class="instructionLine">Take a photo of your target.</div>
+
           <img id="targetImg" class="targetImg" alt="Target photo" />
+
+          <!-- Tap layer MUST be same coordinate space as dots -->
           <div id="tapLayer" class="tapLayer" aria-label="Tap layer"></div>
           <div id="dotsLayer" class="dotsLayer" aria-hidden="true"></div>
         </div>
+
+        <div class="statusRow">
+          <div class="chip">Bull: <span id="bullStatus">not set</span></div>
+          <div class="chip">Holes: <span id="holeCount">0</span></div>
+        </div>
+
+        <div class="btnRow">
+          <button id="undoBtn" class="btn ghost" type="button" disabled>Undo</button>
+          <button id="clearBtn" class="btn ghost" type="button" disabled>Clear</button>
+          <button id="showResultsBtn" class="btn primary" type="button" disabled>Show Results</button>
+        </div>
+
+        <div id="lockBanner" class="lockBanner" hidden>Results locked. Undo/Clear to edit taps.</div>
+
+        <!-- (kept in DOM for JS compatibility; hidden in CSS) -->
+        <button id="changeBullBtn" type="button">Change Bull</button>
       </div>
-
-      <div class="statusRow">
-        <div class="chip">Bull: <span id="bullStatus">not set</span></div>
-        <div class="chip">Holes: <span id="holeCount">0</span></div>
-      </div>
-
-      <div class="btnRow">
-        <button id="undoBtn" class="btn ghost" type="button" disabled>Undo</button>
-        <button id="clearBtn" class="btn ghost" type="button" disabled>Clear</button>
-        <button id="showResultsBtn" class="btn primary" type="button" disabled>Show Results</button>
-      </div>
-
-      <!-- Keep button but hidden unless bull is set -->
-      <button id="changeBullBtn" class="hiddenBtn" type="button">Change Bull</button>
-
-      <div id="lockBanner" class="lockBanner" hidden>Results locked. Undo/Clear to edit taps.</div>
     </section>
 
-    <!-- RESULTS -->
+    <!-- Results / SEC -->
     <section class="card resultsCard">
       <div class="resultsHdr">
         <div class="secTitle">
@@ -96,8 +87,8 @@
         </div>
 
         <div class="vendorPillMiniWrap">
-          <div class="vendorPillMini" aria-label="Printer mini">
-            <img id="vendorLogoMini" class="vendorLogoMini" alt="Vendor logo mini" />
+          <div class="vendorPillMini">
+            <img id="vendorLogoMini" class="vendorLogoMini" alt="Printer logo" />
             <div id="vendorNameMini" class="vendorNameMini">—</div>
           </div>
         </div>
@@ -106,15 +97,16 @@
       <div class="corrBlock">
         <div class="corrLine">
           <div class="corrLabel">Windage</div>
-          <div class="corrValue"><span id="windageDir">—</span> <span class="arrow">→</span> <span id="windageVal">—</span></div>
+          <div class="corrValue"><span id="windageDir" class="dir">—</span> <span class="arrow">→</span> <span id="windageVal" class="val">—</span></div>
         </div>
+
         <div class="corrLine">
           <div class="corrLabel">Elevation</div>
-          <div class="corrValue"><span id="elevDir">—</span> <span class="arrow">→</span> <span id="elevVal">—</span></div>
+          <div class="corrValue"><span id="elevDir" class="dir">—</span> <span class="arrow">→</span> <span id="elevVal" class="val">—</span></div>
         </div>
       </div>
 
-      <div class="btnRow" style="margin-top:14px">
+      <div class="btnRow">
         <button id="downloadSecBtn" class="btn primary" type="button" disabled>View / Download SEC</button>
       </div>
     </section>
