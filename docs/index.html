@@ -2,25 +2,27 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+
+  <!-- Anti-zoom / anti-double-tap zoom for pilot stability -->
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
+
   <meta name="color-scheme" content="dark" />
   <meta name="theme-color" content="#000000" />
   <title>Tap-n-Score™</title>
 
-  <link rel="stylesheet" href="./styles.css?v=20260126a" />
+  <link rel="stylesheet" href="./styles.css?v=20260126b" />
 </head>
 
 <body>
   <main class="page">
 
-    <!-- CARD 1: Vendor + Choose -->
+    <!-- CARD 1 -->
     <section class="card">
       <div class="topbar">
         <div class="brandSmall">Pilot</div>
 
-        <!-- Vendor pill (clickable if vendor.website exists) -->
-        <div id="vendorPill" class="vendorPill" role="button" aria-label="Vendor link">
-          <img id="vendorLogo" class="vendorLogo" alt="Vendor logo" />
+        <div id="vendorPill" class="vendorPill" role="button" aria-label="Printer link">
+          <img id="vendorLogo" class="vendorLogo" alt="Printer logo" />
           <div class="vendorTxt">
             <div class="vendorLabel">PRINTER</div>
             <div id="vendorName" class="vendorName">—</div>
@@ -29,28 +31,24 @@
       </div>
 
       <div class="heroRow" style="margin-top:12px;">
-        <!-- IMPORTANT: no capture attribute -->
         <label class="chooseBtn" aria-label="Take a photo of your target">
-          <input
-            id="photoInput"
-            type="file"
-            accept="image/*"
-          />
+          <input id="photoInput" type="file" accept="image/*" />
           <span>TAKE A PHOTO OF YOUR TARGET</span>
         </label>
-
         <div class="heroHint">Tip: straight-on photo, fill the frame.</div>
       </div>
     </section>
 
-    <!-- CARD 2: Target + tapping -->
+    <!-- CARD 2 -->
     <section class="card">
       <div class="instructionLine" id="instructionLine">Take a photo of your target.</div>
 
       <div class="targetStage">
         <div class="imgFrame" id="imgFrame">
           <img id="targetImg" class="targetImg" alt="Target photo" />
+          <!-- Tap surface -->
           <div id="tapLayer" class="tapLayer" aria-label="Tap layer"></div>
+          <!-- Dots -->
           <div id="dotsLayer" class="dotsLayer" aria-hidden="true"></div>
         </div>
       </div>
@@ -69,7 +67,7 @@
       <div id="lockBanner" class="lockBanner" hidden>Results locked. Undo/Clear to edit taps.</div>
     </section>
 
-    <!-- CARD 3: Results -->
+    <!-- CARD 3 -->
     <section class="card resultsCard" id="resultsCard">
       <div class="resultsHdr">
         <div class="secTitle">
@@ -78,8 +76,8 @@
         </div>
 
         <div class="vendorPillMiniWrap">
-          <div id="vendorPillMini" class="vendorPillMini" role="button" aria-label="Vendor link (mini)">
-            <img id="vendorLogoMini" class="vendorLogoMini" alt="Vendor logo" />
+          <div id="vendorPillMini" class="vendorPillMini" role="button" aria-label="Printer link (mini)">
+            <img id="vendorLogoMini" class="vendorLogoMini" alt="Printer logo" />
             <div id="vendorNameMini" class="vendorNameMini">—</div>
           </div>
         </div>
@@ -104,6 +102,6 @@
 
   </main>
 
-  <script src="./index.js?v=20260126a"></script>
+  <script src="./index.js?v=20260126b"></script>
 </body>
 </html>
