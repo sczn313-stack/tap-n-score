@@ -11,9 +11,9 @@
   --red:#ff3b30;
   --white:#ffffff;
 
-  --primary: var(--blue); /* choose button + actions unified */
+  --primary: var(--blue);
 
-  --bull:#ffd200;         /* YELLOW bull */
+  --bull:#ffd200;     /* YELLOW bull */
   --hole:#00b45a;
 
   --radius:18px;
@@ -129,13 +129,9 @@ body{
   margin-bottom:12px;
 }
 
-/* TARGET STAGE
-   Key: overlays MUST share the same coordinate space as the image.
-   - imgFrame is relative
-   - img is display:block; width:100%; height:auto
-   - overlay layers are absolute 0/0/0/0
-*/
+/* TARGET STAGE */
 .targetStage{width:100%}
+
 .imgFrame{
   position:relative;
   width:100%;
@@ -143,28 +139,37 @@ body{
   overflow:hidden;
   border:1px solid rgba(255,255,255,.10);
   background:rgba(0,0,0,.25);
+
+  /* Helps iOS layout stability */
+  transform:translateZ(0);
 }
 
 .targetImg{
   width:100%;
   height:auto;
-  display:block;          /* removes baseline gap */
+  display:block;
   user-select:none;
   -webkit-user-drag:none;
-  touch-action:manipulation;
+
+  /* Let page scroll normally; tapping is handled by overlay */
+  touch-action:pan-y;
 }
 
+/* Tap capture layer (same coordinate space as dots) */
 .tapLayer{
   position:absolute;
   inset:0;
   z-index:2;
-  touch-action:pan-y;     /* allow scroll */
+
+  /* IMPORTANT: allow vertical scroll gestures to work */
+  touch-action:pan-y;
+
+  /* Stops text selection / callout */
+  -webkit-touch-callout:none;
+  user-select:none;
 }
 
-.tapLayer.active{
-  pointer-events:auto;
-}
-
+/* Dots render layer */
 .dotsLayer{
   position:absolute;
   inset:0;
@@ -182,7 +187,7 @@ body{
 }
 
 .bullDot{
-  background:rgba(255,210,0,.95); /* YELLOW */
+  background:rgba(255,210,0,.95);
   box-shadow:0 0 0 3px rgba(0,0,0,.45), 0 0 0 1px rgba(255,255,255,.12);
 }
 
