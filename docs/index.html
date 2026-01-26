@@ -2,15 +2,11 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-
-  <!-- IMPORTANT: stop double-tap/pinch zoom from changing your tap mapping -->
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
-
   <meta name="color-scheme" content="dark" />
   <meta name="theme-color" content="#000000" />
   <title>Tap-n-Score™</title>
-
-  <link rel="stylesheet" href="./styles.css?v=20260126b" />
+  <link rel="stylesheet" href="./styles.css?v=20260126c" />
 </head>
 
 <body>
@@ -31,6 +27,7 @@
     <section class="card">
       <div class="heroRow">
         <label class="chooseBtn" aria-label="Take a photo of your target">
+          <!-- IMPORTANT: NO capture attribute. This allows Camera + Photo Library + Files on iOS -->
           <input id="photoInput" type="file" accept="image/*" />
           <span>TAKE A PHOTO OF YOUR TARGET</span>
         </label>
@@ -101,6 +98,6 @@
 
   </main>
 
-  <script src="./index.js?v=20260126b"></script>
+  <script src="./index.js?v=20260126c"></script>
 </body>
 </html>
