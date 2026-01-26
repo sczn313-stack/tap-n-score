@@ -2,99 +2,80 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
   <meta name="color-scheme" content="dark" />
-  <meta name="theme-color" content="#000000" />
+  <meta name="theme-color" content="#050606" />
   <title>Tap-n-Score™</title>
-
-  <link rel="stylesheet" href="./styles.css?v=hotfix-brick5" />
+  <link rel="stylesheet" href="./styles.css?v=pilot-hot-fix-004" />
 </head>
 
 <body>
   <main class="page">
 
-    <!-- TOP: minimal. (We’ll keep brand small; shooter-forward) -->
-    <header class="topbar">
+    <!-- Top bar -->
+    <section class="card topbar">
       <div class="brandSmall">Tap-n-Score™</div>
 
-      <!-- Vendor pill (INPUT location) -->
-      <div id="vendorPill" class="vendorPill" role="button" aria-label="Printer link">
-        <img id="vendorLogo" class="vendorLogo" alt="" />
+      <div id="vendorPill" class="vendorPill" aria-label="Printer">
+        <img id="vendorLogo" class="vendorLogo" alt="Vendor logo" />
         <div class="vendorTxt">
           <div class="vendorLabel">Printer</div>
           <div id="vendorName" class="vendorName">—</div>
         </div>
       </div>
-    </header>
-
-    <!-- CARD 1: Choose photo ONLY -->
-    <section class="card">
-      <div class="heroRow">
-        <label class="chooseBtn">
-          <input id="photoInput" type="file" accept="image/*" />
-          <span>TAKE / CHOOSE TARGET PHOTO</span>
-        </label>
-
-        <div class="heroHint">
-          Straight-on photo • Fill the frame • Good lighting
-        </div>
-      </div>
     </section>
 
-    <!-- CARD 2: Target + taps -->
-    <section class="card">
-      <!-- Instruction INSIDE target frame area (above image) -->
-      <div id="instructionLine" class="instructionLine">
-        Tap aim point first, then tap bullet holes.
+    <!-- Choose photo -->
+    <section class="card heroRow">
+      <label class="chooseBtn" aria-label="Take or choose target photo">
+        <input id="photoInput" type="file" accept="image/*" />
+        <span>TAKE / CHOOSE TARGET PHOTO</span>
+      </label>
+      <div class="heroHint">Straight-on photo • Fill the frame • Good lighting</div>
+    </section>
+
+    <!-- Target stage -->
+    <section class="card targetStage">
+
+      <!-- instruction INSIDE the frame -->
+      <div class="instructionLine" id="instructionLine">Load a photo to begin.</div>
+
+      <div class="imgFrame" id="imgFrame">
+        <img id="targetImg" class="targetImg" alt="Target photo" />
+
+        <!-- tap + dot layers share the exact same coordinate space as the image -->
+        <div id="tapLayer" class="tapLayer" aria-label="Tap layer"></div>
+        <div id="dotsLayer" class="dotsLayer" aria-label="Dots layer"></div>
       </div>
 
-      <div class="targetStage" aria-label="Target photo stage">
-        <div class="imgFrame">
-          <img id="targetImg" class="targetImg" alt="Target photo" />
-
-          <!-- Tap capture layer -->
-          <div id="tapLayer" class="tapLayer" aria-hidden="true"></div>
-
-          <!-- Dots render layer -->
-          <div id="dotsLayer" class="dotsLayer" aria-hidden="true"></div>
-        </div>
-      </div>
-
-      <!-- Status: keep only what matters -->
+      <!-- Status row (ONLY holes now) -->
       <div class="statusRow">
         <div class="chip">Holes: <span id="holeCount">0</span></div>
-
-        <!-- Hidden but REQUIRED by JS (we are removing “Bull set” UI) -->
-        <span id="bullStatus" class="hiddenInline">not set</span>
-        <button id="changeBullBtn" class="hiddenBtn" type="button" aria-hidden="true">Change Bull</button>
+        <button id="changeBullBtn" class="btn ghost hiddenBtn" type="button">Change aim point</button>
       </div>
 
+      <!-- Controls -->
       <div class="btnRow">
         <button id="undoBtn" class="btn ghost" type="button" disabled>Undo</button>
         <button id="clearBtn" class="btn ghost" type="button" disabled>Clear</button>
         <button id="showResultsBtn" class="btn primary" type="button" disabled>Show Results</button>
       </div>
 
-      <div id="lockBanner" class="lockBanner" hidden>
-        Results locked. Use Undo or Clear to edit taps.
-      </div>
+      <div id="lockBanner" class="lockBanner" hidden>Results locked. Use Undo or Clear to edit taps.</div>
     </section>
 
-    <!-- CARD 3: Results -->
+    <!-- Results -->
     <section class="card resultsCard">
       <div class="resultsHdr">
         <div class="secTitle">
-          <span class="secR">SHOOTER</span>
-          <span class="secW"> EXPERIENCE </span>
-          <span class="secB">CARD</span>
-          <span class="secMini">SEC</span>
+          <span class="secR">SHOOTER</span> <span class="secW">EXPERIENCE</span> <span class="secB">CARD</span>
+          <span class="secMini"><span class="secR">S</span><span class="secW">E</span><span class="secB">C</span></span>
         </div>
 
-        <!-- Vendor pill (RESULTS location) -->
         <div class="vendorPillMiniWrap">
-          <div id="vendorPillResults" class="vendorPillMini" aria-hidden="true">
-            <img id="vendorLogoResults" class="vendorLogoMini" alt="" />
-            <div id="vendorNameResults" class="vendorNameMini">—</div>
+          <div class="vendorPillMini">
+            <img id="vendorLogoMini" class="vendorLogoMini" alt="Vendor logo" />
+            <div id="vendorNameMini" class="vendorNameMini">—</div>
           </div>
         </div>
       </div>
@@ -102,58 +83,21 @@
       <div class="corrBlock">
         <div class="corrLine">
           <div class="corrLabel">Windage</div>
-          <div class="corrValue">
-            <span id="windageDir" class="dir">—</span>
-            <span class="arrow">→</span>
-            <span id="windageVal" class="val">—</span>
-          </div>
+          <div class="corrValue"><span id="windageDir" class="dir">—</span><span class="arrow">→</span><span id="windageVal" class="val">—</span></div>
         </div>
-
         <div class="corrLine">
           <div class="corrLabel">Elevation</div>
-          <div class="corrValue">
-            <span id="elevDir" class="dir">—</span>
-            <span class="arrow">→</span>
-            <span id="elevVal" class="val">—</span>
-          </div>
+          <div class="corrValue"><span id="elevDir" class="dir">—</span><span class="arrow">→</span><span id="elevVal" class="val">—</span></div>
         </div>
       </div>
 
-      <div class="btnRow">
+      <div class="btnRow" style="margin-top:14px;">
         <button id="downloadSecBtn" class="btn primary" type="button" disabled>Download/Keep SEC (PNG)</button>
       </div>
     </section>
 
+    <!-- Vendor config -->
+    <script src="./index.js?v=pilot-hot-fix-004"></script>
   </main>
-
-  <script src="./index.js?v=hotfix-brick5"></script>
-
-  <!-- Mirror vendor pill data into RESULTS pill (no new JS file; tiny helper) -->
-  <script>
-    (function(){
-      const sync = () => {
-        const img1 = document.getElementById("vendorLogo");
-        const name1 = document.getElementById("vendorName");
-        const img2 = document.getElementById("vendorLogoResults");
-        const name2 = document.getElementById("vendorNameResults");
-        const wrap = document.getElementById("vendorPillResults");
-
-        if (!img1 || !name1 || !img2 || !name2 || !wrap) return;
-
-        // copy
-        img2.src = img1.src || "";
-        img2.style.display = img1.src ? "block" : "none";
-        name2.textContent = name1.textContent || "—";
-      };
-
-      // try a few times (vendor.json loads async)
-      let n = 0;
-      const t = setInterval(() => {
-        sync();
-        n++;
-        if (n > 20) clearInterval(t);
-      }, 150);
-    })();
-  </script>
 </body>
-</html>
+</html> 
