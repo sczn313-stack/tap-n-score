@@ -1,10 +1,10 @@
 /* ============================================================
    Tap-n-Score™ — docs/index.js (FULL REPLACEMENT)
-   Brick: Tap stability + anti iOS double-tap zoom
-   - Uses tapLayer rect as ONLY coordinate reference (perfect alignment)
-   - Prevents double-tap zoom on the tap surface
-   - Keeps bull-first then holes
-   - Keeps Truth Gate + True MOA math (baseline pilot)
+   Brick #1: HARD lock Show Results (spam-proof)
+   - Locks immediately on press (prevents poisoning)
+   - Blocks re-press + double-click + rapid spam
+   - If Truth Gate fails, unlocks and allows edits
+   - Tap stability remains: uses tapLayer rect for dots
 ============================================================ */
 
 (() => {
@@ -50,6 +50,9 @@
   let holes = [];     // [{nx, ny}...]
   let resultsLocked = false;
 
+  // NEW: "Show Results" run guard
+  let showInFlight = false;
+
   // Vendor
   let vendor = null;
   let vendorLogoImg = null;
@@ -59,7 +62,7 @@
   const TAP_TIME_MS = 450;
   let ptrDown = null;
 
-  // Double-tap zoom blocker
+  // iOS double-tap zoom blocker
   let lastTouchEndTs = 0;
 
   const clamp01 = (v) => Math.max(0, Math.min(1, v));
@@ -79,7 +82,9 @@
     elClear.disabled = !(bull || holes.length);
 
     const ready = !!bull && holes.length > 0;
-    elShow.disabled = !(ready && !resultsLocked);
+
+    // Show Results: disabled if not ready OR locked OR already running
+    elShow.disabled = !(ready && !resultsLocked && !showInFlight);
 
     elLockBanner.hidden = !resultsLocked;
   }
@@ -110,8 +115,16 @@
     }
   }
 
-  function lockResults() { resultsLocked = true; setStatus(); }
-  function unlockResults() { resultsLocked = false; setStatus(); }
+  function lockResults() {
+    resultsLocked = true;
+    setStatus();
+  }
+
+  function unlockResults() {
+    resultsLocked = false;
+    showInFlight = false;
+    setStatus();
+  }
 
   function meanPointNorm(points) {
     let sx = 0, sy = 0;
@@ -125,7 +138,7 @@
     return { ok: (windDir === wantWind) && (elevDir === wantElev) };
   }
 
-  // ✅ KEY FIX: use tapLayer rect (not image rect) so dots land exactly
+  // ✅ Tap alignment source of truth = tapLayer rect
   function clientToLayerPoint(clientX, clientY) {
     const rect = elTapLayer.getBoundingClientRect();
     const nx = clamp01((clientX - rect.left) / rect.width);
@@ -135,7 +148,9 @@
 
   function addTapPoint(pt) {
     if (!elImg.src) return;
-    if (resultsLocked) return;
+
+    // HARD BLOCK: once locked OR running, NO edits via taps
+    if (resultsLocked || showInFlight) return;
 
     if (!bull) {
       bull = pt;
@@ -145,14 +160,14 @@
     }
 
     resetResultsUI();
-    unlockResults();
     setInstruction();
     setStatus();
     renderDots();
   }
 
+  // -------- Compute + Render
   function computeAndRender() {
-    if (!bull || holes.length === 0) return;
+    if (!bull || holes.length === 0) return { ok: false, reason: "not-ready" };
 
     const poib = meanPointNorm(holes);
 
@@ -169,13 +184,12 @@
     if (!gate.ok) {
       resetResultsUI();
       elWindDir.textContent = "DIRECTION ERROR";
-      elWindVal.textContent = "LOCKED";
+      elWindVal.textContent = "UNLOCKED";
       elElevDir.textContent = "DIRECTION ERROR";
-      elElevVal.textContent = "LOCKED";
+      elElevVal.textContent = "UNLOCKED";
       elDownloadSEC.disabled = true;
-      resultsLocked = false;
-      setStatus();
-      return;
+
+      return { ok: false, reason: "truth-gate" };
     }
 
     const ipm = inchesPerMOA(DISTANCE_YDS);
@@ -188,9 +202,11 @@
     elElevVal.textContent = `${fmt2(elevClicks)} clicks`;
 
     elDownloadSEC.disabled = false;
-    lockResults();
+
+    return { ok: true };
   }
 
+  // -------- Undo / Clear (always unlock + allow edits)
   function undo() {
     if (holes.length) holes.pop();
     else bull = null;
@@ -205,6 +221,7 @@
   function clearAll() {
     bull = null;
     holes = [];
+
     unlockResults();
     resetResultsUI();
     setInstruction();
@@ -212,6 +229,7 @@
     renderDots();
   }
 
+  // -------- File load
   function revokeObjectUrl() {
     if (objectUrl) {
       URL.revokeObjectURL(objectUrl);
@@ -221,6 +239,7 @@
 
   function onFileSelected(file) {
     if (!file) return;
+
     revokeObjectUrl();
     objectUrl = URL.createObjectURL(file);
 
@@ -228,6 +247,8 @@
       bull = null;
       holes = [];
       resultsLocked = false;
+      showInFlight = false;
+
       resetResultsUI();
       setInstruction();
       setStatus();
@@ -281,7 +302,9 @@
   function onPointerDown(e) {
     if (!e.isPrimary) return;
     if (!elImg.src) return;
-    if (resultsLocked) return;
+
+    // If locked/running, ignore
+    if (resultsLocked || showInFlight) return;
 
     ptrDown = { id: e.pointerId, x: e.clientX, y: e.clientY, t: Date.now(), moved: false };
   }
@@ -312,12 +335,10 @@
     ptrDown = null;
   }
 
-  // ✅ iOS double-tap zoom blocker on tap surface
+  // iOS double-tap zoom blocker on tap surface
   function blockDoubleTapZoom(e) {
     const now = Date.now();
-    if (now - lastTouchEndTs <= 300) {
-      e.preventDefault();
-    }
+    if (now - lastTouchEndTs <= 300) e.preventDefault();
     lastTouchEndTs = now;
   }
 
@@ -327,16 +348,43 @@
   elUndo.addEventListener("click", undo);
   elClear.addEventListener("click", clearAll);
 
-  elShow.addEventListener("click", computeAndRender);
+  // ✅ Brick #1: HARD LOCK on first press (instant)
+  elShow.addEventListener("click", () => {
+    if (showInFlight) return;            // guard
+    if (resultsLocked) return;           // guard
+    if (!bull || holes.length === 0) return;
+
+    // LOCK IMMEDIATELY (prevents poisoning)
+    showInFlight = true;
+    lockResults();
+
+    // compute
+    const out = computeAndRender();
+
+    if (!out.ok) {
+      // Truth Gate or not-ready => unlock so shooter can correct taps
+      resultsLocked = false;
+      showInFlight = false;
+      setStatus();
+      return;
+    }
+
+    // success => remain locked; mark run complete
+    showInFlight = false;
+    setStatus();
+  });
 
   // Tap layer events
   elTapLayer.addEventListener("pointerdown", onPointerDown, { passive: true });
   elTapLayer.addEventListener("pointermove", onPointerMove, { passive: true });
   elTapLayer.addEventListener("pointerup", onPointerUp, { passive: true });
   elTapLayer.addEventListener("pointercancel", onPointerCancel, { passive: true });
-
-  // Non-passive to allow preventDefault
   elTapLayer.addEventListener("touchend", blockDoubleTapZoom, { passive: false });
+
+  // SEC button still disabled until you wire SEC build (your next brick)
+  elDownloadSEC.addEventListener("click", () => {
+    // placeholder for your SEC builder brick
+  });
 
   // Init
   loadVendor();
