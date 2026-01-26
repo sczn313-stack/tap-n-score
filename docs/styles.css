@@ -1,19 +1,19 @@
+/* docs/styles.css (FULL REPLACEMENT) — Shooter-first + Vendor pill + Accurate tap overlays */
+
 :root{
   --bg:#050606;
   --card:rgba(255,255,255,.04);
   --stroke:rgba(255,255,255,.10);
-  --stroke2:rgba(255,255,255,.14);
   --text:rgba(255,255,255,.92);
   --muted:rgba(255,255,255,.72);
-  --dim:rgba(255,255,255,.58);
 
   --blue:#1f6feb;
   --red:#ff3b30;
+  --white:#ffffff;
 
-  --primary: var(--blue);
-
-  --bull:#ffd200;     /* yellow aim point */
-  --hole:#00b45a;     /* green holes */
+  --primary: var(--blue); /* choose + actions unified */
+  --bull:#ffd200;         /* yellow bull */
+  --hole:#00b45a;
 
   --radius:18px;
   --shadow:0 18px 60px rgba(0,0,0,.55);
@@ -21,6 +21,7 @@
 
 *{box-sizing:border-box}
 html,body{height:100%}
+
 body{
   margin:0;
   background:
@@ -47,22 +48,7 @@ body{
   padding:14px;
 }
 
-/* Top bar */
-.topbar{
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap:12px;
-}
-
-.brandSmall{
-  font-weight:900;
-  letter-spacing:.4px;
-  color:rgba(255,255,255,.78);
-  font-size:14px;
-}
-
-/* Vendor pill */
+/* Vendor pill (INPUT) */
 .vendorPill{
   display:flex;
   align-items:center;
@@ -107,9 +93,8 @@ body{
   background:rgba(31,111,235,.20);
   padding:14px 14px;
   font-weight:1000;
-  letter-spacing:.8px;
+  letter-spacing:.6px;
   cursor:pointer;
-  text-transform:uppercase;
 }
 .chooseBtn input{display:none}
 .chooseBtn span{color:rgba(255,255,255,.92)}
@@ -119,18 +104,7 @@ body{
   font-size:13px;
 }
 
-/* Instruction INSIDE the stage */
-.instructionLine{
-  padding:10px 12px;
-  border-radius:14px;
-  border:1px solid rgba(255,255,255,.10);
-  background:rgba(0,0,0,.22);
-  font-weight:900;
-  color:rgba(255,255,255,.86);
-  margin-bottom:12px;
-}
-
-/* TARGET STAGE */
+/* Target frame */
 .targetStage{width:100%}
 .imgFrame{
   position:relative;
@@ -141,6 +115,18 @@ body{
   background:rgba(0,0,0,.25);
 }
 
+/* Instruction INSIDE frame */
+.instructionLine{
+  position:relative;
+  z-index:4;
+  padding:10px 12px;
+  border-bottom:1px solid rgba(255,255,255,.10);
+  background:rgba(0,0,0,.30);
+  font-weight:950;
+  color:rgba(255,255,255,.86);
+}
+
+/* Image */
 .targetImg{
   width:100%;
   height:auto;
@@ -150,18 +136,14 @@ body{
   touch-action:manipulation;
 }
 
-/* Tap + Dots layers (same coordinate space as image) */
+/* Overlays share same coordinate space as image */
 .tapLayer{
   position:absolute;
   inset:0;
   z-index:2;
-  pointer-events:none;   /* off until active */
-  touch-action:pan-y;    /* allow scroll; taps are filtered in JS */
+  touch-action:pan-y;     /* allow scroll */
 }
-
-.tapLayer.active{
-  pointer-events:auto;
-}
+.tapLayer.active{ pointer-events:auto; }
 
 .dotsLayer{
   position:absolute;
@@ -208,23 +190,21 @@ body{
 }
 
 .btnRow{
-  display:grid;
-  grid-template-columns:1fr 1fr 1fr;
-  gap:14px;
-  margin-top:14px;
+  display:flex;
+  gap:10px;
+  margin-top:12px;
 }
 
 .btn{
   border-radius:14px;
   padding:12px 12px;
-  min-height:52px;
   border:1px solid rgba(255,255,255,.12);
   background:rgba(0,0,0,.22);
   color:rgba(255,255,255,.90);
   font-weight:1000;
-  letter-spacing:.5px;
+  letter-spacing:.4px;
   cursor:pointer;
-  width:100%;
+  flex:1;
 }
 
 .btn:disabled{
@@ -232,16 +212,11 @@ body{
   cursor:not-allowed;
 }
 
-.btn.ghost{
-  background:rgba(0,0,0,.18);
-}
+.btn.ghost{ background:rgba(0,0,0,.18); }
 
 .btn.primary{
-  background:rgba(31,111,235,.30);
-  border-color:rgba(31,111,235,.45);
-  box-shadow:0 12px 34px rgba(31,111,235,.20);
-  letter-spacing:.9px;
-  font-weight:1100;
+  background:rgba(31,111,235,.20);
+  border-color:rgba(31,111,235,.28);
 }
 
 /* Lock banner */
@@ -256,8 +231,6 @@ body{
 }
 
 /* Results */
-.resultsCard{padding-top:16px}
-
 .resultsHdr{
   display:flex;
   align-items:flex-start;
@@ -282,33 +255,32 @@ body{
   font-weight:950;
 }
 
+/* Vendor pill (RESULTS) */
 .vendorPillMiniWrap{display:flex; justify-content:flex-end}
 .vendorPillMini{
   display:flex;
   align-items:center;
-  gap:10px;
-  padding:10px 14px;
+  gap:8px;
+  padding:8px 10px;
   border:1px solid rgba(255,255,255,.10);
   border-radius:999px;
   background:rgba(0,0,0,.18);
 }
-
 .vendorLogoMini{
-  width:32px;
-  height:32px;
+  width:26px;
+  height:26px;
   border-radius:999px;
   object-fit:cover;
   border:1px solid rgba(255,255,255,.14);
-  display:none; /* turn on by JS if logo exists */
+  display:none;
 }
-
 .vendorNameMini{
-  font-weight:1000;
-  font-size:14px;
+  font-weight:950;
+  font-size:12px;
   color:rgba(255,255,255,.82);
 }
 
-/* Corrections */
+/* Corrections block */
 .corrBlock{
   border:1px solid rgba(255,255,255,.10);
   border-radius:16px;
@@ -336,6 +308,9 @@ body{
   color:rgba(255,255,255,.92);
 }
 .arrow{opacity:.75; padding:0 8px}
+.dir{color:rgba(255,255,255,.92)}
+.val{color:rgba(255,255,255,.88)}
 
-/* Hidden utility */
+/* Hidden helpers */
+.hiddenInline{display:none !important}
 .hiddenBtn{display:none !important}
