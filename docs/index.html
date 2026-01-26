@@ -3,24 +3,23 @@
 <head>
   <meta charset="utf-8" />
 
-  <!-- BRICK 6: iOS zoom stability -->
+  <!-- BRICK 8: Stop iOS zoom changing coordinate space -->
   <meta name="viewport"
-        content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no" />
+        content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+
   <meta name="color-scheme" content="dark" />
   <meta name="theme-color" content="#000000" />
-
   <title>Tap-n-Score™</title>
-  <link rel="stylesheet" href="./styles.css?v=20260126b" />
+
+  <link rel="stylesheet" href="./styles.css?v=20260126a" />
 </head>
 
 <body>
   <main class="page">
 
-    <!-- INPUT CARD -->
+    <!-- CARD: Vendor pill + pick -->
     <section class="card">
-
-      <!-- Vendor pill -->
-      <div id="vendorPill" class="vendorPill" aria-label="Printer">
+      <div id="vendorPill" class="vendorPill" aria-label="Printer calling card">
         <img id="vendorLogo" class="vendorLogo" alt="Vendor logo" />
         <div class="vendorTxt">
           <div class="vendorLabel">PRINTER</div>
@@ -28,12 +27,14 @@
         </div>
       </div>
 
-      <div class="heroRow" style="margin-top:12px">
+      <div class="heroRow" style="margin-top:12px;">
+        <!-- Camera -->
         <label class="chooseBtn">
           <input id="photoInputCamera" type="file" accept="image/*" capture="environment" />
           <span>TAKE TARGET PHOTO</span>
         </label>
 
+        <!-- Library -->
         <label class="chooseBtn">
           <input id="photoInputLibrary" type="file" accept="image/*" />
           <span>CHOOSE FROM LIBRARY</span>
@@ -43,20 +44,20 @@
       </div>
     </section>
 
-    <!-- TARGET + TAPS -->
-    <section class="card targetStage">
-      <div id="instructionLine" class="instructionLine">
-        Take a photo of your target.
-      </div>
+    <!-- CARD: Tap stage -->
+    <section class="card">
+      <div id="instructionLine" class="instructionLine">Take a photo of your target.</div>
 
-      <div class="imgFrame">
-        <img id="targetImg" class="targetImg" alt="Target photo" />
-        <div id="tapLayer" class="tapLayer" aria-label="Tap layer"></div>
-        <div id="dotsLayer" class="dotsLayer" aria-hidden="true"></div>
+      <div class="targetStage">
+        <div class="imgFrame" id="imgFrame" aria-label="Target photo frame">
+          <img id="targetImg" class="targetImg" alt="Target photo" />
+          <div id="tapLayer" class="tapLayer" aria-label="Tap layer"></div>
+          <div id="dotsLayer" class="dotsLayer" aria-hidden="true"></div>
+        </div>
       </div>
 
       <div class="statusRow">
-        <div class="chip">Bull: <span id="bullStatus">not set</span></div>
+        <div class="chip">Aim point: <span id="bullStatus">not set</span></div>
         <div class="chip">Holes: <span id="holeCount">0</span></div>
       </div>
 
@@ -69,21 +70,19 @@
       <div id="lockBanner" class="lockBanner" hidden>
         Results locked. Undo/Clear to edit taps.
       </div>
-
-      <!-- kept hidden (compat) -->
-      <button id="changeBullBtn" class="hiddenBtn" type="button">Change Bull</button>
     </section>
 
-    <!-- RESULTS -->
+    <!-- CARD: Results -->
     <section class="card resultsCard">
       <div class="resultsHdr">
         <div class="secTitle">
-          <span class="secR">Shooter</span><span class="secW"> Experience </span><span class="secB">Card</span>
-          <span class="secMini">SEC</span>
+          <span class="secR">S</span><span class="secW">H</span><span class="secB">OOTER</span>
+          <span class="secW"> EXPERIENCE </span><span class="secB">CARD</span>
+          <span class="secMini"><span class="secR">S</span><span class="secW">E</span><span class="secB">C</span></span>
         </div>
 
         <div class="vendorPillMiniWrap">
-          <div class="vendorPillMini" aria-label="Printer mini">
+          <div class="vendorPillMini">
             <img id="vendorLogoMini" class="vendorLogoMini" alt="Vendor logo" />
             <div id="vendorNameMini" class="vendorNameMini">—</div>
           </div>
@@ -95,19 +94,20 @@
           <div class="corrLabel">Windage</div>
           <div class="corrValue"><span id="windageDir" class="dir">—</span><span class="arrow">→</span><span id="windageVal" class="val">—</span></div>
         </div>
+
         <div class="corrLine">
           <div class="corrLabel">Elevation</div>
           <div class="corrValue"><span id="elevDir" class="dir">—</span><span class="arrow">→</span><span id="elevVal" class="val">—</span></div>
         </div>
       </div>
 
-      <div class="btnRow" style="margin-top:12px">
+      <div class="btnRow" style="margin-top:12px;">
         <button id="downloadSecBtn" class="btn primary" type="button" disabled>View / Download SEC</button>
       </div>
     </section>
 
   </main>
 
-  <script src="./index.js?v=20260126b"></script>
+  <script src="./index.js?v=20260126a"></script>
 </body>
 </html>
