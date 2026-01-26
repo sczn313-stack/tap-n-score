@@ -9,9 +9,9 @@
   --red:#ff3b30;
   --white:#ffffff;
 
-  --primary: rgba(31,111,235,.20);
+  --primary: var(--blue);
 
-  --bull:#ffd200;  /* yellow */
+  --bull:#ffd200;         /* YELLOW bull */
   --hole:#00b45a;
 
   --radius:18px;
@@ -20,7 +20,6 @@
 
 *{box-sizing:border-box}
 html,body{height:100%}
-
 body{
   margin:0;
   background:
@@ -29,6 +28,9 @@ body{
     var(--bg);
   color:var(--text);
   font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+
+  /* iOS: keeps text sizing from shifting layout */
+  -webkit-text-size-adjust: 100%;
 }
 
 .page{
@@ -61,39 +63,25 @@ body{
   font-size:14px;
 }
 
-/* Vendor pill (INPUT + RESULTS) */
-.vendorPill,
-.vendorPillMini{
+/* Vendor pill (INPUT) */
+.vendorPill{
   display:flex;
   align-items:center;
   gap:10px;
   padding:10px 12px;
-  border:1px solid rgba(255,255,255,.10);
+  border:1px solid var(--stroke);
   border-radius:999px;
   background:rgba(0,0,0,.22);
   user-select:none;
 }
-
-.vendorPillMini{ padding:8px 10px; background:rgba(0,0,0,.18); }
-
 .vendorLogo{
   width:34px;
   height:34px;
   border-radius:999px;
+  display:none;
   object-fit:cover;
   border:1px solid rgba(255,255,255,.14);
-  display:none;
 }
-
-.vendorLogoMini{
-  width:26px;
-  height:26px;
-  border-radius:999px;
-  object-fit:cover;
-  border:1px solid rgba(255,255,255,.14);
-  display:none;
-}
-
 .vendorTxt{display:flex; flex-direction:column; line-height:1.05}
 .vendorLabel{
   font-size:11px;
@@ -107,40 +95,29 @@ body{
   font-weight:900;
 }
 
-.vendorNameMini{
-  font-weight:950;
-  font-size:12px;
-  color:rgba(255,255,255,.82);
-}
-
-.vendorPillMiniWrap{display:flex; justify-content:flex-end}
-
 /* Choose */
 .heroRow{display:flex; flex-direction:column; gap:10px}
-
 .chooseBtn{
   display:flex;
   align-items:center;
   justify-content:center;
   border-radius:14px;
   border:1px solid rgba(255,255,255,.12);
-  background:var(--primary);
+  background:rgba(31,111,235,.20);
   padding:14px 14px;
   font-weight:1000;
   letter-spacing:.6px;
   cursor:pointer;
 }
-
 .chooseBtn input{display:none}
 .chooseBtn span{color:rgba(255,255,255,.92)}
-
 .heroHint{
   color:rgba(255,255,255,.62);
   font-weight:700;
   font-size:13px;
 }
 
-/* Instruction inside target frame area */
+/* Instruction inside target frame */
 .instructionLine{
   padding:10px 12px;
   border-radius:14px;
@@ -151,7 +128,8 @@ body{
   margin-bottom:12px;
 }
 
-/* Target stage */
+/* TARGET STAGE: lock coordinate space */
+.targetStage{width:100%}
 .imgFrame{
   position:relative;
   width:100%;
@@ -159,6 +137,11 @@ body{
   overflow:hidden;
   border:1px solid rgba(255,255,255,.10);
   background:rgba(0,0,0,.25);
+
+  /* iOS: prevent long-press / callout / selection */
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 .targetImg{
@@ -167,16 +150,19 @@ body{
   display:block;
   user-select:none;
   -webkit-user-drag:none;
+  -webkit-touch-callout:none;
+
+  /* critical: stop gestures on the image itself */
+  touch-action: none;
 }
 
-/* Brick D: prevent zoom / stabilize gesture behavior */
 .tapLayer{
   position:absolute;
   inset:0;
   z-index:2;
-  /* Important: this stops Safari from treating taps as double-tap zoom */
-  touch-action:manipulation;
-  -webkit-tap-highlight-color: transparent;
+
+  /* allow normal page scroll outside, but gestures here are handled by JS */
+  touch-action: none;
 }
 
 .dotsLayer{
@@ -194,12 +180,10 @@ body{
   border-radius:999px;
   transform:translate(-50%,-50%);
 }
-
 .bullDot{
   background:rgba(255,210,0,.95);
   box-shadow:0 0 0 3px rgba(0,0,0,.45), 0 0 0 1px rgba(255,255,255,.12);
 }
-
 .holeDot{
   background:rgba(0,180,90,.92);
   box-shadow:0 0 0 3px rgba(0,0,0,.45), 0 0 0 1px rgba(255,255,255,.12);
@@ -213,7 +197,6 @@ body{
   gap:10px;
   margin-top:12px;
 }
-
 .chip{
   padding:9px 12px;
   border-radius:999px;
@@ -222,13 +205,11 @@ body{
   font-weight:900;
   color:rgba(255,255,255,.82);
 }
-
 .btnRow{
   display:flex;
   gap:10px;
   margin-top:12px;
 }
-
 .btn{
   border-radius:14px;
   padding:12px 12px;
@@ -240,16 +221,10 @@ body{
   cursor:pointer;
   flex:1;
 }
-
-.btn:disabled{
-  opacity:.45;
-  cursor:not-allowed;
-}
-
-.btn.ghost{ background:rgba(0,0,0,.18); }
-
+.btn:disabled{opacity:.45; cursor:not-allowed}
+.btn.ghost{background:rgba(0,0,0,.18)}
 .btn.primary{
-  background:var(--primary);
+  background:rgba(31,111,235,.20);
   border-color:rgba(31,111,235,.28);
 }
 
@@ -265,7 +240,6 @@ body{
 
 /* Results */
 .resultsCard{padding-top:16px}
-
 .resultsHdr{
   display:flex;
   align-items:flex-start;
@@ -273,7 +247,6 @@ body{
   gap:10px;
   margin-bottom:12px;
 }
-
 .secTitle{
   font-weight:1000;
   letter-spacing:.3px;
@@ -290,14 +263,36 @@ body{
   font-weight:950;
 }
 
-/* Corrections */
+.vendorPillMiniWrap{display:flex; justify-content:flex-end}
+.vendorPillMini{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  padding:8px 10px;
+  border:1px solid rgba(255,255,255,.10);
+  border-radius:999px;
+  background:rgba(0,0,0,.18);
+}
+.vendorLogoMini{
+  width:26px;
+  height:26px;
+  border-radius:999px;
+  object-fit:cover;
+  border:1px solid rgba(255,255,255,.14);
+  display:none;
+}
+.vendorNameMini{
+  font-weight:950;
+  font-size:12px;
+  color:rgba(255,255,255,.82);
+}
+
 .corrBlock{
   border:1px solid rgba(255,255,255,.10);
   border-radius:16px;
   padding:12px;
   background:rgba(0,0,0,.16);
 }
-
 .corrLine{
   display:flex;
   align-items:center;
@@ -307,14 +302,6 @@ body{
   border-bottom:1px solid rgba(255,255,255,.06);
 }
 .corrLine:last-child{border-bottom:none}
-
-.corrLabel{
-  color:rgba(255,255,255,.70);
-  font-weight:950;
-  letter-spacing:.3px;
-}
-.corrValue{
-  font-weight:1000;
-  color:rgba(255,255,255,.92);
-}
+.corrLabel{color:rgba(255,255,255,.70); font-weight:950; letter-spacing:.3px}
+.corrValue{font-weight:1000; color:rgba(255,255,255,.92)}
 .arrow{opacity:.75; padding:0 8px}
