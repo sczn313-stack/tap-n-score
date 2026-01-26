@@ -1,11 +1,8 @@
 :root{
   --bg:#050606;
-  --card:rgba(255,255,255,.04);
   --stroke:rgba(255,255,255,.10);
-  --stroke2:rgba(255,255,255,.14);
   --text:rgba(255,255,255,.92);
   --muted:rgba(255,255,255,.72);
-  --dim:rgba(255,255,255,.58);
 
   --blue:#1f6feb;
   --red:#ff3b30;
@@ -13,8 +10,12 @@
 
   --primary: var(--blue);
 
-  --bull:#ffd200;
+  --bull:#ffd200;  /* yellow bull */
   --hole:#00b45a;
+
+  --good:#00b45a;  /* green */
+  --mid:#ffd200;   /* yellow */
+  --poor:#ff4646;  /* red */
 
   --radius:18px;
   --shadow:0 18px 60px rgba(0,0,0,.55);
@@ -22,10 +23,6 @@
 
 *{box-sizing:border-box}
 html,body{height:100%}
-
-/* Helps prevent “random zoom” behaviors on iOS */
-html{ -webkit-text-size-adjust:100%; }
-
 body{
   margin:0;
   background:
@@ -52,7 +49,7 @@ body{
   padding:14px;
 }
 
-.topbar{
+.topRow{
   display:flex;
   align-items:center;
   justify-content:space-between;
@@ -66,7 +63,7 @@ body{
   font-size:14px;
 }
 
-/* Vendor pill (INPUT) */
+/* Vendor pill */
 .vendorPill{
   display:flex;
   align-items:center;
@@ -76,7 +73,6 @@ body{
   border-radius:999px;
   background:rgba(0,0,0,.22);
   user-select:none;
-  -webkit-tap-highlight-color: transparent;
 }
 
 .vendorLogo{
@@ -114,10 +110,6 @@ body{
   font-weight:1000;
   letter-spacing:.6px;
   cursor:pointer;
-  -webkit-tap-highlight-color: transparent;
-
-  /* KEY: disables iOS double-tap zoom on this control */
-  touch-action: manipulation;
 }
 .chooseBtn input{display:none}
 .chooseBtn span{color:rgba(255,255,255,.92)}
@@ -127,7 +119,7 @@ body{
   font-size:13px;
 }
 
-/* Instruction inside target frame */
+/* Instruction */
 .instructionLine{
   padding:10px 12px;
   border-radius:14px;
@@ -138,8 +130,7 @@ body{
   margin-bottom:12px;
 }
 
-/* TARGET STAGE */
-.targetStage{width:100%}
+/* Target stage */
 .imgFrame{
   position:relative;
   width:100%;
@@ -147,9 +138,6 @@ body{
   overflow:hidden;
   border:1px solid rgba(255,255,255,.10);
   background:rgba(0,0,0,.25);
-
-  /* KEY: makes the frame stable + discourages iOS zoom tricks */
-  -webkit-tap-highlight-color: transparent;
 }
 
 .targetImg{
@@ -158,24 +146,14 @@ body{
   display:block;
   user-select:none;
   -webkit-user-drag:none;
-
-  /* KEY: prevents “tap to zoom image” behavior */
-  pointer-events:none;
+  touch-action:manipulation;
 }
 
 .tapLayer{
   position:absolute;
   inset:0;
   z-index:2;
-
-  /* KEY: allows scroll, but disables double-tap zoom */
-  touch-action: manipulation;
-
-  -webkit-tap-highlight-color: transparent;
-}
-
-.tapLayer.active{
-  pointer-events:auto;
+  touch-action:pan-y;
 }
 
 .dotsLayer{
@@ -193,18 +171,16 @@ body{
   border-radius:999px;
   transform:translate(-50%,-50%);
 }
-
 .bullDot{
   background:rgba(255,210,0,.95);
   box-shadow:0 0 0 3px rgba(0,0,0,.45), 0 0 0 1px rgba(255,255,255,.12);
 }
-
 .holeDot{
   background:rgba(0,180,90,.92);
   box-shadow:0 0 0 3px rgba(0,0,0,.45), 0 0 0 1px rgba(255,255,255,.12);
 }
 
-/* Status + controls */
+/* Status + buttons */
 .statusRow{
   display:flex;
   align-items:center;
@@ -222,11 +198,7 @@ body{
   color:rgba(255,255,255,.82);
 }
 
-.btnRow{
-  display:flex;
-  gap:10px;
-  margin-top:12px;
-}
+.btnRow{display:flex; gap:10px; margin-top:12px}
 
 .btn{
   border-radius:14px;
@@ -238,25 +210,16 @@ body{
   letter-spacing:.4px;
   cursor:pointer;
   flex:1;
-
-  -webkit-tap-highlight-color: transparent;
-
-  /* KEY: disables double-tap zoom on action buttons */
-  touch-action: manipulation;
 }
 
-.btn:disabled{
-  opacity:.45;
-  cursor:not-allowed;
-}
-
-.btn.ghost{ background:rgba(0,0,0,.18); }
-
+.btn:disabled{opacity:.45; cursor:not-allowed}
+.btn.ghost{background:rgba(0,0,0,.18)}
 .btn.primary{
   background:rgba(31,111,235,.20);
   border-color:rgba(31,111,235,.28);
 }
 
+/* Lock banner */
 .lockBanner{
   margin-top:12px;
   padding:10px 12px;
@@ -267,8 +230,7 @@ body{
   font-weight:900;
 }
 
-/* Results */
-.resultsCard{padding-top:16px}
+/* Results header */
 .resultsHdr{
   display:flex;
   align-items:flex-start;
@@ -277,11 +239,7 @@ body{
   margin-bottom:12px;
 }
 
-.secTitle{
-  font-weight:1000;
-  letter-spacing:.3px;
-  line-height:1.05;
-}
+.secTitle{font-weight:1000; letter-spacing:.3px; line-height:1.05}
 .secR{color:var(--red)}
 .secW{color:rgba(255,255,255,.90)}
 .secB{color:var(--blue)}
@@ -302,8 +260,6 @@ body{
   border:1px solid rgba(255,255,255,.10);
   border-radius:999px;
   background:rgba(0,0,0,.18);
-  -webkit-tap-highlight-color: transparent;
-  touch-action: manipulation;
 }
 .vendorLogoMini{
   width:26px;
@@ -318,6 +274,32 @@ body{
   font-size:12px;
   color:rgba(255,255,255,.82);
 }
+
+/* Score */
+.scoreWrap{
+  border:1px solid rgba(255,255,255,.10);
+  border-radius:16px;
+  padding:12px;
+  background:rgba(0,0,0,.16);
+  margin-bottom:12px;
+}
+
+.scoreLabel{
+  color:rgba(255,255,255,.70);
+  font-weight:950;
+  letter-spacing:.3px;
+}
+
+.scoreBig{
+  font-weight:1100;
+  font-size:64px;
+  line-height:1.0;
+  margin-top:6px;
+}
+
+.scoreGood{color:var(--good)}
+.scoreMid{color:var(--mid)}
+.scorePoor{color:var(--poor)}
 
 /* Corrections block */
 .corrBlock{
@@ -337,15 +319,6 @@ body{
 }
 .corrLine:last-child{border-bottom:none}
 
-.corrLabel{
-  color:rgba(255,255,255,.70);
-  font-weight:950;
-  letter-spacing:.3px;
-}
-.corrValue{
-  font-weight:1000;
-  color:rgba(255,255,255,.92);
-}
+.corrLabel{color:rgba(255,255,255,.70); font-weight:950; letter-spacing:.3px}
+.corrValue{font-weight:1000; color:rgba(255,255,255,.92)}
 .arrow{opacity:.75; padding:0 8px}
-.dir{color:rgba(255,255,255,.92)}
-.val{color:rgba(255,255,255,.88)}
