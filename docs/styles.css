@@ -13,8 +13,8 @@
 
   --primary: var(--blue);
 
-  --bull:#ffd200;     /* YELLOW bull */
-  --hole:#00b45a;
+  --bull:#ffd200;         /* YELLOW bull */
+  --hole:#00b45a;         /* GREEN holes */
 
   --radius:18px;
   --shadow:0 18px 60px rgba(0,0,0,.55);
@@ -131,7 +131,6 @@ body{
 
 /* TARGET STAGE */
 .targetStage{width:100%}
-
 .imgFrame{
   position:relative;
   width:100%;
@@ -139,9 +138,6 @@ body{
   overflow:hidden;
   border:1px solid rgba(255,255,255,.10);
   background:rgba(0,0,0,.25);
-
-  /* Helps iOS layout stability */
-  transform:translateZ(0);
 }
 
 .targetImg{
@@ -150,26 +146,23 @@ body{
   display:block;
   user-select:none;
   -webkit-user-drag:none;
-
-  /* Let page scroll normally; tapping is handled by overlay */
-  touch-action:pan-y;
+  touch-action:manipulation;
 }
 
-/* Tap capture layer (same coordinate space as dots) */
+/* IMPORTANT:
+   tapLayer is ONLY active when an image is loaded.
+   Default pointer-events:none prevents phantom taps during scroll. */
 .tapLayer{
   position:absolute;
   inset:0;
   z-index:2;
-
-  /* IMPORTANT: allow vertical scroll gestures to work */
   touch-action:pan-y;
-
-  /* Stops text selection / callout */
-  -webkit-touch-callout:none;
-  user-select:none;
+  pointer-events:none;
+}
+.tapLayer.active{
+  pointer-events:auto;
 }
 
-/* Dots render layer */
 .dotsLayer{
   position:absolute;
   inset:0;
@@ -214,15 +207,16 @@ body{
   color:rgba(255,255,255,.82);
 }
 
+/* More spacing + Show Results stronger */
 .btnRow{
   display:flex;
-  gap:10px;
-  margin-top:12px;
+  gap:16px;
+  margin-top:14px;
 }
 
 .btn{
   border-radius:14px;
-  padding:12px 12px;
+  padding:13px 14px;
   border:1px solid rgba(255,255,255,.12);
   background:rgba(0,0,0,.22);
   color:rgba(255,255,255,.90);
@@ -230,6 +224,7 @@ body{
   letter-spacing:.4px;
   cursor:pointer;
   flex:1;
+  min-height:46px;
 }
 
 .btn:disabled{
@@ -246,6 +241,12 @@ body{
   border-color:rgba(31,111,235,.28);
 }
 
+.btn.showResults{
+  font-weight:1100;
+  letter-spacing:.6px;
+  text-transform:none;
+}
+
 .lockBanner{
   margin-top:12px;
   padding:10px 12px;
@@ -257,53 +258,55 @@ body{
 }
 
 /* Results */
-.resultsCard{padding-top:16px}
+.resultsCard{padding-top:14px}
 .resultsHdr{
   display:flex;
   align-items:flex-start;
   justify-content:space-between;
   gap:10px;
-  margin-bottom:12px;
+  margin-bottom:10px;
 }
 
 .secTitle{
   font-weight:1000;
   letter-spacing:.3px;
-  line-height:1.05;
+  line-height:1.02;
+  margin:0;
 }
 .secR{color:var(--red)}
 .secW{color:rgba(255,255,255,.90)}
 .secB{color:var(--blue)}
 .secMini{
   display:block;
-  margin-top:6px;
+  margin-top:2px;          /* closer */
   font-size:18px;
   color:rgba(255,255,255,.70);
   font-weight:950;
 }
 
+/* Vendor pill (RESULTS) - bigger */
 .vendorPillMiniWrap{display:flex; justify-content:flex-end}
 .vendorPillMini{
   display:flex;
   align-items:center;
-  gap:8px;
-  padding:8px 10px;
-  border:1px solid rgba(255,255,255,.10);
+  gap:10px;
+  padding:10px 14px;
+  border:1px solid rgba(255,255,255,.12);
   border-radius:999px;
   background:rgba(0,0,0,.18);
 }
 .vendorLogoMini{
-  width:26px;
-  height:26px;
+  width:30px;
+  height:30px;
   border-radius:999px;
   object-fit:cover;
   border:1px solid rgba(255,255,255,.14);
   display:none;
 }
 .vendorNameMini{
-  font-weight:950;
-  font-size:12px;
-  color:rgba(255,255,255,.82);
+  font-weight:1000;
+  font-size:13px;
+  color:rgba(255,255,255,.86);
 }
 
 /* Corrections block */
