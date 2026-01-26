@@ -1,4 +1,10 @@
- <!doctype html>
+<!-- ============================================================
+     docs/index.html (FULL REPLACEMENT)
+     BRICK 2 — Photo Picker Stability (Camera + Photos/Files)
+     - Primary button: Take Target Photo (camera)
+     - Secondary: Choose from Photos/Files (library/files)
+============================================================ -->
+<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
@@ -6,46 +12,60 @@
   <meta name="color-scheme" content="dark" />
   <meta name="theme-color" content="#000000" />
   <title>Tap-n-Score™</title>
-
   <link rel="stylesheet" href="./styles.css?v=20260126b" />
 </head>
 
 <body>
   <main class="page">
 
-    <!-- Top -->
-    <section class="card topRow">
-      <div class="brandSmall">Tap-n-Score™</div>
-
-      <!-- Vendor pill (INPUT) -->
-      <div id="vendorPill" class="vendorPill" aria-label="Printer calling card">
-        <img id="vendorLogo" class="vendorLogo" alt="Printer logo" />
+    <!-- Vendor pill (input page) -->
+    <section class="card">
+      <div id="vendorPill" class="vendorPill" aria-label="Printer">
+        <img id="vendorLogo" class="vendorLogo" alt="Vendor logo" />
         <div class="vendorTxt">
-          <div class="vendorLabel">Printer</div>
+          <div class="vendorLabel">PRINTER</div>
           <div id="vendorName" class="vendorName">—</div>
         </div>
       </div>
     </section>
 
-    <!-- Card 1: Choose -->
+    <!-- HERO: Choose photo -->
     <section class="card">
       <div class="heroRow">
-        <label class="chooseBtn">
-          <input id="photoInput" type="file" accept="image/*" />
-          <span>TAKE A PHOTO OF YOUR TARGET</span>
+
+        <!-- CAMERA input (forces camera) -->
+        <label class="chooseBtn" for="photoInputCamera">
+          <input
+            id="photoInputCamera"
+            type="file"
+            accept="image/*"
+            capture="environment"
+          />
+          <span>TAKE TARGET PHOTO</span>
         </label>
-        <div class="heroHint">Tip: straight-on photo, fill the frame.</div>
+
+        <!-- LIBRARY/FILES input (NO capture => Photos/Files options) -->
+        <label class="chooseBtn" for="photoInputLibrary" style="background:rgba(31,111,235,.12)">
+          <input
+            id="photoInputLibrary"
+            type="file"
+            accept="image/*"
+          />
+          <span>CHOOSE FROM PHOTOS / FILES</span>
+        </label>
+
+        <div class="heroHint">Take a straight-on photo. Fill the frame.</div>
       </div>
     </section>
 
-    <!-- Card 2: Tap -->
+    <!-- TARGET + TAPS -->
     <section class="card">
       <div class="instructionLine" id="instructionLine">Take a photo of your target.</div>
 
       <div class="targetStage">
-        <div class="imgFrame">
+        <div class="imgFrame" id="imgFrame">
           <img id="targetImg" class="targetImg" alt="Target photo" />
-          <div id="tapLayer" class="tapLayer"></div>
+          <div id="tapLayer" class="tapLayer" aria-label="Tap layer"></div>
           <div id="dotsLayer" class="dotsLayer" aria-hidden="true"></div>
         </div>
       </div>
@@ -61,55 +81,43 @@
         <button id="showResultsBtn" class="btn primary" type="button" disabled>Show Results</button>
       </div>
 
-      <div id="lockBanner" class="lockBanner" hidden>
-        Results locked. Use Undo/Clear to edit taps.
-      </div>
+      <!-- Keep button but hidden unless bull is set -->
+      <button id="changeBullBtn" class="hiddenBtn" type="button">Change Bull</button>
+
+      <div id="lockBanner" class="lockBanner" hidden>Results locked. Undo/Clear to edit taps.</div>
     </section>
 
-    <!-- Card 3: Results -->
+    <!-- RESULTS -->
     <section class="card resultsCard">
       <div class="resultsHdr">
         <div class="secTitle">
-          <span class="secR">Shooter</span><span class="secW"> Experience </span><span class="secB">Card</span>
-          <span class="secMini"><span class="secR">S</span><span class="secW">E</span><span class="secB">C</span></span>
+          <span class="secR">SHOOTER</span><span class="secW"> EXPERIENCE </span><span class="secB">CARD</span>
+          <span class="secMini">SEC</span>
         </div>
 
-        <!-- Vendor pill (RESULTS) -->
         <div class="vendorPillMiniWrap">
-          <div id="vendorPillMini" class="vendorPillMini" aria-label="Printer calling card (results)">
-            <img id="vendorLogoMini" class="vendorLogoMini" alt="Printer logo" />
+          <div class="vendorPillMini" aria-label="Printer mini">
+            <img id="vendorLogoMini" class="vendorLogoMini" alt="Vendor logo mini" />
             <div id="vendorNameMini" class="vendorNameMini">—</div>
           </div>
         </div>
       </div>
 
-      <!-- SCORE (TOP, BIG) -->
-      <div class="scoreWrap">
-        <div class="scoreLabel">Score</div>
-        <div id="scoreBig" class="scoreBig scoreGood">—</div>
-      </div>
-
       <div class="corrBlock">
         <div class="corrLine">
           <div class="corrLabel">Windage</div>
-          <div class="corrValue"><span id="windageDir" class="dir">—</span> <span class="arrow">→</span> <span id="windageVal" class="val">—</span></div>
+          <div class="corrValue"><span id="windageDir">—</span> <span class="arrow">→</span> <span id="windageVal">—</span></div>
         </div>
-
         <div class="corrLine">
           <div class="corrLabel">Elevation</div>
-          <div class="corrValue"><span id="elevDir" class="dir">—</span> <span class="arrow">→</span> <span id="elevVal" class="val">—</span></div>
+          <div class="corrValue"><span id="elevDir">—</span> <span class="arrow">→</span> <span id="elevVal">—</span></div>
         </div>
       </div>
 
-      <div class="btnRow" style="margin-top:12px;">
+      <div class="btnRow" style="margin-top:14px">
         <button id="downloadSecBtn" class="btn primary" type="button" disabled>View / Download SEC</button>
       </div>
     </section>
-
-    <!-- (kept for layout compatibility / future) -->
-    <div class="hiddenInline">
-      <span id="unused"></span>
-    </div>
 
   </main>
 
