@@ -1,25 +1,14 @@
-/* ============================================================
-   Tap-n-Score™ — docs/index.js (FULL REPLACEMENT)
-   Brick: TAP STABILITY
-   - Prevent iOS double-tap zoom on tap surface
-   - Scroll-safe tap filtering (movement/time thresholds)
-   - Accurate dot placement (uses image rect at tap-time)
-   - Truth Gate: never emit direction unless sign-consistent
-   - Vendor calling card: vendor.json -> pill + SEC logo
-============================================================ */
-
 (() => {
   const $ = (id) => document.getElementById(id);
 
-  // ---------- DOM
   const elFile = $("photoInput");
   const elImg = $("targetImg");
+  const elImgFrame = $("imgFrame");
   const elTapLayer = $("tapLayer");
   const elDots = $("dotsLayer");
 
   const elBullStatus = $("bullStatus");
   const elHoleCount = $("holeCount");
-
   const elInstruction = $("instructionLine");
 
   const elUndo = $("undoBtn");
@@ -41,44 +30,51 @@
   const elVendorLogoMini = $("vendorLogoMini");
   const elVendorNameMini = $("vendorNameMini");
 
-  // ---------- Locked pilot constants
+  // Pilot constants (locked)
   const PAPER_W_IN = 8.5;
   const PAPER_H_IN = 11.0;
   const DISTANCE_YDS = 100;
-  const CLICK_MOA = 0.25; // 1/4 MOA per click (pilot)
-
+  const CLICK_MOA = 0.25;
   const inchesPerMOA = (yds) => 1.047 * (yds / 100);
 
-  // ---------- State
   let objectUrl = null;
 
-  // Points: normalized within displayed image
-  // { nx, ny }
-  let bull = null;
+  let bull = null;   // { nx, ny, ix, iy }
   let holes = [];
 
   let resultsLocked = false;
 
-  // Vendor
   let vendor = null;
-  let vendorLogoImg = null; // preloaded Image() for SEC canvas
+  let vendorLogoImg = null;
 
-  // ---------- Tap filtering / scroll safety
-  const TAP_MOVE_PX = 12;
-  const TAP_TIME_MS = 420;
-
+  // Tap filtering
+  const TAP_MOVE_PX = 10;
+  const TAP_TIME_MS = 450;
   let ptrDown = null;
 
-  // Double-tap zoom suppression
-  let lastTouchEndTs = 0;
-
-  // ---------- Utils
   const clamp01 = (v) => Math.max(0, Math.min(1, v));
   const fmt2 = (n) => (Number.isFinite(n) ? n.toFixed(2) : "0.00");
 
+  // ---------- iOS STABILITY: block double-tap zoom *inside target frame only*
+  // This keeps the page scroll normal everywhere else.
+  let lastTouchEnd = 0;
+  elImgFrame.addEventListener("touchend", (e) => {
+    const now = Date.now();
+    if (now - lastTouchEnd < 300) {
+      e.preventDefault(); // kills iOS double-tap zoom
+    }
+    lastTouchEnd = now;
+  }, { passive: false });
+
+  // Also block pinch/gesture zoom inside frame (iOS Safari)
+  elImgFrame.addEventListener("gesturestart", (e) => e.preventDefault(), { passive: false });
+  elImgFrame.addEventListener("gesturechange", (e) => e.preventDefault(), { passive: false });
+  elImgFrame.addEventListener("gestureend", (e) => e.preventDefault(), { passive: false });
+
+  // ---------- UI helpers
   function setInstruction() {
     if (!elImg.src) {
-      elInstruction.textContent = "Take a photo of your target to begin.";
+      elInstruction.textContent = "Take a photo of your target.";
       return;
     }
     if (!bull) {
@@ -111,40 +107,34 @@
 
   function renderDots() {
     elDots.innerHTML = "";
-
     if (bull) {
       const d = document.createElement("div");
       d.className = "dot bullDot";
-      d.style.left = `${(bull.nx * 100).toFixed(4)}%`;
-      d.style.top  = `${(bull.ny * 100).toFixed(4)}%`;
+      d.style.left = `${bull.nx * 100}%`;
+      d.style.top  = `${bull.ny * 100}%`;
       elDots.appendChild(d);
     }
-
     for (const p of holes) {
       const d = document.createElement("div");
       d.className = "dot holeDot";
-      d.style.left = `${(p.nx * 100).toFixed(4)}%`;
-      d.style.top  = `${(p.ny * 100).toFixed(4)}%`;
+      d.style.left = `${p.nx * 100}%`;
+      d.style.top  = `${p.ny * 100}%`;
       elDots.appendChild(d);
     }
   }
 
-  function lockResults() {
-    resultsLocked = true;
-    setStatus();
-  }
+  function lockResults() { resultsLocked = true; setStatus(); }
+  function unlockResults() { resultsLocked = false; setStatus(); }
 
-  function unlockResults() {
-    resultsLocked = false;
-    setStatus();
-  }
-
-  // Convert client coordinates to normalized coordinates inside the IMAGE rect
-  function clientToNorm(clientX, clientY) {
+  function clientToImagePoint(clientX, clientY) {
     const rect = elImg.getBoundingClientRect();
     const nx = clamp01((clientX - rect.left) / rect.width);
     const ny = clamp01((clientY - rect.top) / rect.height);
-    return { nx, ny };
+
+    const iw = elImg.naturalWidth || 1;
+    const ih = elImg.naturalHeight || 1;
+
+    return { nx, ny, ix: nx * iw, iy: ny * ih };
   }
 
   function meanPointNorm(points) {
@@ -153,20 +143,14 @@
     return { nx: sx / points.length, ny: sy / points.length };
   }
 
-  // ---------- HARD Truth Gate
-  // dxIn >= 0 => RIGHT else LEFT
-  // dyIn <= 0 => UP    else DOWN   (screen Y grows downward)
-  function truthGate(dxIn, dyIn, windDir, elevDir) {
+  // Truth Gate (direction derived from signed inches)
+  function truthGateDirections(dxIn, dyIn, windDir, elevDir) {
     const wantWind = dxIn >= 0 ? "RIGHT" : "LEFT";
     const wantElev = dyIn <= 0 ? "UP" : "DOWN";
-    return {
-      ok: (windDir === wantWind) && (elevDir === wantElev),
-      wantWind,
-      wantElev
-    };
+    return { ok: (windDir === wantWind) && (elevDir === wantElev) };
   }
 
-  // ---------- Vendor load (non-blocking)
+  // ---------- Vendor load
   async function loadVendor() {
     try {
       const res = await fetch("./vendor.json", { cache: "no-store" });
@@ -180,35 +164,34 @@
 
       if (vendor?.logoPath) {
         elVendorLogo.src = vendor.logoPath;
+        elVendorLogo.alt = `${name} logo`;
         elVendorLogo.style.display = "block";
 
         elVendorLogoMini.src = vendor.logoPath;
+        elVendorLogoMini.alt = `${name} logo`;
         elVendorLogoMini.style.display = "block";
 
         vendorLogoImg = new Image();
         vendorLogoImg.src = vendor.logoPath;
-      } else {
-        elVendorLogo.style.display = "none";
-        elVendorLogoMini.style.display = "none";
       }
 
-      if (vendor?.website) {
-        const go = () => window.open(vendor.website, "_blank", "noopener,noreferrer");
+      const website = vendor?.website || "";
+      const openSite = () => { if (website) window.open(website, "_blank", "noopener,noreferrer"); };
+
+      if (website) {
         elVendorPill.style.cursor = "pointer";
-        elVendorPill.onclick = go;
-        elVendorPill.onkeydown = (e) => { if (e.key === "Enter") go(); };
-
         elVendorPillMini.style.cursor = "pointer";
-        elVendorPillMini.onclick = go;
-        elVendorPillMini.onkeydown = (e) => { if (e.key === "Enter") go(); };
+        elVendorPill.onclick = openSite;
+        elVendorPillMini.onclick = openSite;
+
+        elVendorPill.onkeydown = (e) => { if (e.key === "Enter") openSite(); };
+        elVendorPillMini.onkeydown = (e) => { if (e.key === "Enter") openSite(); };
       }
-    } catch {
-      // silent
-    }
+    } catch {}
   }
 
-  // ---------- Tap add (bull first, then holes)
-  function addTap(pt) {
+  // ---------- Tap pipeline
+  function addTapPoint(pt) {
     if (!elImg.src) return;
     if (resultsLocked) return;
 
@@ -231,17 +214,19 @@
     renderDots();
   }
 
-  // ---------- Pointer events (scroll-safe)
   function onPointerDown(e) {
     if (!e.isPrimary) return;
     if (!elImg.src) return;
     if (resultsLocked) return;
 
+    // stop Safari from interpreting this as a zoom gesture
+    e.preventDefault();
+
     ptrDown = {
       id: e.pointerId,
       x: e.clientX,
       y: e.clientY,
-      t: performance.now(),
+      t: Date.now(),
       moved: false,
     };
   }
@@ -259,18 +244,14 @@
     if (!ptrDown) return;
     if (e.pointerId !== ptrDown.id) return;
 
-    const dt = performance.now() - ptrDown.t;
+    const elapsed = Date.now() - ptrDown.t;
     const moved = ptrDown.moved;
     ptrDown = null;
 
     if (moved) return;
-    if (dt > TAP_TIME_MS) return;
+    if (elapsed > TAP_TIME_MS) return;
 
-    // Only accept tap if inside the current image rect
-    const r = elImg.getBoundingClientRect();
-    if (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) return;
-
-    addTap(clientToNorm(e.clientX, e.clientY));
+    addTapPoint(clientToImagePoint(e.clientX, e.clientY));
   }
 
   function onPointerCancel(e) {
@@ -279,26 +260,12 @@
     ptrDown = null;
   }
 
-  // ---------- iOS double-tap zoom kill (tap surface only)
-  // This is why your screen was resizing on consecutive taps.
-  // Non-passive so preventDefault works.
-  function onTouchEndKillDoubleTap(e) {
-    const now = Date.now();
-    if (now - lastTouchEndTs < 300) {
-      e.preventDefault();
-    }
-    lastTouchEndTs = now;
-  }
-
   // ---------- File load
   function revokeObjectUrl() {
-    if (objectUrl) {
-      URL.revokeObjectURL(objectUrl);
-      objectUrl = null;
-    }
+    if (objectUrl) { URL.revokeObjectURL(objectUrl); objectUrl = null; }
   }
 
-  function resetAll() {
+  function resetAllState() {
     bull = null;
     holes = [];
     resultsLocked = false;
@@ -315,8 +282,7 @@
     objectUrl = URL.createObjectURL(file);
 
     elImg.onload = () => {
-      resetAll();
-      elTapLayer.classList.add("active");
+      resetAllState();
       setInstruction();
       setStatus();
     };
@@ -339,7 +305,6 @@
   function clearAll() {
     bull = null;
     holes = [];
-
     unlockResults();
     resetResultsUI();
     setInstruction();
@@ -351,10 +316,7 @@
   function computeAndRender() {
     if (!bull || holes.length === 0) return;
 
-    // POIB = mean of holes
     const poib = meanPointNorm(holes);
-
-    // correction vector = bull - poib
     const dx01 = bull.nx - poib.nx;
     const dy01 = bull.ny - poib.ny;
 
@@ -364,7 +326,7 @@
     const windDir = dxIn >= 0 ? "RIGHT" : "LEFT";
     const elevDir = dyIn <= 0 ? "UP" : "DOWN";
 
-    const gate = truthGate(dxIn, dyIn, windDir, elevDir);
+    const gate = truthGateDirections(dxIn, dyIn, windDir, elevDir);
     if (!gate.ok) {
       resetResultsUI();
       elWindDir.textContent = "DIRECTION ERROR";
@@ -372,52 +334,43 @@
       elElevDir.textContent = "DIRECTION ERROR";
       elElevVal.textContent = "LOCKED";
       elDownloadSEC.disabled = true;
-      resultsLocked = false;
-      setStatus();
+      unlockResults();
       return;
     }
 
     const ipm = inchesPerMOA(DISTANCE_YDS);
-
     const windClicks = (Math.abs(dxIn) / ipm) / CLICK_MOA;
     const elevClicks = (Math.abs(dyIn) / ipm) / CLICK_MOA;
 
     elWindDir.textContent = windDir;
     elWindVal.textContent = `${fmt2(windClicks)} clicks`;
-
     elElevDir.textContent = elevDir;
     elElevVal.textContent = `${fmt2(elevClicks)} clicks`;
 
     elDownloadSEC.disabled = false;
-
-    // Lock after first successful compute
     lockResults();
   }
 
-  // ---------- SEC PNG
+  // ---------- SEC PNG (same as your current behavior; leaving it intact)
   async function buildSecPng(payload) {
     const W = 1200, H = 675;
     const canvas = document.createElement("canvas");
-    canvas.width = W;
-    canvas.height = H;
+    canvas.width = W; canvas.height = H;
     const ctx = canvas.getContext("2d");
 
     ctx.fillStyle = "#0b0e0f";
     ctx.fillRect(0, 0, W, H);
 
-    // Shooter Experience Card header (red/white/blue)
     ctx.font = "1000 54px system-ui, -apple-system, Segoe UI, Roboto, Arial";
     ctx.fillStyle = "#ff3b30"; ctx.fillText("SHOOTER", 60, 86);
     ctx.fillStyle = "rgba(255,255,255,.92)"; ctx.fillText(" EXPERIENCE ", 315, 86);
     ctx.fillStyle = "#1f6feb"; ctx.fillText("CARD", 720, 86);
 
-    // SEC letters (r/w/b)
     ctx.font = "1000 46px system-ui, -apple-system, Segoe UI, Roboto, Arial";
     ctx.fillStyle = "#ff3b30"; ctx.fillText("S", 60, 132);
     ctx.fillStyle = "rgba(255,255,255,.92)"; ctx.fillText("E", 92, 132);
     ctx.fillStyle = "#1f6feb"; ctx.fillText("C", 124, 132);
 
-    // Vendor top-right
     const vName = vendor?.name || "Printer";
     ctx.font = "850 26px system-ui, -apple-system, Segoe UI, Roboto, Arial";
     ctx.fillStyle = "rgba(255,255,255,.78)";
@@ -425,27 +378,32 @@
     ctx.fillText(vName, W - 70, 120);
     ctx.textAlign = "left";
 
-    // Vendor logo circle
-    if (vendorLogoImg && vendorLogoImg.complete) {
-      const size = 64;
-      const x = W - 70 - size;
-      const y = 38;
+    if (vendorLogoImg) {
+      await new Promise((resolve) => {
+        if (vendorLogoImg.complete) return resolve();
+        const t = setTimeout(resolve, 250);
+        vendorLogoImg.onload = () => { clearTimeout(t); resolve(); };
+        vendorLogoImg.onerror = () => { clearTimeout(t); resolve(); };
+      });
 
-      ctx.save();
-      ctx.beginPath();
-      ctx.arc(x + size/2, y + size/2, size/2, 0, Math.PI * 2);
-      ctx.clip();
-      ctx.drawImage(vendorLogoImg, x, y, size, size);
-      ctx.restore();
-
-      ctx.strokeStyle = "rgba(255,255,255,.18)";
-      ctx.lineWidth = 3;
-      ctx.beginPath();
-      ctx.arc(x + size/2, y + size/2, size/2 + 1, 0, Math.PI * 2);
-      ctx.stroke();
+      if (vendorLogoImg.complete) {
+        const size = 64;
+        const x = W - 70 - size;
+        const y = 38;
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(x + size/2, y + size/2, size/2, 0, Math.PI*2);
+        ctx.clip();
+        ctx.drawImage(vendorLogoImg, x, y, size, size);
+        ctx.restore();
+        ctx.strokeStyle = "rgba(255,255,255,.18)";
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(x + size/2, y + size/2, size/2 + 1, 0, Math.PI*2);
+        ctx.stroke();
+      }
     }
 
-    // Panel
     const px = 60, py = 170, pw = 1080, ph = 440;
     roundRect(ctx, px, py, pw, ph, 22);
     ctx.fillStyle = "rgba(255,255,255,.04)"; ctx.fill();
@@ -466,7 +424,7 @@
     return canvas.toDataURL("image/png");
 
     function roundRect(c, x, y, w, h, r) {
-      const rr = Math.min(r, w / 2, h / 2);
+      const rr = Math.min(r, w/2, h/2);
       c.beginPath();
       c.moveTo(x + rr, y);
       c.arcTo(x + w, y, x + w, y + h, rr);
@@ -490,21 +448,12 @@
     const windDir = dxIn >= 0 ? "RIGHT" : "LEFT";
     const elevDir = dyIn <= 0 ? "UP" : "DOWN";
 
-    const gate = truthGate(dxIn, dyIn, windDir, elevDir);
+    const gate = truthGateDirections(dxIn, dyIn, windDir, elevDir);
     if (!gate.ok) return;
 
     const ipm = inchesPerMOA(DISTANCE_YDS);
     const windClicks = (Math.abs(dxIn) / ipm) / CLICK_MOA;
     const elevClicks = (Math.abs(dyIn) / ipm) / CLICK_MOA;
-
-    // Wait briefly for logo load
-    if (vendorLogoImg && !vendorLogoImg.complete) {
-      await new Promise((resolve) => {
-        const t = setTimeout(resolve, 250);
-        vendorLogoImg.onload = () => { clearTimeout(t); resolve(); };
-        vendorLogoImg.onerror = () => { clearTimeout(t); resolve(); };
-      });
-    }
 
     const dataUrl = await buildSecPng({ windDir, windClicks, elevDir, elevClicks });
 
@@ -522,34 +471,18 @@
     onFileSelected(file);
   });
 
-  elUndo.addEventListener("click", () => {
-    if (resultsLocked) { unlockResults(); resetResultsUI(); }
-    undo();
-  });
+  elUndo.addEventListener("click", undo);
+  elClear.addEventListener("click", clearAll);
 
-  elClear.addEventListener("click", () => {
-    if (resultsLocked) { unlockResults(); resetResultsUI(); }
-    clearAll();
-  });
+  elShow.addEventListener("click", computeAndRender);
+  elDownloadSEC.addEventListener("click", downloadSec);
 
-  elShow.addEventListener("click", () => {
-    computeAndRender();
-  });
-
-  elDownloadSEC.addEventListener("click", () => {
-    downloadSec();
-  });
-
-  // Pointer pipeline
-  elTapLayer.addEventListener("pointerdown", onPointerDown, { passive: true });
+  // Pointer events on tap layer (NOT passive so we can preventDefault)
+  elTapLayer.addEventListener("pointerdown", onPointerDown, { passive: false });
   elTapLayer.addEventListener("pointermove", onPointerMove, { passive: true });
   elTapLayer.addEventListener("pointerup", onPointerUp, { passive: true });
   elTapLayer.addEventListener("pointercancel", onPointerCancel, { passive: true });
 
-  // Double-tap zoom kill (must be non-passive)
-  elTapLayer.addEventListener("touchend", onTouchEndKillDoubleTap, { passive: false });
-
-  // ---------- Init
   loadVendor();
   setInstruction();
   setStatus();
