@@ -1,103 +1,116 @@
+<!-- docs/index.html (FULL REPLACEMENT) — Clean shooter-first UI + Vendor pill (input + results) -->
 <!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="color-scheme" content="dark" />
-  <meta name="theme-color" content="#050606" />
+  <meta name="theme-color" content="#000000" />
   <title>Tap-n-Score™</title>
-  <link rel="stylesheet" href="./styles.css?v=pilot-hot-fix-004" />
+
+  <link rel="stylesheet" href="./styles.css?v=hotfix-baker-01" />
 </head>
 
 <body>
   <main class="page">
 
-    <!-- Top bar -->
-    <section class="card topbar">
-      <div class="brandSmall">Tap-n-Score™</div>
-
-      <div id="vendorPill" class="vendorPill" aria-label="Printer">
-        <img id="vendorLogo" class="vendorLogo" alt="Vendor logo" />
+    <!-- CARD 0: Baker Calling Card (INPUT) -->
+    <section class="card">
+      <div id="vendorPill" class="vendorPill" aria-label="Printer calling card">
+        <img id="vendorLogo" class="vendorLogo" alt="Printer logo" />
         <div class="vendorTxt">
-          <div class="vendorLabel">Printer</div>
+          <div class="vendorLabel">PRINTER</div>
           <div id="vendorName" class="vendorName">—</div>
         </div>
       </div>
     </section>
 
-    <!-- Choose photo -->
-    <section class="card heroRow">
-      <label class="chooseBtn" aria-label="Take or choose target photo">
-        <input id="photoInput" type="file" accept="image/*" />
-        <span>TAKE / CHOOSE TARGET PHOTO</span>
-      </label>
-      <div class="heroHint">Straight-on photo • Fill the frame • Good lighting</div>
+    <!-- CARD 1: Choose photo (ONLY message the shooter needs) -->
+    <section class="card">
+      <div class="heroRow">
+        <label class="chooseBtn">
+          <input id="photoInput" type="file" accept="image/*" />
+          <span>TAKE A PHOTO OF YOUR TARGET</span>
+        </label>
+        <div class="heroHint">Tip: straight-on photo, fill the frame.</div>
+      </div>
     </section>
 
-    <!-- Target stage -->
-    <section class="card targetStage">
+    <!-- CARD 2: Tap stage -->
+    <section class="card">
+      <div class="targetStage">
+        <div class="imgFrame" aria-label="Target frame">
+          <!-- Instruction INSIDE the frame -->
+          <div id="instructionLine" class="instructionLine">
+            Take a photo of your target.
+          </div>
 
-      <!-- instruction INSIDE the frame -->
-      <div class="instructionLine" id="instructionLine">Load a photo to begin.</div>
+          <img id="targetImg" class="targetImg" alt="Target photo" />
 
-      <div class="imgFrame" id="imgFrame">
-        <img id="targetImg" class="targetImg" alt="Target photo" />
-
-        <!-- tap + dot layers share the exact same coordinate space as the image -->
-        <div id="tapLayer" class="tapLayer" aria-label="Tap layer"></div>
-        <div id="dotsLayer" class="dotsLayer" aria-label="Dots layer"></div>
+          <!-- Tap + dots overlays (share same coordinate space as image) -->
+          <div id="tapLayer" class="tapLayer active" aria-hidden="true"></div>
+          <div id="dotsLayer" class="dotsLayer" aria-hidden="true"></div>
+        </div>
       </div>
 
-      <!-- Status row (ONLY holes now) -->
       <div class="statusRow">
+        <!-- We keep bullStatus internally for debug/stability but do NOT talk about “bull set” to shooter -->
+        <div class="chip hiddenInline">Bull: <span id="bullStatus">not set</span></div>
         <div class="chip">Holes: <span id="holeCount">0</span></div>
-        <button id="changeBullBtn" class="btn ghost hiddenBtn" type="button">Change aim point</button>
       </div>
 
-      <!-- Controls -->
       <div class="btnRow">
-        <button id="undoBtn" class="btn ghost" type="button" disabled>Undo</button>
-        <button id="clearBtn" class="btn ghost" type="button" disabled>Clear</button>
+        <button id="undoBtn" class="btn ghost" type="button">Undo</button>
+        <button id="clearBtn" class="btn ghost" type="button">Clear</button>
         <button id="showResultsBtn" class="btn primary" type="button" disabled>Show Results</button>
       </div>
 
-      <div id="lockBanner" class="lockBanner" hidden>Results locked. Use Undo or Clear to edit taps.</div>
+      <div id="lockBanner" class="lockBanner" hidden>
+        Results locked. Use Undo/Clear to edit taps.
+      </div>
+
+      <!-- Change bull exists for now but hidden; you can delete later once you’re confident -->
+      <button id="changeBullBtn" class="hiddenBtn" type="button">Change aim point</button>
     </section>
 
-    <!-- Results -->
+    <!-- CARD 3: Results -->
     <section class="card resultsCard">
       <div class="resultsHdr">
-        <div class="secTitle">
-          <span class="secR">SHOOTER</span> <span class="secW">EXPERIENCE</span> <span class="secB">CARD</span>
-          <span class="secMini"><span class="secR">S</span><span class="secW">E</span><span class="secB">C</span></span>
+        <div class="secTitle" aria-label="Shooter Experience Card title">
+          <span class="secR">SHOOTER</span>
+          <span class="secW"> EXPERIENCE </span>
+          <span class="secB">CARD</span>
+          <span class="secMini">SEC</span>
         </div>
 
+        <!-- Baker Calling Card (RESULTS) -->
         <div class="vendorPillMiniWrap">
-          <div class="vendorPillMini">
-            <img id="vendorLogoMini" class="vendorLogoMini" alt="Vendor logo" />
+          <div id="vendorPillMini" class="vendorPillMini" aria-label="Printer calling card (results)">
+            <img id="vendorLogoMini" class="vendorLogoMini" alt="Printer logo small" />
             <div id="vendorNameMini" class="vendorNameMini">—</div>
           </div>
         </div>
       </div>
 
-      <div class="corrBlock">
+      <div class="corrBlock" aria-label="Corrections">
         <div class="corrLine">
           <div class="corrLabel">Windage</div>
           <div class="corrValue"><span id="windageDir" class="dir">—</span><span class="arrow">→</span><span id="windageVal" class="val">—</span></div>
         </div>
+
         <div class="corrLine">
           <div class="corrLabel">Elevation</div>
           <div class="corrValue"><span id="elevDir" class="dir">—</span><span class="arrow">→</span><span id="elevVal" class="val">—</span></div>
         </div>
       </div>
 
-      <div class="btnRow" style="margin-top:14px;">
-        <button id="downloadSecBtn" class="btn primary" type="button" disabled>Download/Keep SEC (PNG)</button>
+      <div class="btnRow" style="margin-top:12px">
+        <button id="downloadSecBtn" class="btn primary" type="button" disabled>View / Download SEC</button>
       </div>
     </section>
 
-    <!-- Vendor config -->
-    <script src="./index.js?v=pilot-hot-fix-004"></script>
   </main>
+
+  <script src="./index.js?v=hotfix-baker-01"></script>
 </body>
-</html> 
+</html>
