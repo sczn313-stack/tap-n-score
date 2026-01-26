@@ -1,11 +1,10 @@
 /* ============================================================
    Tap-n-Score™ — docs/index.js (FULL REPLACEMENT)
-   Brick D:
-   - Prevent double-tap zoom / gesture zoom from shifting geometry
-   - Tap points map to image reliably (nx/ny anchored to img rect)
-   - Bull first, then holes (no “Bull set” UI)
-   - Lock results after successful show
-   - Vendor pill wired from vendor.json
+   Brick A:
+   - HARD lockout: first Show Results press freezes taps + button
+   - Prevents repeat presses / tap-poisoning
+   - Unlock ONLY via Undo or Clear
+   - If compute fails, we unlock automatically (safe rollback)
    - True MOA, 100y, 0.25 MOA/click baseline
    - HARD Truth Gate (direction can’t lie)
 ============================================================ */
@@ -58,6 +57,9 @@
   let holes = [];      // [{nx, ny}...]
   let resultsLocked = false;
 
+  // NEW: prevents double-trigger / spam click even before lock banner paints
+  let showInFlight = false;
+
   // Vendor
   let vendor = null;
   let vendorLogoImg = null;
@@ -80,7 +82,9 @@
       elInstruction.textContent = "Tap bull (aim point) first, then tap bullet holes.";
       return;
     }
-    elInstruction.textContent = "Tap each confirmed bullet hole.";
+    elInstruction.textContent = resultsLocked
+      ? "Results are locked. Use Undo or Clear to edit taps."
+      : "Tap each confirmed bullet hole.";
   }
 
   function setStatus() {
@@ -91,11 +95,15 @@
     elClear.disabled = !(bull || holes.length);
 
     const ready = !!bull && holes.length > 0;
-    elShow.disabled = !(ready && !resultsLocked);
+    // Show Results disabled if not ready OR locked OR in-flight
+    elShow.disabled = !(ready && !resultsLocked && !showInFlight);
 
     elLockBanner.hidden = !resultsLocked;
 
-    elDownloadSEC.disabled = true;
+    // SEC is enabled only after a successful compute
+    // (we keep disabled here; compute will turn it on)
+    // but if locked and results already exist, button stays enabled
+    // (we do NOT disable it here)
   }
 
   function resetResultsUI() {
@@ -126,12 +134,22 @@
     }
   }
 
+  // Brick A: when locked, we also physically block taps
+  function applyTapLockUI() {
+    elTapLayer.style.pointerEvents = resultsLocked ? "none" : "auto";
+  }
+
   function lockResults() {
     resultsLocked = true;
+    applyTapLockUI();
+    setInstruction();
     setStatus();
   }
+
   function unlockResults() {
     resultsLocked = false;
+    applyTapLockUI();
+    setInstruction();
     setStatus();
   }
 
@@ -157,23 +175,17 @@
     return { nx, ny };
   }
 
-  // Brick D: stop Safari zoom gestures from firing during tap workflow
+  // iOS no-zoom guards (kept)
   function installNoZoomGuards() {
-    // Prevent “gesture” zoom (pinch) in Safari
     document.addEventListener("gesturestart", (e) => e.preventDefault(), { passive:false });
     document.addEventListener("gesturechange", (e) => e.preventDefault(), { passive:false });
     document.addEventListener("gestureend", (e) => e.preventDefault(), { passive:false });
-
-    // Prevent double click zoom
     elTapLayer.addEventListener("dblclick", (e) => e.preventDefault(), { passive:false });
 
-    // Extra guard: iOS sometimes treats quick double-tap as zoom
     let lastTouchEnd = 0;
     elTapLayer.addEventListener("touchend", (e) => {
       const now = Date.now();
-      if (now - lastTouchEnd <= 300) {
-        e.preventDefault();
-      }
+      if (now - lastTouchEnd <= 300) e.preventDefault();
       lastTouchEnd = now;
     }, { passive:false });
   }
@@ -218,15 +230,13 @@
 
       wire(elVendorPill);
       wire(elVendorPillMini);
-    } catch (_) {
-      // silent
-    }
+    } catch (_) {}
   }
 
   // Tap pipeline
   function addTap(pt) {
     if (!elImg.src) return;
-    if (resultsLocked) return;
+    if (resultsLocked) return; // Brick A: hard freeze
 
     if (!bull) {
       bull = pt;
@@ -295,7 +305,9 @@
     bull = null;
     holes = [];
     resultsLocked = false;
+    showInFlight = false;
     resetResultsUI();
+    applyTapLockUI();
     setInstruction();
     setStatus();
     renderDots();
@@ -309,18 +321,19 @@
 
     elImg.onload = () => {
       resetAll();
-      setInstruction();
-      setStatus();
     };
 
     elImg.src = objectUrl;
   }
 
   function undo() {
+    // Brick A: Undo is an UNLOCK action
+    if (resultsLocked) unlockResults();
+
     if (holes.length) holes.pop();
     else if (bull) bull = null;
 
-    unlockResults();
+    showInFlight = false;
     resetResultsUI();
     setInstruction();
     setStatus();
@@ -328,17 +341,22 @@
   }
 
   function clearAll() {
+    // Brick A: Clear is an UNLOCK action
+    if (resultsLocked) unlockResults();
+
     bull = null;
     holes = [];
-    unlockResults();
+    showInFlight = false;
+
     resetResultsUI();
     setInstruction();
     setStatus();
     renderDots();
   }
 
+  // Brick A: compute wrapper with rollback-safe locking
   function computeAndRender() {
-    if (!bull || holes.length === 0) return;
+    if (!bull || holes.length === 0) return false;
 
     const poib = meanPointNorm(holes);
 
@@ -357,8 +375,7 @@
       elWindVal.textContent = "LOCKED";
       elElevDir.textContent = "DIRECTION ERROR";
       elElevVal.textContent = "LOCKED";
-      unlockResults();
-      return;
+      return false;
     }
 
     const ipm = inchesPerMOA(DISTANCE_YDS);
@@ -372,7 +389,7 @@
 
     elDownloadSEC.disabled = false;
 
-    lockResults();
+    return true;
   }
 
   async function buildSecPng(payload) {
@@ -384,7 +401,6 @@
     ctx.fillStyle = "#0b0e0f";
     ctx.fillRect(0, 0, W, H);
 
-    // "Shooter Experience Card" (no Tap-n-Score on SEC)
     ctx.font = "1000 54px system-ui, -apple-system, Segoe UI, Roboto, Arial";
     ctx.fillStyle = "#ff3b30"; ctx.fillText("SHOOTER", 60, 86);
     ctx.fillStyle = "rgba(255,255,255,.92)"; ctx.fillText(" EXPERIENCE ", 315, 86);
@@ -395,7 +411,6 @@
     ctx.fillStyle = "rgba(255,255,255,.92)"; ctx.fillText("E", 92, 132);
     ctx.fillStyle = "#1f6feb"; ctx.fillText("C", 124, 132);
 
-    // Vendor top-right
     const vName = vendor?.name || "Printer";
     ctx.font = "850 26px system-ui, -apple-system, Segoe UI, Roboto, Arial";
     ctx.fillStyle = "rgba(255,255,255,.78)";
@@ -403,7 +418,6 @@
     ctx.fillText(vName, W - 70, 120);
     ctx.textAlign = "left";
 
-    // Vendor logo
     if (vendorLogoImg && vendorLogoImg.complete) {
       const size = 64;
       const x = W - 70 - size;
@@ -423,7 +437,6 @@
       ctx.stroke();
     }
 
-    // Panel
     const px = 60, py = 170, pw = 1080, ph = 440;
     roundRect(ctx, px, py, pw, ph, 22);
     ctx.fillStyle = "rgba(255,255,255,.04)"; ctx.fill();
@@ -474,7 +487,6 @@
     const windClicks = (Math.abs(dxIn) / ipm) / CLICK_MOA;
     const elevClicks = (Math.abs(dyIn) / ipm) / CLICK_MOA;
 
-    // wait briefly for logo
     if (vendorLogoImg && !vendorLogoImg.complete) {
       await new Promise((resolve) => {
         const t = setTimeout(resolve, 250);
@@ -502,7 +514,34 @@
   elUndo.addEventListener("click", () => undo());
   elClear.addEventListener("click", () => clearAll());
 
-  elShow.addEventListener("click", () => computeAndRender());
+  // Brick A: HARD lock immediately on press (then rollback if compute fails)
+  elShow.addEventListener("click", () => {
+    if (showInFlight) return;
+    if (resultsLocked) return;
+    if (!bull || holes.length === 0) return;
+
+    showInFlight = true;
+    setStatus();
+
+    // Immediate lockout (prevents tap + repeat press)
+    lockResults();
+
+    const ok = computeAndRender();
+    if (!ok) {
+      // rollback-safe: unlock so shooter can fix taps
+      resultsLocked = false;
+      showInFlight = false;
+      applyTapLockUI();
+      setInstruction();
+      setStatus();
+      return;
+    }
+
+    // success: keep locked, allow SEC
+    showInFlight = false;
+    setStatus();
+  });
+
   elDownloadSEC.addEventListener("click", () => downloadSec());
 
   elTapLayer.addEventListener("pointerdown", onPointerDown, { passive:true });
@@ -513,7 +552,5 @@
   // Init
   installNoZoomGuards();
   loadVendor();
-  setInstruction();
-  setStatus();
-  renderDots();
+  resetAll();
 })();
