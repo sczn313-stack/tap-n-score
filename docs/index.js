@@ -1,10 +1,11 @@
 /* ============================================================
    Tap-n-Score™ — index.js (FULL REPLACEMENT)
-   - Bull is FIRST tap (no Set Bull button)
-   - Scroll-safe tap filtering
-   - Normalized dot placement (stable)
-   - True MOA click math (pilot baseline 8.5x11)
-   - Results lock + SEC PNG generation
+   - Shooter UI: no "Bull set" status (only holes)
+   - Flow: Tap aim point first, then tap holes
+   - Scroll-safe taps (filters drags/scroll gestures)
+   - True MOA clicks (pilot baseline 8.5x11, 100y, 0.25 MOA/click)
+   - Truth Gate for direction integrity
+   - SEC PNG download with vendor name/logo
 ============================================================ */
 
 (() => {
@@ -16,10 +17,9 @@
   const elTapLayer = $("tapLayer");
   const elDots = $("dotsLayer");
 
-  const elBullStatus = $("bullStatus");
   const elHoleCount = $("holeCount");
   const elInstruction = $("instructionLine");
-  const elChangeBull = $("changeBullBtn"); // keep as hidden “Change bull” if you want
+  const elChangeBull = $("changeBullBtn");
 
   const elUndo = $("undoBtn");
   const elClear = $("clearBtn");
@@ -51,21 +51,19 @@
   // ---------- State
   let objectUrl = null;
 
+  // Points store: normalized + natural px (for future)
   // { nx, ny, ix, iy }
   let bull = null;
   let holes = [];
-
   let resultsLocked = false;
 
   // Vendor
   let vendor = null;
-  let vendorLogoImg = null;
+  let vendorLogoImg = null; // Image() preloaded for SEC
 
-  // Pointer tap filtering (scroll-safe)
-  // If finger moves more than this, we treat it as scroll, not tap.
-  const TAP_MOVE_PX = 14;
-  // If press lasts too long, treat as non-tap (prevents press/drag weirdness)
-  const TAP_TIME_MS = 380;
+  // Scroll-safe pointer handling
+  const TAP_MOVE_PX = 10;
+  const TAP_TIME_MS = 450;
   let ptrDown = null;
 
   // ---------- Helpers
@@ -78,20 +76,21 @@
       return;
     }
     if (!bull) {
-      elInstruction.textContent = "Tap bull / aim point first, then tap bullet holes.";
+      elInstruction.textContent = "Tap aim point first, then tap bullet holes.";
       return;
     }
     elInstruction.textContent = "Tap each confirmed bullet hole.";
   }
 
   function setStatus() {
-    elBullStatus.textContent = bull ? "set" : "not set";
     elHoleCount.textContent = String(holes.length);
 
-    if (elChangeBull) elChangeBull.hidden = !bull;
+    // Change bull only appears after bull set
+    elChangeBull.classList.toggle("hiddenBtn", !bull);
 
-    elUndo.disabled = !(bull || holes.length);
-    elClear.disabled = !(bull || holes.length);
+    const hasAny = !!bull || holes.length > 0;
+    elUndo.disabled = !hasAny;
+    elClear.disabled = !hasAny;
 
     const ready = !!bull && holes.length > 0;
     elShow.disabled = !(ready && !resultsLocked);
@@ -110,7 +109,6 @@
   function renderDots() {
     elDots.innerHTML = "";
 
-    // Bull first (so it’s always present)
     if (bull) {
       const d = document.createElement("div");
       d.className = "dot bullDot";
@@ -119,7 +117,6 @@
       elDots.appendChild(d);
     }
 
-    // Holes
     for (const p of holes) {
       const d = document.createElement("div");
       d.className = "dot holeDot";
@@ -139,6 +136,7 @@
     setStatus();
   }
 
+  // Convert client coordinate to normalized + natural px
   function clientToImagePoint(clientX, clientY) {
     const rect = elImg.getBoundingClientRect();
     const nx = clamp01((clientX - rect.left) / rect.width);
@@ -152,19 +150,20 @@
     return { nx, ny, ix, iy };
   }
 
+  // Mean point in normalized space (stable for mapping to PAPER_W/H)
   function meanPointNorm(points) {
     let sx = 0, sy = 0;
     for (const p of points) { sx += p.nx; sy += p.ny; }
     return { nx: sx / points.length, ny: sy / points.length };
   }
 
-  // Direction truth rules
+  // Truth Gate:
   // dxIn > 0 => RIGHT, dxIn < 0 => LEFT
-  // dyIn < 0 => UP,   dyIn > 0 => DOWN   (screen Y grows downward)
+  // dyIn < 0 => UP,   dyIn > 0 => DOWN (screen Y increases downward)
   function truthGateDirections(dxIn, dyIn, windDir, elevDir) {
     const wantWind = dxIn >= 0 ? "RIGHT" : "LEFT";
     const wantElev = dyIn <= 0 ? "UP" : "DOWN";
-    return { ok: (windDir === wantWind) && (elevDir === wantElev), wantWind, wantElev };
+    return { ok: windDir === wantWind && elevDir === wantElev, wantWind, wantElev };
   }
 
   // ---------- Vendor load
@@ -172,29 +171,29 @@
     try {
       const res = await fetch("./vendor.json", { cache: "no-store" });
       if (!res.ok) return;
-
       vendor = await res.json();
 
-      const vName = vendor?.name || "Printer";
-      elVendorName.textContent = vName;
-      if (elVendorNameMini) elVendorNameMini.textContent = vName;
+      const name = vendor?.name || "—";
+      elVendorName.textContent = name;
+      elVendorNameMini.textContent = name;
 
       if (vendor?.logoPath) {
+        // Top pill logo
         elVendorLogo.src = vendor.logoPath;
-        elVendorLogo.alt = `${vName} logo`;
+        elVendorLogo.alt = `${name} logo`;
         elVendorLogo.style.display = "block";
 
-        if (elVendorLogoMini) {
-          elVendorLogoMini.src = vendor.logoPath;
-          elVendorLogoMini.alt = `${vName} logo`;
-          elVendorLogoMini.style.display = "block";
-        }
+        // SEC mini logo
+        elVendorLogoMini.src = vendor.logoPath;
+        elVendorLogoMini.alt = `${name} logo`;
+        elVendorLogoMini.style.display = "block";
 
+        // Preload for canvas
         vendorLogoImg = new Image();
         vendorLogoImg.src = vendor.logoPath;
       } else {
         elVendorLogo.style.display = "none";
-        if (elVendorLogoMini) elVendorLogoMini.style.display = "none";
+        elVendorLogoMini.style.display = "none";
       }
 
       if (vendor?.website) {
@@ -207,15 +206,16 @@
         elVendorPill.onclick = null;
       }
     } catch (_) {
-      // silent
+      // silent fail
     }
   }
 
-  // ---------- Tap logic: first tap sets bull, then holes
+  // ---------- Tap logic (bull first, then holes)
   function addTapPoint(pt) {
     if (!elImg.src) return;
     if (resultsLocked) return;
 
+    // First tap sets aim point
     if (!bull) {
       bull = pt;
       holes = [];
@@ -227,6 +227,7 @@
       return;
     }
 
+    // Remaining taps are holes
     holes.push(pt);
     resetResultsUI();
     unlockResults();
@@ -246,7 +247,7 @@
       x: e.clientX,
       y: e.clientY,
       t: Date.now(),
-      moved: false,
+      moved: false
     };
   }
 
@@ -355,18 +356,19 @@
 
     const poib = meanPointNorm(holes);
 
-    // correction = bull - POIB
+    // correction vector = bull - poib (normalized)
     const dx01 = bull.nx - poib.nx;
     const dy01 = bull.ny - poib.ny;
 
-    // inches (pilot baseline)
+    // Convert to inches using pilot paper dimensions
     const dxIn = dx01 * PAPER_W_IN;
     const dyIn = dy01 * PAPER_H_IN;
 
-    // directions derived ONLY from signed inches
+    // Directions derived ONLY from signed inches
     const windDir = dxIn >= 0 ? "RIGHT" : "LEFT";
     const elevDir = dyIn <= 0 ? "UP" : "DOWN";
 
+    // Truth gate
     const gate = truthGateDirections(dxIn, dyIn, windDir, elevDir);
     if (!gate.ok) {
       resetResultsUI();
@@ -391,6 +393,7 @@
     elElevVal.textContent = `${fmt2(elevClicks)} clicks`;
 
     elDownloadSEC.disabled = false;
+
     lockResults();
   }
 
@@ -402,38 +405,38 @@
     canvas.height = H;
     const ctx = canvas.getContext("2d");
 
+    // Background
     ctx.fillStyle = "#0b0e0f";
     ctx.fillRect(0, 0, W, H);
 
-    // Header (closer + clean)
+    // Title
     ctx.font = "1000 54px system-ui, -apple-system, Segoe UI, Roboto, Arial";
     ctx.fillStyle = "#ff3b30";
-    ctx.fillText("SHOOTER", 60, 82);
+    ctx.fillText("SHOOTER", 60, 86);
     ctx.fillStyle = "rgba(255,255,255,.92)";
-    ctx.fillText(" EXPERIENCE ", 315, 82);
+    ctx.fillText(" EXPERIENCE ", 315, 86);
     ctx.fillStyle = "#1f6feb";
-    ctx.fillText("CARD", 720, 82);
+    ctx.fillText("CARD", 720, 86);
 
+    // SEC letters
     ctx.font = "1000 46px system-ui, -apple-system, Segoe UI, Roboto, Arial";
-    ctx.fillStyle = "#ff3b30";
-    ctx.fillText("S", 60, 122);
-    ctx.fillStyle = "rgba(255,255,255,.92)";
-    ctx.fillText("E", 92, 122);
-    ctx.fillStyle = "#1f6feb";
-    ctx.fillText("C", 124, 122);
+    ctx.fillStyle = "#ff3b30"; ctx.fillText("S", 60, 132);
+    ctx.fillStyle = "rgba(255,255,255,.92)"; ctx.fillText("E", 92, 132);
+    ctx.fillStyle = "#1f6feb"; ctx.fillText("C", 124, 132);
 
-    // Vendor (top-right)
+    // Vendor top-right
     const vName = vendor?.name || "Printer";
-    ctx.font = "900 28px system-ui, -apple-system, Segoe UI, Roboto, Arial";
-    ctx.fillStyle = "rgba(255,255,255,.82)";
+    ctx.font = "850 26px system-ui, -apple-system, Segoe UI, Roboto, Arial";
+    ctx.fillStyle = "rgba(255,255,255,.78)";
     ctx.textAlign = "right";
-    ctx.fillText(vName, W - 70, 118);
+    ctx.fillText(vName, W - 70, 120);
     ctx.textAlign = "left";
 
+    // Vendor logo (circle)
     if (vendorLogoImg && vendorLogoImg.complete) {
-      const size = 70;
+      const size = 64;
       const x = W - 70 - size;
-      const y = 28;
+      const y = 38;
 
       ctx.save();
       ctx.beginPath();
@@ -450,7 +453,7 @@
     }
 
     // Main panel
-    const px = 60, py = 155, pw = 1080, ph = 460;
+    const px = 60, py = 170, pw = 1080, ph = 440;
     roundRect(ctx, px, py, pw, ph, 22);
     ctx.fillStyle = "rgba(255,255,255,.04)";
     ctx.fill();
@@ -459,12 +462,12 @@
     ctx.stroke();
 
     ctx.fillStyle = "rgba(255,255,255,.92)";
-    ctx.font = "950 36px system-ui, -apple-system, Segoe UI, Roboto, Arial";
-    ctx.fillText("Corrections", px + 34, py + 80);
+    ctx.font = "950 34px system-ui, -apple-system, Segoe UI, Roboto, Arial";
+    ctx.fillText("Corrections", px + 34, py + 72);
 
-    ctx.font = "900 32px system-ui, -apple-system, Segoe UI, Roboto, Arial";
-    ctx.fillText(`Windage: ${payload.windDir} → ${fmt2(payload.windClicks)} clicks`, px + 34, py + 155);
-    ctx.fillText(`Elevation: ${payload.elevDir} → ${fmt2(payload.elevClicks)} clicks`, px + 34, py + 225);
+    ctx.font = "900 30px system-ui, -apple-system, Segoe UI, Roboto, Arial";
+    ctx.fillText(`Windage: ${payload.windDir} → ${fmt2(payload.windClicks)} clicks`, px + 34, py + 140);
+    ctx.fillText(`Elevation: ${payload.elevDir} → ${fmt2(payload.elevClicks)} clicks`, px + 34, py + 200);
 
     ctx.fillStyle = "rgba(255,255,255,.55)";
     ctx.font = "750 22px system-ui, -apple-system, Segoe UI, Roboto, Arial";
@@ -484,7 +487,6 @@
     }
   }
 
-  // Download helper
   async function downloadSec() {
     if (!bull || holes.length === 0) return;
 
@@ -505,7 +507,7 @@
     const windClicks = (Math.abs(dxIn) / ipm) / CLICK_MOA;
     const elevClicks = (Math.abs(dyIn) / ipm) / CLICK_MOA;
 
-    // Wait briefly for logo load
+    // brief wait for logo load if needed
     if (vendorLogoImg && !vendorLogoImg.complete) {
       await new Promise((resolve) => {
         const t = setTimeout(resolve, 250);
@@ -516,7 +518,6 @@
 
     const dataUrl = await buildSecPng({ windDir, windClicks, elevDir, elevClicks });
 
-    // NOTE: iOS Safari controls the “View / Download” prompt. We can’t remove “View”.
     const a = document.createElement("a");
     a.href = dataUrl;
     a.download = "SEC.png";
@@ -541,12 +542,10 @@
     clearAll();
   });
 
-  if (elChangeBull) {
-    elChangeBull.addEventListener("click", () => {
-      if (resultsLocked) { unlockResults(); resetResultsUI(); }
-      changeBull();
-    });
-  }
+  elChangeBull.addEventListener("click", () => {
+    if (resultsLocked) { unlockResults(); resetResultsUI(); }
+    changeBull();
+  });
 
   elShow.addEventListener("click", () => {
     computeAndRender();
@@ -556,6 +555,7 @@
     downloadSec();
   });
 
+  // Pointer events live on tapLayer
   elTapLayer.addEventListener("pointerdown", onPointerDown, { passive: true });
   elTapLayer.addEventListener("pointermove", onPointerMove, { passive: true });
   elTapLayer.addEventListener("pointerup", onPointerUp, { passive: true });
