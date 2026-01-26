@@ -1,5 +1,15 @@
+/* ============================================================
+   docs/styles.css (FULL REPLACEMENT)
+   BRICK 1 — Tap Accuracy & Stability
+   - Kills double-tap zoom behavior (JS assist below)
+   - Ensures ONE coordinate space: img + overlays share exact frame
+   - Scroll-safe tap capture (tap layer allows pan-y)
+   - Removes baseline gaps / layout drift
+============================================================ */
+
 :root{
   --bg:#050606;
+  --card:rgba(255,255,255,.04);
   --stroke:rgba(255,255,255,.10);
   --text:rgba(255,255,255,.92);
   --muted:rgba(255,255,255,.72);
@@ -10,12 +20,8 @@
 
   --primary: var(--blue);
 
-  --bull:#ffd200;  /* yellow bull */
-  --hole:#00b45a;
-
-  --good:#00b45a;  /* green */
-  --mid:#ffd200;   /* yellow */
-  --poor:#ff4646;  /* red */
+  --bull:#ffd200;  /* yellow */
+  --hole:#00b45a;  /* green */
 
   --radius:18px;
   --shadow:0 18px 60px rgba(0,0,0,.55);
@@ -23,6 +29,12 @@
 
 *{box-sizing:border-box}
 html,body{height:100%}
+
+/* Helps reduce iOS weird selection/zoom side-effects.
+   (Double-tap zoom is primarily prevented in JS with a hard gate.) */
+html{
+  -webkit-text-size-adjust: 100%;
+}
 body{
   margin:0;
   background:
@@ -31,6 +43,9 @@ body{
     var(--bg);
   color:var(--text);
   font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+
+  /* Prevent iOS long-press callout oddities */
+  -webkit-touch-callout:none;
 }
 
 .page{
@@ -49,21 +64,7 @@ body{
   padding:14px;
 }
 
-.topRow{
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap:12px;
-}
-
-.brandSmall{
-  font-weight:900;
-  letter-spacing:.4px;
-  color:rgba(255,255,255,.78);
-  font-size:14px;
-}
-
-/* Vendor pill */
+/* Vendor pill (INPUT) */
 .vendorPill{
   display:flex;
   align-items:center;
@@ -73,6 +74,7 @@ body{
   border-radius:999px;
   background:rgba(0,0,0,.22);
   user-select:none;
+  -webkit-user-select:none;
 }
 
 .vendorLogo{
@@ -119,7 +121,7 @@ body{
   font-size:13px;
 }
 
-/* Instruction */
+/* Instruction inside target frame */
 .instructionLine{
   padding:10px 12px;
   border-radius:14px;
@@ -130,7 +132,9 @@ body{
   margin-bottom:12px;
 }
 
-/* Target stage */
+/* TARGET STAGE — single coordinate space */
+.targetStage{width:100%}
+
 .imgFrame{
   position:relative;
   width:100%;
@@ -138,24 +142,41 @@ body{
   overflow:hidden;
   border:1px solid rgba(255,255,255,.10);
   background:rgba(0,0,0,.25);
+
+  /* Helps stop scroll chaining weirdness on iOS */
+  overscroll-behavior: contain;
 }
 
+/* CRITICAL: no transforms on the image */
 .targetImg{
   width:100%;
   height:auto;
-  display:block;
+  display:block;            /* removes baseline gap */
   user-select:none;
+  -webkit-user-select:none;
   -webkit-user-drag:none;
-  touch-action:manipulation;
+  pointer-events:none;      /* image never captures events */
 }
 
+/* Tap layer is the ONLY event surface */
 .tapLayer{
   position:absolute;
   inset:0;
   z-index:2;
-  touch-action:pan-y;
+
+  /* Allows scrolling to win; taps only register if movement/time gates pass */
+  touch-action: pan-y;
+
+  /* Don’t let layer highlight/select */
+  user-select:none;
+  -webkit-user-select:none;
 }
 
+.tapLayer.active{
+  pointer-events:auto;
+}
+
+/* Dots on top; never interact */
 .dotsLayer{
   position:absolute;
   inset:0;
@@ -171,16 +192,18 @@ body{
   border-radius:999px;
   transform:translate(-50%,-50%);
 }
+
 .bullDot{
   background:rgba(255,210,0,.95);
   box-shadow:0 0 0 3px rgba(0,0,0,.45), 0 0 0 1px rgba(255,255,255,.12);
 }
+
 .holeDot{
   background:rgba(0,180,90,.92);
   box-shadow:0 0 0 3px rgba(0,0,0,.45), 0 0 0 1px rgba(255,255,255,.12);
 }
 
-/* Status + buttons */
+/* Status + controls */
 .statusRow{
   display:flex;
   align-items:center;
@@ -198,7 +221,11 @@ body{
   color:rgba(255,255,255,.82);
 }
 
-.btnRow{display:flex; gap:10px; margin-top:12px}
+.btnRow{
+  display:flex;
+  gap:10px;
+  margin-top:12px;
+}
 
 .btn{
   border-radius:14px;
@@ -212,14 +239,18 @@ body{
   flex:1;
 }
 
-.btn:disabled{opacity:.45; cursor:not-allowed}
-.btn.ghost{background:rgba(0,0,0,.18)}
+.btn:disabled{
+  opacity:.45;
+  cursor:not-allowed;
+}
+
+.btn.ghost{ background:rgba(0,0,0,.18); }
+
 .btn.primary{
   background:rgba(31,111,235,.20);
   border-color:rgba(31,111,235,.28);
 }
 
-/* Lock banner */
 .lockBanner{
   margin-top:12px;
   padding:10px 12px;
@@ -230,7 +261,8 @@ body{
   font-weight:900;
 }
 
-/* Results header */
+/* Results */
+.resultsCard{padding-top:16px}
 .resultsHdr{
   display:flex;
   align-items:flex-start;
@@ -239,7 +271,11 @@ body{
   margin-bottom:12px;
 }
 
-.secTitle{font-weight:1000; letter-spacing:.3px; line-height:1.05}
+.secTitle{
+  font-weight:1000;
+  letter-spacing:.3px;
+  line-height:1.05;
+}
 .secR{color:var(--red)}
 .secW{color:rgba(255,255,255,.90)}
 .secB{color:var(--blue)}
@@ -251,6 +287,7 @@ body{
   font-weight:950;
 }
 
+/* Mini vendor pill (Results) */
 .vendorPillMiniWrap{display:flex; justify-content:flex-end}
 .vendorPillMini{
   display:flex;
@@ -275,32 +312,6 @@ body{
   color:rgba(255,255,255,.82);
 }
 
-/* Score */
-.scoreWrap{
-  border:1px solid rgba(255,255,255,.10);
-  border-radius:16px;
-  padding:12px;
-  background:rgba(0,0,0,.16);
-  margin-bottom:12px;
-}
-
-.scoreLabel{
-  color:rgba(255,255,255,.70);
-  font-weight:950;
-  letter-spacing:.3px;
-}
-
-.scoreBig{
-  font-weight:1100;
-  font-size:64px;
-  line-height:1.0;
-  margin-top:6px;
-}
-
-.scoreGood{color:var(--good)}
-.scoreMid{color:var(--mid)}
-.scorePoor{color:var(--poor)}
-
 /* Corrections block */
 .corrBlock{
   border:1px solid rgba(255,255,255,.10);
@@ -319,6 +330,17 @@ body{
 }
 .corrLine:last-child{border-bottom:none}
 
-.corrLabel{color:rgba(255,255,255,.70); font-weight:950; letter-spacing:.3px}
-.corrValue{font-weight:1000; color:rgba(255,255,255,.92)}
+.corrLabel{
+  color:rgba(255,255,255,.70);
+  font-weight:950;
+  letter-spacing:.3px;
+}
+.corrValue{
+  font-weight:1000;
+  color:rgba(255,255,255,.92);
+}
 .arrow{opacity:.75; padding:0 8px}
+
+/* Utility */
+.hiddenInline{display:none !important}
+.hiddenBtn{display:none !important}
