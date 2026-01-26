@@ -2,18 +2,16 @@
   --bg:#050606;
   --card:rgba(255,255,255,.04);
   --stroke:rgba(255,255,255,.10);
-  --stroke2:rgba(255,255,255,.14);
   --text:rgba(255,255,255,.92);
   --muted:rgba(255,255,255,.72);
-  --dim:rgba(255,255,255,.58);
 
   --blue:#1f6feb;
   --red:#ff3b30;
   --white:#ffffff;
 
-  --primary: var(--blue); /* choose button + actions unified */
+  --primary: rgba(31,111,235,.20);
 
-  --bull:#ffd200;         /* YELLOW bull */
+  --bull:#ffd200;  /* yellow */
   --hole:#00b45a;
 
   --radius:18px;
@@ -22,6 +20,7 @@
 
 *{box-sizing:border-box}
 html,body{height:100%}
+
 body{
   margin:0;
   background:
@@ -62,25 +61,37 @@ body{
   font-size:14px;
 }
 
-/* Vendor pill (INPUT) */
-.vendorPill{
+/* Vendor pill (INPUT + RESULTS) */
+.vendorPill,
+.vendorPillMini{
   display:flex;
   align-items:center;
   gap:10px;
   padding:10px 12px;
-  border:1px solid var(--stroke);
+  border:1px solid rgba(255,255,255,.10);
   border-radius:999px;
   background:rgba(0,0,0,.22);
   user-select:none;
 }
 
+.vendorPillMini{ padding:8px 10px; background:rgba(0,0,0,.18); }
+
 .vendorLogo{
   width:34px;
   height:34px;
   border-radius:999px;
-  display:none;
   object-fit:cover;
   border:1px solid rgba(255,255,255,.14);
+  display:none;
+}
+
+.vendorLogoMini{
+  width:26px;
+  height:26px;
+  border-radius:999px;
+  object-fit:cover;
+  border:1px solid rgba(255,255,255,.14);
+  display:none;
 }
 
 .vendorTxt{display:flex; flex-direction:column; line-height:1.05}
@@ -96,29 +107,40 @@ body{
   font-weight:900;
 }
 
+.vendorNameMini{
+  font-weight:950;
+  font-size:12px;
+  color:rgba(255,255,255,.82);
+}
+
+.vendorPillMiniWrap{display:flex; justify-content:flex-end}
+
 /* Choose */
 .heroRow{display:flex; flex-direction:column; gap:10px}
+
 .chooseBtn{
   display:flex;
   align-items:center;
   justify-content:center;
   border-radius:14px;
   border:1px solid rgba(255,255,255,.12);
-  background:rgba(31,111,235,.20);
+  background:var(--primary);
   padding:14px 14px;
   font-weight:1000;
   letter-spacing:.6px;
   cursor:pointer;
 }
+
 .chooseBtn input{display:none}
 .chooseBtn span{color:rgba(255,255,255,.92)}
+
 .heroHint{
   color:rgba(255,255,255,.62);
   font-weight:700;
   font-size:13px;
 }
 
-/* Instruction inside target frame */
+/* Instruction inside target frame area */
 .instructionLine{
   padding:10px 12px;
   border-radius:14px;
@@ -129,8 +151,7 @@ body{
   margin-bottom:12px;
 }
 
-/* TARGET STAGE */
-.targetStage{width:100%}
+/* Target stage */
 .imgFrame{
   position:relative;
   width:100%;
@@ -143,21 +164,19 @@ body{
 .targetImg{
   width:100%;
   height:auto;
-  display:block;          /* removes baseline gap */
+  display:block;
   user-select:none;
   -webkit-user-drag:none;
-  touch-action:manipulation;
 }
 
+/* Brick D: prevent zoom / stabilize gesture behavior */
 .tapLayer{
   position:absolute;
   inset:0;
   z-index:2;
-  touch-action:pan-y;     /* allow scroll */
-}
-
-.tapLayer.active{
-  pointer-events:auto;
+  /* Important: this stops Safari from treating taps as double-tap zoom */
+  touch-action:manipulation;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .dotsLayer{
@@ -177,7 +196,7 @@ body{
 }
 
 .bullDot{
-  background:rgba(255,210,0,.95); /* YELLOW */
+  background:rgba(255,210,0,.95);
   box-shadow:0 0 0 3px rgba(0,0,0,.45), 0 0 0 1px rgba(255,255,255,.12);
 }
 
@@ -204,29 +223,19 @@ body{
   color:rgba(255,255,255,.82);
 }
 
-/* ============================================================
-   BRICK A — Button Row Polish
-   - More spacing
-   - Bigger hit targets
-   - "Show Results" clearly primary
-   - Stacks on very narrow screens
-============================================================ */
 .btnRow{
   display:flex;
-  gap:14px;               /* more space */
-  margin-top:14px;
-  align-items:stretch;
+  gap:10px;
+  margin-top:12px;
 }
 
 .btn{
-  border-radius:16px;
-  padding:14px 14px;      /* bigger tap targets */
-  min-height:52px;        /* consistent height */
+  border-radius:14px;
+  padding:12px 12px;
   border:1px solid rgba(255,255,255,.12);
   background:rgba(0,0,0,.22);
   color:rgba(255,255,255,.90);
   font-weight:1000;
-  font-size:16px;         /* more readable */
   letter-spacing:.4px;
   cursor:pointer;
   flex:1;
@@ -237,34 +246,12 @@ body{
   cursor:not-allowed;
 }
 
-.btn.ghost{
-  background:rgba(0,0,0,.18);
-}
+.btn.ghost{ background:rgba(0,0,0,.18); }
 
-/* Primary action: "Show Results" */
 .btn.primary{
-  background:rgba(31,111,235,.26);
-  border-color:rgba(31,111,235,.34);
-  box-shadow:0 10px 28px rgba(31,111,235,.18);
-  flex:1.25;              /* slightly wider than others */
-  font-weight:1100;
+  background:var(--primary);
+  border-color:rgba(31,111,235,.28);
 }
-
-/* On tap: quick feedback */
-.btn:active{
-  transform:translateY(1px);
-}
-
-/* If screen is tight, stack buttons for accuracy */
-@media (max-width: 520px){
-  .btnRow{
-    flex-direction:column;
-  }
-  .btn.primary{
-    flex:1;
-  }
-}
-/* ============================================================ */
 
 .lockBanner{
   margin-top:12px;
@@ -278,6 +265,7 @@ body{
 
 /* Results */
 .resultsCard{padding-top:16px}
+
 .resultsHdr{
   display:flex;
   align-items:flex-start;
@@ -302,31 +290,7 @@ body{
   font-weight:950;
 }
 
-.vendorPillMiniWrap{display:flex; justify-content:flex-end}
-.vendorPillMini{
-  display:flex;
-  align-items:center;
-  gap:8px;
-  padding:8px 10px;
-  border:1px solid rgba(255,255,255,.10);
-  border-radius:999px;
-  background:rgba(0,0,0,.18);
-}
-.vendorLogoMini{
-  width:26px;
-  height:26px;
-  border-radius:999px;
-  object-fit:cover;
-  border:1px solid rgba(255,255,255,.14);
-  display:none;
-}
-.vendorNameMini{
-  font-weight:950;
-  font-size:12px;
-  color:rgba(255,255,255,.82);
-}
-
-/* Corrections block */
+/* Corrections */
 .corrBlock{
   border:1px solid rgba(255,255,255,.10);
   border-radius:16px;
@@ -354,9 +318,3 @@ body{
   color:rgba(255,255,255,.92);
 }
 .arrow{opacity:.75; padding:0 8px}
-.dir{color:rgba(255,255,255,.92)}
-.val{color:rgba(255,255,255,.88)}
-
-/* Hidden required nodes */
-.hiddenInline{display:none !important}
-.hiddenBtn{display:none !important}
