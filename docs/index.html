@@ -2,48 +2,55 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="color-scheme" content="dark" />
   <meta name="theme-color" content="#000000" />
   <title>Tap-n-Score™</title>
-  <link rel="stylesheet" href="./styles.css?v=20260126c" />
+
+  <link rel="stylesheet" href="./styles.css?v=20260126a" />
 </head>
 
 <body>
   <main class="page">
 
-    <header class="topbar">
-      <div class="brandSmall">Tap-n-Score™</div>
+    <!-- CARD 1: Vendor + Choose -->
+    <section class="card">
+      <div class="topbar">
+        <div class="brandSmall">Pilot</div>
 
-      <div id="vendorPill" class="vendorPill" role="button" tabindex="0" aria-label="Printer calling card">
-        <img id="vendorLogo" class="vendorLogo" alt="Vendor logo" />
-        <div class="vendorTxt">
-          <div class="vendorLabel">PRINTER</div>
-          <div id="vendorName" class="vendorName">—</div>
+        <!-- Vendor pill (clickable if vendor.website exists) -->
+        <div id="vendorPill" class="vendorPill" role="button" aria-label="Vendor link">
+          <img id="vendorLogo" class="vendorLogo" alt="Vendor logo" />
+          <div class="vendorTxt">
+            <div class="vendorLabel">PRINTER</div>
+            <div id="vendorName" class="vendorName">—</div>
+          </div>
         </div>
       </div>
-    </header>
 
-    <section class="card">
-      <div class="heroRow">
+      <div class="heroRow" style="margin-top:12px;">
+        <!-- IMPORTANT: no capture attribute -->
         <label class="chooseBtn" aria-label="Take a photo of your target">
-          <!-- IMPORTANT: NO capture attribute. This allows Camera + Photo Library + Files on iOS -->
-          <input id="photoInput" type="file" accept="image/*" />
+          <input
+            id="photoInput"
+            type="file"
+            accept="image/*"
+          />
           <span>TAKE A PHOTO OF YOUR TARGET</span>
         </label>
+
         <div class="heroHint">Tip: straight-on photo, fill the frame.</div>
       </div>
     </section>
 
+    <!-- CARD 2: Target + tapping -->
     <section class="card">
-      <div class="targetStage">
-        <div id="instructionLine" class="instructionLine">
-          Tap aim point first, then tap bullet holes.
-        </div>
+      <div class="instructionLine" id="instructionLine">Take a photo of your target.</div>
 
-        <div id="imgFrame" class="imgFrame" aria-label="Target photo and tap layer">
+      <div class="targetStage">
+        <div class="imgFrame" id="imgFrame">
           <img id="targetImg" class="targetImg" alt="Target photo" />
-          <div id="tapLayer" class="tapLayer" aria-hidden="true"></div>
+          <div id="tapLayer" class="tapLayer" aria-label="Tap layer"></div>
           <div id="dotsLayer" class="dotsLayer" aria-hidden="true"></div>
         </div>
       </div>
@@ -59,20 +66,19 @@
         <button id="showResultsBtn" class="btn primary" type="button" disabled>Show Results</button>
       </div>
 
-      <div id="lockBanner" class="lockBanner" hidden>
-        Results locked. Undo/Clear to edit taps.
-      </div>
+      <div id="lockBanner" class="lockBanner" hidden>Results locked. Undo/Clear to edit taps.</div>
     </section>
 
-    <section class="card resultsCard" aria-label="Results">
+    <!-- CARD 3: Results -->
+    <section class="card resultsCard" id="resultsCard">
       <div class="resultsHdr">
         <div class="secTitle">
-          <span class="secR">SHOOTER</span><span class="secW"> EXPERIENCE </span><span class="secB">CARD</span>
+          <span class="secR">Shooter</span><span class="secW"> Experience </span><span class="secB">Card</span>
           <span class="secMini">SEC</span>
         </div>
 
         <div class="vendorPillMiniWrap">
-          <div id="vendorPillMini" class="vendorPillMini" role="button" tabindex="0" aria-label="Printer calling card">
+          <div id="vendorPillMini" class="vendorPillMini" role="button" aria-label="Vendor link (mini)">
             <img id="vendorLogoMini" class="vendorLogoMini" alt="Vendor logo" />
             <div id="vendorNameMini" class="vendorNameMini">—</div>
           </div>
@@ -82,12 +88,12 @@
       <div class="corrBlock">
         <div class="corrLine">
           <div class="corrLabel">Windage</div>
-          <div class="corrValue"><span id="windageDir" class="dir">—</span> <span class="arrow">→</span> <span id="windageVal" class="val">—</span></div>
+          <div class="corrValue"><span id="windageDir" class="dir">—</span><span class="arrow">→</span><span id="windageVal" class="val">—</span></div>
         </div>
 
         <div class="corrLine">
           <div class="corrLabel">Elevation</div>
-          <div class="corrValue"><span id="elevDir" class="dir">—</span> <span class="arrow">→</span> <span id="elevVal" class="val">—</span></div>
+          <div class="corrValue"><span id="elevDir" class="dir">—</span><span class="arrow">→</span><span id="elevVal" class="val">—</span></div>
         </div>
       </div>
 
@@ -98,6 +104,6 @@
 
   </main>
 
-  <script src="./index.js?v=20260126c"></script>
+  <script src="./index.js?v=20260126a"></script>
 </body>
 </html>
