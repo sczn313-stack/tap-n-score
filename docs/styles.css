@@ -1,15 +1,5 @@
-/* ============================================================
-   docs/styles.css (FULL REPLACEMENT)
-   BRICK 1 — Tap Accuracy & Stability
-   - Kills double-tap zoom behavior (JS assist below)
-   - Ensures ONE coordinate space: img + overlays share exact frame
-   - Scroll-safe tap capture (tap layer allows pan-y)
-   - Removes baseline gaps / layout drift
-============================================================ */
-
 :root{
   --bg:#050606;
-  --card:rgba(255,255,255,.04);
   --stroke:rgba(255,255,255,.10);
   --text:rgba(255,255,255,.92);
   --muted:rgba(255,255,255,.72);
@@ -20,8 +10,8 @@
 
   --primary: var(--blue);
 
-  --bull:#ffd200;  /* yellow */
-  --hole:#00b45a;  /* green */
+  --bull:#ffd200;     /* YELLOW bull */
+  --hole:#00b45a;
 
   --radius:18px;
   --shadow:0 18px 60px rgba(0,0,0,.55);
@@ -30,10 +20,10 @@
 *{box-sizing:border-box}
 html,body{height:100%}
 
-/* Helps reduce iOS weird selection/zoom side-effects.
-   (Double-tap zoom is primarily prevented in JS with a hard gate.) */
+/* BRICK 4: reduce iOS zoom/selection weirdness */
 html{
-  -webkit-text-size-adjust: 100%;
+  -webkit-text-size-adjust:100%;
+  touch-action: pan-y;
 }
 body{
   margin:0;
@@ -43,9 +33,6 @@ body{
     var(--bg);
   color:var(--text);
   font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
-
-  /* Prevent iOS long-press callout oddities */
-  -webkit-touch-callout:none;
 }
 
 .page{
@@ -62,6 +49,20 @@ body{
   border-radius:var(--radius);
   box-shadow:var(--shadow);
   padding:14px;
+}
+
+.topbar{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+}
+
+.brandSmall{
+  font-weight:900;
+  letter-spacing:.4px;
+  color:rgba(255,255,255,.78);
+  font-size:14px;
 }
 
 /* Vendor pill (INPUT) */
@@ -100,7 +101,7 @@ body{
 }
 
 /* Choose */
-.heroRow{display:flex; flex-direction:column; gap:10px}
+.heroRow{display:flex; flex-direction:column; gap:10px; margin-top:10px}
 .chooseBtn{
   display:flex;
   align-items:center;
@@ -112,6 +113,11 @@ body{
   font-weight:1000;
   letter-spacing:.6px;
   cursor:pointer;
+
+  /* BRICK 4: stop iOS highlight/zoom triggers */
+  user-select:none;
+  -webkit-user-select:none;
+  -webkit-tap-highlight-color: transparent;
 }
 .chooseBtn input{display:none}
 .chooseBtn span{color:rgba(255,255,255,.92)}
@@ -121,7 +127,7 @@ body{
   font-size:13px;
 }
 
-/* Instruction inside target frame */
+/* Instruction inside frame */
 .instructionLine{
   padding:10px 12px;
   border-radius:14px;
@@ -132,7 +138,9 @@ body{
   margin-bottom:12px;
 }
 
-/* TARGET STAGE — single coordinate space */
+/* TARGET STAGE
+   Key: overlays MUST share the same coordinate space as the image.
+*/
 .targetStage{width:100%}
 
 .imgFrame{
@@ -143,40 +151,39 @@ body{
   border:1px solid rgba(255,255,255,.10);
   background:rgba(0,0,0,.25);
 
-  /* Helps stop scroll chaining weirdness on iOS */
-  overscroll-behavior: contain;
+  /* BRICK 4: makes touch behavior consistent */
+  -webkit-tap-highlight-color: transparent;
 }
 
-/* CRITICAL: no transforms on the image */
 .targetImg{
   width:100%;
   height:auto;
-  display:block;            /* removes baseline gap */
+  display:block;              /* removes baseline gap */
   user-select:none;
   -webkit-user-select:none;
   -webkit-user-drag:none;
-  pointer-events:none;      /* image never captures events */
+
+  /* BRICK 4: no double-tap zoom interactions on image */
+  touch-action: manipulation;
 }
 
-/* Tap layer is the ONLY event surface */
 .tapLayer{
   position:absolute;
   inset:0;
   z-index:2;
 
-  /* Allows scrolling to win; taps only register if movement/time gates pass */
+  /* allow scroll; JS blocks taps when user is actually scrolling */
   touch-action: pan-y;
 
-  /* Don’t let layer highlight/select */
+  /* BRICK 4: remove highlight + keep stable */
+  -webkit-tap-highlight-color: transparent;
   user-select:none;
   -webkit-user-select:none;
-}
 
-.tapLayer.active{
-  pointer-events:auto;
+  pointer-events:none;
 }
+.tapLayer.active{ pointer-events:auto; }
 
-/* Dots on top; never interact */
 .dotsLayer{
   position:absolute;
   inset:0;
@@ -194,7 +201,7 @@ body{
 }
 
 .bullDot{
-  background:rgba(255,210,0,.95);
+  background:rgba(255,210,0,.95); /* YELLOW */
   box-shadow:0 0 0 3px rgba(0,0,0,.45), 0 0 0 1px rgba(255,255,255,.12);
 }
 
@@ -237,6 +244,10 @@ body{
   letter-spacing:.4px;
   cursor:pointer;
   flex:1;
+
+  user-select:none;
+  -webkit-user-select:none;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .btn:disabled{
@@ -287,7 +298,6 @@ body{
   font-weight:950;
 }
 
-/* Mini vendor pill (Results) */
 .vendorPillMiniWrap{display:flex; justify-content:flex-end}
 .vendorPillMini{
   display:flex;
@@ -341,6 +351,5 @@ body{
 }
 .arrow{opacity:.75; padding:0 8px}
 
-/* Utility */
-.hiddenInline{display:none !important}
-.hiddenBtn{display:none !important}
+/* Hide “change bull” button (kept only so JS doesn’t break) */
+#changeBullBtn{ display:none !important; }
