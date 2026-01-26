@@ -1,10 +1,11 @@
 /* ============================================================
    Tap-n-Score™ — index.js (FULL REPLACEMENT)
-   Brick #4:
-   - Keep the new accurate tap system (nx/ny + natural px)
-   - Restore True MOA click math (8.5x11 baseline for pilot)
-   - HARD "Truth Gate": app will NOT emit direction if it fails sign-check
-   - Generate SEC PNG (Shooter Experience Card) with Vendor logo
+   Brick:
+   - Fix dot accuracy: compute taps from tapLayer rect (shared space with dots)
+   - Fix scroll-taps: stronger scroll intent gating for iOS
+   - Bull first, then holes (no Set Bull button flow)
+   - True MOA click math (pilot baseline)
+   - SEC PNG with vendor logo
 ============================================================ */
 
 (() => {
@@ -40,44 +41,38 @@
   const PAPER_W_IN = 8.5;
   const PAPER_H_IN = 11.0;
 
-  // Pilot defaults (we’ll expose later, not now)
   const DISTANCE_YDS = 100;
   const CLICK_MOA = 0.25; // 1/4 MOA per click
-
-  // True MOA inches per MOA at distance
   const inchesPerMOA = (yds) => 1.047 * (yds / 100);
 
   // ---------- State
   let objectUrl = null;
 
-  // Points store: normalized within image + natural px
   // { nx, ny, ix, iy }
   let bull = null;
   let holes = [];
-
   let resultsLocked = false;
 
   // Vendor
-  let vendor = null;         // vendor.json contents
-  let vendorLogoImg = null;  // Image() preloaded for SEC
+  let vendor = null;
+  let vendorLogoImg = null;
 
-  // Pointer tap filtering (scroll-safe)
-  const TAP_MOVE_PX = 10;
-  const TAP_TIME_MS = 450;
+  // Scroll-safe pointer/touch gating
+  const TAP_MOVE_PX = 18;     // stronger than 10 for iOS
+  const TAP_TIME_MS = 600;    // allow normal deliberate taps
   let ptrDown = null;
 
   // ---------- Helpers
   const clamp01 = (v) => Math.max(0, Math.min(1, v));
-
   const fmt2 = (n) => (Number.isFinite(n) ? n.toFixed(2) : "0.00");
 
   function setInstruction() {
     if (!elImg.src) {
-      elInstruction.textContent = "Load a photo to begin.";
+      elInstruction.textContent = "TAKE / CHOOSE TARGET PHOTO";
       return;
     }
     if (!bull) {
-      elInstruction.textContent = "Tap aim point first, then tap bullet holes.";
+      elInstruction.textContent = "Tap bull / aim point first, then tap bullet holes.";
       return;
     }
     elInstruction.textContent = "Tap each confirmed bullet hole.";
@@ -92,7 +87,6 @@
     elUndo.disabled = !(bull || holes.length);
     elClear.disabled = !(bull || holes.length);
 
-    // Show Results disabled if not ready OR locked
     const ready = !!bull && holes.length > 0;
     elShow.disabled = !(ready && !resultsLocked);
 
@@ -137,9 +131,11 @@
     setStatus();
   }
 
-  // Convert a client coordinate to normalized + natural px
-  function clientToImagePoint(clientX, clientY) {
-    const rect = elImg.getBoundingClientRect();
+  // ---------- Coordinate mapping (FIX)
+  // IMPORTANT: Use tapLayer rect (same space as dotsLayer)
+  function clientToStagePoint(clientX, clientY) {
+    const rect = elTapLayer.getBoundingClientRect();
+
     const nx = clamp01((clientX - rect.left) / rect.width);
     const ny = clamp01((clientY - rect.top) / rect.height);
 
@@ -151,20 +147,16 @@
     return { nx, ny, ix, iy };
   }
 
-  // Mean point in normalized space (for stable inches mapping to PAPER_W/H)
   function meanPointNorm(points) {
     let sx = 0, sy = 0;
     for (const p of points) { sx += p.nx; sy += p.ny; }
     return { nx: sx / points.length, ny: sy / points.length };
   }
 
-  // ---------- HARD Truth Gate
-  // We only emit directions that match the sign of signed deltas.
-  // dxIn > 0 => RIGHT, dxIn < 0 => LEFT
-  // dyIn < 0 => UP,   dyIn > 0 => DOWN   (because screen Y increases downward)
+  // ---------- Truth Gate (direction must match signed deltas)
   function truthGateDirections(dxIn, dyIn, windDir, elevDir) {
     const wantWind = dxIn >= 0 ? "RIGHT" : "LEFT";
-    const wantElev = dyIn <= 0 ? "UP" : "DOWN";
+    const wantElev = dyIn <= 0 ? "UP" : "DOWN"; // screen Y increases downward
 
     const okWind = windDir === wantWind;
     const okElev = elevDir === wantElev;
@@ -172,7 +164,7 @@
     return { ok: okWind && okElev, wantWind, wantElev };
   }
 
-  // ---------- Vendor load (non-blocking)
+  // ---------- Vendor load
   async function loadVendor() {
     try {
       const res = await fetch("./vendor.json", { cache: "no-store" });
@@ -186,15 +178,12 @@
         elVendorLogo.alt = vendor.name ? `${vendor.name} logo` : "Vendor logo";
         elVendorLogo.style.display = "block";
 
-        // Preload for SEC canvas
         vendorLogoImg = new Image();
         vendorLogoImg.src = vendor.logoPath;
-        // If it fails, SEC will still render without it.
       } else {
         elVendorLogo.style.display = "none";
       }
 
-      // Optional click-through
       if (vendor?.website) {
         elVendorPill.style.cursor = "pointer";
         elVendorPill.title = vendor.website;
@@ -204,9 +193,7 @@
         elVendorPill.title = "";
         elVendorPill.onclick = null;
       }
-    } catch (_) {
-      // silent fail
-    }
+    } catch (_) {}
   }
 
   // ---------- Tap logic (bull first, then holes)
@@ -214,7 +201,6 @@
     if (!elImg.src) return;
     if (resultsLocked) return;
 
-    // First tap sets bull
     if (!bull) {
       bull = pt;
       holes = [];
@@ -226,7 +212,6 @@
       return;
     }
 
-    // Remaining taps are holes
     holes.push(pt);
     resetResultsUI();
     unlockResults();
@@ -235,11 +220,14 @@
     renderDots();
   }
 
-  // ---------- Scroll-safe pointer handling
+  // ---------- Scroll-safe pointer handling (FIX)
   function onPointerDown(e) {
     if (!e.isPrimary) return;
     if (!elImg.src) return;
     if (resultsLocked) return;
+
+    // Capture so we keep getting move/up even if finger drifts slightly
+    try { elTapLayer.setPointerCapture(e.pointerId); } catch (_) {}
 
     ptrDown = {
       id: e.pointerId,
@@ -247,6 +235,7 @@
       y: e.clientY,
       t: Date.now(),
       moved: false,
+      scrollIntent: false
     };
   }
 
@@ -256,7 +245,14 @@
 
     const dx = e.clientX - ptrDown.x;
     const dy = e.clientY - ptrDown.y;
+
+    // Strong move threshold
     if (Math.hypot(dx, dy) > TAP_MOVE_PX) ptrDown.moved = true;
+
+    // If movement is predominantly vertical, assume scroll intent
+    if (Math.abs(dy) > 6 && Math.abs(dy) > Math.abs(dx) * 1.25) {
+      ptrDown.scrollIntent = true;
+    }
   }
 
   function onPointerUp(e) {
@@ -265,12 +261,15 @@
 
     const elapsed = Date.now() - ptrDown.t;
     const moved = ptrDown.moved;
+    const scrollIntent = ptrDown.scrollIntent;
+
     ptrDown = null;
 
-    if (moved) return;
+    // If it looked like scroll, DO NOT tap
+    if (moved || scrollIntent) return;
     if (elapsed > TAP_TIME_MS) return;
 
-    addTapPoint(clientToImagePoint(e.clientX, e.clientY));
+    addTapPoint(clientToStagePoint(e.clientX, e.clientY));
   }
 
   function onPointerCancel(e) {
@@ -304,7 +303,6 @@
     objectUrl = URL.createObjectURL(file);
 
     elImg.onload = () => {
-      elTapLayer.classList.add("active");
       resetAllState();
       setInstruction();
       setStatus();
@@ -349,26 +347,25 @@
     renderDots();
   }
 
-  // ---------- Compute + Render (real clicks)
+  // ---------- Compute + Render
   function computeAndRender() {
     if (!bull || holes.length === 0) return;
 
-    // POIB in normalized space
     const poib = meanPointNorm(holes);
 
-    // correction vector = bull - poib (normalized)
+    // correction vector = bull - POIB
     const dx01 = bull.nx - poib.nx;
     const dy01 = bull.ny - poib.ny;
 
-    // Convert to inches using pilot baseline paper dimensions
+    // inches (pilot baseline)
     const dxIn = dx01 * PAPER_W_IN;
     const dyIn = dy01 * PAPER_H_IN;
 
-    // Direction labels derived ONLY from signed inches
+    // Directions from sign only
     const windDir = dxIn >= 0 ? "RIGHT" : "LEFT";
-    const elevDir = dyIn <= 0 ? "UP" : "DOWN"; // IMPORTANT: screen-space truth
+    const elevDir = dyIn <= 0 ? "UP" : "DOWN";
 
-    // Truth gate (paranoid by design)
+    // Truth gate (paranoid)
     const gate = truthGateDirections(dxIn, dyIn, windDir, elevDir);
     if (!gate.ok) {
       resetResultsUI();
@@ -377,38 +374,26 @@
       elElevDir.textContent = "DIRECTION ERROR";
       elElevVal.textContent = "LOCKED";
       elDownloadSEC.disabled = true;
-      // Do NOT lock results; allow edits immediately
       resultsLocked = false;
       setStatus();
       return;
     }
 
-    // Magnitudes
-    const windAbsIn = Math.abs(dxIn);
-    const elevAbsIn = Math.abs(dyIn);
-
-    // True MOA math
     const ipm = inchesPerMOA(DISTANCE_YDS);
-    const windMOA = windAbsIn / ipm;
-    const elevMOA = elevAbsIn / ipm;
 
-    const windClicks = windMOA / CLICK_MOA;
-    const elevClicks = elevMOA / CLICK_MOA;
+    const windClicks = (Math.abs(dxIn) / ipm) / CLICK_MOA;
+    const elevClicks = (Math.abs(dyIn) / ipm) / CLICK_MOA;
 
-    // Render UI (two decimals on clicks)
     elWindDir.textContent = windDir;
     elWindVal.textContent = `${fmt2(windClicks)} clicks`;
     elElevDir.textContent = elevDir;
     elElevVal.textContent = `${fmt2(elevClicks)} clicks`;
 
-    // Enable SEC
     elDownloadSEC.disabled = false;
-
-    // LOCK after first successful show
     lockResults();
   }
 
-  // ---------- SEC PNG builder (Shooter Experience Card)
+  // ---------- SEC builder
   async function buildSecPng(payload) {
     const W = 1200, H = 675;
     const canvas = document.createElement("canvas");
@@ -416,11 +401,9 @@
     canvas.height = H;
     const ctx = canvas.getContext("2d");
 
-    // Background
     ctx.fillStyle = "#0b0e0f";
     ctx.fillRect(0, 0, W, H);
 
-    // Top line: "Shooter Experience Card" in red/white/blue (no TAP-N-SCORE on SEC)
     ctx.font = "1000 54px system-ui, -apple-system, Segoe UI, Roboto, Arial";
     ctx.fillStyle = "#ff3b30";
     ctx.fillText("SHOOTER", 60, 86);
@@ -429,7 +412,6 @@
     ctx.fillStyle = "#1f6feb";
     ctx.fillText("CARD", 720, 86);
 
-    // "SEC" in red/white/blue beneath (same size feel)
     ctx.font = "1000 46px system-ui, -apple-system, Segoe UI, Roboto, Arial";
     ctx.fillStyle = "#ff3b30";
     ctx.fillText("S", 60, 132);
@@ -438,7 +420,6 @@
     ctx.fillStyle = "#1f6feb";
     ctx.fillText("C", 124, 132);
 
-    // Vendor block top-right
     const vName = vendor?.name || "Printer";
     ctx.font = "850 26px system-ui, -apple-system, Segoe UI, Roboto, Arial";
     ctx.fillStyle = "rgba(255,255,255,.78)";
@@ -446,12 +427,11 @@
     ctx.fillText(vName, W - 70, 120);
     ctx.textAlign = "left";
 
-    // Draw vendor logo if available + loaded
     if (vendorLogoImg && vendorLogoImg.complete) {
       const size = 64;
       const x = W - 70 - size;
       const y = 38;
-      // Circle mask
+
       ctx.save();
       ctx.beginPath();
       ctx.arc(x + size / 2, y + size / 2, size / 2, 0, Math.PI * 2);
@@ -459,7 +439,6 @@
       ctx.drawImage(vendorLogoImg, x, y, size, size);
       ctx.restore();
 
-      // Ring
       ctx.strokeStyle = "rgba(255,255,255,.18)";
       ctx.lineWidth = 3;
       ctx.beginPath();
@@ -467,7 +446,6 @@
       ctx.stroke();
     }
 
-    // Main panel
     const px = 60, py = 170, pw = 1080, ph = 440;
     roundRect(ctx, px, py, pw, ph, 22);
     ctx.fillStyle = "rgba(255,255,255,.04)";
@@ -476,7 +454,6 @@
     ctx.lineWidth = 2;
     ctx.stroke();
 
-    // Corrections
     ctx.fillStyle = "rgba(255,255,255,.92)";
     ctx.font = "950 34px system-ui, -apple-system, Segoe UI, Roboto, Arial";
     ctx.fillText("Corrections", px + 34, py + 72);
@@ -485,7 +462,6 @@
     ctx.fillText(`Windage: ${payload.windDir} → ${fmt2(payload.windClicks)} clicks`, px + 34, py + 140);
     ctx.fillText(`Elevation: ${payload.elevDir} → ${fmt2(payload.elevClicks)} clicks`, px + 34, py + 200);
 
-    // Footer line (quiet)
     ctx.fillStyle = "rgba(255,255,255,.55)";
     ctx.font = "750 22px system-ui, -apple-system, Segoe UI, Roboto, Arial";
     ctx.fillText(`True MOA • ${DISTANCE_YDS} yards • ${CLICK_MOA} MOA/click`, px + 34, py + ph - 34);
@@ -504,11 +480,9 @@
     }
   }
 
-  // Download helper
   async function downloadSec() {
     if (!bull || holes.length === 0) return;
 
-    // Recompute from current dots (must match UI)
     const poib = meanPointNorm(holes);
     const dx01 = bull.nx - poib.nx;
     const dy01 = bull.ny - poib.ny;
@@ -526,7 +500,6 @@
     const windClicks = (Math.abs(dxIn) / ipm) / CLICK_MOA;
     const elevClicks = (Math.abs(dyIn) / ipm) / CLICK_MOA;
 
-    // Ensure logo is loaded if possible (wait briefly)
     if (vendorLogoImg && !vendorLogoImg.complete) {
       await new Promise((resolve) => {
         const t = setTimeout(resolve, 250);
@@ -535,12 +508,8 @@
       });
     }
 
-    const dataUrl = await buildSecPng({
-      windDir, windClicks,
-      elevDir, elevClicks
-    });
+    const dataUrl = await buildSecPng({ windDir, windClicks, elevDir, elevClicks });
 
-    // Force download
     const a = document.createElement("a");
     a.href = dataUrl;
     a.download = "SEC.png";
@@ -556,7 +525,6 @@
   });
 
   elUndo.addEventListener("click", () => {
-    // Any edit unlocks results
     if (resultsLocked) { unlockResults(); resetResultsUI(); }
     undo();
   });
@@ -572,7 +540,6 @@
   });
 
   elShow.addEventListener("click", () => {
-    // LOCK happens only after a successful compute
     computeAndRender();
   });
 
@@ -580,7 +547,7 @@
     downloadSec();
   });
 
-  // Pointer events live on tapLayer
+  // Pointer events on tap layer
   elTapLayer.addEventListener("pointerdown", onPointerDown, { passive: true });
   elTapLayer.addEventListener("pointermove", onPointerMove, { passive: true });
   elTapLayer.addEventListener("pointerup", onPointerUp, { passive: true });
