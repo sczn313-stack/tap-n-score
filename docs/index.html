@@ -2,56 +2,63 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <!-- Brick D: lock viewport scaling so double-tap doesn’t zoom and shift tap geometry -->
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="color-scheme" content="dark" />
   <meta name="theme-color" content="#000000" />
   <title>Tap-n-Score™</title>
 
-  <link rel="stylesheet" href="./styles.css?v=20260125d" />
+  <link rel="stylesheet" href="./styles.css?v=20260126a" />
 </head>
 
 <body>
   <main class="page">
 
-    <!-- TOP -->
-    <header class="topbar">
-      <div class="brandSmall">Tap-n-Score™ Pilot</div>
+    <!-- CARD 1: Vendor + Choose -->
+    <section class="card">
 
-      <!-- Vendor pill (INPUT) -->
-      <div id="vendorPill" class="vendorPill" role="button" aria-label="Printer link">
-        <img id="vendorLogo" class="vendorLogo" alt="" />
+      <!-- Vendor pill (input page) -->
+      <div id="vendorPill" class="vendorPill" role="button" tabindex="0" aria-label="Vendor">
+        <img id="vendorLogo" class="vendorLogo" alt="Vendor logo" />
         <div class="vendorTxt">
-          <div class="vendorLabel">Printer</div>
+          <div class="vendorLabel">Printed by</div>
           <div id="vendorName" class="vendorName">—</div>
         </div>
       </div>
-    </header>
 
-    <!-- CARD: Choose -->
-    <section class="card">
-      <div class="heroRow">
-        <label class="chooseBtn">
-          <input id="photoInput" type="file" accept="image/*" />
-          <span>CHOOSE TARGET PHOTO</span>
+      <div class="heroRow" style="margin-top:12px;">
+
+        <!-- IMPORTANT:
+             - NO capture attribute (this is what forces camera-only)
+             - accept includes common iPhone formats
+        -->
+        <label class="chooseBtn" for="photoInput">
+          <span>TAKE / CHOOSE TARGET PHOTO</span>
         </label>
-        <div class="heroHint">Tip: straight-on photo, fill the frame.</div>
+
+        <input
+          id="photoInput"
+          type="file"
+          accept="image/*,image/heic,image/heif"
+          style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0;"
+        />
+
+        <div class="heroHint">
+          Tip: straight-on photo, fill the frame.
+        </div>
       </div>
     </section>
 
-    <!-- CARD: Target + Taps -->
-    <section class="card">
+    <!-- CARD 2: Target + taps -->
+    <section class="card targetStage">
 
-      <!-- Instruction INSIDE the target frame area -->
-      <div id="instructionLine" class="instructionLine">Take a photo of your target to begin.</div>
+      <div id="instructionLine" class="instructionLine">
+        Take a photo of your target to begin.
+      </div>
 
-      <div class="targetStage">
-        <div class="imgFrame" id="imgFrame">
-          <img id="targetImg" class="targetImg" alt="Target photo" />
-          <!-- Tap layer is the ONLY place we listen for taps -->
-          <div id="tapLayer" class="tapLayer" aria-label="Tap layer"></div>
-          <div id="dotsLayer" class="dotsLayer" aria-hidden="true"></div>
-        </div>
+      <div class="imgFrame">
+        <img id="targetImg" class="targetImg" alt="Target photo" />
+        <div id="tapLayer" class="tapLayer active" aria-label="Tap layer"></div>
+        <div id="dotsLayer" class="dotsLayer" aria-hidden="true"></div>
       </div>
 
       <div class="statusRow">
@@ -60,15 +67,17 @@
       </div>
 
       <div class="btnRow">
-        <button id="undoBtn" class="btn ghost" type="button" disabled>Undo</button>
-        <button id="clearBtn" class="btn ghost" type="button" disabled>Clear</button>
+        <button id="undoBtn" class="btn ghost" type="button">Undo</button>
+        <button id="clearBtn" class="btn ghost" type="button">Clear</button>
         <button id="showResultsBtn" class="btn primary" type="button" disabled>Show Results</button>
       </div>
 
-      <div id="lockBanner" class="lockBanner" hidden>Results locked. Undo/Clear to edit taps.</div>
+      <div id="lockBanner" class="lockBanner" hidden>
+        Results locked. Use Undo or Clear to edit taps.
+      </div>
     </section>
 
-    <!-- CARD: Results -->
+    <!-- CARD 3: Results -->
     <section class="card resultsCard">
       <div class="resultsHdr">
         <div class="secTitle">
@@ -77,8 +86,8 @@
         </div>
 
         <div class="vendorPillMiniWrap">
-          <div id="vendorPillMini" class="vendorPillMini" role="button" aria-label="Printer link">
-            <img id="vendorLogoMini" class="vendorLogoMini" alt="" />
+          <div id="vendorPillMini" class="vendorPillMini" role="button" tabindex="0" aria-label="Vendor mini">
+            <img id="vendorLogoMini" class="vendorLogoMini" alt="Vendor logo mini" />
             <div id="vendorNameMini" class="vendorNameMini">—</div>
           </div>
         </div>
@@ -103,6 +112,6 @@
 
   </main>
 
-  <script src="./index.js?v=20260125d"></script>
+  <script src="./index.js?v=20260126a"></script>
 </body>
 </html>
