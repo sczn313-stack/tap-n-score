@@ -1,11 +1,12 @@
 /* ============================================================
-   Tap-n-Score™ — index.js (FULL REPLACEMENT)
-   - Shooter UI: no "Bull set" status (only holes)
-   - Flow: Tap aim point first, then tap holes
-   - Scroll-safe taps (filters drags/scroll gestures)
-   - True MOA clicks (pilot baseline 8.5x11, 100y, 0.25 MOA/click)
-   - Truth Gate for direction integrity
-   - SEC PNG download with vendor name/logo
+   Tap-n-Score™ — docs/index.js (FULL REPLACEMENT)
+   Stability Brick:
+   - TAP ACCURACY LOCK (Hard Gate): ONLY accept taps inside the actual image rect
+   - Keeps normalized + natural px point model (nx/ny + ix/iy)
+   - True MOA click math (8.5x11 pilot baseline)
+   - HARD Truth Gate: app will NOT emit direction unless sign-check passes
+   - Vendor (printer) logo + link from vendor.json
+   - SEC PNG (Shooter Experience Card) with vendor logo + R/W/B header
 ============================================================ */
 
 (() => {
@@ -17,6 +18,7 @@
   const elTapLayer = $("tapLayer");
   const elDots = $("dotsLayer");
 
+  const elBullStatus = $("bullStatus");
   const elHoleCount = $("holeCount");
   const elInstruction = $("instructionLine");
   const elChangeBull = $("changeBullBtn");
@@ -36,32 +38,32 @@
   const elVendorLogo = $("vendorLogo");
   const elVendorName = $("vendorName");
 
-  const elVendorLogoMini = $("vendorLogoMini");
-  const elVendorNameMini = $("vendorNameMini");
-
   // ---------- Pilot constants (locked baseline)
   const PAPER_W_IN = 8.5;
   const PAPER_H_IN = 11.0;
 
+  // Pilot defaults (we’ll expose later, not now)
   const DISTANCE_YDS = 100;
   const CLICK_MOA = 0.25; // 1/4 MOA per click
 
+  // True MOA inches per MOA at distance
   const inchesPerMOA = (yds) => 1.047 * (yds / 100);
 
   // ---------- State
   let objectUrl = null;
 
-  // Points store: normalized + natural px (for future)
+  // Points store: normalized within image + natural px
   // { nx, ny, ix, iy }
   let bull = null;
   let holes = [];
+
   let resultsLocked = false;
 
   // Vendor
-  let vendor = null;
-  let vendorLogoImg = null; // Image() preloaded for SEC
+  let vendor = null;         // vendor.json contents
+  let vendorLogoImg = null;  // Image() preloaded for SEC
 
-  // Scroll-safe pointer handling
+  // Pointer tap filtering (scroll-safe)
   const TAP_MOVE_PX = 10;
   const TAP_TIME_MS = 450;
   let ptrDown = null;
@@ -83,14 +85,14 @@
   }
 
   function setStatus() {
+    elBullStatus.textContent = bull ? "set" : "not set";
     elHoleCount.textContent = String(holes.length);
 
-    // Change bull only appears after bull set
-    elChangeBull.classList.toggle("hiddenBtn", !bull);
+    // show/hide change bull button if it exists
+    if (elChangeBull) elChangeBull.hidden = !bull;
 
-    const hasAny = !!bull || holes.length > 0;
-    elUndo.disabled = !hasAny;
-    elClear.disabled = !hasAny;
+    elUndo.disabled = !(bull || holes.length);
+    elClear.disabled = !(bull || holes.length);
 
     const ready = !!bull && holes.length > 0;
     elShow.disabled = !(ready && !resultsLocked);
@@ -136,9 +138,15 @@
     setStatus();
   }
 
-  // Convert client coordinate to normalized + natural px
+  // Convert a client coordinate to normalized + natural px
   function clientToImagePoint(clientX, clientY) {
     const rect = elImg.getBoundingClientRect();
+
+    // Guard against not-laid-out image
+    if (!rect || rect.width < 5 || rect.height < 5) {
+      return { nx: 0, ny: 0, ix: 0, iy: 0 };
+    }
+
     const nx = clamp01((clientX - rect.left) / rect.width);
     const ny = clamp01((clientY - rect.top) / rect.height);
 
@@ -150,52 +158,52 @@
     return { nx, ny, ix, iy };
   }
 
-  // Mean point in normalized space (stable for mapping to PAPER_W/H)
+  // Mean point in normalized space (for stable inches mapping to PAPER_W/H)
   function meanPointNorm(points) {
     let sx = 0, sy = 0;
-    for (const p of points) { sx += p.nx; sy += p.ny; }
+    for (const p of points) {
+      sx += p.nx;
+      sy += p.ny;
+    }
     return { nx: sx / points.length, ny: sy / points.length };
   }
 
-  // Truth Gate:
+  // ---------- HARD Truth Gate
   // dxIn > 0 => RIGHT, dxIn < 0 => LEFT
-  // dyIn < 0 => UP,   dyIn > 0 => DOWN (screen Y increases downward)
+  // dyIn < 0 => UP,   dyIn > 0 => DOWN   (screen Y increases downward)
   function truthGateDirections(dxIn, dyIn, windDir, elevDir) {
     const wantWind = dxIn >= 0 ? "RIGHT" : "LEFT";
     const wantElev = dyIn <= 0 ? "UP" : "DOWN";
-    return { ok: windDir === wantWind && elevDir === wantElev, wantWind, wantElev };
+
+    const okWind = windDir === wantWind;
+    const okElev = elevDir === wantElev;
+
+    return { ok: okWind && okElev, wantWind, wantElev };
   }
 
-  // ---------- Vendor load
+  // ---------- Vendor load (non-blocking)
   async function loadVendor() {
     try {
       const res = await fetch("./vendor.json", { cache: "no-store" });
       if (!res.ok) return;
+
       vendor = await res.json();
 
-      const name = vendor?.name || "—";
-      elVendorName.textContent = name;
-      elVendorNameMini.textContent = name;
+      if (vendor?.name) elVendorName.textContent = vendor.name;
 
       if (vendor?.logoPath) {
-        // Top pill logo
         elVendorLogo.src = vendor.logoPath;
-        elVendorLogo.alt = `${name} logo`;
+        elVendorLogo.alt = vendor.name ? `${vendor.name} logo` : "Printer logo";
         elVendorLogo.style.display = "block";
 
-        // SEC mini logo
-        elVendorLogoMini.src = vendor.logoPath;
-        elVendorLogoMini.alt = `${name} logo`;
-        elVendorLogoMini.style.display = "block";
-
-        // Preload for canvas
+        // Preload for SEC canvas
         vendorLogoImg = new Image();
         vendorLogoImg.src = vendor.logoPath;
       } else {
         elVendorLogo.style.display = "none";
-        elVendorLogoMini.style.display = "none";
       }
 
+      // Optional click-through
       if (vendor?.website) {
         elVendorPill.style.cursor = "pointer";
         elVendorPill.title = vendor.website;
@@ -215,7 +223,6 @@
     if (!elImg.src) return;
     if (resultsLocked) return;
 
-    // First tap sets aim point
     if (!bull) {
       bull = pt;
       holes = [];
@@ -227,7 +234,6 @@
       return;
     }
 
-    // Remaining taps are holes
     holes.push(pt);
     resetResultsUI();
     unlockResults();
@@ -236,18 +242,34 @@
     renderDots();
   }
 
+  // ---------- TAP ACCURACY LOCK (Hard Gate)
+  function isInsideImage(clientX, clientY) {
+    const r = elImg.getBoundingClientRect();
+    if (!r || r.width < 5 || r.height < 5) return false;
+
+    return (
+      clientX >= r.left &&
+      clientX <= r.right &&
+      clientY >= r.top &&
+      clientY <= r.bottom
+    );
+  }
+
   // ---------- Scroll-safe pointer handling
   function onPointerDown(e) {
     if (!e.isPrimary) return;
     if (!elImg.src) return;
     if (resultsLocked) return;
 
+    // Only begin intent if down is inside the image
+    if (!isInsideImage(e.clientX, e.clientY)) return;
+
     ptrDown = {
       id: e.pointerId,
       x: e.clientX,
       y: e.clientY,
       t: Date.now(),
-      moved: false
+      moved: false,
     };
   }
 
@@ -270,6 +292,11 @@
 
     if (moved) return;
     if (elapsed > TAP_TIME_MS) return;
+    if (!elImg.src) return;
+    if (resultsLocked) return;
+
+    // Hard Gate: MUST be inside image on UP too (prevents ghost taps)
+    if (!isInsideImage(e.clientX, e.clientY)) return;
 
     addTapPoint(clientToImagePoint(e.clientX, e.clientY));
   }
@@ -305,6 +332,7 @@
     objectUrl = URL.createObjectURL(file);
 
     elImg.onload = () => {
+      // enable tap layer
       elTapLayer.classList.add("active");
       resetAllState();
       setInstruction();
@@ -350,7 +378,7 @@
     renderDots();
   }
 
-  // ---------- Compute + Render
+  // ---------- Compute + Render (real clicks)
   function computeAndRender() {
     if (!bull || holes.length === 0) return;
 
@@ -360,15 +388,15 @@
     const dx01 = bull.nx - poib.nx;
     const dy01 = bull.ny - poib.ny;
 
-    // Convert to inches using pilot paper dimensions
+    // Convert to inches using pilot baseline paper dimensions
     const dxIn = dx01 * PAPER_W_IN;
     const dyIn = dy01 * PAPER_H_IN;
 
-    // Directions derived ONLY from signed inches
+    // Direction labels derived ONLY from signed inches
     const windDir = dxIn >= 0 ? "RIGHT" : "LEFT";
-    const elevDir = dyIn <= 0 ? "UP" : "DOWN";
+    const elevDir = dyIn <= 0 ? "UP" : "DOWN"; // screen-space truth
 
-    // Truth gate
+    // Truth gate (paranoid by design)
     const gate = truthGateDirections(dxIn, dyIn, windDir, elevDir);
     if (!gate.ok) {
       resetResultsUI();
@@ -377,16 +405,24 @@
       elElevDir.textContent = "DIRECTION ERROR";
       elElevVal.textContent = "LOCKED";
       elDownloadSEC.disabled = true;
+
       resultsLocked = false;
       setStatus();
       return;
     }
 
+    const windAbsIn = Math.abs(dxIn);
+    const elevAbsIn = Math.abs(dyIn);
+
+    // True MOA math
     const ipm = inchesPerMOA(DISTANCE_YDS);
+    const windMOA = windAbsIn / ipm;
+    const elevMOA = elevAbsIn / ipm;
 
-    const windClicks = (Math.abs(dxIn) / ipm) / CLICK_MOA;
-    const elevClicks = (Math.abs(dyIn) / ipm) / CLICK_MOA;
+    const windClicks = windMOA / CLICK_MOA;
+    const elevClicks = elevMOA / CLICK_MOA;
 
+    // Render UI (two decimals on clicks)
     elWindDir.textContent = windDir;
     elWindVal.textContent = `${fmt2(windClicks)} clicks`;
     elElevDir.textContent = elevDir;
@@ -394,10 +430,11 @@
 
     elDownloadSEC.disabled = false;
 
+    // LOCK after first successful show
     lockResults();
   }
 
-  // ---------- SEC PNG builder
+  // ---------- SEC PNG builder (Shooter Experience Card)
   async function buildSecPng(payload) {
     const W = 1200, H = 675;
     const canvas = document.createElement("canvas");
@@ -409,7 +446,7 @@
     ctx.fillStyle = "#0b0e0f";
     ctx.fillRect(0, 0, W, H);
 
-    // Title
+    // Top line: "Shooter Experience Card" in red/white/blue (no TAP-N-SCORE on SEC)
     ctx.font = "1000 54px system-ui, -apple-system, Segoe UI, Roboto, Arial";
     ctx.fillStyle = "#ff3b30";
     ctx.fillText("SHOOTER", 60, 86);
@@ -418,13 +455,16 @@
     ctx.fillStyle = "#1f6feb";
     ctx.fillText("CARD", 720, 86);
 
-    // SEC letters
+    // "SEC" in red/white/blue beneath
     ctx.font = "1000 46px system-ui, -apple-system, Segoe UI, Roboto, Arial";
-    ctx.fillStyle = "#ff3b30"; ctx.fillText("S", 60, 132);
-    ctx.fillStyle = "rgba(255,255,255,.92)"; ctx.fillText("E", 92, 132);
-    ctx.fillStyle = "#1f6feb"; ctx.fillText("C", 124, 132);
+    ctx.fillStyle = "#ff3b30";
+    ctx.fillText("S", 60, 132);
+    ctx.fillStyle = "rgba(255,255,255,.92)";
+    ctx.fillText("E", 92, 132);
+    ctx.fillStyle = "#1f6feb";
+    ctx.fillText("C", 124, 132);
 
-    // Vendor top-right
+    // Vendor block top-right
     const vName = vendor?.name || "Printer";
     ctx.font = "850 26px system-ui, -apple-system, Segoe UI, Roboto, Arial";
     ctx.fillStyle = "rgba(255,255,255,.78)";
@@ -432,24 +472,34 @@
     ctx.fillText(vName, W - 70, 120);
     ctx.textAlign = "left";
 
-    // Vendor logo (circle)
-    if (vendorLogoImg && vendorLogoImg.complete) {
-      const size = 64;
-      const x = W - 70 - size;
-      const y = 38;
+    // Draw vendor logo if available
+    if (vendorLogoImg) {
+      if (!vendorLogoImg.complete) {
+        await new Promise((resolve) => {
+          const t = setTimeout(resolve, 250);
+          vendorLogoImg.onload = () => { clearTimeout(t); resolve(); };
+          vendorLogoImg.onerror = () => { clearTimeout(t); resolve(); };
+        });
+      }
 
-      ctx.save();
-      ctx.beginPath();
-      ctx.arc(x + size / 2, y + size / 2, size / 2, 0, Math.PI * 2);
-      ctx.clip();
-      ctx.drawImage(vendorLogoImg, x, y, size, size);
-      ctx.restore();
+      if (vendorLogoImg.complete && vendorLogoImg.naturalWidth > 0) {
+        const size = 64;
+        const x = W - 70 - size;
+        const y = 38;
 
-      ctx.strokeStyle = "rgba(255,255,255,.18)";
-      ctx.lineWidth = 3;
-      ctx.beginPath();
-      ctx.arc(x + size / 2, y + size / 2, size / 2 + 1, 0, Math.PI * 2);
-      ctx.stroke();
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(x + size / 2, y + size / 2, size / 2, 0, Math.PI * 2);
+        ctx.clip();
+        ctx.drawImage(vendorLogoImg, x, y, size, size);
+        ctx.restore();
+
+        ctx.strokeStyle = "rgba(255,255,255,.18)";
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(x + size / 2, y + size / 2, size / 2 + 1, 0, Math.PI * 2);
+        ctx.stroke();
+      }
     }
 
     // Main panel
@@ -461,6 +511,7 @@
     ctx.lineWidth = 2;
     ctx.stroke();
 
+    // Corrections
     ctx.fillStyle = "rgba(255,255,255,.92)";
     ctx.font = "950 34px system-ui, -apple-system, Segoe UI, Roboto, Arial";
     ctx.fillText("Corrections", px + 34, py + 72);
@@ -469,6 +520,7 @@
     ctx.fillText(`Windage: ${payload.windDir} → ${fmt2(payload.windClicks)} clicks`, px + 34, py + 140);
     ctx.fillText(`Elevation: ${payload.elevDir} → ${fmt2(payload.elevClicks)} clicks`, px + 34, py + 200);
 
+    // Footer line (quiet)
     ctx.fillStyle = "rgba(255,255,255,.55)";
     ctx.font = "750 22px system-ui, -apple-system, Segoe UI, Roboto, Arial";
     ctx.fillText(`True MOA • ${DISTANCE_YDS} yards • ${CLICK_MOA} MOA/click`, px + 34, py + ph - 34);
@@ -487,6 +539,7 @@
     }
   }
 
+  // Download helper
   async function downloadSec() {
     if (!bull || holes.length === 0) return;
 
@@ -507,16 +560,10 @@
     const windClicks = (Math.abs(dxIn) / ipm) / CLICK_MOA;
     const elevClicks = (Math.abs(dyIn) / ipm) / CLICK_MOA;
 
-    // brief wait for logo load if needed
-    if (vendorLogoImg && !vendorLogoImg.complete) {
-      await new Promise((resolve) => {
-        const t = setTimeout(resolve, 250);
-        vendorLogoImg.onload = () => { clearTimeout(t); resolve(); };
-        vendorLogoImg.onerror = () => { clearTimeout(t); resolve(); };
-      });
-    }
-
-    const dataUrl = await buildSecPng({ windDir, windClicks, elevDir, elevClicks });
+    const dataUrl = await buildSecPng({
+      windDir, windClicks,
+      elevDir, elevClicks
+    });
 
     const a = document.createElement("a");
     a.href = dataUrl;
@@ -542,10 +589,12 @@
     clearAll();
   });
 
-  elChangeBull.addEventListener("click", () => {
-    if (resultsLocked) { unlockResults(); resetResultsUI(); }
-    changeBull();
-  });
+  if (elChangeBull) {
+    elChangeBull.addEventListener("click", () => {
+      if (resultsLocked) { unlockResults(); resetResultsUI(); }
+      changeBull();
+    });
+  }
 
   elShow.addEventListener("click", () => {
     computeAndRender();
