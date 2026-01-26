@@ -1,9 +1,9 @@
 /* ============================================================
    Tap-n-Score™ — index.js (FULL REPLACEMENT)
-   BRICK C: iPad SAFARI TAP STABILITY LOCK
-   - Hard-block double-tap zoom + pinch gestures from breaking tap coords
-   - Only blocks gestures on the tap surface (tapLayer), not the whole page
-   - Keeps your bull-first flow + normalized taps
+   BRICK D:
+   - Keep Brick C Tap Stability (no iPad zoom drift)
+   - Keep Truth Gate + Lock
+   - RESTORE full SEC PNG builder + Vendor logo + Vendor name
 ============================================================ */
 
 (() => {
@@ -61,40 +61,27 @@
   const TAP_TIME_MS = 450;
   let ptrDown = null;
 
-  // ---------- HARD iPad Safari stability guards
-  // (double tap zoom + pinch gesture can change layout/rects -> wrong mapping)
+  // ---------- iPad Safari stability guards (locks out zoom drift)
   let lastTouchEndAt = 0;
 
   function enableTapStabilityGuards() {
-    // Block pinch (gesture*) on iOS Safari
     const stop = (e) => e.preventDefault();
 
-    // These exist in iOS Safari (not standard everywhere)
+    // Pinch (gesture*) on iOS Safari
     document.addEventListener("gesturestart", stop, { passive: false });
     document.addEventListener("gesturechange", stop, { passive: false });
     document.addEventListener("gestureend", stop, { passive: false });
 
-    // Block double-tap zoom specifically ON the tap surface
-    elTapLayer.addEventListener("touchend", (e) => {
+    // Double-tap zoom block on tap layer + img
+    const blockDoubleTap = (e) => {
       const now = Date.now();
       const dt = now - lastTouchEndAt;
       lastTouchEndAt = now;
+      if (dt > 0 && dt < 320) e.preventDefault();
+    };
 
-      // If two touchend events happen quickly, it's likely a double-tap attempt
-      if (dt > 0 && dt < 320) {
-        e.preventDefault();
-      }
-    }, { passive: false });
-
-    // Also block double-tap on the image itself (sometimes Safari targets the img)
-    elImg.addEventListener("touchend", (e) => {
-      const now = Date.now();
-      const dt = now - lastTouchEndAt;
-      lastTouchEndAt = now;
-      if (dt > 0 && dt < 320) {
-        e.preventDefault();
-      }
-    }, { passive: false });
+    elTapLayer.addEventListener("touchend", blockDoubleTap, { passive: false });
+    elImg.addEventListener("touchend", blockDoubleTap, { passive: false });
   }
 
   // ---------- Helpers
@@ -102,7 +89,7 @@
   const fmt2 = (n) => (Number.isFinite(n) ? n.toFixed(2) : "0.00");
 
   function setInstruction() {
-    if (!elImg.src) { elInstruction.textContent = "Load a photo to begin."; return; }
+    if (!elImg.src) { elInstruction.textContent = "Take a photo of your target."; return; }
     if (!bull) { elInstruction.textContent = "Tap aim point first, then tap bullet holes."; return; }
     elInstruction.textContent = "Tap each confirmed bullet hole.";
   }
@@ -172,9 +159,10 @@
     return { nx: sx / points.length, ny: sy / points.length };
   }
 
+  // ---------- HARD Truth Gate
   function truthGateDirections(dxIn, dyIn, windDir, elevDir) {
     const wantWind = dxIn >= 0 ? "RIGHT" : "LEFT";
-    const wantElev = dyIn <= 0 ? "UP" : "DOWN";
+    const wantElev = dyIn <= 0 ? "UP" : "DOWN"; // screen-space Y is down-positive
     return { ok: (windDir === wantWind) && (elevDir === wantElev), wantWind, wantElev };
   }
 
@@ -217,11 +205,12 @@
     } catch (_) {}
   }
 
-  // ---------- Tap flow (bull first, then holes)
+  // ---------- Tap flow
   function addTapPoint(pt) {
     if (!elImg.src) return;
     if (resultsLocked) return;
 
+    // bull first
     if (!bull) {
       bull = pt;
       holes = [];
@@ -233,6 +222,7 @@
       return;
     }
 
+    // holes after
     holes.push(pt);
     resetResultsUI();
     unlockResults();
@@ -241,7 +231,7 @@
     renderDots();
   }
 
-  // ---------- Scroll-safe pointer handling
+  // ---------- Pointer handling
   function onPointerDown(e) {
     if (!e.isPrimary) return;
     if (!elImg.src) return;
@@ -340,7 +330,7 @@
 
   function changeBull() { clearAll(); }
 
-  // ---------- Compute
+  // ---------- Compute + Render (real clicks)
   function computeAndRender() {
     if (!bull || holes.length === 0) return;
 
@@ -377,15 +367,147 @@
     elElevVal.textContent = `${fmt2(elevClicks)} clicks`;
 
     elDownloadSEC.disabled = false;
+
+    // LOCK after first successful show
     lockResults();
   }
 
-  // ---------- SEC download (keep your existing builder if you want; minimal here)
+  // ---------- SEC PNG Builder (FULL)
+  async function buildSecPng(payload) {
+    const W = 1200, H = 675;
+    const canvas = document.createElement("canvas");
+    canvas.width = W;
+    canvas.height = H;
+    const ctx = canvas.getContext("2d");
+
+    // BG
+    ctx.fillStyle = "#0b0e0f";
+    ctx.fillRect(0, 0, W, H);
+
+    // Header: SHOOTER EXPERIENCE CARD (R/W/B)
+    ctx.font = "1000 54px system-ui, -apple-system, Segoe UI, Roboto, Arial";
+    ctx.fillStyle = "#ff3b30";
+    ctx.fillText("SHOOTER", 60, 86);
+    ctx.fillStyle = "rgba(255,255,255,.92)";
+    ctx.fillText(" EXPERIENCE ", 315, 86);
+    ctx.fillStyle = "#1f6feb";
+    ctx.fillText("CARD", 720, 86);
+
+    // SEC letters (R/W/B)
+    ctx.font = "1000 46px system-ui, -apple-system, Segoe UI, Roboto, Arial";
+    ctx.fillStyle = "#ff3b30"; ctx.fillText("S", 60, 132);
+    ctx.fillStyle = "rgba(255,255,255,.92)"; ctx.fillText("E", 92, 132);
+    ctx.fillStyle = "#1f6feb"; ctx.fillText("C", 124, 132);
+
+    // Vendor name top-right
+    const vName = vendor?.name || "Printer";
+    ctx.font = "850 26px system-ui, -apple-system, Segoe UI, Roboto, Arial";
+    ctx.fillStyle = "rgba(255,255,255,.78)";
+    ctx.textAlign = "right";
+    ctx.fillText(vName, W - 70, 120);
+    ctx.textAlign = "left";
+
+    // Vendor logo top-right (circle)
+    if (vendorLogoImg) {
+      await waitImage(vendorLogoImg, 300);
+      if (vendorLogoImg.complete && vendorLogoImg.naturalWidth > 0) {
+        const size = 64;
+        const x = W - 70 - size;
+        const y = 38;
+
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(x + size / 2, y + size / 2, size / 2, 0, Math.PI * 2);
+        ctx.clip();
+        ctx.drawImage(vendorLogoImg, x, y, size, size);
+        ctx.restore();
+
+        ctx.strokeStyle = "rgba(255,255,255,.18)";
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(x + size / 2, y + size / 2, size / 2 + 1, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+    }
+
+    // Main panel
+    const px = 60, py = 170, pw = 1080, ph = 440;
+    roundRect(ctx, px, py, pw, ph, 22);
+    ctx.fillStyle = "rgba(255,255,255,.04)";
+    ctx.fill();
+    ctx.strokeStyle = "rgba(255,255,255,.10)";
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // Corrections header
+    ctx.fillStyle = "rgba(255,255,255,.92)";
+    ctx.font = "950 34px system-ui, -apple-system, Segoe UI, Roboto, Arial";
+    ctx.fillText("Corrections", px + 34, py + 72);
+
+    // Corrections lines
+    ctx.font = "900 30px system-ui, -apple-system, Segoe UI, Roboto, Arial";
+    ctx.fillText(`Windage: ${payload.windDir} → ${fmt2(payload.windClicks)} clicks`, px + 34, py + 140);
+    ctx.fillText(`Elevation: ${payload.elevDir} → ${fmt2(payload.elevClicks)} clicks`, px + 34, py + 200);
+
+    // Footer
+    ctx.fillStyle = "rgba(255,255,255,.55)";
+    ctx.font = "750 22px system-ui, -apple-system, Segoe UI, Roboto, Arial";
+    ctx.fillText(`True MOA • ${DISTANCE_YDS} yards • ${CLICK_MOA} MOA/click`, px + 34, py + ph - 34);
+
+    return canvas.toDataURL("image/png");
+
+    function roundRect(c, x, y, w, h, r) {
+      const rr = Math.min(r, w / 2, h / 2);
+      c.beginPath();
+      c.moveTo(x + rr, y);
+      c.arcTo(x + w, y, x + w, y + h, rr);
+      c.arcTo(x + w, y + h, x, y + h, rr);
+      c.arcTo(x, y + h, x, y, rr);
+      c.arcTo(x, y, x + w, y, rr);
+      c.closePath();
+    }
+  }
+
+  function waitImage(img, timeoutMs = 250) {
+    if (!img) return Promise.resolve();
+    if (img.complete) return Promise.resolve();
+    return new Promise((resolve) => {
+      const t = setTimeout(resolve, timeoutMs);
+      img.onload = () => { clearTimeout(t); resolve(); };
+      img.onerror = () => { clearTimeout(t); resolve(); };
+    });
+  }
+
+  // ---------- Download SEC
   async function downloadSec() {
-    // You already had a working SEC builder — keep it if you prefer.
-    // For now, just trigger the existing UI behavior you had:
-    // If you want, next brick we will re-drop the full SEC canvas builder here.
-    alert("Next brick can re-drop the full SEC canvas builder exactly as you had it.");
+    if (!bull || holes.length === 0) return;
+
+    // Recompute from current points (must match UI)
+    const poib = meanPointNorm(holes);
+    const dx01 = bull.nx - poib.nx;
+    const dy01 = bull.ny - poib.ny;
+
+    const dxIn = dx01 * PAPER_W_IN;
+    const dyIn = dy01 * PAPER_H_IN;
+
+    const windDir = dxIn >= 0 ? "RIGHT" : "LEFT";
+    const elevDir = dyIn <= 0 ? "UP" : "DOWN";
+
+    const gate = truthGateDirections(dxIn, dyIn, windDir, elevDir);
+    if (!gate.ok) return;
+
+    const ipm = inchesPerMOA(DISTANCE_YDS);
+    const windClicks = (Math.abs(dxIn) / ipm) / CLICK_MOA;
+    const elevClicks = (Math.abs(dyIn) / ipm) / CLICK_MOA;
+
+    const dataUrl = await buildSecPng({ windDir, windClicks, elevDir, elevClicks });
+
+    const a = document.createElement("a");
+    a.href = dataUrl;
+    a.download = "SEC.png";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
   }
 
   // ---------- Wire up
@@ -406,10 +528,8 @@
   elTapLayer.addEventListener("pointerup", onPointerUp, { passive: true });
   elTapLayer.addEventListener("pointercancel", onPointerCancel, { passive: true });
 
-  // ✅ Activate iPad stability guards immediately
-  enableTapStabilityGuards();
-
   // ---------- Init
+  enableTapStabilityGuards();
   loadVendor();
   setInstruction();
   setStatus();
