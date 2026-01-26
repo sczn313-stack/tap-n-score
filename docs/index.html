@@ -2,22 +2,23 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+
+  <!-- IMPORTANT: stop double-tap/pinch zoom from changing your tap mapping -->
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
+
   <meta name="color-scheme" content="dark" />
   <meta name="theme-color" content="#000000" />
   <title>Tap-n-Score™</title>
 
-  <link rel="stylesheet" href="./styles.css?v=20260126a" />
+  <link rel="stylesheet" href="./styles.css?v=20260126b" />
 </head>
 
 <body>
   <main class="page">
 
-    <!-- TOP BAR (vendor pill only) -->
     <header class="topbar">
       <div class="brandSmall">Tap-n-Score™</div>
 
-      <!-- Vendor calling card (INPUT) -->
       <div id="vendorPill" class="vendorPill" role="button" tabindex="0" aria-label="Printer calling card">
         <img id="vendorLogo" class="vendorLogo" alt="Vendor logo" />
         <div class="vendorTxt">
@@ -27,30 +28,23 @@
       </div>
     </header>
 
-    <!-- CARD 1: CHOOSE PHOTO (ONLY message on screen) -->
     <section class="card">
       <div class="heroRow">
-
         <label class="chooseBtn" aria-label="Take a photo of your target">
-          <!-- IMPORTANT: no capture attribute (this enables Camera + Library + Files on iOS) -->
           <input id="photoInput" type="file" accept="image/*" />
           <span>TAKE A PHOTO OF YOUR TARGET</span>
         </label>
-
         <div class="heroHint">Tip: straight-on photo, fill the frame.</div>
       </div>
     </section>
 
-    <!-- CARD 2: TARGET + TAPS -->
     <section class="card">
       <div class="targetStage">
-
-        <!-- Instruction INSIDE the frame -->
         <div id="instructionLine" class="instructionLine">
           Tap aim point first, then tap bullet holes.
         </div>
 
-        <div class="imgFrame" aria-label="Target photo and tap layer">
+        <div id="imgFrame" class="imgFrame" aria-label="Target photo and tap layer">
           <img id="targetImg" class="targetImg" alt="Target photo" />
           <div id="tapLayer" class="tapLayer" aria-hidden="true"></div>
           <div id="dotsLayer" class="dotsLayer" aria-hidden="true"></div>
@@ -73,16 +67,13 @@
       </div>
     </section>
 
-    <!-- CARD 3: RESULTS + SEC -->
     <section class="card resultsCard" aria-label="Results">
-
       <div class="resultsHdr">
         <div class="secTitle">
           <span class="secR">SHOOTER</span><span class="secW"> EXPERIENCE </span><span class="secB">CARD</span>
           <span class="secMini">SEC</span>
         </div>
 
-        <!-- Vendor calling card (SEC) -->
         <div class="vendorPillMiniWrap">
           <div id="vendorPillMini" class="vendorPillMini" role="button" tabindex="0" aria-label="Printer calling card">
             <img id="vendorLogoMini" class="vendorLogoMini" alt="Vendor logo" />
@@ -106,11 +97,10 @@
       <div class="btnRow" style="margin-top:12px;">
         <button id="downloadSecBtn" class="btn primary" type="button" disabled>View / Download SEC</button>
       </div>
-
     </section>
 
   </main>
 
-  <script src="./index.js?v=20260126a"></script>
+  <script src="./index.js?v=20260126b"></script>
 </body>
 </html>
