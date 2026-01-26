@@ -13,52 +13,48 @@
 <body>
   <main class="page">
 
-    <!-- CARD 1: Vendor + Choose -->
-    <section class="card">
+    <!-- TOP BAR (vendor pill only) -->
+    <header class="topbar">
+      <div class="brandSmall">Tap-n-Score™</div>
 
-      <!-- Vendor pill (input page) -->
-      <div id="vendorPill" class="vendorPill" role="button" tabindex="0" aria-label="Vendor">
+      <!-- Vendor calling card (INPUT) -->
+      <div id="vendorPill" class="vendorPill" role="button" tabindex="0" aria-label="Printer calling card">
         <img id="vendorLogo" class="vendorLogo" alt="Vendor logo" />
         <div class="vendorTxt">
-          <div class="vendorLabel">Printed by</div>
+          <div class="vendorLabel">PRINTER</div>
           <div id="vendorName" class="vendorName">—</div>
         </div>
       </div>
+    </header>
 
-      <div class="heroRow" style="margin-top:12px;">
+    <!-- CARD 1: CHOOSE PHOTO (ONLY message on screen) -->
+    <section class="card">
+      <div class="heroRow">
 
-        <!-- IMPORTANT:
-             - NO capture attribute (this is what forces camera-only)
-             - accept includes common iPhone formats
-        -->
-        <label class="chooseBtn" for="photoInput">
-          <span>TAKE / CHOOSE TARGET PHOTO</span>
+        <label class="chooseBtn" aria-label="Take a photo of your target">
+          <!-- IMPORTANT: no capture attribute (this enables Camera + Library + Files on iOS) -->
+          <input id="photoInput" type="file" accept="image/*" />
+          <span>TAKE A PHOTO OF YOUR TARGET</span>
         </label>
 
-        <input
-          id="photoInput"
-          type="file"
-          accept="image/*,image/heic,image/heif"
-          style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0;"
-        />
-
-        <div class="heroHint">
-          Tip: straight-on photo, fill the frame.
-        </div>
+        <div class="heroHint">Tip: straight-on photo, fill the frame.</div>
       </div>
     </section>
 
-    <!-- CARD 2: Target + taps -->
-    <section class="card targetStage">
+    <!-- CARD 2: TARGET + TAPS -->
+    <section class="card">
+      <div class="targetStage">
 
-      <div id="instructionLine" class="instructionLine">
-        Take a photo of your target to begin.
-      </div>
+        <!-- Instruction INSIDE the frame -->
+        <div id="instructionLine" class="instructionLine">
+          Tap aim point first, then tap bullet holes.
+        </div>
 
-      <div class="imgFrame">
-        <img id="targetImg" class="targetImg" alt="Target photo" />
-        <div id="tapLayer" class="tapLayer active" aria-label="Tap layer"></div>
-        <div id="dotsLayer" class="dotsLayer" aria-hidden="true"></div>
+        <div class="imgFrame" aria-label="Target photo and tap layer">
+          <img id="targetImg" class="targetImg" alt="Target photo" />
+          <div id="tapLayer" class="tapLayer" aria-hidden="true"></div>
+          <div id="dotsLayer" class="dotsLayer" aria-hidden="true"></div>
+        </div>
       </div>
 
       <div class="statusRow">
@@ -67,27 +63,29 @@
       </div>
 
       <div class="btnRow">
-        <button id="undoBtn" class="btn ghost" type="button">Undo</button>
-        <button id="clearBtn" class="btn ghost" type="button">Clear</button>
+        <button id="undoBtn" class="btn ghost" type="button" disabled>Undo</button>
+        <button id="clearBtn" class="btn ghost" type="button" disabled>Clear</button>
         <button id="showResultsBtn" class="btn primary" type="button" disabled>Show Results</button>
       </div>
 
       <div id="lockBanner" class="lockBanner" hidden>
-        Results locked. Use Undo or Clear to edit taps.
+        Results locked. Undo/Clear to edit taps.
       </div>
     </section>
 
-    <!-- CARD 3: Results -->
-    <section class="card resultsCard">
+    <!-- CARD 3: RESULTS + SEC -->
+    <section class="card resultsCard" aria-label="Results">
+
       <div class="resultsHdr">
         <div class="secTitle">
           <span class="secR">SHOOTER</span><span class="secW"> EXPERIENCE </span><span class="secB">CARD</span>
           <span class="secMini">SEC</span>
         </div>
 
+        <!-- Vendor calling card (SEC) -->
         <div class="vendorPillMiniWrap">
-          <div id="vendorPillMini" class="vendorPillMini" role="button" tabindex="0" aria-label="Vendor mini">
-            <img id="vendorLogoMini" class="vendorLogoMini" alt="Vendor logo mini" />
+          <div id="vendorPillMini" class="vendorPillMini" role="button" tabindex="0" aria-label="Printer calling card">
+            <img id="vendorLogoMini" class="vendorLogoMini" alt="Vendor logo" />
             <div id="vendorNameMini" class="vendorNameMini">—</div>
           </div>
         </div>
@@ -96,18 +94,19 @@
       <div class="corrBlock">
         <div class="corrLine">
           <div class="corrLabel">Windage</div>
-          <div class="corrValue"><span id="windageDir" class="dir">—</span><span class="arrow">→</span><span id="windageVal" class="val">—</span></div>
+          <div class="corrValue"><span id="windageDir" class="dir">—</span> <span class="arrow">→</span> <span id="windageVal" class="val">—</span></div>
         </div>
 
         <div class="corrLine">
           <div class="corrLabel">Elevation</div>
-          <div class="corrValue"><span id="elevDir" class="dir">—</span><span class="arrow">→</span><span id="elevVal" class="val">—</span></div>
+          <div class="corrValue"><span id="elevDir" class="dir">—</span> <span class="arrow">→</span> <span id="elevVal" class="val">—</span></div>
         </div>
       </div>
 
       <div class="btnRow" style="margin-top:12px;">
         <button id="downloadSecBtn" class="btn primary" type="button" disabled>View / Download SEC</button>
       </div>
+
     </section>
 
   </main>
