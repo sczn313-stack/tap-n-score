@@ -2,10 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-
-  <!-- Anti-zoom / anti-double-tap zoom for pilot stability -->
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
-
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="color-scheme" content="dark" />
   <meta name="theme-color" content="#000000" />
   <title>Tap-n-Score™</title>
@@ -16,22 +13,24 @@
 <body>
   <main class="page">
 
-    <!-- CARD 1 -->
-    <section class="card">
-      <div class="topbar">
-        <div class="brandSmall">Pilot</div>
+    <!-- Top -->
+    <section class="card topRow">
+      <div class="brandSmall">Tap-n-Score™</div>
 
-        <div id="vendorPill" class="vendorPill" role="button" aria-label="Printer link">
-          <img id="vendorLogo" class="vendorLogo" alt="Printer logo" />
-          <div class="vendorTxt">
-            <div class="vendorLabel">PRINTER</div>
-            <div id="vendorName" class="vendorName">—</div>
-          </div>
+      <!-- Vendor pill (INPUT) -->
+      <div id="vendorPill" class="vendorPill" aria-label="Printer calling card">
+        <img id="vendorLogo" class="vendorLogo" alt="Printer logo" />
+        <div class="vendorTxt">
+          <div class="vendorLabel">Printer</div>
+          <div id="vendorName" class="vendorName">—</div>
         </div>
       </div>
+    </section>
 
-      <div class="heroRow" style="margin-top:12px;">
-        <label class="chooseBtn" aria-label="Take a photo of your target">
+    <!-- Card 1: Choose -->
+    <section class="card">
+      <div class="heroRow">
+        <label class="chooseBtn">
           <input id="photoInput" type="file" accept="image/*" />
           <span>TAKE A PHOTO OF YOUR TARGET</span>
         </label>
@@ -39,16 +38,14 @@
       </div>
     </section>
 
-    <!-- CARD 2 -->
+    <!-- Card 2: Tap -->
     <section class="card">
       <div class="instructionLine" id="instructionLine">Take a photo of your target.</div>
 
       <div class="targetStage">
-        <div class="imgFrame" id="imgFrame">
+        <div class="imgFrame">
           <img id="targetImg" class="targetImg" alt="Target photo" />
-          <!-- Tap surface -->
-          <div id="tapLayer" class="tapLayer" aria-label="Tap layer"></div>
-          <!-- Dots -->
+          <div id="tapLayer" class="tapLayer"></div>
           <div id="dotsLayer" class="dotsLayer" aria-hidden="true"></div>
         </div>
       </div>
@@ -64,34 +61,43 @@
         <button id="showResultsBtn" class="btn primary" type="button" disabled>Show Results</button>
       </div>
 
-      <div id="lockBanner" class="lockBanner" hidden>Results locked. Undo/Clear to edit taps.</div>
+      <div id="lockBanner" class="lockBanner" hidden>
+        Results locked. Use Undo/Clear to edit taps.
+      </div>
     </section>
 
-    <!-- CARD 3 -->
-    <section class="card resultsCard" id="resultsCard">
+    <!-- Card 3: Results -->
+    <section class="card resultsCard">
       <div class="resultsHdr">
         <div class="secTitle">
           <span class="secR">Shooter</span><span class="secW"> Experience </span><span class="secB">Card</span>
-          <span class="secMini">SEC</span>
+          <span class="secMini"><span class="secR">S</span><span class="secW">E</span><span class="secB">C</span></span>
         </div>
 
+        <!-- Vendor pill (RESULTS) -->
         <div class="vendorPillMiniWrap">
-          <div id="vendorPillMini" class="vendorPillMini" role="button" aria-label="Printer link (mini)">
+          <div id="vendorPillMini" class="vendorPillMini" aria-label="Printer calling card (results)">
             <img id="vendorLogoMini" class="vendorLogoMini" alt="Printer logo" />
             <div id="vendorNameMini" class="vendorNameMini">—</div>
           </div>
         </div>
       </div>
 
+      <!-- SCORE (TOP, BIG) -->
+      <div class="scoreWrap">
+        <div class="scoreLabel">Score</div>
+        <div id="scoreBig" class="scoreBig scoreGood">—</div>
+      </div>
+
       <div class="corrBlock">
         <div class="corrLine">
           <div class="corrLabel">Windage</div>
-          <div class="corrValue"><span id="windageDir" class="dir">—</span><span class="arrow">→</span><span id="windageVal" class="val">—</span></div>
+          <div class="corrValue"><span id="windageDir" class="dir">—</span> <span class="arrow">→</span> <span id="windageVal" class="val">—</span></div>
         </div>
 
         <div class="corrLine">
           <div class="corrLabel">Elevation</div>
-          <div class="corrValue"><span id="elevDir" class="dir">—</span><span class="arrow">→</span><span id="elevVal" class="val">—</span></div>
+          <div class="corrValue"><span id="elevDir" class="dir">—</span> <span class="arrow">→</span> <span id="elevVal" class="val">—</span></div>
         </div>
       </div>
 
@@ -99,6 +105,11 @@
         <button id="downloadSecBtn" class="btn primary" type="button" disabled>View / Download SEC</button>
       </div>
     </section>
+
+    <!-- (kept for layout compatibility / future) -->
+    <div class="hiddenInline">
+      <span id="unused"></span>
+    </div>
 
   </main>
 
