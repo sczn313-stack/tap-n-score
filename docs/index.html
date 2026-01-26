@@ -1,55 +1,58 @@
+<!-- docs/index.html (FULL REPLACEMENT) — BRICK 10 -->
 <!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-
-  <!-- BRICK 8: Stop iOS zoom changing coordinate space -->
-  <meta name="viewport"
-        content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
-
+  <!-- iOS zoom hard-kill (pairs with Brick 9 JS guards) -->
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
   <meta name="color-scheme" content="dark" />
   <meta name="theme-color" content="#000000" />
   <title>Tap-n-Score™</title>
 
-  <link rel="stylesheet" href="./styles.css?v=20260126a" />
+  <link rel="stylesheet" href="./styles.css?v=hotfix-10" />
 </head>
 
 <body>
   <main class="page">
 
-    <!-- CARD: Vendor pill + pick -->
+    <!-- CARD 0: Vendor calling card (INPUT) -->
     <section class="card">
       <div id="vendorPill" class="vendorPill" aria-label="Printer calling card">
-        <img id="vendorLogo" class="vendorLogo" alt="Vendor logo" />
+        <img id="vendorLogo" class="vendorLogo" alt="Printer logo" />
         <div class="vendorTxt">
           <div class="vendorLabel">PRINTER</div>
           <div id="vendorName" class="vendorName">—</div>
         </div>
       </div>
+    </section>
 
-      <div class="heroRow" style="margin-top:12px;">
+    <!-- CARD 1: Photo picker (CLEAN) -->
+    <section class="card">
+      <div class="heroRow">
         <!-- Camera -->
-        <label class="chooseBtn">
+        <label class="chooseBtn" aria-label="Take a photo of your target">
           <input id="photoInputCamera" type="file" accept="image/*" capture="environment" />
-          <span>TAKE TARGET PHOTO</span>
+          <span>TAKE A PHOTO OF YOUR TARGET</span>
         </label>
 
         <!-- Library -->
-        <label class="chooseBtn">
+        <label class="chooseBtn" aria-label="Choose target photo from library">
           <input id="photoInputLibrary" type="file" accept="image/*" />
-          <span>CHOOSE FROM LIBRARY</span>
+          <span>CHOOSE FROM PHOTO LIBRARY</span>
         </label>
 
         <div class="heroHint">Tip: straight-on photo, fill the frame.</div>
       </div>
     </section>
 
-    <!-- CARD: Tap stage -->
+    <!-- CARD 2: Target stage (instruction INSIDE frame) -->
     <section class="card">
-      <div id="instructionLine" class="instructionLine">Take a photo of your target.</div>
-
       <div class="targetStage">
-        <div class="imgFrame" id="imgFrame" aria-label="Target photo frame">
+        <div class="instructionLine" id="instructionLine">
+          Take a photo of your target.
+        </div>
+
+        <div class="imgFrame" id="imgFrame">
           <img id="targetImg" class="targetImg" alt="Target photo" />
           <div id="tapLayer" class="tapLayer" aria-label="Tap layer"></div>
           <div id="dotsLayer" class="dotsLayer" aria-hidden="true"></div>
@@ -57,7 +60,7 @@
       </div>
 
       <div class="statusRow">
-        <div class="chip">Aim point: <span id="bullStatus">not set</span></div>
+        <div class="chip">Bull: <span id="bullStatus">not set</span></div>
         <div class="chip">Holes: <span id="holeCount">0</span></div>
       </div>
 
@@ -72,18 +75,17 @@
       </div>
     </section>
 
-    <!-- CARD: Results -->
-    <section class="card resultsCard">
+    <!-- CARD 3: Results + Vendor calling card (SEC) -->
+    <section class="card resultsCard" aria-live="polite">
       <div class="resultsHdr">
         <div class="secTitle">
-          <span class="secR">S</span><span class="secW">H</span><span class="secB">OOTER</span>
-          <span class="secW"> EXPERIENCE </span><span class="secB">CARD</span>
-          <span class="secMini"><span class="secR">S</span><span class="secW">E</span><span class="secB">C</span></span>
+          <span class="secR">S</span><span class="secW">E</span><span class="secB">C</span>
+          <span class="secMini">Shooter Experience Card</span>
         </div>
 
         <div class="vendorPillMiniWrap">
-          <div class="vendorPillMini">
-            <img id="vendorLogoMini" class="vendorLogoMini" alt="Vendor logo" />
+          <div class="vendorPillMini" aria-label="Printer calling card (SEC)">
+            <img id="vendorLogoMini" class="vendorLogoMini" alt="Printer logo" />
             <div id="vendorNameMini" class="vendorNameMini">—</div>
           </div>
         </div>
@@ -101,13 +103,13 @@
         </div>
       </div>
 
-      <div class="btnRow" style="margin-top:12px;">
+      <div class="btnRow" style="margin-top:12px">
         <button id="downloadSecBtn" class="btn primary" type="button" disabled>View / Download SEC</button>
       </div>
     </section>
 
   </main>
 
-  <script src="./index.js?v=20260126a"></script>
+  <script src="./index.js?v=hotfix-10"></script>
 </body>
 </html>
