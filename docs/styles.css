@@ -1,16 +1,17 @@
 :root{
   --bg:#050606;
+  --card:rgba(255,255,255,.04);
   --stroke:rgba(255,255,255,.10);
+
   --text:rgba(255,255,255,.92);
   --muted:rgba(255,255,255,.72);
 
   --blue:#1f6feb;
   --red:#ff3b30;
-  --white:#ffffff;
 
   --primary: var(--blue);
 
-  --bull:#ffd200;     /* YELLOW bull */
+  --bull:#ffd200;         /* YELLOW bull */
   --hole:#00b45a;
 
   --radius:18px;
@@ -20,10 +21,10 @@
 *{box-sizing:border-box}
 html,body{height:100%}
 
-/* BRICK 4: reduce iOS zoom/selection weirdness */
+/* BRICK 6: stop iOS zoom / selection weirdness */
 html{
   -webkit-text-size-adjust:100%;
-  touch-action: pan-y;
+  touch-action:manipulation;
 }
 body{
   margin:0;
@@ -33,6 +34,7 @@ body{
     var(--bg);
   color:var(--text);
   font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+  overscroll-behavior:contain;
 }
 
 .page{
@@ -49,20 +51,6 @@ body{
   border-radius:var(--radius);
   box-shadow:var(--shadow);
   padding:14px;
-}
-
-.topbar{
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap:12px;
-}
-
-.brandSmall{
-  font-weight:900;
-  letter-spacing:.4px;
-  color:rgba(255,255,255,.78);
-  font-size:14px;
 }
 
 /* Vendor pill (INPUT) */
@@ -101,7 +89,7 @@ body{
 }
 
 /* Choose */
-.heroRow{display:flex; flex-direction:column; gap:10px; margin-top:10px}
+.heroRow{display:flex; flex-direction:column; gap:10px}
 .chooseBtn{
   display:flex;
   align-items:center;
@@ -113,11 +101,8 @@ body{
   font-weight:1000;
   letter-spacing:.6px;
   cursor:pointer;
-
-  /* BRICK 4: stop iOS highlight/zoom triggers */
   user-select:none;
   -webkit-user-select:none;
-  -webkit-tap-highlight-color: transparent;
 }
 .chooseBtn input{display:none}
 .chooseBtn span{color:rgba(255,255,255,.92)}
@@ -127,7 +112,7 @@ body{
   font-size:13px;
 }
 
-/* Instruction inside frame */
+/* Instruction inside target frame */
 .instructionLine{
   padding:10px 12px;
   border-radius:14px;
@@ -138,11 +123,8 @@ body{
   margin-bottom:12px;
 }
 
-/* TARGET STAGE
-   Key: overlays MUST share the same coordinate space as the image.
-*/
+/* Target stage */
 .targetStage{width:100%}
-
 .imgFrame{
   position:relative;
   width:100%;
@@ -150,39 +132,33 @@ body{
   overflow:hidden;
   border:1px solid rgba(255,255,255,.10);
   background:rgba(0,0,0,.25);
-
-  /* BRICK 4: makes touch behavior consistent */
-  -webkit-tap-highlight-color: transparent;
 }
 
+/* BRICK 6: disable tap-zoom/select on image */
 .targetImg{
   width:100%;
   height:auto;
-  display:block;              /* removes baseline gap */
+  display:block;
   user-select:none;
   -webkit-user-select:none;
   -webkit-user-drag:none;
-
-  /* BRICK 4: no double-tap zoom interactions on image */
-  touch-action: manipulation;
+  touch-action:manipulation;
+  pointer-events:none; /* taps happen on tapLayer, not on img */
 }
 
 .tapLayer{
   position:absolute;
   inset:0;
   z-index:2;
-
-  /* allow scroll; JS blocks taps when user is actually scrolling */
-  touch-action: pan-y;
-
-  /* BRICK 4: remove highlight + keep stable */
-  -webkit-tap-highlight-color: transparent;
+  touch-action:pan-y;   /* allow scroll */
+  pointer-events:none;  /* off until image loaded */
   user-select:none;
   -webkit-user-select:none;
-
-  pointer-events:none;
 }
-.tapLayer.active{ pointer-events:auto; }
+
+.tapLayer.active{
+  pointer-events:auto;
+}
 
 .dotsLayer{
   position:absolute;
@@ -201,7 +177,7 @@ body{
 }
 
 .bullDot{
-  background:rgba(255,210,0,.95); /* YELLOW */
+  background:rgba(255,210,0,.95);
   box-shadow:0 0 0 3px rgba(0,0,0,.45), 0 0 0 1px rgba(255,255,255,.12);
 }
 
@@ -238,16 +214,14 @@ body{
   border-radius:14px;
   padding:12px 12px;
   border:1px solid rgba(255,255,255,.12);
-  background:rgba(0,0,0,.22);
+  background:rgba(31,111,235,.20);  /* unify with choose */
   color:rgba(255,255,255,.90);
   font-weight:1000;
   letter-spacing:.4px;
   cursor:pointer;
   flex:1;
-
   user-select:none;
   -webkit-user-select:none;
-  -webkit-tap-highlight-color: transparent;
 }
 
 .btn:disabled{
@@ -255,10 +229,12 @@ body{
   cursor:not-allowed;
 }
 
-.btn.ghost{ background:rgba(0,0,0,.18); }
+.btn.ghost{
+  background:rgba(31,111,235,.12);
+}
 
 .btn.primary{
-  background:rgba(31,111,235,.20);
+  background:rgba(31,111,235,.22);
   border-color:rgba(31,111,235,.28);
 }
 
@@ -329,7 +305,6 @@ body{
   padding:12px;
   background:rgba(0,0,0,.16);
 }
-
 .corrLine{
   display:flex;
   align-items:center;
@@ -339,7 +314,6 @@ body{
   border-bottom:1px solid rgba(255,255,255,.06);
 }
 .corrLine:last-child{border-bottom:none}
-
 .corrLabel{
   color:rgba(255,255,255,.70);
   font-weight:950;
@@ -350,6 +324,4 @@ body{
   color:rgba(255,255,255,.92);
 }
 .arrow{opacity:.75; padding:0 8px}
-
-/* Hide “change bull” button (kept only so JS doesn’t break) */
-#changeBullBtn{ display:none !important; }
+.hiddenBtn{display:none !important}
