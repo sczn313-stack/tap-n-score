@@ -9,12 +9,11 @@
 
   --blue:#1f6feb;
   --red:#ff3b30;
-  --white:#ffffff;
 
   --primary: var(--blue);
 
-  --bull:#ffd200;         /* YELLOW bull */
-  --hole:#00b45a;         /* GREEN holes */
+  --bull:#ffd200;     /* yellow aim point */
+  --hole:#00b45a;     /* green holes */
 
   --radius:18px;
   --shadow:0 18px 60px rgba(0,0,0,.55);
@@ -48,6 +47,7 @@ body{
   padding:14px;
 }
 
+/* Top bar */
 .topbar{
   display:flex;
   align-items:center;
@@ -62,7 +62,7 @@ body{
   font-size:14px;
 }
 
-/* Vendor pill (INPUT) */
+/* Vendor pill */
 .vendorPill{
   display:flex;
   align-items:center;
@@ -107,8 +107,9 @@ body{
   background:rgba(31,111,235,.20);
   padding:14px 14px;
   font-weight:1000;
-  letter-spacing:.6px;
+  letter-spacing:.8px;
   cursor:pointer;
+  text-transform:uppercase;
 }
 .chooseBtn input{display:none}
 .chooseBtn span{color:rgba(255,255,255,.92)}
@@ -118,7 +119,7 @@ body{
   font-size:13px;
 }
 
-/* Instruction inside target frame */
+/* Instruction INSIDE the stage */
 .instructionLine{
   padding:10px 12px;
   border-radius:14px;
@@ -149,16 +150,15 @@ body{
   touch-action:manipulation;
 }
 
-/* IMPORTANT:
-   tapLayer is ONLY active when an image is loaded.
-   Default pointer-events:none prevents phantom taps during scroll. */
+/* Tap + Dots layers (same coordinate space as image) */
 .tapLayer{
   position:absolute;
   inset:0;
   z-index:2;
-  touch-action:pan-y;
-  pointer-events:none;
+  pointer-events:none;   /* off until active */
+  touch-action:pan-y;    /* allow scroll; taps are filtered in JS */
 }
+
 .tapLayer.active{
   pointer-events:auto;
 }
@@ -207,24 +207,24 @@ body{
   color:rgba(255,255,255,.82);
 }
 
-/* More spacing + Show Results stronger */
 .btnRow{
-  display:flex;
-  gap:16px;
+  display:grid;
+  grid-template-columns:1fr 1fr 1fr;
+  gap:14px;
   margin-top:14px;
 }
 
 .btn{
   border-radius:14px;
-  padding:13px 14px;
+  padding:12px 12px;
+  min-height:52px;
   border:1px solid rgba(255,255,255,.12);
   background:rgba(0,0,0,.22);
   color:rgba(255,255,255,.90);
   font-weight:1000;
-  letter-spacing:.4px;
+  letter-spacing:.5px;
   cursor:pointer;
-  flex:1;
-  min-height:46px;
+  width:100%;
 }
 
 .btn:disabled{
@@ -237,16 +237,14 @@ body{
 }
 
 .btn.primary{
-  background:rgba(31,111,235,.20);
-  border-color:rgba(31,111,235,.28);
-}
-
-.btn.showResults{
+  background:rgba(31,111,235,.30);
+  border-color:rgba(31,111,235,.45);
+  box-shadow:0 12px 34px rgba(31,111,235,.20);
+  letter-spacing:.9px;
   font-weight:1100;
-  letter-spacing:.6px;
-  text-transform:none;
 }
 
+/* Lock banner */
 .lockBanner{
   margin-top:12px;
   padding:10px 12px;
@@ -258,58 +256,59 @@ body{
 }
 
 /* Results */
-.resultsCard{padding-top:14px}
+.resultsCard{padding-top:16px}
+
 .resultsHdr{
   display:flex;
   align-items:flex-start;
   justify-content:space-between;
   gap:10px;
-  margin-bottom:10px;
+  margin-bottom:12px;
 }
 
 .secTitle{
   font-weight:1000;
   letter-spacing:.3px;
-  line-height:1.02;
-  margin:0;
+  line-height:1.05;
 }
 .secR{color:var(--red)}
 .secW{color:rgba(255,255,255,.90)}
 .secB{color:var(--blue)}
 .secMini{
   display:block;
-  margin-top:2px;          /* closer */
+  margin-top:6px;
   font-size:18px;
   color:rgba(255,255,255,.70);
   font-weight:950;
 }
 
-/* Vendor pill (RESULTS) - bigger */
 .vendorPillMiniWrap{display:flex; justify-content:flex-end}
 .vendorPillMini{
   display:flex;
   align-items:center;
   gap:10px;
   padding:10px 14px;
-  border:1px solid rgba(255,255,255,.12);
+  border:1px solid rgba(255,255,255,.10);
   border-radius:999px;
   background:rgba(0,0,0,.18);
 }
+
 .vendorLogoMini{
-  width:30px;
-  height:30px;
+  width:32px;
+  height:32px;
   border-radius:999px;
   object-fit:cover;
   border:1px solid rgba(255,255,255,.14);
-  display:none;
-}
-.vendorNameMini{
-  font-weight:1000;
-  font-size:13px;
-  color:rgba(255,255,255,.86);
+  display:none; /* turn on by JS if logo exists */
 }
 
-/* Corrections block */
+.vendorNameMini{
+  font-weight:1000;
+  font-size:14px;
+  color:rgba(255,255,255,.82);
+}
+
+/* Corrections */
 .corrBlock{
   border:1px solid rgba(255,255,255,.10);
   border-radius:16px;
@@ -337,9 +336,6 @@ body{
   color:rgba(255,255,255,.92);
 }
 .arrow{opacity:.75; padding:0 8px}
-.dir{color:rgba(255,255,255,.92)}
-.val{color:rgba(255,255,255,.88)}
 
-/* Hidden required nodes */
-.hiddenInline{display:none !important}
+/* Hidden utility */
 .hiddenBtn{display:none !important}
