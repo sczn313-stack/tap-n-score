@@ -2,8 +2,10 @@
   --bg:#050606;
   --card:rgba(255,255,255,.04);
   --stroke:rgba(255,255,255,.10);
+  --stroke2:rgba(255,255,255,.14);
   --text:rgba(255,255,255,.92);
   --muted:rgba(255,255,255,.72);
+  --dim:rgba(255,255,255,.58);
 
   --blue:#1f6feb;
   --red:#ff3b30;
@@ -11,7 +13,7 @@
 
   --primary: var(--blue);
 
-  --bull:#ffd200;         /* YELLOW bull */
+  --bull:#ffd200;
   --hole:#00b45a;
 
   --radius:18px;
@@ -20,6 +22,10 @@
 
 *{box-sizing:border-box}
 html,body{height:100%}
+
+/* Helps prevent “random zoom” behaviors on iOS */
+html{ -webkit-text-size-adjust:100%; }
+
 body{
   margin:0;
   background:
@@ -28,9 +34,6 @@ body{
     var(--bg);
   color:var(--text);
   font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
-
-  /* iOS: keeps text sizing from shifting layout */
-  -webkit-text-size-adjust: 100%;
 }
 
 .page{
@@ -73,7 +76,9 @@ body{
   border-radius:999px;
   background:rgba(0,0,0,.22);
   user-select:none;
+  -webkit-tap-highlight-color: transparent;
 }
+
 .vendorLogo{
   width:34px;
   height:34px;
@@ -82,6 +87,7 @@ body{
   object-fit:cover;
   border:1px solid rgba(255,255,255,.14);
 }
+
 .vendorTxt{display:flex; flex-direction:column; line-height:1.05}
 .vendorLabel{
   font-size:11px;
@@ -108,6 +114,10 @@ body{
   font-weight:1000;
   letter-spacing:.6px;
   cursor:pointer;
+  -webkit-tap-highlight-color: transparent;
+
+  /* KEY: disables iOS double-tap zoom on this control */
+  touch-action: manipulation;
 }
 .chooseBtn input{display:none}
 .chooseBtn span{color:rgba(255,255,255,.92)}
@@ -128,7 +138,7 @@ body{
   margin-bottom:12px;
 }
 
-/* TARGET STAGE: lock coordinate space */
+/* TARGET STAGE */
 .targetStage{width:100%}
 .imgFrame{
   position:relative;
@@ -138,10 +148,8 @@ body{
   border:1px solid rgba(255,255,255,.10);
   background:rgba(0,0,0,.25);
 
-  /* iOS: prevent long-press / callout / selection */
-  -webkit-touch-callout: none;
-  -webkit-user-select: none;
-  user-select: none;
+  /* KEY: makes the frame stable + discourages iOS zoom tricks */
+  -webkit-tap-highlight-color: transparent;
 }
 
 .targetImg{
@@ -150,10 +158,9 @@ body{
   display:block;
   user-select:none;
   -webkit-user-drag:none;
-  -webkit-touch-callout:none;
 
-  /* critical: stop gestures on the image itself */
-  touch-action: none;
+  /* KEY: prevents “tap to zoom image” behavior */
+  pointer-events:none;
 }
 
 .tapLayer{
@@ -161,8 +168,14 @@ body{
   inset:0;
   z-index:2;
 
-  /* allow normal page scroll outside, but gestures here are handled by JS */
-  touch-action: none;
+  /* KEY: allows scroll, but disables double-tap zoom */
+  touch-action: manipulation;
+
+  -webkit-tap-highlight-color: transparent;
+}
+
+.tapLayer.active{
+  pointer-events:auto;
 }
 
 .dotsLayer{
@@ -180,10 +193,12 @@ body{
   border-radius:999px;
   transform:translate(-50%,-50%);
 }
+
 .bullDot{
   background:rgba(255,210,0,.95);
   box-shadow:0 0 0 3px rgba(0,0,0,.45), 0 0 0 1px rgba(255,255,255,.12);
 }
+
 .holeDot{
   background:rgba(0,180,90,.92);
   box-shadow:0 0 0 3px rgba(0,0,0,.45), 0 0 0 1px rgba(255,255,255,.12);
@@ -197,6 +212,7 @@ body{
   gap:10px;
   margin-top:12px;
 }
+
 .chip{
   padding:9px 12px;
   border-radius:999px;
@@ -205,11 +221,13 @@ body{
   font-weight:900;
   color:rgba(255,255,255,.82);
 }
+
 .btnRow{
   display:flex;
   gap:10px;
   margin-top:12px;
 }
+
 .btn{
   border-radius:14px;
   padding:12px 12px;
@@ -220,9 +238,20 @@ body{
   letter-spacing:.4px;
   cursor:pointer;
   flex:1;
+
+  -webkit-tap-highlight-color: transparent;
+
+  /* KEY: disables double-tap zoom on action buttons */
+  touch-action: manipulation;
 }
-.btn:disabled{opacity:.45; cursor:not-allowed}
-.btn.ghost{background:rgba(0,0,0,.18)}
+
+.btn:disabled{
+  opacity:.45;
+  cursor:not-allowed;
+}
+
+.btn.ghost{ background:rgba(0,0,0,.18); }
+
 .btn.primary{
   background:rgba(31,111,235,.20);
   border-color:rgba(31,111,235,.28);
@@ -247,6 +276,7 @@ body{
   gap:10px;
   margin-bottom:12px;
 }
+
 .secTitle{
   font-weight:1000;
   letter-spacing:.3px;
@@ -272,6 +302,8 @@ body{
   border:1px solid rgba(255,255,255,.10);
   border-radius:999px;
   background:rgba(0,0,0,.18);
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
 }
 .vendorLogoMini{
   width:26px;
@@ -287,12 +319,14 @@ body{
   color:rgba(255,255,255,.82);
 }
 
+/* Corrections block */
 .corrBlock{
   border:1px solid rgba(255,255,255,.10);
   border-radius:16px;
   padding:12px;
   background:rgba(0,0,0,.16);
 }
+
 .corrLine{
   display:flex;
   align-items:center;
@@ -302,6 +336,16 @@ body{
   border-bottom:1px solid rgba(255,255,255,.06);
 }
 .corrLine:last-child{border-bottom:none}
-.corrLabel{color:rgba(255,255,255,.70); font-weight:950; letter-spacing:.3px}
-.corrValue{font-weight:1000; color:rgba(255,255,255,.92)}
+
+.corrLabel{
+  color:rgba(255,255,255,.70);
+  font-weight:950;
+  letter-spacing:.3px;
+}
+.corrValue{
+  font-weight:1000;
+  color:rgba(255,255,255,.92);
+}
 .arrow{opacity:.75; padding:0 8px}
+.dir{color:rgba(255,255,255,.92)}
+.val{color:rgba(255,255,255,.88)}
