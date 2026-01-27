@@ -1,11 +1,11 @@
 /* ============================================================
-   docs/index.js (FULL REPLACEMENT) — PILOT TIGHTEN PACK
-   - Smooth pinch zoom + pan (iOS touch events)
-   - RAF-throttled transforms (smoother feel)
-   - Smaller filled dots (color centers)
-   - Vendor session routing for Baker
-   - Locked tags: catalog, product
-   - Baker landing URLs configurable (Baker chooses)
+   docs/index.js (FULL REPLACEMENT) — TAP PRECISION MODE (A)
+   Default: Tap Precision ON
+   - 1 finger = taps only (bull + holes), NO accidental drag
+   - 2 fingers = pan + pinch zoom (smooth)
+   - RAF-throttled transforms
+   - Smaller filled dots
+   - Baker CTAs with locked tags: catalog, product
 ============================================================ */
 
 (() => {
@@ -32,16 +32,19 @@
   const bakerCatalogBtn = $("bakerCatalogBtn");
   const bakerProductBtn = $("bakerProductBtn");
 
+  // Tap Precision toggle UI
+  const tapPrecisionToggle = $("tapPrecisionToggle");
+  const tapPrecisionState = $("tapPrecisionState");
+
   // LOCKED Baker tags
   const BAKER_TAG_CATALOG = "catalog";
   const BAKER_TAG_PRODUCT = "product";
   const DEFAULT_DEST = BAKER_TAG_CATALOG;
 
-  // Baker selects landing locations (fill these when Baker tells you)
-  // Keep as empty string until you get the exact URLs.
+  // Baker chooses landing later
   const BAKER_DESTINATION_MAP = {
-    [BAKER_TAG_CATALOG]: "", // e.g. "https://bakerprinting.com/collections/targets"
-    [BAKER_TAG_PRODUCT]: "", // e.g. "https://bakerprinting.com/pages/targets"
+    [BAKER_TAG_CATALOG]: "",
+    [BAKER_TAG_PRODUCT]: "",
   };
 
   function getSessionParams() {
@@ -60,6 +63,30 @@
 
   // DONE state
   let done = false;
+
+  // Tap Precision (default ON) persisted
+  const PRECISION_KEY = "tap_precision_on";
+  let tapPrecisionOn = true;
+
+  function loadPrecisionSetting() {
+    const raw = localStorage.getItem(PRECISION_KEY);
+    if (raw === null) tapPrecisionOn = true; // default A
+    else tapPrecisionOn = raw === "1";
+    tapPrecisionToggle.checked = tapPrecisionOn;
+    tapPrecisionState.textContent = tapPrecisionOn ? "ON" : "OFF";
+  }
+
+  function savePrecisionSetting(next) {
+    tapPrecisionOn = !!next;
+    localStorage.setItem(PRECISION_KEY, tapPrecisionOn ? "1" : "0");
+    tapPrecisionToggle.checked = tapPrecisionOn;
+    tapPrecisionState.textContent = tapPrecisionOn ? "ON" : "OFF";
+    setUi();
+  }
+
+  tapPrecisionToggle.addEventListener("change", () => {
+    savePrecisionSetting(tapPrecisionToggle.checked);
+  });
 
   // View transform
   let scale = 1;
@@ -120,9 +147,16 @@
       return;
     }
 
-    instructionLine.textContent = !bull
-      ? "Pinch to zoom if needed, then TAP the bull (aim point) once."
-      : "Now TAP bullet holes. Pinch/zoom and pan as needed. Then press Show Results.";
+    // Precision ON: explicit 2-finger pan/zoom instruction
+    if (tapPrecisionOn) {
+      instructionLine.textContent = !bull
+        ? "Tap the bull once. Use TWO fingers to zoom/pan if needed."
+        : "Tap bullet holes. Use TWO fingers to zoom/pan. Then press Show Results.";
+    } else {
+      instructionLine.textContent = !bull
+        ? "Tap the bull once. Pinch/zoom and drag to pan if needed."
+        : "Tap bullet holes. Pinch/zoom and drag to pan. Then press Show Results.";
+    }
   }
 
   function clearAll() {
@@ -187,7 +221,6 @@
   function wireVendor() {
     const { vendor, dest } = getSessionParams();
 
-    // Default: hide vendor UI
     vendorLink.style.display = "none";
     bakerCtas.style.display = "none";
 
@@ -199,7 +232,6 @@
 
     bakerCtas.style.display = "flex";
 
-    // Locked button labels (already on HTML, but enforce)
     bakerCatalogBtn.textContent = "Buy Baker Targets";
     bakerProductBtn.textContent = "Learn More About Baker Targets";
 
@@ -211,15 +243,10 @@
       window.location.href = `${window.location.pathname}?vendor=baker&dest=${BAKER_TAG_PRODUCT}`;
     };
 
-    // If someone arrives with dest specified, show the Baker selection note,
-    // and if a real URL is configured, redirect.
     const targetUrl = BAKER_DESTINATION_MAP[dest] || "";
     if (dest && (dest === BAKER_TAG_CATALOG || dest === BAKER_TAG_PRODUCT)) {
-      if (targetUrl) {
-        // Baker landing configured: go there
-        window.location.href = targetUrl;
-      } else {
-        // Not configured yet: show a clean note (no dead-click confusion)
+      if (targetUrl) window.location.href = targetUrl;
+      else {
         showOutput(
           "Baker Link",
           `Baker landing for <b>${dest}</b> is not set yet.<br/>
@@ -241,7 +268,6 @@
       resetView();
       clearAll();
 
-      // dots layer uses image-local coordinates (natural size)
       dotsLayer.style.width = img.naturalWidth + "px";
       dotsLayer.style.height = img.naturalHeight + "px";
 
@@ -259,7 +285,10 @@
   });
 
   // Touch gesture state
-  let mode = "none";     // "pan" | "pinch" | "none"
+  // Precision ON:
+  // - 1 touch: tap only (no pan)
+  // - 2 touches: pinch + pan (via midpoint)
+  let mode = "none";     // "tap" | "pan" | "pinch" | "none"
   let panStart = null;   // { x, y, tx, ty }
   let pinchStart = null; // { dist, midX, midY, scale, tx, ty }
 
@@ -277,7 +306,6 @@
     };
   }
 
-  // Tap detection
   const TAP_SLOP = 10;
   let downPt = null;
   let downWasPinch = false;
@@ -286,23 +314,30 @@
   viewport.addEventListener("touchstart", (e) => {
     if (!img.src) return;
 
-    if (e.touches.length === 1) {
-      e.preventDefault();
-      mode = "pan";
+    // Prevent page scrolling/zoom behavior inside viewport
+    e.preventDefault();
 
+    if (e.touches.length === 1) {
       const t = e.touches[0];
       const pt = getViewportPointFromClient(t.clientX, t.clientY);
-      panStart = { x: pt.x, y: pt.y, tx, ty };
-      pinchStart = null;
 
       downWasPinch = false;
       downPt = pt;
+
+      if (tapPrecisionOn) {
+        mode = "tap";
+        panStart = null;
+        pinchStart = null;
+      } else {
+        // Allow 1-finger pan when precision OFF
+        mode = "pan";
+        panStart = { x: pt.x, y: pt.y, tx, ty };
+        pinchStart = null;
+      }
     }
 
     if (e.touches.length === 2) {
-      e.preventDefault();
       mode = "pinch";
-
       const t1 = e.touches[0];
       const t2 = e.touches[1];
       const m = tMid(t1, t2);
@@ -317,7 +352,6 @@
       };
 
       panStart = null;
-
       downWasPinch = true;
       downPt = null;
     }
@@ -325,9 +359,9 @@
 
   viewport.addEventListener("touchmove", (e) => {
     if (!img.src) return;
+    e.preventDefault();
 
     if (mode === "pan" && e.touches.length === 1 && panStart) {
-      e.preventDefault();
       const t = e.touches[0];
       const pt = getViewportPointFromClient(t.clientX, t.clientY);
 
@@ -340,7 +374,6 @@
     }
 
     if (mode === "pinch" && e.touches.length === 2 && pinchStart) {
-      e.preventDefault();
       const t1 = e.touches[0];
       const t2 = e.touches[1];
 
@@ -349,7 +382,6 @@
 
       const nextScale = clamp(pinchStart.scale * (d / pinchStart.dist), MIN_SCALE, MAX_SCALE);
 
-      // keep pinch-start midpoint stable in image-local space
       const imgLocalAtStartMid = {
         x: (pinchStart.midX - pinchStart.tx) / pinchStart.scale,
         y: (pinchStart.midY - pinchStart.ty) / pinchStart.scale
@@ -363,12 +395,15 @@
       applyTransform();
       return;
     }
+
+    // mode === "tap": ignore move (prevents accidental drag feeling)
   }, { passive: false });
 
   viewport.addEventListener("touchend", (e) => {
     if (!img.src) return;
+    e.preventDefault();
 
-    // double tap reset + single tap place dots
+    // Single-finger tap handling (place dot + double tap reset)
     if (!downWasPinch && e.changedTouches.length === 1 && downPt) {
       const t = e.changedTouches[0];
       const upPt = getViewportPointFromClient(t.clientX, t.clientY);
@@ -397,7 +432,7 @@
       }
     }
 
-    // transition mode based on remaining touches
+    // Transition mode based on remaining touches
     if (e.touches.length === 0) {
       mode = "none";
       panStart = null;
@@ -405,13 +440,22 @@
       downPt = null;
       downWasPinch = false;
     } else if (e.touches.length === 1) {
-      mode = "pan";
+      // Remaining one touch:
       const t = e.touches[0];
       const pt = getViewportPointFromClient(t.clientX, t.clientY);
-      panStart = { x: pt.x, y: pt.y, tx, ty };
-      pinchStart = null;
-      downPt = pt;
+
       downWasPinch = false;
+      downPt = pt;
+
+      if (tapPrecisionOn) {
+        mode = "tap";
+        panStart = null;
+        pinchStart = null;
+      } else {
+        mode = "pan";
+        panStart = { x: pt.x, y: pt.y, tx, ty };
+        pinchStart = null;
+      }
     }
   }, { passive: false });
 
@@ -433,6 +477,7 @@
   });
 
   // Init
+  loadPrecisionSetting();
   wireVendor();
   setUi();
 })();
