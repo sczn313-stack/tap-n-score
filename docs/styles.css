@@ -97,7 +97,6 @@ body{
 }
 .fileBtn input{ display:none; }
 
-/* Tap Precision toggle pill */
 .togglePill{
   display:inline-flex;
   align-items:center;
@@ -110,10 +109,7 @@ body{
   font-size: 13px;
   user-select:none;
 }
-.togglePill input{
-  width: 18px;
-  height: 18px;
-}
+.togglePill input{ width:18px; height:18px; }
 .toggleText{ color: rgba(255,255,255,.85); font-weight: 650; }
 .toggleState{
   padding: 3px 8px;
@@ -156,7 +152,6 @@ body{
   border-color: rgba(255,43,43,.55);
   background: rgba(255,43,43,.18);
 }
-
 .btn.ctaPrimary{
   border-color: rgba(255,43,43,.65);
   background: rgba(255,43,43,.22);
@@ -171,7 +166,7 @@ body{
 
 .stage{ margin-top: 14px; }
 
-/* Custom pinch/zoom surface */
+/* Pinch/zoom surface */
 .viewport{
   position: relative;
   width: 100%;
@@ -185,7 +180,6 @@ body{
   user-select: none;
 }
 
-/* Smoothness hints */
 .targetImg,
 .dotsLayer{
   will-change: transform;
@@ -209,7 +203,7 @@ body{
   transform-origin: 0 0;
 }
 
-/* Smaller, filled markers */
+/* Dots */
 .dot{
   position:absolute;
   width: 10px;
@@ -228,6 +222,21 @@ body{
 .dot.hit{
   background: rgba(255,43,43,.95);
   border: 2px solid rgba(255,255,255,.85);
+}
+
+/* Loupe (magnifier) */
+.loupe{
+  position:absolute;
+  left: 12px;
+  top: 12px;
+  width: 140px;
+  height: 140px;
+  border-radius: 16px;
+  border: 1px solid rgba(255,255,255,.22);
+  background: rgba(0,0,0,.25);
+  box-shadow: 0 14px 40px rgba(0,0,0,.55);
+  display:none;
+  pointer-events:none;
 }
 
 .output{ margin-top: 14px; }
