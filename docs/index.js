@@ -1,9 +1,10 @@
 /* ============================================================
-   docs/index.js (FULL REPLACEMENT) — iOS PINCH/ZOOM + PAN + TAPS
+   docs/index.js (FULL REPLACEMENT) — iOS PINCH/ZOOM + DONE STATE
    - Pinch zoom works on iOS Safari (touch events)
    - Pan works (one finger drag)
    - Taps place bull then hits (stored in image-local coords)
    - Markers remain accurate under zoom/pan
+   - Adds a clear DONE state on Show Results (pilot confidence)
 ============================================================ */
 
 (() => {
@@ -30,6 +31,9 @@
   // Tap data stored in IMAGE-LOCAL coords
   let bull = null;
   let hits = [];
+
+  // DONE state (pilot)
+  let done = false;
 
   // View transform
   let scale = 1;
@@ -87,17 +91,38 @@
       instructionLine.textContent = "Upload your target photo to begin.";
       return;
     }
+
+    if (done) {
+      instructionLine.textContent = "Results ready. You can Undo/Clear or upload a new target photo.";
+      return;
+    }
+
     instructionLine.textContent = !bull
       ? "Pinch to zoom if needed, then TAP the bull (aim point) once."
       : "Now TAP bullet holes. Pinch/zoom and pan as needed. Then press Show Results.";
+  }
+
+  function hideOutput() {
+    outputBox.classList.add("hidden");
+    outputText.textContent = "";
+    done = false;
+  }
+
+  function showDoneOutput() {
+    outputBox.classList.remove("hidden");
+    outputText.innerHTML =
+      `<b>✅ Results Ready (Pilot)</b><br/>` +
+      `Bull anchored + <b>${hits.length}</b> hits recorded.<br/>` +
+      `Next: Undo/Clear to adjust, or upload a new photo.`;
+    done = true;
+    setUi();
   }
 
   function clearAll() {
     bull = null;
     hits = [];
     dotsLayer.innerHTML = "";
-    outputBox.classList.add("hidden");
-    outputText.textContent = "";
+    hideOutput();
     setUi();
   }
 
@@ -106,8 +131,7 @@
     else if (bull) bull = null;
 
     renderDots();
-    outputBox.classList.add("hidden");
-    outputText.textContent = "";
+    hideOutput();
     setUi();
   }
 
@@ -185,6 +209,11 @@
 
   viewport.addEventListener("touchstart", (e) => {
     if (!img.src) return;
+
+    if (done) {
+      // Allow user to keep panning/zooming even after done
+      // but tapping will still add hits if they want to adjust (via Undo/Clear)
+    }
 
     if (e.touches.length === 1) {
       e.preventDefault();
@@ -282,14 +311,14 @@
         } else {
           lastTapTime = now;
 
-          // Place bull/hit on tap
+          // Place bull/hit on tap (and clear DONE state if they keep working)
           const imgLocal = viewportToImageLocal(upPt);
           if (Number.isFinite(imgLocal.x) && Number.isFinite(imgLocal.y)) {
             if (!bull) bull = imgLocal;
             else hits.push(imgLocal);
+
             renderDots();
-            outputBox.classList.add("hidden");
-            outputText.textContent = "";
+            hideOutput(); // they changed inputs, so results not "done" anymore
             setUi();
           }
         }
@@ -320,8 +349,7 @@
 
   showBtn.addEventListener("click", () => {
     if (!(bull && hits.length > 0)) return;
-    outputBox.classList.remove("hidden");
-    outputText.textContent = `Bull anchored. Hits recorded: ${hits.length}. (Pilot view)`;
+    showDoneOutput();
   });
 
   // Init
