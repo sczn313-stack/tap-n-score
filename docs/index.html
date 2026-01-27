@@ -1,97 +1,87 @@
-<!-- docs/index.html (FULL REPLACEMENT) — BRICKS: arrows, score, info panel, single picker, remove “Bull” -->
+<!-- docs/index.html (FULL REPLACEMENT) — REBUILD STEADY + YOUR NEW BRICKS -->
 <!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <!-- iOS zoom hard-kill (pairs with JS guards) -->
+  <!-- iOS zoom hard-kill -->
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
   <meta name="color-scheme" content="dark" />
   <meta name="theme-color" content="#000000" />
   <title>Tap-n-Score™</title>
 
-  <link rel="stylesheet" href="./styles.css?v=hotfix-13" />
+  <link rel="stylesheet" href="./styles.css?v=hotfix-rebuild-01" />
 </head>
 
 <body>
   <main class="page">
 
-    <!-- Floating “info/light” button -->
-    <button id="infoBtn" class="infoBtn" type="button" aria-label="Details & settings">
-      ✦
-    </button>
+    <!-- Floating insight button -->
+    <button id="insightBtn" class="insightBtn" type="button" aria-label="Details">✦</button>
 
-    <!-- Bottom sheet -->
-    <div id="sheetBackdrop" class="sheetBackdrop hidden" aria-hidden="true"></div>
-    <section id="bottomSheet" class="sheet hidden" role="dialog" aria-modal="true" aria-label="Details & Settings">
-      <div class="sheetHandle" aria-hidden="true"></div>
-      <div class="sheetHeader">
-        <div class="sheetTitle">Details</div>
-        <button id="sheetClose" class="sheetClose" type="button">Close</button>
+    <!-- Details Drawer -->
+    <div id="drawerBackdrop" class="drawerBackdrop hiddenBtn" aria-hidden="true"></div>
+    <section id="drawer" class="drawer hiddenBtn" role="dialog" aria-modal="true" aria-label="Details">
+      <div class="drawerHead">
+        <div class="drawerTitle">Details</div>
+        <button id="drawerClose" class="drawerClose" type="button">Close</button>
       </div>
 
-      <div class="sheetBody">
-        <div class="sheetSectionTitle">Adjustments</div>
+      <div class="drawerBody">
+        <div class="fieldRow">
+          <div class="fieldLabel">Distance</div>
+          <div class="fieldCtrl">
+            <input id="distanceVal" class="fieldInput" type="number" min="1" step="1" value="100" />
+            <button id="unitToggle" class="pillBtn" type="button" aria-label="Toggle yards meters">yd</button>
+          </div>
+        </div>
 
-        <div class="formRow">
-          <label class="formLabel" for="distanceVal">Distance</label>
-          <div class="formInline">
-            <input id="distanceVal" class="formInput" type="number" min="1" step="1" value="100" />
-            <select id="distanceUnit" class="formSelect">
-              <option value="yd" selected>yards</option>
-              <option value="m">meters</option>
+        <div class="fieldRow">
+          <div class="fieldLabel">Click Value</div>
+          <div class="fieldCtrl">
+            <select id="clickVal" class="fieldSelect">
+              <option value="0.25" selected>0.25 MOA / click</option>
+              <option value="0.5">0.50 MOA / click</option>
+              <option value="0.125">0.125 MOA / click</option>
+              <option value="0.1">0.10 mil / click</option>
             </select>
           </div>
-          <div class="formHelp">Used for True MOA math. (Meters auto-convert.)</div>
         </div>
 
-        <div class="formRow">
-          <label class="formLabel" for="clickMoa">Click Value</label>
-          <select id="clickMoa" class="formSelect">
-            <option value="0.25" selected>0.25 MOA / click</option>
-            <option value="0.5">0.50 MOA / click</option>
-            <option value="0.125">0.125 MOA / click</option>
-          </select>
-          <div class="formHelp">Most scopes: 0.25 MOA/click.</div>
+        <div class="drawerNote">
+          Tip: this only changes the math. Your direction truth stays locked.
         </div>
-
-        <div class="sheetSectionTitle" style="margin-top:14px">How to Use</div>
-        <ul class="bullets">
-          <li>Choose a target photo.</li>
-          <li>Tap the aim point once.</li>
-          <li>Tap each confirmed bullet hole.</li>
-          <li>Press “Show Results” for direction + clicks.</li>
-        </ul>
       </div>
     </section>
 
     <!-- CARD 0: Printer calling card (INPUT) -->
     <section class="card">
-      <div id="vendorPill" class="vendorPill" aria-label="Printer calling card">
-        <img id="vendorLogo" class="vendorLogo" alt="Printer logo" />
-        <div class="vendorTxt">
-          <div class="vendorLabel">PRINTER</div>
-          <div id="vendorName" class="vendorName">—</div>
+      <div class="cardRow">
+        <div id="vendorPill" class="vendorPill" aria-label="Printer calling card">
+          <img id="vendorLogo" class="vendorLogo" alt="Printer logo" />
+          <div class="vendorTxt">
+            <div class="vendorLabel">PRINTER</div>
+            <div id="vendorName" class="vendorName">—</div>
+          </div>
         </div>
       </div>
     </section>
 
-    <!-- CARD 1: Photo picker (SINGLE) — iOS pop-up menu handles camera/library -->
+    <!-- CARD 1: Photo picker (ONE BUTTON) -->
     <section class="card">
       <div class="heroRow">
-        <label class="chooseBtn" aria-label="Choose target photo">
+        <label class="chooseBtn" aria-label="Take or choose a photo of your target">
           <input id="photoInput" type="file" accept="image/*" />
-          <span>CHOOSE TARGET PHOTO</span>
+          <span>TAKE OR CHOOSE A PHOTO OF YOUR TARGET</span>
         </label>
-
         <div class="heroHint">Tip: straight-on photo, fill the frame.</div>
       </div>
     </section>
 
-    <!-- CARD 2: Target stage (instruction INSIDE frame) -->
+    <!-- CARD 2: Target stage -->
     <section class="card">
       <div class="targetStage">
         <div class="instructionLine" id="instructionLine">
-          Choose a target photo.
+          Take a photo of your target.
         </div>
 
         <div class="imgFrame" id="imgFrame">
@@ -102,7 +92,7 @@
       </div>
 
       <div class="statusRow">
-        <div class="chip">Aim point: <span id="aimStatus">not set</span></div>
+        <div class="chip">Aim Point: <span id="aimStatus">not set</span></div>
         <div class="chip">Holes: <span id="holeCount">0</span></div>
       </div>
 
@@ -118,7 +108,7 @@
     </section>
 
     <!-- CARD 3: Results + Printer calling card (SEC) -->
-    <section id="resultsCard" class="card resultsCard hidden" aria-live="polite">
+    <section class="card resultsCard" aria-live="polite">
       <div class="resultsHdr">
         <div class="secTitle">
           <span class="secR">S</span><span class="secW">E</span><span class="secB">C</span>
@@ -126,7 +116,7 @@
         </div>
 
         <div class="vendorPillMiniWrap">
-          <div id="vendorPillMini" class="vendorPillMini" aria-label="Printer calling card (SEC)">
+          <div class="vendorPillMini" id="vendorPillMini" aria-label="Printer calling card (SEC)">
             <img id="vendorLogoMini" class="vendorLogoMini" alt="Printer logo" />
             <div id="vendorNameMini" class="vendorNameMini">—</div>
           </div>
@@ -134,18 +124,17 @@
       </div>
 
       <!-- SCORE (back) -->
-      <div class="scoreRow">
+      <div class="scoreBigRow">
         <div class="scoreLabel">Score</div>
-        <div id="scoreVal" class="scoreBig scorePoor">—</div>
+        <div id="scoreBig" class="scoreBig scoreMid">—</div>
       </div>
 
       <div class="corrBlock">
         <div class="corrLine">
           <div class="corrLabel">Windage</div>
           <div class="corrValue">
-            <span id="windArrow" class="dirArrow">—</span>
             <span id="windageDir" class="dir">—</span>
-            <span class="arrowSep">•</span>
+            <span id="windArrow" class="dirArrow arrowRight" aria-hidden="true">➤</span>
             <span id="windageVal" class="val">—</span>
           </div>
         </div>
@@ -153,9 +142,8 @@
         <div class="corrLine">
           <div class="corrLabel">Elevation</div>
           <div class="corrValue">
-            <span id="elevArrow" class="dirArrow">—</span>
             <span id="elevDir" class="dir">—</span>
-            <span class="arrowSep">•</span>
+            <span id="elevArrow" class="dirArrow arrowUp" aria-hidden="true">➤</span>
             <span id="elevVal" class="val">—</span>
           </div>
         </div>
@@ -168,6 +156,6 @@
 
   </main>
 
-  <script src="./index.js?v=hotfix-13"></script>
+  <script src="./index.js?v=hotfix-rebuild-01"></script>
 </body>
 </html>
