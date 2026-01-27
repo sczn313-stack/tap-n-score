@@ -3,8 +3,6 @@
   --fg:#fff;
   --muted:rgba(255,255,255,.70);
   --muted2:rgba(255,255,255,.55);
-  --card:rgba(255,255,255,.08);
-  --card2:rgba(255,255,255,.12);
   --line:rgba(255,255,255,.14);
   --accent:#ff2b2b;
 }
@@ -44,6 +42,7 @@ body{
 .brandTm{ color:var(--muted2); font-weight:700; margin-left:2px; }
 
 .vendorLink{
+  display:none;                 /* shown only for vendor sessions */
   color: var(--muted);
   text-decoration:none;
   font-size: 13px;
@@ -51,7 +50,15 @@ body{
   border: 1px solid var(--line);
   border-radius: 10px;
 }
-.vendorLink:hover{ border-color: var(--card2); color:#fff; }
+.vendorLink:hover{ border-color: rgba(255,255,255,.22); color:#fff; }
+
+.bakerCtas{
+  display:none;                 /* shown only for vendor=baker */
+  margin-top: 10px;
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+}
 
 .instruction{
   margin: 10px 0 0;
@@ -109,9 +116,19 @@ body{
   font-size: 14px;
 }
 .btn:disabled{ opacity:.45; cursor:not-allowed; }
+
 .btn.primary{
   border-color: rgba(255,43,43,.55);
   background: rgba(255,43,43,.18);
+}
+
+.btn.ctaPrimary{
+  border-color: rgba(255,43,43,.65);
+  background: rgba(255,43,43,.22);
+}
+.btn.ctaSecondary{
+  border-color: rgba(255,255,255,.22);
+  background: rgba(255,255,255,.06);
 }
 
 .hintRow{ margin-top: 10px; }
@@ -128,16 +145,24 @@ body{
   background: rgba(255,255,255,.03);
   overflow: hidden;
 
-  touch-action: none;                 /* stops browser gesture conflicts */
+  touch-action: none;
   -webkit-user-select: none;
   user-select: none;
+}
+
+/* Smoothness hints */
+.targetImg,
+.dotsLayer{
+  will-change: transform;
+  backface-visibility: hidden;
+  transform: translate3d(0,0,0);
 }
 
 .targetImg{
   display:block;
   width: 100%;
   height: auto;
-  transform-origin: 0 0;              /* simplifies transform math */
+  transform-origin: 0 0;
   -webkit-user-drag: none;
   user-select: none;
 }
@@ -149,23 +174,25 @@ body{
   transform-origin: 0 0;
 }
 
+/* Smaller, filled, clean markers */
 .dot{
   position:absolute;
-  width: 14px;
-  height: 14px;
+  width: 10px;
+  height: 10px;
   border-radius: 999px;
-  border: 2px solid rgba(255,255,255,.9);
-  box-shadow: 0 6px 18px rgba(0,0,0,.45);
   transform: translate(-50%, -50%);
+  box-shadow: 0 6px 18px rgba(0,0,0,.35);
   opacity: .95;
 }
 .dot.bull{
-  width: 16px;
-  height: 16px;
-  border-color: rgba(0,200,255,.95);
+  width: 12px;
+  height: 12px;
+  background: rgba(0,200,255,.95);
+  border: 2px solid rgba(255,255,255,.85);
 }
 .dot.hit{
-  border-color: rgba(255,43,43,.95);
+  background: rgba(255,43,43,.95);
+  border: 2px solid rgba(255,255,255,.85);
 }
 
 .output{ margin-top: 14px; }
