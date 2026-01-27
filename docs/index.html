@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
 
-  <!-- iOS pinch stability: keep page from hijacking zoom -->
+  <!-- iOS stability + prevents Safari page zoom hijacking during pinch in viewport -->
   <meta name="viewport"
         content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
 
@@ -11,7 +11,7 @@
   <meta name="theme-color" content="#000000" />
   <title>Tap-n-Score™</title>
 
-  <link rel="stylesheet" href="./styles.css?v=pilot-zoom-ios-2" />
+  <link rel="stylesheet" href="./styles.css?v=pilot-tight-1" />
 </head>
 
 <body>
@@ -22,7 +22,15 @@
         <div class="brand">
           <span class="brandTap">TAP</span><span class="brandN">-N-</span><span class="brandScore">SCORE</span><span class="brandTm">™</span>
         </div>
+
+        <!-- Vendor badge/button (shows only when vendor=baker) -->
         <a id="vendorLink" class="vendorLink" href="#" target="_blank" rel="noopener">Vendor</a>
+      </div>
+
+      <!-- Baker CTAs (show only when vendor=baker) -->
+      <div id="bakerCtas" class="bakerCtas" aria-label="Baker buttons">
+        <button id="bakerCatalogBtn" class="btn ctaPrimary" type="button">Buy Baker Targets</button>
+        <button id="bakerProductBtn" class="btn ctaSecondary" type="button">Learn More About Baker Targets</button>
       </div>
 
       <p id="instructionLine" class="instruction">
@@ -60,17 +68,17 @@
 
     <section class="output">
       <div id="outputBox" class="outputBox hidden">
-        <div class="outputTitle">Pilot Result</div>
+        <div class="outputTitle" id="outputTitle">Pilot</div>
         <div id="outputText" class="outputText"></div>
       </div>
     </section>
 
     <footer class="footer">
-      <span class="muted">Pilot build — iOS pinch/zoom enabled.</span>
+      <span class="muted">Pilot build — smooth pinch/zoom, clean dots, vendor CTAs.</span>
     </footer>
 
   </main>
 
-  <script src="./index.js?v=pilot-zoom-ios-2"></script>
+  <script src="./index.js?v=pilot-tight-1"></script>
 </body>
 </html>
