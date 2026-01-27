@@ -1,12 +1,6 @@
 /* ============================================================
    docs/index.js (FULL REPLACEMENT) — REBUILD STEADY + YOUR BRICKS
-   - One photo chooser (iOS/Android native menu)
-   - Removes "bull" wording (Aim Point)
-   - Instruction hides after first tap, returns on Clear/new photo
-   - Direction arrows rotate to match LEFT/RIGHT/UP/DOWN
-   - Score is back (colored)
-   - Insight drawer: distance (yd/m), click value
-   - HARD truth gate for direction (never emits wrong polarity)
+   FIX: SEC PNG arrows now match direction (← → ↑ ↓)
 ============================================================ */
 
 (() => {
@@ -55,15 +49,13 @@
   const elUnitToggle = $("unitToggle");
   const elClickVal = $("clickVal");
 
-  // ---- Baseline (pilot paper) — used ONLY for converting normalized offsets to inches
+  // ---- Baseline (pilot paper)
   const PAPER_W_IN = 8.5;
   const PAPER_H_IN = 11.0;
 
   // ---- State
   let objectUrl = null;
 
-  // points: normalized within image
-  // { nx, ny }
   let aim = null;
   let holes = [];
 
@@ -79,15 +71,22 @@
   let ptrDown = null;
 
   // Settings (drawer)
-  // distance stored in yards internally
   let distanceYds = 100;
-  let unit = "yd"; // display unit
-  let clickMode = "0.25"; // string from select
+  let unit = "yd";
+  let clickMode = "0.25";
 
   // ---- Helpers
   const clamp01 = (v) => Math.max(0, Math.min(1, v));
   const fmt2 = (n) => (Number.isFinite(n) ? n.toFixed(2) : "0.00");
   const inchesPerMOA = (yds) => 1.047 * (yds / 100); // True MOA
+
+  function arrowGlyph(dir) {
+    if (dir === "LEFT") return "←";
+    if (dir === "RIGHT") return "→";
+    if (dir === "UP") return "↑";
+    if (dir === "DOWN") return "↓";
+    return "→";
+  }
 
   function setInstruction() {
     if (!elImg.src) {
@@ -102,7 +101,6 @@
       return;
     }
 
-    // After first tap (aim point), hide instruction until reset/clear
     elInstruction.classList.add("hiddenInline");
   }
 
@@ -158,9 +156,6 @@
   function lockResults() { resultsLocked = true; setStatus(); }
   function unlockResults() { resultsLocked = false; setStatus(); }
 
-  // Direction truth gate (signed inches => label)
-  // dxIn > 0 => RIGHT, dxIn < 0 => LEFT
-  // dyIn < 0 => UP,   dyIn > 0 => DOWN (screen Y grows downward)
   function truthDir(dxIn, dyIn) {
     return {
       wind: dxIn >= 0 ? "RIGHT" : "LEFT",
@@ -178,14 +173,11 @@
     else el.classList.add("arrowRight");
   }
 
-  // Score: 0..100 (pilot)
-  // 0 inches => 100, 6 inches => 0 (clamped)
   function computeScore(dxIn, dyIn) {
     const err = Math.hypot(dxIn, dyIn);
     const MAX_IN = 6.0;
     const raw = 100 - (err / MAX_IN) * 100;
-    const score = Math.round(Math.max(0, Math.min(100, raw)));
-    return score;
+    return Math.round(Math.max(0, Math.min(100, raw)));
   }
 
   function applyScoreClass(score) {
@@ -195,7 +187,6 @@
     else elScoreBig.classList.add("scorePoor");
   }
 
-  // Convert client point into normalized image space
   function clientToNorm(clientX, clientY) {
     const rect = elImg.getBoundingClientRect();
     const nx = clamp01((clientX - rect.left) / rect.width);
@@ -210,29 +201,23 @@
   }
 
   function currentClickValue() {
-    const v = String(elClickVal?.value || clickMode || "0.25");
-    // If mil selected (0.1), treat as "mil per click" and convert using mil math
-    // 1 mil = 3.6" at 100yd (approx true mil)
-    return v;
+    return String(elClickVal?.value || clickMode || "0.25");
   }
 
   function computeClicks(absIn, distanceYdsLocal, clickValStr) {
     if (clickValStr === "0.1") {
-      // mil mode
       const inchesPerMil = 3.6 * (distanceYdsLocal / 100);
       const mils = absIn / inchesPerMil;
-      const clicks = mils / 0.1;
-      return clicks;
+      return mils / 0.1;
     }
 
     const clickMOA = Number(clickValStr || 0.25);
     const ipm = inchesPerMOA(distanceYdsLocal);
     const moa = absIn / ipm;
-    const clicks = moa / clickMOA;
-    return clicks;
+    return moa / clickMOA;
   }
 
-  // ---- Vendor load (non-blocking)
+  // ---- Vendor load
   async function loadVendor() {
     try {
       const res = await fetch("./vendor.json", { cache: "no-store" });
@@ -273,7 +258,6 @@
     if (!elImg.src) return;
     if (resultsLocked) return;
 
-    // first tap sets aim
     if (!aim) {
       aim = pt;
       holes = [];
@@ -285,7 +269,6 @@
       return;
     }
 
-    // remaining are holes
     holes.push(pt);
     resetResultsUI();
     unlockResults();
@@ -294,7 +277,7 @@
     renderDots();
   }
 
-  // ---- Pointer (scroll-safe)
+  // ---- Pointer
   function onPointerDown(e) {
     if (!e.isPrimary) return;
     if (!elImg.src) return;
@@ -388,7 +371,6 @@
 
     const poib = meanNorm(holes);
 
-    // correction vector = aim - poib
     const dx01 = aim.nx - poib.nx;
     const dy01 = aim.ny - poib.ny;
 
@@ -397,7 +379,6 @@
 
     const dirs = truthDir(dxIn, dyIn);
 
-    // HARD gate: directions MUST match sign truth (paranoid safety)
     const mustWind = dxIn >= 0 ? "RIGHT" : "LEFT";
     const mustElev = dyIn <= 0 ? "UP" : "DOWN";
     if (dirs.wind !== mustWind || dirs.elev !== mustElev) {
@@ -419,12 +400,10 @@
     const windClicks = computeClicks(absWindIn, distanceYds, clickStr);
     const elevClicks = computeClicks(absElevIn, distanceYds, clickStr);
 
-    // Score
     const score = computeScore(dxIn, dyIn);
     elScoreBig.textContent = String(score);
     applyScoreClass(score);
 
-    // Render
     elWindDir.textContent = dirs.wind;
     elWindVal.textContent = `${fmt2(windClicks)} clicks`;
     setArrow(elWindArrow, dirs.wind);
@@ -438,7 +417,7 @@
     lockResults();
   }
 
-  // ---- SEC PNG (includes score + printer)
+  // ---- SEC PNG (FIXED arrows)
   async function buildSecPng(payload) {
     const W = 1200, H = 675;
     const canvas = document.createElement("canvas");
@@ -449,7 +428,6 @@
     ctx.fillStyle = "#0b0e0f";
     ctx.fillRect(0, 0, W, H);
 
-    // Title (no Tap-n-Score on SEC)
     ctx.font = "1000 54px system-ui, -apple-system, Segoe UI, Roboto, Arial";
     ctx.fillStyle = "#ff3b30"; ctx.fillText("SHOOTER", 60, 86);
     ctx.fillStyle = "rgba(255,255,255,.92)"; ctx.fillText(" EXPERIENCE ", 315, 86);
@@ -460,7 +438,6 @@
     ctx.fillStyle = "rgba(255,255,255,.92)"; ctx.fillText("E", 92, 132);
     ctx.fillStyle = "#1f6feb"; ctx.fillText("C", 124, 132);
 
-    // Vendor (top-right)
     const vName = vendor?.name || "Printer";
     ctx.font = "850 26px system-ui, -apple-system, Segoe UI, Roboto, Arial";
     ctx.fillStyle = "rgba(255,255,255,.78)";
@@ -468,7 +445,6 @@
     ctx.fillText(vName, W - 70, 120);
     ctx.textAlign = "left";
 
-    // Logo
     if (vendorLogoImg) {
       await new Promise((resolve) => {
         if (vendorLogoImg.complete) return resolve();
@@ -497,13 +473,11 @@
       }
     }
 
-    // Panel
     const px = 60, py = 170, pw = 1080, ph = 440;
     roundRect(ctx, px, py, pw, ph, 22);
     ctx.fillStyle = "rgba(255,255,255,.04)"; ctx.fill();
     ctx.strokeStyle = "rgba(255,255,255,.10)"; ctx.lineWidth = 2; ctx.stroke();
 
-    // Score
     ctx.fillStyle = "rgba(255,255,255,.80)";
     ctx.font = "900 28px system-ui, -apple-system, Segoe UI, Roboto, Arial";
     ctx.fillText("SCORE", px + 34, py + 64);
@@ -517,16 +491,17 @@
     ctx.font = "1000 96px system-ui, -apple-system, Segoe UI, Roboto, Arial";
     ctx.fillText(String(payload.score), px + 34, py + 152);
 
-    // Corrections
     ctx.fillStyle = "rgba(255,255,255,.92)";
     ctx.font = "950 34px system-ui, -apple-system, Segoe UI, Roboto, Arial";
     ctx.fillText("Corrections", px + 34, py + 220);
 
-    ctx.font = "900 30px system-ui, -apple-system, Segoe UI, Roboto, Arial";
-    ctx.fillText(`Windage: ${payload.windDir} → ${fmt2(payload.windClicks)} clicks`, px + 34, py + 290);
-    ctx.fillText(`Elevation: ${payload.elevDir} → ${fmt2(payload.elevClicks)} clicks`, px + 34, py + 345);
+    const wArr = arrowGlyph(payload.windDir);
+    const eArr = arrowGlyph(payload.elevDir);
 
-    // Footer (quiet)
+    ctx.font = "900 30px system-ui, -apple-system, Segoe UI, Roboto, Arial";
+    ctx.fillText(`Windage: ${payload.windDir} ${wArr} ${fmt2(payload.windClicks)} clicks`, px + 34, py + 290);
+    ctx.fillText(`Elevation: ${payload.elevDir} ${eArr} ${fmt2(payload.elevClicks)} clicks`, px + 34, py + 345);
+
     ctx.fillStyle = "rgba(255,255,255,.55)";
     ctx.font = "750 22px system-ui, -apple-system, Segoe UI, Roboto, Arial";
     ctx.fillText(payload.footer, px + 34, py + ph - 34);
@@ -602,7 +577,6 @@
   }
 
   function syncDistanceUI() {
-    // if displaying meters, convert yards->meters in UI
     if (unit === "m") {
       const meters = Math.round(distanceYds * 0.9144);
       elDistanceVal.value = String(meters);
@@ -618,26 +592,20 @@
     if (!Number.isFinite(n) || n <= 0) return;
 
     if (unit === "m") {
-      // meters -> yards internal
       distanceYds = Math.max(1, Math.round(n / 0.9144));
     } else {
       distanceYds = Math.max(1, Math.round(n));
     }
   }
 
-  // ---- iOS gesture suppression (extra hardening)
+  // ---- iOS gesture suppression
   document.addEventListener("gesturestart", (e) => { e.preventDefault(); }, { passive: false });
-  document.addEventListener("dblclick", (e) => {
-    // prevent iOS double-tap zoom side effects
-    e.preventDefault();
-  }, { passive: false });
+  document.addEventListener("dblclick", (e) => { e.preventDefault(); }, { passive: false });
 
   // ---- Wire up
   elFile.addEventListener("change", (e) => {
     const file = e.target.files && e.target.files[0];
     if (!file) return;
-
-    // New photo => instruction returns until first tap
     loadFile(file);
   });
 
@@ -649,7 +617,6 @@
   elClear.addEventListener("click", () => {
     if (resultsLocked) { unlockResults(); resetResultsUI(); }
     clearAll();
-    // After clear, instruction must show again
     setInstruction();
   });
 
@@ -679,13 +646,11 @@
 
   elDistanceVal.addEventListener("change", () => {
     readDistanceUI();
-    // Keep it stable in UI after any conversion
     syncDistanceUI();
   });
 
   elClickVal.addEventListener("change", () => {
     clickMode = String(elClickVal.value || "0.25");
-    // any change should unlock results so user can re-run
     if (resultsLocked) { unlockResults(); resetResultsUI(); }
   });
 
