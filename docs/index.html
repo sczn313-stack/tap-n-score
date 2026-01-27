@@ -1,4 +1,4 @@
-<!-- docs/index.html (FULL REPLACEMENT) — BRICK 10 + AUTO-SCALE + FALLBACK -->
+<!-- docs/index.html (FULL REPLACEMENT) — SCORE BACK -->
 <!doctype html>
 <html lang="en">
 <head>
@@ -8,13 +8,13 @@
   <meta name="theme-color" content="#000000" />
   <title>Tap-n-Score™</title>
 
-  <link rel="stylesheet" href="./styles.css?v=hotfix-10s" />
+  <link rel="stylesheet" href="./styles.css?v=hotfix-score-1" />
 </head>
 
 <body>
   <main class="page">
 
-    <!-- CARD 0: Printer calling card (INPUT) -->
+    <!-- CARD 0: Vendor calling card (INPUT) -->
     <section class="card">
       <div id="vendorPill" class="vendorPill" aria-label="Printer calling card">
         <img id="vendorLogo" class="vendorLogo" alt="Printer logo" />
@@ -25,20 +25,14 @@
       </div>
     </section>
 
-    <!-- CARD 1: Photo picker (CLEAN) -->
+    <!-- CARD 1: Photo picker (SINGLE) -->
     <section class="card">
       <div class="heroRow">
-        <!-- Keep both for now (pilot stability). Later we can collapse. -->
-        <label class="chooseBtn" aria-label="Take a photo of your target">
-          <input id="photoInputCamera" type="file" accept="image/*" capture="environment" />
-          <span>TAKE A PHOTO OF YOUR TARGET</span>
+        <label class="chooseBtn" aria-label="Take or choose a photo of your target">
+          <!-- iOS will offer Camera / Photo Library / Browse -->
+          <input id="photoInput" type="file" accept="image/*" />
+          <span>TAKE OR CHOOSE A PHOTO OF YOUR TARGET</span>
         </label>
-
-        <label class="chooseBtn" aria-label="Choose target photo from library">
-          <input id="photoInputLibrary" type="file" accept="image/*" />
-          <span>CHOOSE FROM PHOTO LIBRARY</span>
-        </label>
-
         <div class="heroHint">Tip: straight-on photo, fill the frame.</div>
       </div>
     </section>
@@ -58,14 +52,8 @@
       </div>
 
       <div class="statusRow">
-        <div class="chip">Aim point: <span id="bullStatus">not set</span></div>
+        <div class="chip">Aim: <span id="bullStatus">not set</span></div>
         <div class="chip">Holes: <span id="holeCount">0</span></div>
-
-        <!-- NEW: Scale status + Fix -->
-        <div class="chip chipScale">
-          Scale: <span id="scaleState">—</span>
-          <button id="fixScaleBtn" class="miniBtn" type="button" hidden>Fix</button>
-        </div>
       </div>
 
       <div class="btnRow">
@@ -79,7 +67,7 @@
       </div>
     </section>
 
-    <!-- CARD 3: Results + Printer calling card (SEC) -->
+    <!-- CARD 3: Results + Vendor calling card (SEC) -->
     <section class="card resultsCard" aria-live="polite">
       <div class="resultsHdr">
         <div class="secTitle">
@@ -93,6 +81,12 @@
             <div id="vendorNameMini" class="vendorNameMini">—</div>
           </div>
         </div>
+      </div>
+
+      <!-- SCORE (most prominent) -->
+      <div class="scoreBigRow">
+        <div class="scoreLabel">Score</div>
+        <div id="scoreBig" class="scoreBig scoreGood">—</div>
       </div>
 
       <div class="corrBlock">
@@ -122,6 +116,6 @@
 
   </main>
 
-  <script src="./index.js?v=hotfix-10s"></script>
+  <script src="./index.js?v=hotfix-score-1"></script>
 </body>
 </html>
