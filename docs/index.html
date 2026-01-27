@@ -1,78 +1,44 @@
-<!-- docs/index.html (FULL REPLACEMENT) — REBUILD STEADY + YOUR NEW BRICKS -->
+<!-- docs/index.html (FULL REPLACEMENT) — BRICK 10 + AUTO-SCALE + FALLBACK -->
 <!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <!-- iOS zoom hard-kill -->
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
   <meta name="color-scheme" content="dark" />
   <meta name="theme-color" content="#000000" />
   <title>Tap-n-Score™</title>
 
-  <link rel="stylesheet" href="./styles.css?v=hotfix-rebuild-01" />
+  <link rel="stylesheet" href="./styles.css?v=hotfix-10s" />
 </head>
 
 <body>
   <main class="page">
 
-    <!-- Floating insight button -->
-    <button id="insightBtn" class="insightBtn" type="button" aria-label="Details">✦</button>
-
-    <!-- Details Drawer -->
-    <div id="drawerBackdrop" class="drawerBackdrop hiddenBtn" aria-hidden="true"></div>
-    <section id="drawer" class="drawer hiddenBtn" role="dialog" aria-modal="true" aria-label="Details">
-      <div class="drawerHead">
-        <div class="drawerTitle">Details</div>
-        <button id="drawerClose" class="drawerClose" type="button">Close</button>
-      </div>
-
-      <div class="drawerBody">
-        <div class="fieldRow">
-          <div class="fieldLabel">Distance</div>
-          <div class="fieldCtrl">
-            <input id="distanceVal" class="fieldInput" type="number" min="1" step="1" value="100" />
-            <button id="unitToggle" class="pillBtn" type="button" aria-label="Toggle yards meters">yd</button>
-          </div>
-        </div>
-
-        <div class="fieldRow">
-          <div class="fieldLabel">Click Value</div>
-          <div class="fieldCtrl">
-            <select id="clickVal" class="fieldSelect">
-              <option value="0.25" selected>0.25 MOA / click</option>
-              <option value="0.5">0.50 MOA / click</option>
-              <option value="0.125">0.125 MOA / click</option>
-              <option value="0.1">0.10 mil / click</option>
-            </select>
-          </div>
-        </div>
-
-        <div class="drawerNote">
-          Tip: this only changes the math. Your direction truth stays locked.
-        </div>
-      </div>
-    </section>
-
     <!-- CARD 0: Printer calling card (INPUT) -->
     <section class="card">
-      <div class="cardRow">
-        <div id="vendorPill" class="vendorPill" aria-label="Printer calling card">
-          <img id="vendorLogo" class="vendorLogo" alt="Printer logo" />
-          <div class="vendorTxt">
-            <div class="vendorLabel">PRINTER</div>
-            <div id="vendorName" class="vendorName">—</div>
-          </div>
+      <div id="vendorPill" class="vendorPill" aria-label="Printer calling card">
+        <img id="vendorLogo" class="vendorLogo" alt="Printer logo" />
+        <div class="vendorTxt">
+          <div class="vendorLabel">PRINTER</div>
+          <div id="vendorName" class="vendorName">—</div>
         </div>
       </div>
     </section>
 
-    <!-- CARD 1: Photo picker (ONE BUTTON) -->
+    <!-- CARD 1: Photo picker (CLEAN) -->
     <section class="card">
       <div class="heroRow">
-        <label class="chooseBtn" aria-label="Take or choose a photo of your target">
-          <input id="photoInput" type="file" accept="image/*" />
-          <span>TAKE OR CHOOSE A PHOTO OF YOUR TARGET</span>
+        <!-- Keep both for now (pilot stability). Later we can collapse. -->
+        <label class="chooseBtn" aria-label="Take a photo of your target">
+          <input id="photoInputCamera" type="file" accept="image/*" capture="environment" />
+          <span>TAKE A PHOTO OF YOUR TARGET</span>
         </label>
+
+        <label class="chooseBtn" aria-label="Choose target photo from library">
+          <input id="photoInputLibrary" type="file" accept="image/*" />
+          <span>CHOOSE FROM PHOTO LIBRARY</span>
+        </label>
+
         <div class="heroHint">Tip: straight-on photo, fill the frame.</div>
       </div>
     </section>
@@ -92,8 +58,14 @@
       </div>
 
       <div class="statusRow">
-        <div class="chip">Aim Point: <span id="aimStatus">not set</span></div>
+        <div class="chip">Aim point: <span id="bullStatus">not set</span></div>
         <div class="chip">Holes: <span id="holeCount">0</span></div>
+
+        <!-- NEW: Scale status + Fix -->
+        <div class="chip chipScale">
+          Scale: <span id="scaleState">—</span>
+          <button id="fixScaleBtn" class="miniBtn" type="button" hidden>Fix</button>
+        </div>
       </div>
 
       <div class="btnRow">
@@ -116,17 +88,11 @@
         </div>
 
         <div class="vendorPillMiniWrap">
-          <div class="vendorPillMini" id="vendorPillMini" aria-label="Printer calling card (SEC)">
+          <div class="vendorPillMini" aria-label="Printer calling card (SEC)">
             <img id="vendorLogoMini" class="vendorLogoMini" alt="Printer logo" />
             <div id="vendorNameMini" class="vendorNameMini">—</div>
           </div>
         </div>
-      </div>
-
-      <!-- SCORE (back) -->
-      <div class="scoreBigRow">
-        <div class="scoreLabel">Score</div>
-        <div id="scoreBig" class="scoreBig scoreMid">—</div>
       </div>
 
       <div class="corrBlock">
@@ -134,7 +100,7 @@
           <div class="corrLabel">Windage</div>
           <div class="corrValue">
             <span id="windageDir" class="dir">—</span>
-            <span id="windArrow" class="dirArrow arrowRight" aria-hidden="true">➤</span>
+            <span id="windArrow" class="arrowGlyph">→</span>
             <span id="windageVal" class="val">—</span>
           </div>
         </div>
@@ -143,7 +109,7 @@
           <div class="corrLabel">Elevation</div>
           <div class="corrValue">
             <span id="elevDir" class="dir">—</span>
-            <span id="elevArrow" class="dirArrow arrowUp" aria-hidden="true">➤</span>
+            <span id="elevArrow" class="arrowGlyph">→</span>
             <span id="elevVal" class="val">—</span>
           </div>
         </div>
@@ -156,6 +122,6 @@
 
   </main>
 
-  <script src="./index.js?v=hotfix-rebuild-01"></script>
+  <script src="./index.js?v=hotfix-10s"></script>
 </body>
 </html>
