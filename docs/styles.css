@@ -13,8 +13,8 @@
 
   --primary: var(--blue);
 
-  --bull:#ffd200;   /* yellow */
-  --hole:#00b45a;   /* green */
+  --bull:#ffd200;
+  --hole:#00b45a;
 
   --radius:18px;
   --shadow:0 18px 60px rgba(0,0,0,.55);
@@ -22,7 +22,6 @@
 
 *{box-sizing:border-box}
 html,body{height:100%}
-
 body{
   margin:0;
   background:
@@ -49,8 +48,7 @@ body{
   padding:14px;
 }
 
-/* ---------- TOP / VENDOR ---------- */
-
+/* Vendor pill (INPUT) */
 .vendorPill{
   display:flex;
   align-items:center;
@@ -61,7 +59,6 @@ body{
   background:rgba(0,0,0,.22);
   user-select:none;
 }
-
 .vendorLogo{
   width:34px;
   height:34px;
@@ -70,7 +67,6 @@ body{
   object-fit:cover;
   border:1px solid rgba(255,255,255,.14);
 }
-
 .vendorTxt{display:flex; flex-direction:column; line-height:1.05}
 .vendorLabel{
   font-size:11px;
@@ -84,10 +80,8 @@ body{
   font-weight:900;
 }
 
-/* ---------- PHOTO PICKER ---------- */
-
+/* Choose */
 .heroRow{display:flex; flex-direction:column; gap:10px}
-
 .chooseBtn{
   display:flex;
   align-items:center;
@@ -95,22 +89,20 @@ body{
   border-radius:14px;
   border:1px solid rgba(255,255,255,.12);
   background:rgba(31,111,235,.20);
-  padding:14px;
+  padding:14px 14px;
   font-weight:1000;
   letter-spacing:.6px;
   cursor:pointer;
 }
 .chooseBtn input{display:none}
 .chooseBtn span{color:rgba(255,255,255,.92)}
-
 .heroHint{
   color:rgba(255,255,255,.62);
   font-weight:700;
   font-size:13px;
 }
 
-/* ---------- TARGET STAGE ---------- */
-
+/* Instruction */
 .instructionLine{
   padding:10px 12px;
   border-radius:14px;
@@ -121,6 +113,8 @@ body{
   margin-bottom:12px;
 }
 
+/* Target Stage */
+.targetStage{width:100%}
 .imgFrame{
   position:relative;
   width:100%;
@@ -129,7 +123,6 @@ body{
   border:1px solid rgba(255,255,255,.10);
   background:rgba(0,0,0,.25);
 }
-
 .targetImg{
   width:100%;
   height:auto;
@@ -138,17 +131,13 @@ body{
   -webkit-user-drag:none;
   touch-action:manipulation;
 }
-
 .tapLayer{
   position:absolute;
   inset:0;
   z-index:2;
   touch-action:pan-y;
 }
-
-.tapLayer.active{
-  pointer-events:auto;
-}
+.tapLayer.active{ pointer-events:auto; }
 
 .dotsLayer{
   position:absolute;
@@ -157,32 +146,29 @@ body{
   pointer-events:none;
 }
 
-/* ---------- TAP DOTS (10px) ---------- */
-
+/* Dots (SMALLER) */
 .dot{
   position:absolute;
-  width:10px;
-  height:10px;
+  width:12px;              /* was 18px */
+  height:12px;             /* was 18px */
   border-radius:999px;
   transform:translate(-50%,-50%);
 }
-
 .bullDot{
   background:rgba(255,210,0,.95);
-  box-shadow:
-    0 0 0 2px rgba(0,0,0,.55),
-    0 0 0 1px rgba(255,255,255,.18);
+  box-shadow:0 0 0 2px rgba(0,0,0,.55), 0 0 0 1px rgba(255,255,255,.12);
 }
-
 .holeDot{
-  background:rgba(0,180,90,.95);
-  box-shadow:
-    0 0 0 2px rgba(0,0,0,.55),
-    0 0 0 1px rgba(255,255,255,.18);
+  background:rgba(0,180,90,.92);
+  box-shadow:0 0 0 2px rgba(0,0,0,.55), 0 0 0 1px rgba(255,255,255,.12);
+}
+/* Scale calibration markers */
+.scaleDot{
+  background:transparent;
+  box-shadow:0 0 0 2px rgba(255,210,0,.70), 0 0 0 1px rgba(0,0,0,.6);
 }
 
-/* ---------- STATUS / CONTROLS ---------- */
-
+/* Status + controls */
 .statusRow{
   display:flex;
   align-items:center;
@@ -190,7 +176,6 @@ body{
   gap:10px;
   margin-top:12px;
 }
-
 .chip{
   padding:9px 12px;
   border-radius:999px;
@@ -199,16 +184,14 @@ body{
   font-weight:900;
   color:rgba(255,255,255,.82);
 }
-
 .btnRow{
   display:flex;
   gap:10px;
   margin-top:12px;
 }
-
 .btn{
   border-radius:14px;
-  padding:12px;
+  padding:12px 12px;
   border:1px solid rgba(255,255,255,.12);
   background:rgba(0,0,0,.22);
   color:rgba(255,255,255,.90);
@@ -217,15 +200,11 @@ body{
   cursor:pointer;
   flex:1;
 }
-
+.btn:disabled{ opacity:.45; cursor:not-allowed; }
+.btn.ghost{ background:rgba(0,0,0,.18); }
 .btn.primary{
   background:rgba(31,111,235,.20);
   border-color:rgba(31,111,235,.28);
-}
-
-.btn:disabled{
-  opacity:.45;
-  cursor:not-allowed;
 }
 
 .lockBanner{
@@ -238,28 +217,23 @@ body{
   font-weight:900;
 }
 
-/* ---------- RESULTS / SEC ---------- */
-
+/* Results */
 .resultsCard{padding-top:16px}
-
 .resultsHdr{
   display:flex;
   align-items:flex-start;
   justify-content:space-between;
   gap:10px;
-  margin-bottom:12px;
+  margin-bottom:10px;
 }
-
 .secTitle{
   font-weight:1000;
   letter-spacing:.3px;
   line-height:1.05;
 }
-
 .secR{color:var(--red)}
-.secW{color:rgba(255,255,255,.92)}
+.secW{color:rgba(255,255,255,.90)}
 .secB{color:var(--blue)}
-
 .secMini{
   display:block;
   margin-top:6px;
@@ -268,6 +242,7 @@ body{
   font-weight:950;
 }
 
+.vendorPillMiniWrap{display:flex; justify-content:flex-end}
 .vendorPillMini{
   display:flex;
   align-items:center;
@@ -277,7 +252,6 @@ body{
   border-radius:999px;
   background:rgba(0,0,0,.18);
 }
-
 .vendorLogoMini{
   width:26px;
   height:26px;
@@ -286,22 +260,37 @@ body{
   border:1px solid rgba(255,255,255,.14);
   display:none;
 }
-
 .vendorNameMini{
   font-weight:950;
   font-size:12px;
   color:rgba(255,255,255,.82);
 }
 
-/* ---------- CORRECTIONS ---------- */
+/* Score line (injected by JS) */
+.scoreLine{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:10px 10px 4px;
+  margin-bottom:8px;
+}
+.scoreLabel{
+  color:rgba(255,255,255,.70);
+  font-weight:950;
+  letter-spacing:.3px;
+}
+.scoreVal{
+  font-weight:1000;
+  color:rgba(255,255,255,.82);
+}
 
+/* Corrections block */
 .corrBlock{
   border:1px solid rgba(255,255,255,.10);
   border-radius:16px;
   padding:12px;
   background:rgba(0,0,0,.16);
 }
-
 .corrLine{
   display:flex;
   align-items:center;
@@ -310,23 +299,122 @@ body{
   padding:10px 6px;
   border-bottom:1px solid rgba(255,255,255,.06);
 }
-
 .corrLine:last-child{border-bottom:none}
-
 .corrLabel{
   color:rgba(255,255,255,.70);
   font-weight:950;
   letter-spacing:.3px;
 }
-
 .corrValue{
   font-weight:1000;
   color:rgba(255,255,255,.92);
 }
+.arrow{opacity:.80; padding:0 10px}
+.dir{color:rgba(255,255,255,.92)}
+.val{color:rgba(255,255,255,.88)}
 
-.arrow{opacity:.75; padding:0 8px}
-
-/* ---------- UTIL ---------- */
-
-.hiddenInline{display:none !important}
-.hiddenBtn{display:none !important}
+/* ============================================================
+   Gear button + panel (injected)
+============================================================ */
+#gearBtn{
+  position:fixed;
+  top:12px;
+  right:12px;
+  z-index:99999;
+  width:42px;
+  height:42px;
+  border-radius:999px;
+  border:1px solid rgba(255,255,255,.12);
+  background:rgba(0,0,0,.28);
+  color:rgba(255,255,255,.90);
+  font-weight:1000;
+  font-size:18px;
+  cursor:pointer;
+  box-shadow:0 16px 50px rgba(0,0,0,.55);
+}
+#gearPanel{
+  position:fixed;
+  top:62px;
+  right:12px;
+  width:min(320px, 92vw);
+  z-index:99999;
+  border-radius:16px;
+  border:1px solid rgba(255,255,255,.12);
+  background:rgba(10,12,13,.92);
+  box-shadow:0 20px 70px rgba(0,0,0,.70);
+  padding:12px;
+  display:none;
+}
+#gearPanel.open{display:block}
+.gearHdr{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  margin-bottom:10px;
+}
+.gearTitle{
+  font-weight:1000;
+  letter-spacing:.3px;
+  color:rgba(255,255,255,.92);
+}
+.gearClose{
+  width:34px;
+  height:34px;
+  border-radius:12px;
+  border:1px solid rgba(255,255,255,.12);
+  background:rgba(0,0,0,.25);
+  color:rgba(255,255,255,.88);
+  cursor:pointer;
+  font-weight:1000;
+}
+.gearRow{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  padding:10px 0;
+  border-top:1px solid rgba(255,255,255,.06);
+}
+.gearRow:first-of-type{border-top:none}
+.gearLabel{
+  color:rgba(255,255,255,.72);
+  font-weight:950;
+  font-size:13px;
+}
+.gearField{
+  display:flex;
+  align-items:center;
+  gap:8px;
+}
+.gearInput{
+  width:110px;
+  padding:10px 10px;
+  border-radius:12px;
+  border:1px solid rgba(255,255,255,.12);
+  background:rgba(0,0,0,.22);
+  color:rgba(255,255,255,.92);
+  font-weight:950;
+}
+.gearSelect{
+  padding:10px 10px;
+  border-radius:12px;
+  border:1px solid rgba(255,255,255,.12);
+  background:rgba(0,0,0,.22);
+  color:rgba(255,255,255,.92);
+  font-weight:950;
+}
+.gearBtn{
+  padding:10px 12px;
+  border-radius:12px;
+  border:1px solid rgba(255,255,255,.12);
+  background:rgba(31,111,235,.18);
+  color:rgba(255,255,255,.92);
+  font-weight:1000;
+  cursor:pointer;
+}
+.gearNote{
+  color:rgba(255,255,255,.60);
+  font-weight:800;
+  font-size:12px;
+  line-height:1.25;
+}
