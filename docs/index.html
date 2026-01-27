@@ -1,19 +1,21 @@
-<!-- docs/index.html (FULL REPLACEMENT) — BRICK 12 (Tap accuracy hardening) -->
+<!-- docs/index.html (FULL REPLACEMENT) — BRICK 13 -->
 <!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <!-- iOS zoom hard-kill -->
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
   <meta name="color-scheme" content="dark" />
   <meta name="theme-color" content="#000000" />
   <title>Tap-n-Score™</title>
 
-  <link rel="stylesheet" href="./styles.css?v=hotfix-12" />
+  <link rel="stylesheet" href="./styles.css?v=hotfix-13" />
 </head>
 
 <body>
   <main class="page">
+
+    <!-- Top corner details spark -->
+    <button id="detailsBtn" class="detailsBtn" type="button" aria-label="Details">✦</button>
 
     <!-- CARD 0: Printer calling card (INPUT) -->
     <section class="card">
@@ -26,19 +28,12 @@
       </div>
     </section>
 
-    <!-- CARD 1: Photo picker (CLEAN) -->
+    <!-- CARD 1: Photo picker (ONE BUTTON — iOS menu handles camera/library) -->
     <section class="card">
       <div class="heroRow">
-        <!-- Camera -->
-        <label class="chooseBtn" aria-label="Take a photo of your target">
-          <input id="photoInputCamera" type="file" accept="image/*" capture="environment" />
-          <span>TAKE A PHOTO OF YOUR TARGET</span>
-        </label>
-
-        <!-- Library -->
-        <label class="chooseBtn" aria-label="Choose target photo from library">
-          <input id="photoInputLibrary" type="file" accept="image/*" />
-          <span>CHOOSE FROM PHOTO LIBRARY</span>
+        <label class="chooseBtn" aria-label="Add target photo">
+          <input id="photoInput" type="file" accept="image/*" />
+          <span>ADD TARGET PHOTO</span>
         </label>
 
         <div class="heroHint">Tip: straight-on photo, fill the frame.</div>
@@ -54,14 +49,13 @@
 
         <div class="imgFrame" id="imgFrame" aria-label="Target frame">
           <img id="targetImg" class="targetImg" alt="Target photo" />
-          <!-- Tap space is the FRAME (not the image rect) -->
           <div id="tapLayer" class="tapLayer" aria-label="Tap layer"></div>
           <div id="dotsLayer" class="dotsLayer" aria-hidden="true"></div>
         </div>
       </div>
 
       <div class="statusRow">
-        <div class="chip">Bull: <span id="bullStatus">not set</span></div>
+        <div class="chip">Aim point: <span id="aimStatus">not set</span></div>
         <div class="chip">Holes: <span id="holeCount">0</span></div>
       </div>
 
@@ -78,6 +72,7 @@
 
     <!-- CARD 3: Results + Printer calling card (SEC) -->
     <section id="resultsCard" class="card resultsCard hidden" aria-live="polite">
+
       <div class="resultsHdr">
         <div class="secTitle">
           <span class="secR">S</span><span class="secW">E</span><span class="secB">C</span>
@@ -92,15 +87,29 @@
         </div>
       </div>
 
+      <!-- SCORE (back + color-coded) -->
+      <div class="scoreRow">
+        <div class="scoreLabel">Score</div>
+        <div id="scoreVal" class="scoreVal scoreGood">—</div>
+      </div>
+
       <div class="corrBlock">
         <div class="corrLine">
           <div class="corrLabel">Windage</div>
-          <div class="corrValue"><span id="windageDir" class="dir">—</span><span class="arrow">→</span><span id="windageVal" class="val">—</span></div>
+          <div class="corrValue">
+            <span id="windageDir" class="dir">—</span>
+            <span id="windArrow" class="dirArrow" aria-hidden="true">←</span>
+            <span id="windageVal" class="val">—</span>
+          </div>
         </div>
 
         <div class="corrLine">
           <div class="corrLabel">Elevation</div>
-          <div class="corrValue"><span id="elevDir" class="dir">—</span><span class="arrow">→</span><span id="elevVal" class="val">—</span></div>
+          <div class="corrValue">
+            <span id="elevDir" class="dir">—</span>
+            <span id="elevArrow" class="dirArrow" aria-hidden="true">↑</span>
+            <span id="elevVal" class="val">—</span>
+          </div>
         </div>
       </div>
 
@@ -111,6 +120,45 @@
 
   </main>
 
-  <script src="./index.js?v=hotfix-12"></script>
+  <!-- Details sheet -->
+  <div id="sheetBackdrop" class="sheetBackdrop hidden" aria-hidden="true"></div>
+  <section id="detailsSheet" class="sheet hidden" role="dialog" aria-modal="true" aria-label="Details">
+    <div class="sheetHandle" aria-hidden="true"></div>
+
+    <div class="sheetHeader">
+      <div class="sheetTitle">Details</div>
+      <button id="sheetClose" class="sheetClose" type="button">Close</button>
+    </div>
+
+    <div class="sheetBody">
+      <div class="fieldRow">
+        <div class="fieldLabel">Distance</div>
+        <div class="fieldCtrl">
+          <input id="distanceVal" class="fieldInput" type="number" inputmode="decimal" min="1" step="1" value="100" />
+          <select id="distanceUnit" class="fieldSelect">
+            <option value="yd" selected>yards</option>
+            <option value="m">meters</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="fieldRow">
+        <div class="fieldLabel">Click value</div>
+        <div class="fieldCtrl">
+          <select id="clickMoa" class="fieldSelect wide">
+            <option value="0.25" selected>0.25 MOA / click (¼)</option>
+            <option value="0.5">0.50 MOA / click (½)</option>
+            <option value="0.125">0.125 MOA / click (⅛)</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="sheetHint">
+        Distance + click value update the math instantly for your session.
+      </div>
+    </div>
+  </section>
+
+  <script src="./index.js?v=hotfix-13"></script>
 </body>
 </html>
