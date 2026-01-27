@@ -42,7 +42,7 @@ body{
 .brandTm{ color:var(--muted2); font-weight:700; margin-left:2px; }
 
 .vendorLink{
-  display:none;                 /* shown only for vendor sessions */
+  display:none;
   color: var(--muted);
   text-decoration:none;
   font-size: 13px;
@@ -53,7 +53,7 @@ body{
 .vendorLink:hover{ border-color: rgba(255,255,255,.22); color:#fff; }
 
 .bakerCtas{
-  display:none;                 /* shown only for vendor=baker */
+  display:none;
   margin-top: 10px;
   display:flex;
   gap:10px;
@@ -75,6 +75,14 @@ body{
   background: rgba(255,255,255,.04);
 }
 
+.topControls{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  flex-wrap:wrap;
+}
+
 .fileBtn{
   display:inline-flex;
   align-items:center;
@@ -88,6 +96,33 @@ body{
   user-select:none;
 }
 .fileBtn input{ display:none; }
+
+/* Tap Precision toggle pill */
+.togglePill{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  padding: 10px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,.22);
+  background: rgba(255,255,255,.06);
+  color:#fff;
+  font-size: 13px;
+  user-select:none;
+}
+.togglePill input{
+  width: 18px;
+  height: 18px;
+}
+.toggleText{ color: rgba(255,255,255,.85); font-weight: 650; }
+.toggleState{
+  padding: 3px 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,.22);
+  color: rgba(255,255,255,.90);
+  font-weight: 750;
+  letter-spacing: .2px;
+}
 
 .metaRow{
   display:flex;
@@ -136,7 +171,7 @@ body{
 
 .stage{ margin-top: 14px; }
 
-/* CRITICAL: custom pinch/zoom surface */
+/* Custom pinch/zoom surface */
 .viewport{
   position: relative;
   width: 100%;
@@ -174,7 +209,7 @@ body{
   transform-origin: 0 0;
 }
 
-/* Smaller, filled, clean markers */
+/* Smaller, filled markers */
 .dot{
   position:absolute;
   width: 10px;
