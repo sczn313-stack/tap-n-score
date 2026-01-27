@@ -1,21 +1,21 @@
-<!-- docs/index.html (FULL REPLACEMENT) — BRICK 10 -->
+<!-- docs/index.html (FULL REPLACEMENT) — BRICK 12 (Tap accuracy hardening) -->
 <!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <!-- iOS zoom hard-kill (pairs with Brick 9 JS guards) -->
+  <!-- iOS zoom hard-kill -->
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
   <meta name="color-scheme" content="dark" />
   <meta name="theme-color" content="#000000" />
   <title>Tap-n-Score™</title>
 
-  <link rel="stylesheet" href="./styles.css?v=hotfix-10" />
+  <link rel="stylesheet" href="./styles.css?v=hotfix-12" />
 </head>
 
 <body>
   <main class="page">
 
-    <!-- CARD 0: Vendor calling card (INPUT) -->
+    <!-- CARD 0: Printer calling card (INPUT) -->
     <section class="card">
       <div id="vendorPill" class="vendorPill" aria-label="Printer calling card">
         <img id="vendorLogo" class="vendorLogo" alt="Printer logo" />
@@ -45,15 +45,16 @@
       </div>
     </section>
 
-    <!-- CARD 2: Target stage (instruction INSIDE frame) -->
+    <!-- CARD 2: Target stage -->
     <section class="card">
       <div class="targetStage">
         <div class="instructionLine" id="instructionLine">
           Take a photo of your target.
         </div>
 
-        <div class="imgFrame" id="imgFrame">
+        <div class="imgFrame" id="imgFrame" aria-label="Target frame">
           <img id="targetImg" class="targetImg" alt="Target photo" />
+          <!-- Tap space is the FRAME (not the image rect) -->
           <div id="tapLayer" class="tapLayer" aria-label="Tap layer"></div>
           <div id="dotsLayer" class="dotsLayer" aria-hidden="true"></div>
         </div>
@@ -75,8 +76,8 @@
       </div>
     </section>
 
-    <!-- CARD 3: Results + Vendor calling card (SEC) -->
-    <section class="card resultsCard" aria-live="polite">
+    <!-- CARD 3: Results + Printer calling card (SEC) -->
+    <section id="resultsCard" class="card resultsCard hidden" aria-live="polite">
       <div class="resultsHdr">
         <div class="secTitle">
           <span class="secR">S</span><span class="secW">E</span><span class="secB">C</span>
@@ -110,6 +111,6 @@
 
   </main>
 
-  <script src="./index.js?v=hotfix-10"></script>
+  <script src="./index.js?v=hotfix-12"></script>
 </body>
 </html>
