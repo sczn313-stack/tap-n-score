@@ -3,7 +3,6 @@
 <head>
   <meta charset="utf-8" />
 
-  <!-- iOS stability + prevents Safari page zoom hijacking during pinch in viewport -->
   <meta name="viewport"
         content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
 
@@ -11,7 +10,7 @@
   <meta name="theme-color" content="#000000" />
   <title>Tap-n-Score™</title>
 
-  <link rel="stylesheet" href="./styles.css?v=pilot-tight-1" />
+  <link rel="stylesheet" href="./styles.css?v=pilot-tight-precisionA-1" />
 </head>
 
 <body>
@@ -23,26 +22,32 @@
           <span class="brandTap">TAP</span><span class="brandN">-N-</span><span class="brandScore">SCORE</span><span class="brandTm">™</span>
         </div>
 
-        <!-- Vendor badge/button (shows only when vendor=baker) -->
         <a id="vendorLink" class="vendorLink" href="#" target="_blank" rel="noopener">Vendor</a>
       </div>
 
-      <!-- Baker CTAs (show only when vendor=baker) -->
       <div id="bakerCtas" class="bakerCtas" aria-label="Baker buttons">
         <button id="bakerCatalogBtn" class="btn ctaPrimary" type="button">Buy Baker Targets</button>
         <button id="bakerProductBtn" class="btn ctaSecondary" type="button">Learn More About Baker Targets</button>
       </div>
 
       <p id="instructionLine" class="instruction">
-        1) Upload your target photo. 2) Pinch to zoom. 3) Tap the bull, then tap bullet holes. 4) Show results.
+        Upload your target photo. Tap the bull once, then tap bullet holes. Use two fingers to zoom/pan.
       </p>
     </header>
 
     <section class="controls">
-      <label class="fileBtn">
-        Upload Target Photo
-        <input id="photoInput" type="file" accept="image/*" />
-      </label>
+      <div class="topControls">
+        <label class="fileBtn">
+          Upload Target Photo
+          <input id="photoInput" type="file" accept="image/*" />
+        </label>
+
+        <label class="togglePill" title="When ON: 1 finger taps only. Use 2 fingers to pan/zoom.">
+          <input id="tapPrecisionToggle" type="checkbox" />
+          <span class="toggleText">Tap Precision</span>
+          <span id="tapPrecisionState" class="toggleState">ON</span>
+        </label>
+      </div>
 
       <div class="metaRow">
         <div class="pill">
@@ -55,7 +60,9 @@
       </div>
 
       <div class="hintRow">
-        <span class="hint">Pinch to zoom • Drag to pan • Double-tap to reset view</span>
+        <span class="hint">
+          2 fingers: pinch zoom + pan • Double-tap: reset view • 1 finger: tap bull/holes
+        </span>
       </div>
     </section>
 
@@ -74,11 +81,11 @@
     </section>
 
     <footer class="footer">
-      <span class="muted">Pilot build — smooth pinch/zoom, clean dots, vendor CTAs.</span>
+      <span class="muted">Pilot build — Tap Precision ON (1-finger taps, 2-finger pan/zoom).</span>
     </footer>
 
   </main>
 
-  <script src="./index.js?v=pilot-tight-1"></script>
+  <script src="./index.js?v=pilot-tight-precisionA-1"></script>
 </body>
 </html>
