@@ -72,7 +72,6 @@ body{
   display:inline-flex;
   align-items:center;
   justify-content:center;
-  gap:10px;
   padding: 10px 14px;
   border: 1px solid var(--line);
   border-radius: 12px;
@@ -109,27 +108,18 @@ body{
   cursor:pointer;
   font-size: 14px;
 }
-.btn:disabled{
-  opacity:.45;
-  cursor:not-allowed;
-}
+.btn:disabled{ opacity:.45; cursor:not-allowed; }
 .btn.primary{
   border-color: rgba(255,43,43,.55);
   background: rgba(255,43,43,.18);
 }
 
-.hintRow{
-  margin-top: 10px;
-}
-.hint{
-  color: var(--muted2);
-  font-size: 12.5px;
-}
+.hintRow{ margin-top: 10px; }
+.hint{ color: var(--muted2); font-size: 12.5px; }
 
-.stage{
-  margin-top: 14px;
-}
+.stage{ margin-top: 14px; }
 
+/* CRITICAL: custom pinch/zoom surface */
 .viewport{
   position: relative;
   width: 100%;
@@ -138,23 +128,25 @@ body{
   background: rgba(255,255,255,.03);
   overflow: hidden;
 
-  /* CRITICAL: enable our own pinch/zoom handling (prevents page zoom/scroll jump) */
-  touch-action: none;
+  touch-action: none;                 /* stops browser gesture conflicts */
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 .targetImg{
   display:block;
   width: 100%;
   height: auto;
-  transform-origin: 0 0;      /* top-left origin simplifies inverse-math */
-  user-select: none;
+  transform-origin: 0 0;              /* simplifies transform math */
   -webkit-user-drag: none;
+  user-select: none;
 }
 
 .dotsLayer{
   position:absolute;
   inset:0;
-  pointer-events:none;        /* overlay never steals touches */
+  pointer-events:none;
+  transform-origin: 0 0;
 }
 
 .dot{
@@ -176,24 +168,15 @@ body{
   border-color: rgba(255,43,43,.95);
 }
 
-.output{
-  margin-top: 14px;
-}
+.output{ margin-top: 14px; }
 .outputBox{
   border: 1px solid var(--line);
   border-radius: 14px;
   padding: 12px;
   background: rgba(255,255,255,.04);
 }
-.outputTitle{
-  font-weight: 800;
-  margin-bottom: 6px;
-}
-.outputText{
-  color: var(--muted);
-  font-size: 14px;
-  line-height: 1.35;
-}
+.outputTitle{ font-weight: 800; margin-bottom: 6px; }
+.outputText{ color: var(--muted); font-size: 14px; line-height: 1.35; }
 .hidden{ display:none; }
 
 .footer{
