@@ -417,4 +417,28 @@ body{
   font-weight:800;
   font-size:12px;
   line-height:1.25;
+}/* --- AUTO-SCALE UI --- */
+.chipScale{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  justify-content:space-between;
+}
+
+.miniBtn{
+  border-radius:999px;
+  padding:8px 10px;
+  border:1px solid rgba(255,255,255,.14);
+  background:rgba(0,0,0,.22);
+  color:rgba(255,255,255,.92);
+  font-weight:1000;
+  cursor:pointer;
+}
+
+.arrowGlyph{
+  display:inline-block;
+  min-width:20px;
+  text-align:center;
+  opacity:.85;
+  font-weight:1000;
 }
