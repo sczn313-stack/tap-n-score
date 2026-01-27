@@ -10,7 +10,7 @@
   <meta name="theme-color" content="#000000" />
   <title>Tap-n-Score™</title>
 
-  <link rel="stylesheet" href="./styles.css?v=pilot-tight-precisionA-1" />
+  <link rel="stylesheet" href="./styles.css?v=pilot-loupe-1" />
 </head>
 
 <body>
@@ -31,7 +31,7 @@
       </div>
 
       <p id="instructionLine" class="instruction">
-        Upload your target photo. Tap the bull once, then tap bullet holes. Use two fingers to zoom/pan.
+        Upload your target photo. Tap bull once, then tap bullet holes. Use TWO fingers to zoom/pan.
       </p>
     </header>
 
@@ -70,6 +70,9 @@
       <div id="targetViewport" class="viewport" aria-label="Target viewport">
         <img id="targetImg" class="targetImg" alt="Target" />
         <div id="dotsLayer" class="dotsLayer" aria-hidden="true"></div>
+
+        <!-- Loupe (magnifier) -->
+        <canvas id="loupe" class="loupe" width="140" height="140" aria-hidden="true"></canvas>
       </div>
     </section>
 
@@ -81,11 +84,11 @@
     </section>
 
     <footer class="footer">
-      <span class="muted">Pilot build — Tap Precision ON (1-finger taps, 2-finger pan/zoom).</span>
+      <span class="muted">Pilot build — Tap Precision + Tap Loupe.</span>
     </footer>
 
   </main>
 
-  <script src="./index.js?v=pilot-tight-precisionA-1"></script>
+  <script src="./index.js?v=pilot-loupe-1"></script>
 </body>
 </html>
