@@ -1,114 +1,198 @@
 /* ============================================================
-   docs/index.js (FULL REPLACEMENT) — BRICK: Grid-anchored scale
-   Fixes:
-   - Eliminates iPhone vs iPad output drift by calibrating px-per-inch
-     from the *actual target image* (2 taps on 1-inch grid spacing).
-   - Adds small settings "gear" (distance, yards/meters, MOA/click).
-   - Makes SEC arrows point the true direction (← → ↑ ↓).
-   - Restores a simple score that improves with tighter group (color shifts).
-   - Renames "Bull" to "Aim" without touching HTML.
+   docs/index.js (FULL REPLACEMENT) — BRICK 10s
+   Adds: AUTO grid scale detect + fallback calibration (2 taps = 1 inch)
+   Principle: app will NOT guess scale. If auto is low, we force Fix Scale.
 ============================================================ */
 
 (() => {
-  // ---------- DOM
   const $ = (id) => document.getElementById(id);
 
-  // Inputs
-  const elFileCam = $("photoInputCamera");
-  const elFileLib = $("photoInputLibrary");
+  // ---- DOM
+  const elCam = $("photoInputCamera");
+  const elLib = $("photoInputLibrary");
 
-  // Target stage
   const elImg = $("targetImg");
   const elTapLayer = $("tapLayer");
   const elDots = $("dotsLayer");
-  const elInstruction = $("instructionLine");
 
-  // Status + buttons
+  const elInstruction = $("instructionLine");
   const elBullStatus = $("bullStatus");
   const elHoleCount = $("holeCount");
+
+  const elScaleState = $("scaleState");
+  const elFixScaleBtn = $("fixScaleBtn");
+
   const elUndo = $("undoBtn");
   const elClear = $("clearBtn");
   const elShow = $("showResultsBtn");
   const elLockBanner = $("lockBanner");
 
-  // Results
   const elWindDir = $("windageDir");
   const elWindVal = $("windageVal");
   const elElevDir = $("elevDir");
   const elElevVal = $("elevVal");
+
+  const elWindArrow = $("windArrow");
+  const elElevArrow = $("elevArrow");
+
   const elDownloadSEC = $("downloadSecBtn");
 
-  // Vendor
   const elVendorPill = $("vendorPill");
   const elVendorLogo = $("vendorLogo");
   const elVendorName = $("vendorName");
   const elVendorLogoMini = $("vendorLogoMini");
   const elVendorNameMini = $("vendorNameMini");
 
-  // Arrow spans (exist in HTML as class .arrow)
-  const elWindArrow = (() => {
-    const v = elWindDir?.closest(".corrValue");
-    return v ? v.querySelector(".arrow") : null;
-  })();
-  const elElevArrow = (() => {
-    const v = elElevDir?.closest(".corrValue");
-    return v ? v.querySelector(".arrow") : null;
-  })();
+  // ---- Pilot defaults (hidden)
+  const DISTANCE_YDS = 100;
+  const CLICK_MOA = 0.25;
 
-  // ---------- Constants
-  const CLICK_MOA_DEFAULT = 0.25; // 1/4 MOA
-  const DIST_DEFAULT_YDS = 100;
+  const inchesPerMOA = (yds) => 1.047 * (yds / 100);
 
-  // Tap filtering (scroll-safe)
-  const TAP_MOVE_PX = 10;
-  const TAP_TIME_MS = 450;
-
-  // ---------- State
+  // ---- State
   let objectUrl = null;
 
-  // points: { nx, ny, ix, iy } where nx/ny are 0..1 within image rect,
-  // and ix/iy are in natural pixels
-  let aim = null;
+  // Tap points: { nx, ny, ix, iy } (normalized + natural px)
+  let bull = null;
   let holes = [];
-
-  // Scale calibration:
-  // pxPerInch = pixels corresponding to 1.00 inch on target grid
-  let pxPerInch = null;
-  let scalePts = []; // two points used to calibrate 1 inch
-
-  // Results lock
   let resultsLocked = false;
+
+  // Scale modes:
+  // - auto: detected grid px spacing
+  // - cal: 2 taps = 1 inch
+  // - none: unknown (we block results)
+  let scale = {
+    mode: "none",     // "auto" | "cal" | "none"
+    inPerPxX: null,
+    inPerPxY: null,
+    confidence: 0
+  };
+
+  // Calibration taps (when Fix Scale engaged)
+  let calMode = false;
+  let calA = null; // first calibration point (natural px)
 
   // Vendor
   let vendor = null;
   let vendorLogoImg = null;
 
-  // Pointer tap capture
+  // Pointer filtering (scroll-safe)
+  const TAP_MOVE_PX = 10;
+  const TAP_TIME_MS = 450;
   let ptrDown = null;
 
-  // Settings (persisted)
-  const SETTINGS_KEY = "tns_settings_v1";
-  let settings = loadSettings();
-
-  // ---------- Utils
   const clamp01 = (v) => Math.max(0, Math.min(1, v));
   const fmt2 = (n) => (Number.isFinite(n) ? n.toFixed(2) : "0.00");
 
-  // True MOA inches per MOA at distance (yards)
-  const inchesPerMOA = (yds) => 1.047 * (yds / 100);
+  // ---- UI helpers
+  function setScaleUI() {
+    if (!elScaleState) return;
 
-  // direction arrows
-  const dirArrow = (dir) => {
-    switch (dir) {
-      case "LEFT": return "←";
-      case "RIGHT": return "→";
-      case "UP": return "↑";
-      case "DOWN": return "↓";
-      default: return "→";
+    if (scale.mode === "auto") {
+      elScaleState.textContent = scale.confidence >= 0.72 ? "AUTO (High)" : "AUTO (Low)";
+      elFixScaleBtn.hidden = !(scale.confidence < 0.72);
+      return;
     }
-  };
 
-  // Convert client coordinate → { nx, ny, ix, iy }
+    if (scale.mode === "cal") {
+      elScaleState.textContent = "LOCKED";
+      elFixScaleBtn.hidden = true;
+      return;
+    }
+
+    elScaleState.textContent = "NEEDED";
+    elFixScaleBtn.hidden = false;
+  }
+
+  function setInstruction() {
+    if (!elImg.src) {
+      elInstruction.textContent = "Take a photo of your target.";
+      return;
+    }
+    if (calMode) {
+      elInstruction.textContent = calA
+        ? "Fix Scale: tap the next grid intersection 1 inch away."
+        : "Fix Scale: tap a grid intersection.";
+      return;
+    }
+    if (!bull) {
+      elInstruction.textContent = "Tap aim point first, then tap bullet holes.";
+      return;
+    }
+    elInstruction.textContent = "Tap each confirmed bullet hole.";
+  }
+
+  function setStatus() {
+    elBullStatus.textContent = bull ? "set" : "not set";
+    elHoleCount.textContent = String(holes.length);
+
+    const ready = !!bull && holes.length > 0;
+    const scaleOk = !!scale.inPerPxX && !!scale.inPerPxY;
+
+    elUndo.disabled = !(bull || holes.length || calMode);
+    elClear.disabled = !(bull || holes.length || calMode);
+
+    elShow.disabled = !(ready && scaleOk && !resultsLocked && !calMode);
+
+    elLockBanner.hidden = !resultsLocked;
+
+    setScaleUI();
+  }
+
+  function resetResultsUI() {
+    elWindDir.textContent = "—";
+    elWindVal.textContent = "—";
+    elElevDir.textContent = "—";
+    elElevVal.textContent = "—";
+    elDownloadSEC.disabled = true;
+
+    if (elWindArrow) elWindArrow.textContent = "→";
+    if (elElevArrow) elElevArrow.textContent = "→";
+  }
+
+  function renderDots() {
+    elDots.innerHTML = "";
+
+    // Bull
+    if (bull) {
+      const d = document.createElement("div");
+      d.className = "dot bullDot";
+      d.style.left = `${bull.nx * 100}%`;
+      d.style.top = `${bull.ny * 100}%`;
+      elDots.appendChild(d);
+    }
+
+    // Holes
+    for (const p of holes) {
+      const d = document.createElement("div");
+      d.className = "dot holeDot";
+      d.style.left = `${p.nx * 100}%`;
+      d.style.top = `${p.ny * 100}%`;
+      elDots.appendChild(d);
+    }
+
+    // Calibration marker A
+    if (calMode && calA) {
+      const d = document.createElement("div");
+      d.className = "dot holeDot";
+      d.style.left = `${calA.nx * 100}%`;
+      d.style.top = `${calA.ny * 100}%`;
+      d.style.opacity = "0.55";
+      elDots.appendChild(d);
+    }
+  }
+
+  function lockResults() {
+    resultsLocked = true;
+    setStatus();
+  }
+
+  function unlockResults() {
+    resultsLocked = false;
+    setStatus();
+  }
+
+  // ---- Coordinate conversion
   function clientToImagePoint(clientX, clientY) {
     const rect = elImg.getBoundingClientRect();
     const nx = clamp01((clientX - rect.left) / rect.width);
@@ -128,204 +212,224 @@
     return { nx: sx / points.length, ny: sy / points.length };
   }
 
-  // px distance between two points (natural pixels)
-  function distPx(a, b) {
-    const dx = a.ix - b.ix;
-    const dy = a.iy - b.iy;
-    return Math.hypot(dx, dy);
+  // ---- Truth Gate (direction must match sign)
+  function truthGate(dxIn, dyIn, windDir, elevDir) {
+    const wantWind = dxIn >= 0 ? "RIGHT" : "LEFT";
+    const wantElev = dyIn <= 0 ? "UP" : "DOWN";
+    return (windDir === wantWind) && (elevDir === wantElev);
   }
 
-  // Score: tighter group => higher score (0..100)
-  // Defined (pilot): score = 100 - (avgRadiusIn * 12), clamped
-  // avgRadiusIn uses calibrated pxPerInch.
-  function computeScore() {
-    if (!aim || holes.length === 0 || !pxPerInch) return null;
+  // ---- Auto grid scale detection (1" grid) using projection peaks
+  async function detectGridScale() {
+    // Default to NONE until proven
+    scale = { mode: "none", inPerPxX: null, inPerPxY: null, confidence: 0 };
+    setScaleUI();
 
-    const radii = holes.map((h) => {
-      const dxIn = (h.ix - aim.ix) / pxPerInch;
-      const dyIn = (h.iy - aim.iy) / pxPerInch;
-      return Math.hypot(dxIn, dyIn);
-    });
+    // Must have natural size
+    const iw = elImg.naturalWidth || 0;
+    const ih = elImg.naturalHeight || 0;
+    if (iw < 300 || ih < 300) return;
 
-    const avg = radii.reduce((a, b) => a + b, 0) / radii.length;
-    const raw = 100 - (avg * 12);
-    const score = Math.max(0, Math.min(100, Math.round(raw)));
-    return score;
-  }
+    // Downscale for speed
+    const maxW = 900;
+    const s = Math.min(1, maxW / iw);
+    const w = Math.floor(iw * s);
+    const h = Math.floor(ih * s);
 
-  function scoreColor(score) {
-    if (!Number.isFinite(score)) return "rgba(255,255,255,.82)";
-    if (score >= 80) return "var(--blue)";
-    if (score >= 55) return "rgba(255,255,255,.88)";
-    return "var(--red)";
-  }
+    const c = document.createElement("canvas");
+    c.width = w;
+    c.height = h;
+    const ctx = c.getContext("2d", { willReadFrequently: true });
+    ctx.drawImage(elImg, 0, 0, w, h);
 
-  // ---------- UI helpers
-  function setInstruction() {
-    if (!elImg.src) {
-      elInstruction.textContent = "Take a photo of your target.";
-      return;
-    }
-    if (!aim) {
-      elInstruction.textContent = "Tap aim point first.";
-      return;
-    }
-    if (!pxPerInch) {
-      elInstruction.textContent = "Tap two grid points exactly 1 inch apart to set scale.";
-      return;
-    }
-    elInstruction.textContent = "Tap each confirmed bullet hole.";
-  }
+    const img = ctx.getImageData(0, 0, w, h);
+    const data = img.data;
 
-  function setStatus() {
-    elBullStatus.textContent = aim ? "set" : "not set";
-    elHoleCount.textContent = String(holes.length);
+    // Build simple grayscale & gradient projections
+    const col = new Float32Array(w);
+    const row = new Float32Array(h);
 
-    elUndo.disabled = !(aim || holes.length || scalePts.length || pxPerInch);
-    elClear.disabled = !(aim || holes.length || scalePts.length || pxPerInch);
+    // Simple gradient magnitude (Sobel-lite) by neighbor diffs
+    for (let y = 1; y < h - 1; y++) {
+      for (let x = 1; x < w - 1; x++) {
+        const i = (y * w + x) * 4;
 
-    // Show results enabled ONLY when we have aim + holes + scale
-    const ready = !!aim && holes.length > 0 && !!pxPerInch;
-    elShow.disabled = !(ready && !resultsLocked);
+        const g = (data[i] * 0.299 + data[i+1] * 0.587 + data[i+2] * 0.114);
 
-    elLockBanner.hidden = !resultsLocked;
+        const il = (y * w + (x - 1)) * 4;
+        const ir = (y * w + (x + 1)) * 4;
+        const iu = ((y - 1) * w + x) * 4;
+        const id = ((y + 1) * w + x) * 4;
 
-    // Download SEC enabled only after compute (we gate by resultsLocked)
-    elDownloadSEC.disabled = !resultsLocked;
-  }
+        const gl = (data[il] * 0.299 + data[il+1] * 0.587 + data[il+2] * 0.114);
+        const gr = (data[ir] * 0.299 + data[ir+1] * 0.587 + data[ir+2] * 0.114);
+        const gu = (data[iu] * 0.299 + data[iu+1] * 0.587 + data[iu+2] * 0.114);
+        const gd = (data[id] * 0.299 + data[id+1] * 0.587 + data[id+2] * 0.114);
 
-  function resetResultsUI() {
-    elWindDir.textContent = "—";
-    elWindVal.textContent = "—";
-    elElevDir.textContent = "—";
-    elElevVal.textContent = "—";
+        const gx = Math.abs(gr - gl);
+        const gy = Math.abs(gd - gu);
 
-    if (elWindArrow) elWindArrow.textContent = "→";
-    if (elElevArrow) elElevArrow.textContent = "→";
+        // Vertical lines => gx spikes (changes across x)
+        col[x] += gx;
 
-    elDownloadSEC.disabled = true;
-
-    // Score line is injected; clear it if present
-    const scoreEl = document.getElementById("scoreVal");
-    if (scoreEl) scoreEl.textContent = "—";
-  }
-
-  function renderDots() {
-    elDots.innerHTML = "";
-
-    // Aim dot
-    if (aim) {
-      const d = document.createElement("div");
-      d.className = "dot bullDot";
-      d.style.left = `${aim.nx * 100}%`;
-      d.style.top = `${aim.ny * 100}%`;
-      elDots.appendChild(d);
-    }
-
-    // Scale calibration dots (yellow ring)
-    for (const p of scalePts) {
-      const d = document.createElement("div");
-      d.className = "dot scaleDot";
-      d.style.left = `${p.nx * 100}%`;
-      d.style.top = `${p.ny * 100}%`;
-      elDots.appendChild(d);
-    }
-
-    // Hole dots
-    for (const p of holes) {
-      const d = document.createElement("div");
-      d.className = "dot holeDot";
-      d.style.left = `${p.nx * 100}%`;
-      d.style.top = `${p.ny * 100}%`;
-      elDots.appendChild(d);
-    }
-  }
-
-  function lockResults() {
-    resultsLocked = true;
-    setStatus();
-  }
-  function unlockResults() {
-    resultsLocked = false;
-    setStatus();
-  }
-
-  function revokeObjectUrl() {
-    if (objectUrl) {
-      URL.revokeObjectURL(objectUrl);
-      objectUrl = null;
-    }
-  }
-
-  function resetAllState() {
-    aim = null;
-    holes = [];
-    scalePts = [];
-    pxPerInch = null;
-
-    resultsLocked = false;
-    resetResultsUI();
-    setInstruction();
-    setStatus();
-    renderDots();
-  }
-
-  // Rename "Bull:" label to "Aim:" without editing HTML
-  function renameBullToAim() {
-    try {
-      const chips = document.querySelectorAll(".chip");
-      chips.forEach((c) => {
-        if (c.textContent.trim().startsWith("Bull:")) {
-          c.innerHTML = c.innerHTML.replace("Bull:", "Aim:");
-        }
-      });
-    } catch (_) {}
-  }
-
-  // ---------- Scale calibration
-  function addScalePoint(pt) {
-    scalePts.push(pt);
-
-    if (scalePts.length === 2) {
-      const d = distPx(scalePts[0], scalePts[1]);
-      // sanity: ignore nonsense taps too close
-      if (d < 10) {
-        scalePts = [];
-        pxPerInch = null;
-      } else {
-        pxPerInch = d; // because user taps 1-inch spacing
+        // Horizontal lines => gy spikes
+        row[y] += gy;
       }
     }
 
-    resetResultsUI();
+    const pxPerInX = estimateSpacingPx(col);
+    const pxPerInY = estimateSpacingPx(row);
+
+    if (!pxPerInX || !pxPerInY) {
+      // Fail -> require Fix
+      scale = { mode: "none", inPerPxX: null, inPerPxY: null, confidence: 0 };
+      setScaleUI();
+      return;
+    }
+
+    // Convert back to natural pixels
+    const pxX = pxPerInX / s;
+    const pxY = pxPerInY / s;
+
+    // Confidence = consistency of spacing estimates
+    const conf = estimateConfidence(col, pxPerInX) * 0.5 + estimateConfidence(row, pxPerInY) * 0.5;
+
+    scale = {
+      mode: "auto",
+      inPerPxX: 1 / pxX,
+      inPerPxY: 1 / pxY,
+      confidence: conf
+    };
+
+    // If low confidence, allow Fix; if high, we hide Fix
+    setScaleUI();
+
+    function estimateSpacingPx(signal) {
+      // Smooth (box filter)
+      const n = signal.length;
+      const sm = new Float32Array(n);
+      const k = 9;
+      for (let i = 0; i < n; i++) {
+        let s = 0, c = 0;
+        for (let j = -k; j <= k; j++) {
+          const idx = i + j;
+          if (idx >= 0 && idx < n) { s += signal[idx]; c++; }
+        }
+        sm[i] = s / c;
+      }
+
+      // Find peaks above threshold
+      let max = 0;
+      for (let i = 0; i < n; i++) if (sm[i] > max) max = sm[i];
+      if (max <= 0) return null;
+
+      const thr = max * 0.45;
+      const peaks = [];
+      for (let i = 2; i < n - 2; i++) {
+        if (sm[i] > thr && sm[i] > sm[i-1] && sm[i] > sm[i+1]) peaks.push(i);
+      }
+      if (peaks.length < 6) return null;
+
+      // Distances between consecutive peaks
+      const ds = [];
+      for (let i = 1; i < peaks.length; i++) ds.push(peaks[i] - peaks[i-1]);
+
+      // Filter plausible grid spacings (avoid tiny noise)
+      const filtered = ds.filter(d => d >= 10 && d <= 180);
+      if (filtered.length < 4) return null;
+
+      // Median
+      filtered.sort((a,b)=>a-b);
+      return filtered[Math.floor(filtered.length / 2)];
+    }
+
+    function estimateConfidence(signal, spacingPx) {
+      // Measures how “regular” the peaks are around spacingPx
+      if (!spacingPx) return 0;
+      const n = signal.length;
+
+      // Build autocorr-like score: sum of signal[i]*signal[i+spacing]
+      let sum = 0, sumShift = 0;
+      for (let i = 0; i < n - spacingPx; i++) {
+        const a = signal[i];
+        const b = signal[i + spacingPx];
+        sum += a * b;
+        sumShift += a * a;
+      }
+      if (sumShift <= 0) return 0;
+
+      // Normalize into ~0..1
+      const r = sum / sumShift;
+      return Math.max(0, Math.min(1, r));
+    }
+  }
+
+  // ---- Fallback calibration: 2 taps = 1 inch
+  function startCalibration() {
+    calMode = true;
+    calA = null;
+
+    // Force scale to none until we lock it
+    scale = { mode: "none", inPerPxX: null, inPerPxY: null, confidence: 0 };
+
     unlockResults();
+    resetResultsUI();
     setInstruction();
     setStatus();
     renderDots();
   }
 
-  function clearScale() {
-    scalePts = [];
-    pxPerInch = null;
-    resetResultsUI();
-    unlockResults();
+  function applyCalibration(a, b) {
+    const dx = Math.abs(b.ix - a.ix);
+    const dy = Math.abs(b.iy - a.iy);
+
+    // User should tap 1 inch apart: we accept either horizontal OR vertical (whichever is larger)
+    const px = Math.max(dx, dy);
+    if (px < 20) return false;
+
+    const inPerPx = 1 / px;
+    scale = {
+      mode: "cal",
+      inPerPxX: inPerPx,
+      inPerPxY: inPerPx,
+      confidence: 1
+    };
+
+    calMode = false;
+    calA = null;
+
     setInstruction();
     setStatus();
     renderDots();
+    return true;
   }
 
-  // ---------- Tap logic
+  // ---- Tap pipeline
   function addTapPoint(pt) {
     if (!elImg.src) return;
     if (resultsLocked) return;
 
-    // First tap sets AIM
-    if (!aim) {
-      aim = pt;
-      holes = [];
-      scalePts = [];
-      pxPerInch = null;
+    // Calibration taps override everything
+    if (calMode) {
+      if (!calA) {
+        calA = pt;
+        setInstruction();
+        renderDots();
+        return;
+      }
+      const ok = applyCalibration(calA, pt);
+      if (!ok) {
+        // reset cal and keep trying
+        calA = null;
+        setInstruction();
+        renderDots();
+      }
+      return;
+    }
 
+    if (!bull) {
+      bull = pt;
+      holes = [];
       resetResultsUI();
       unlockResults();
       setInstruction();
@@ -334,13 +438,6 @@
       return;
     }
 
-    // Next: require scale calibration before accepting holes
-    if (!pxPerInch) {
-      addScalePoint(pt);
-      return;
-    }
-
-    // Remaining taps are holes
     holes.push(pt);
     resetResultsUI();
     unlockResults();
@@ -349,7 +446,7 @@
     renderDots();
   }
 
-  // ---------- Scroll-safe pointer handling
+  // ---- Pointer handlers (scroll-safe)
   function onPointerDown(e) {
     if (!e.isPrimary) return;
     if (!elImg.src) return;
@@ -393,240 +490,65 @@
     ptrDown = null;
   }
 
-  // ---------- Undo/Clear
-  function undo() {
-    if (holes.length) {
-      holes.pop();
-      unlockResults();
-      resetResultsUI();
-    } else if (pxPerInch || scalePts.length) {
-      // undo scale step
-      if (scalePts.length) scalePts.pop();
-      pxPerInch = (scalePts.length === 2) ? distPx(scalePts[0], scalePts[1]) : null;
-      unlockResults();
-      resetResultsUI();
-    } else if (aim) {
-      aim = null;
-      unlockResults();
-      resetResultsUI();
-    }
-    setInstruction();
-    setStatus();
-    renderDots();
-  }
-
-  function clearAll() {
-    aim = null;
-    holes = [];
-    scalePts = [];
-    pxPerInch = null;
-
-    unlockResults();
-    resetResultsUI();
-    setInstruction();
-    setStatus();
-    renderDots();
-  }
-
-  // ---------- Compute + Render (GRID-ANCHORED)
+  // ---- Compute + Render (using inches-per-pixel, not paper assumptions)
   function computeAndRender() {
-    if (!aim || holes.length === 0 || !pxPerInch) return;
+    if (!bull || holes.length === 0) return;
+    if (!scale.inPerPxX || !scale.inPerPxY) return; // never guess
 
-    // POIB in normalized space
-    const poibN = meanPointNorm(holes);
+    const poib = meanPointNorm(holes);
 
-    // Convert to natural pixels for stable inch conversion
+    // Use NATURAL PIXELS for inches mapping (device-proof)
     const iw = elImg.naturalWidth || 1;
     const ih = elImg.naturalHeight || 1;
-    const poib = { ix: poibN.nx * iw, iy: poibN.ny * ih };
 
-    // correction vector = aim - poib (pixels)
-    const dxPx = aim.ix - poib.ix;
-    const dyPx = aim.iy - poib.iy;
+    const bullPxX = bull.nx * iw;
+    const bullPxY = bull.ny * ih;
 
-    // Convert to inches (grid anchored)
-    const dxIn = dxPx / pxPerInch;
-    const dyIn = dyPx / pxPerInch;
+    const poibPxX = poib.nx * iw;
+    const poibPxY = poib.ny * ih;
 
-    // Directions from signed inches (screen y increases downward)
+    // correction vector = bull - poib (pixels)
+    const dxPx = bullPxX - poibPxX;
+    const dyPx = bullPxY - poibPxY;
+
+    // convert to inches using scale
+    const dxIn = dxPx * scale.inPerPxX;
+    const dyIn = dyPx * scale.inPerPxY;
+
     const windDir = dxIn >= 0 ? "RIGHT" : "LEFT";
     const elevDir = dyIn <= 0 ? "UP" : "DOWN";
 
-    // Magnitudes
-    const windAbsIn = Math.abs(dxIn);
-    const elevAbsIn = Math.abs(dyIn);
+    if (!truthGate(dxIn, dyIn, windDir, elevDir)) {
+      resetResultsUI();
+      elWindDir.textContent = "DIRECTION ERROR";
+      elWindVal.textContent = "LOCKED";
+      elElevDir.textContent = "DIRECTION ERROR";
+      elElevVal.textContent = "LOCKED";
+      elDownloadSEC.disabled = true;
+      resultsLocked = false;
+      setStatus();
+      return;
+    }
 
-    // True MOA math
-    const yds = settings.unit === "m" ? (settings.distance * 1.0936133) : settings.distance;
-    const ipm = inchesPerMOA(yds);
-    const windMOA = windAbsIn / ipm;
-    const elevMOA = elevAbsIn / ipm;
+    const ipm = inchesPerMOA(DISTANCE_YDS);
+    const windClicks = (Math.abs(dxIn) / ipm) / CLICK_MOA;
+    const elevClicks = (Math.abs(dyIn) / ipm) / CLICK_MOA;
 
-    const clickMoa = settings.clickMoa;
-    const windClicks = windMOA / clickMoa;
-    const elevClicks = elevMOA / clickMoa;
-
-    // Render UI (two decimals)
     elWindDir.textContent = windDir;
     elWindVal.textContent = `${fmt2(windClicks)} clicks`;
 
     elElevDir.textContent = elevDir;
     elElevVal.textContent = `${fmt2(elevClicks)} clicks`;
 
-    // Arrows that match direction
-    if (elWindArrow) elWindArrow.textContent = dirArrow(windDir);
-    if (elElevArrow) elElevArrow.textContent = dirArrow(elevDir);
+    // Arrow glyphs match direction
+    if (elWindArrow) elWindArrow.textContent = windDir === "LEFT" ? "←" : "→";
+    if (elElevArrow) elElevArrow.textContent = elevDir === "UP" ? "↑" : "↓";
 
-    // Score
-    const s = computeScore();
-    const scoreEl = document.getElementById("scoreVal");
-    if (scoreEl && s !== null) {
-      scoreEl.textContent = String(s);
-      scoreEl.style.color = scoreColor(s);
-    }
-
-    // LOCK after successful compute
+    elDownloadSEC.disabled = false;
     lockResults();
   }
 
-  // ---------- SEC PNG builder
-  async function buildSecPng(payload) {
-    const W = 1200, H = 675;
-    const canvas = document.createElement("canvas");
-    canvas.width = W;
-    canvas.height = H;
-    const ctx = canvas.getContext("2d");
-
-    // Background
-    ctx.fillStyle = "#0b0e0f";
-    ctx.fillRect(0, 0, W, H);
-
-    // Title
-    ctx.font = "1000 54px system-ui, -apple-system, Segoe UI, Roboto, Arial";
-    ctx.fillStyle = "#ff3b30";
-    ctx.fillText("SHOOTER", 60, 86);
-    ctx.fillStyle = "rgba(255,255,255,.92)";
-    ctx.fillText(" EXPERIENCE ", 315, 86);
-    ctx.fillStyle = "#1f6feb";
-    ctx.fillText("CARD", 720, 86);
-
-    ctx.font = "1000 46px system-ui, -apple-system, Segoe UI, Roboto, Arial";
-    ctx.fillStyle = "#ff3b30"; ctx.fillText("S", 60, 132);
-    ctx.fillStyle = "rgba(255,255,255,.92)"; ctx.fillText("E", 92, 132);
-    ctx.fillStyle = "#1f6feb"; ctx.fillText("C", 124, 132);
-
-    // Vendor block top-right
-    const vName = vendor?.name || "Printer";
-    ctx.font = "850 26px system-ui, -apple-system, Segoe UI, Roboto, Arial";
-    ctx.fillStyle = "rgba(255,255,255,.78)";
-    ctx.textAlign = "right";
-    ctx.fillText(vName, W - 70, 120);
-    ctx.textAlign = "left";
-
-    // Logo
-    if (vendorLogoImg && vendorLogoImg.complete) {
-      const size = 64;
-      const x = W - 70 - size;
-      const y = 38;
-
-      ctx.save();
-      ctx.beginPath();
-      ctx.arc(x + size / 2, y + size / 2, size / 2, 0, Math.PI * 2);
-      ctx.clip();
-      ctx.drawImage(vendorLogoImg, x, y, size, size);
-      ctx.restore();
-
-      ctx.strokeStyle = "rgba(255,255,255,.18)";
-      ctx.lineWidth = 3;
-      ctx.beginPath();
-      ctx.arc(x + size / 2, y + size / 2, size / 2 + 1, 0, Math.PI * 2);
-      ctx.stroke();
-    }
-
-    // Main panel
-    const px = 60, py = 170, pw = 1080, ph = 440;
-    roundRect(ctx, px, py, pw, ph, 22);
-    ctx.fillStyle = "rgba(255,255,255,.04)";
-    ctx.fill();
-    ctx.strokeStyle = "rgba(255,255,255,.10)";
-    ctx.lineWidth = 2;
-    ctx.stroke();
-
-    // Corrections
-    ctx.fillStyle = "rgba(255,255,255,.92)";
-    ctx.font = "950 34px system-ui, -apple-system, Segoe UI, Roboto, Arial";
-    ctx.fillText("Corrections", px + 34, py + 72);
-
-    ctx.font = "900 30px system-ui, -apple-system, Segoe UI, Roboto, Arial";
-    ctx.fillText(`Windage: ${payload.windDir} ${dirArrow(payload.windDir)} ${fmt2(payload.windClicks)} clicks`, px + 34, py + 140);
-    ctx.fillText(`Elevation: ${payload.elevDir} ${dirArrow(payload.elevDir)} ${fmt2(payload.elevClicks)} clicks`, px + 34, py + 200);
-
-    // Footer line
-    const yds = settings.unit === "m" ? (settings.distance * 1.0936133) : settings.distance;
-    ctx.fillStyle = "rgba(255,255,255,.55)";
-    ctx.font = "750 22px system-ui, -apple-system, Segoe UI, Roboto, Arial";
-    ctx.fillText(
-      `True MOA • ${settings.distance} ${settings.unit} • ${fmt2(settings.clickMoa)} MOA/click • Grid-anchored scale`,
-      px + 34, py + ph - 34
-    );
-
-    return canvas.toDataURL("image/png");
-
-    function roundRect(c, x, y, w, h, r) {
-      const rr = Math.min(r, w / 2, h / 2);
-      c.beginPath();
-      c.moveTo(x + rr, y);
-      c.arcTo(x + w, y, x + w, y + h, rr);
-      c.arcTo(x + w, y + h, x, y + h, rr);
-      c.arcTo(x, y + h, x, y, rr);
-      c.arcTo(x, y, x + w, y, rr);
-      c.closePath();
-    }
-  }
-
-  async function downloadSec() {
-    if (!aim || holes.length === 0 || !pxPerInch) return;
-
-    // Recompute exactly as UI (from current taps)
-    const poibN = meanPointNorm(holes);
-    const iw = elImg.naturalWidth || 1;
-    const ih = elImg.naturalHeight || 1;
-    const poib = { ix: poibN.nx * iw, iy: poibN.ny * ih };
-
-    const dxPx = aim.ix - poib.ix;
-    const dyPx = aim.iy - poib.iy;
-
-    const dxIn = dxPx / pxPerInch;
-    const dyIn = dyPx / pxPerInch;
-
-    const windDir = dxIn >= 0 ? "RIGHT" : "LEFT";
-    const elevDir = dyIn <= 0 ? "UP" : "DOWN";
-
-    const yds = settings.unit === "m" ? (settings.distance * 1.0936133) : settings.distance;
-    const ipm = inchesPerMOA(yds);
-    const windClicks = (Math.abs(dxIn) / ipm) / settings.clickMoa;
-    const elevClicks = (Math.abs(dyIn) / ipm) / settings.clickMoa;
-
-    // Wait briefly for logo
-    if (vendorLogoImg && !vendorLogoImg.complete) {
-      await new Promise((resolve) => {
-        const t = setTimeout(resolve, 250);
-        vendorLogoImg.onload = () => { clearTimeout(t); resolve(); };
-        vendorLogoImg.onerror = () => { clearTimeout(t); resolve(); };
-      });
-    }
-
-    const dataUrl = await buildSecPng({ windDir, windClicks, elevDir, elevClicks });
-
-    const a = document.createElement("a");
-    a.href = dataUrl;
-    a.download = "SEC.png";
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-  }
-
-  // ---------- Vendor load
+  // ---- Vendor load
   async function loadVendor() {
     try {
       const res = await fetch("./vendor.json", { cache: "no-store" });
@@ -638,15 +560,11 @@
       elVendorNameMini.textContent = name;
 
       if (vendor?.logoPath) {
-        // input pill
         elVendorLogo.src = vendor.logoPath;
-        elVendorLogo.style.display = "block";
-
-        // mini pill
         elVendorLogoMini.src = vendor.logoPath;
+        elVendorLogo.style.display = "block";
         elVendorLogoMini.style.display = "block";
 
-        // canvas preload
         vendorLogoImg = new Image();
         vendorLogoImg.src = vendor.logoPath;
       } else {
@@ -659,173 +577,103 @@
         elVendorPill.title = vendor.website;
         elVendorPill.onclick = () => window.open(vendor.website, "_blank", "noopener,noreferrer");
       }
-    } catch (_) {
-      // silent fail
+    } catch {}
+  }
+
+  // ---- File load
+  function revokeObjectUrl() {
+    if (objectUrl) {
+      URL.revokeObjectURL(objectUrl);
+      objectUrl = null;
     }
   }
 
-  // ---------- File load
+  function resetAllState() {
+    bull = null;
+    holes = [];
+    resultsLocked = false;
+
+    calMode = false;
+    calA = null;
+
+    scale = { mode: "none", inPerPxX: null, inPerPxY: null, confidence: 0 };
+
+    resetResultsUI();
+    setInstruction();
+    setStatus();
+    renderDots();
+  }
+
   function onFileSelected(file) {
     if (!file) return;
 
     revokeObjectUrl();
     objectUrl = URL.createObjectURL(file);
 
-    elImg.onload = () => {
+    elImg.onload = async () => {
       elTapLayer.classList.add("active");
       resetAllState();
+
+      // Attempt auto-detect scale
+      await detectGridScale();
+
+      // If auto is low, we allow Fix. If it fully failed, we require Fix.
       setInstruction();
       setStatus();
+      renderDots();
     };
 
     elImg.src = objectUrl;
   }
 
-  // ---------- Settings gear (injected, no HTML edit)
-  function injectGearUI() {
-    const gearBtn = document.createElement("button");
-    gearBtn.id = "gearBtn";
-    gearBtn.type = "button";
-    gearBtn.textContent = "⚙︎";
-    gearBtn.setAttribute("aria-label", "Settings");
-    document.body.appendChild(gearBtn);
-
-    const panel = document.createElement("div");
-    panel.id = "gearPanel";
-    panel.innerHTML = `
-      <div class="gearHdr">
-        <div class="gearTitle">Details</div>
-        <button id="gearClose" type="button" class="gearClose">✕</button>
-      </div>
-
-      <div class="gearRow">
-        <div class="gearLabel">Distance</div>
-        <div class="gearField">
-          <input id="distVal" class="gearInput" inputmode="decimal" />
-          <select id="distUnit" class="gearSelect">
-            <option value="yd">yd</option>
-            <option value="m">m</option>
-          </select>
-        </div>
-      </div>
-
-      <div class="gearRow">
-        <div class="gearLabel">MOA per click</div>
-        <div class="gearField">
-          <input id="clickMoa" class="gearInput" inputmode="decimal" />
-        </div>
-      </div>
-
-      <div class="gearRow">
-        <div class="gearLabel">Scale</div>
-        <div class="gearField">
-          <button id="recalBtn" type="button" class="gearBtn">Recalibrate (1 inch)</button>
-        </div>
-      </div>
-
-      <div class="gearRow gearNote">
-        After Aim is set, tap two grid points exactly 1 inch apart.
-      </div>
-    `;
-    document.body.appendChild(panel);
-
-    const close = () => panel.classList.remove("open");
-    const open = () => panel.classList.add("open");
-
-    gearBtn.addEventListener("click", () => {
-      if (panel.classList.contains("open")) close();
-      else open();
-    });
-
-    panel.querySelector("#gearClose").addEventListener("click", close);
-
-    // populate
-    const distVal = panel.querySelector("#distVal");
-    const distUnit = panel.querySelector("#distUnit");
-    const clickMoa = panel.querySelector("#clickMoa");
-
-    distVal.value = String(settings.distance);
-    distUnit.value = settings.unit === "m" ? "m" : "yd";
-    clickMoa.value = String(settings.clickMoa);
-
-    const persist = () => {
-      const d = Number(distVal.value);
-      const c = Number(clickMoa.value);
-      settings.distance = Number.isFinite(d) && d > 0 ? d : DIST_DEFAULT_YDS;
-      settings.unit = distUnit.value === "m" ? "m" : "yd";
-      settings.clickMoa = Number.isFinite(c) && c > 0 ? c : CLICK_MOA_DEFAULT;
-      saveSettings(settings);
-
-      // any setting change should unlock + require re-show
-      if (resultsLocked) { unlockResults(); resetResultsUI(); }
-      setStatus();
-    };
-
-    distVal.addEventListener("change", persist);
-    distUnit.addEventListener("change", persist);
-    clickMoa.addEventListener("change", persist);
-
-    panel.querySelector("#recalBtn").addEventListener("click", () => {
-      // allow recal even mid-session (forces re-show results)
-      if (resultsLocked) { unlockResults(); resetResultsUI(); }
-      clearScale();
-      setInstruction();
-    });
-  }
-
-  function loadSettings() {
-    try {
-      const raw = localStorage.getItem(SETTINGS_KEY);
-      if (!raw) {
-        return { distance: DIST_DEFAULT_YDS, unit: "yd", clickMoa: CLICK_MOA_DEFAULT };
-      }
-      const o = JSON.parse(raw);
-      const dist = Number(o.distance);
-      const click = Number(o.clickMoa);
-      const unit = o.unit === "m" ? "m" : "yd";
-      return {
-        distance: Number.isFinite(dist) && dist > 0 ? dist : DIST_DEFAULT_YDS,
-        unit,
-        clickMoa: Number.isFinite(click) && click > 0 ? click : CLICK_MOA_DEFAULT
-      };
-    } catch (_) {
-      return { distance: DIST_DEFAULT_YDS, unit: "yd", clickMoa: CLICK_MOA_DEFAULT };
+  // ---- Undo / Clear
+  function undo() {
+    if (calMode) {
+      // Undo calibration taps first
+      if (calA) calA = null;
+      else calMode = false;
+      setInstruction(); setStatus(); renderDots();
+      return;
     }
+
+    if (holes.length) {
+      holes.pop();
+      unlockResults();
+      resetResultsUI();
+    } else if (bull) {
+      bull = null;
+      unlockResults();
+      resetResultsUI();
+    }
+    setInstruction();
+    setStatus();
+    renderDots();
   }
 
-  function saveSettings(s) {
-    try {
-      localStorage.setItem(SETTINGS_KEY, JSON.stringify(s));
-    } catch (_) {}
+  function clearAll() {
+    bull = null;
+    holes = [];
+    unlockResults();
+    resetResultsUI();
+
+    // Keep the detected scale (pilot-friendly) unless user hits Fix Scale
+    setInstruction();
+    setStatus();
+    renderDots();
   }
 
-  // ---------- Inject Score line into results (no HTML edit)
-  function injectScoreRow() {
-    const resultsCard = document.querySelector(".resultsCard");
-    if (!resultsCard) return;
-    if (document.getElementById("scoreVal")) return;
-
-    const hdr = resultsCard.querySelector(".resultsHdr");
-    const scoreWrap = document.createElement("div");
-    scoreWrap.className = "scoreLine";
-    scoreWrap.innerHTML = `
-      <div class="scoreLabel">Score</div>
-      <div id="scoreVal" class="scoreVal">—</div>
-    `;
-
-    // Insert just under header
-    hdr.insertAdjacentElement("afterend", scoreWrap);
-  }
-
-  // ---------- Wire up
-  elFileCam.addEventListener("change", (e) => {
+  // ---- Wires
+  elCam.addEventListener("change", (e) => {
     const file = e.target.files && e.target.files[0];
     onFileSelected(file);
+    // clear the other input so it can re-pick same file later
+    try { elLib.value = ""; } catch {}
   });
 
-  elFileLib.addEventListener("change", (e) => {
+  elLib.addEventListener("change", (e) => {
     const file = e.target.files && e.target.files[0];
     onFileSelected(file);
+    try { elCam.value = ""; } catch {}
   });
 
   elUndo.addEventListener("click", () => {
@@ -842,8 +690,9 @@
     computeAndRender();
   });
 
-  elDownloadSEC.addEventListener("click", () => {
-    downloadSec();
+  elFixScaleBtn?.addEventListener("click", () => {
+    // Force fallback calibration
+    startCalibration();
   });
 
   // Pointer events on tap layer
@@ -852,13 +701,7 @@
   elTapLayer.addEventListener("pointerup", onPointerUp, { passive: true });
   elTapLayer.addEventListener("pointercancel", onPointerCancel, { passive: true });
 
-  // ---------- Init
-  renameBullToAim();
-  injectGearUI();
-  injectScoreRow();
-
+  // ---- Init
   loadVendor();
-  setInstruction();
-  setStatus();
-  renderDots();
+  resetAllState();
 })();
