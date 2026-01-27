@@ -1,11 +1,11 @@
-/* docs/styles.css (FULL REPLACEMENT) — REBUILD STEADY + YOUR BRICKS */
-
 :root{
   --bg:#050606;
   --card:rgba(255,255,255,.04);
   --stroke:rgba(255,255,255,.10);
+  --stroke2:rgba(255,255,255,.14);
   --text:rgba(255,255,255,.92);
   --muted:rgba(255,255,255,.72);
+  --dim:rgba(255,255,255,.58);
 
   --blue:#1f6feb;
   --red:#ff3b30;
@@ -13,12 +13,8 @@
 
   --primary: var(--blue);
 
-  --aim:#ffd200;      /* aim point (yellow) */
-  --hole:#00b45a;
-
-  --good:#00b45a;
-  --mid:#ffd200;
-  --poor:#ff4646;
+  --bull:#ffd200;   /* yellow */
+  --hole:#00b45a;   /* green */
 
   --radius:18px;
   --shadow:0 18px 60px rgba(0,0,0,.55);
@@ -53,148 +49,14 @@ body{
   padding:14px;
 }
 
-.cardRow{
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap:12px;
-}
+/* ---------- TOP / VENDOR ---------- */
 
-/* Floating insight button */
-.insightBtn{
-  position:fixed;
-  top:14px;
-  right:14px;
-  z-index:999;
-  width:44px;
-  height:44px;
-  border-radius:999px;
-  border:1px solid rgba(255,255,255,.12);
-  background:rgba(0,0,0,.35);
-  color:rgba(255,255,255,.92);
-  font-weight:1000;
-  font-size:18px;
-  cursor:pointer;
-  box-shadow:0 14px 40px rgba(0,0,0,.55);
-}
-
-/* Drawer */
-.drawerBackdrop{
-  position:fixed;
-  inset:0;
-  background:rgba(0,0,0,.55);
-  z-index:1000;
-}
-
-.drawer{
-  position:fixed;
-  left:50%;
-  transform:translateX(-50%);
-  bottom:12px;
-  width:min(980px, 94vw);
-  border-radius:18px;
-  border:1px solid rgba(255,255,255,.10);
-  background:rgba(8,10,11,.96);
-  box-shadow:0 30px 80px rgba(0,0,0,.65);
-  z-index:1001;
-  overflow:hidden;
-}
-
-.drawerHead{
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  padding:12px 14px;
-  border-bottom:1px solid rgba(255,255,255,.08);
-}
-
-.drawerTitle{
-  font-weight:1000;
-  letter-spacing:.3px;
-  color:rgba(255,255,255,.92);
-}
-
-.drawerClose{
-  border-radius:999px;
-  padding:10px 12px;
-  border:1px solid rgba(255,255,255,.10);
-  background:rgba(0,0,0,.22);
-  color:rgba(255,255,255,.90);
-  font-weight:900;
-  cursor:pointer;
-}
-
-.drawerBody{
-  padding:14px;
-  display:flex;
-  flex-direction:column;
-  gap:12px;
-}
-
-.fieldRow{
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap:12px;
-}
-
-.fieldLabel{
-  color:rgba(255,255,255,.72);
-  font-weight:950;
-}
-
-.fieldCtrl{
-  display:flex;
-  align-items:center;
-  gap:10px;
-}
-
-.fieldInput{
-  width:110px;
-  padding:10px 12px;
-  border-radius:12px;
-  border:1px solid rgba(255,255,255,.10);
-  background:rgba(0,0,0,.20);
-  color:rgba(255,255,255,.92);
-  font-weight:900;
-  outline:none;
-}
-
-.fieldSelect{
-  width:220px;
-  padding:10px 12px;
-  border-radius:12px;
-  border:1px solid rgba(255,255,255,.10);
-  background:rgba(0,0,0,.20);
-  color:rgba(255,255,255,.92);
-  font-weight:900;
-  outline:none;
-}
-
-.pillBtn{
-  border-radius:999px;
-  padding:10px 12px;
-  border:1px solid rgba(255,255,255,.10);
-  background:rgba(31,111,235,.18);
-  color:rgba(255,255,255,.92);
-  font-weight:950;
-  cursor:pointer;
-  min-width:44px;
-}
-
-.drawerNote{
-  color:rgba(255,255,255,.60);
-  font-weight:800;
-  font-size:13px;
-}
-
-/* Vendor pill (INPUT + SEC) */
 .vendorPill{
   display:flex;
   align-items:center;
   gap:10px;
   padding:10px 12px;
-  border:1px solid rgba(255,255,255,.10);
+  border:1px solid var(--stroke);
   border-radius:999px;
   background:rgba(0,0,0,.22);
   user-select:none;
@@ -219,35 +81,13 @@ body{
 .vendorName{
   font-size:13px;
   color:rgba(255,255,255,.88);
-  font-weight:1000;
+  font-weight:900;
 }
 
-.vendorPillMiniWrap{display:flex; justify-content:flex-end}
-.vendorPillMini{
-  display:flex;
-  align-items:center;
-  gap:8px;
-  padding:8px 10px;
-  border:1px solid rgba(255,255,255,.10);
-  border-radius:999px;
-  background:rgba(0,0,0,.18);
-}
-.vendorLogoMini{
-  width:26px;
-  height:26px;
-  border-radius:999px;
-  object-fit:cover;
-  border:1px solid rgba(255,255,255,.14);
-  display:none;
-}
-.vendorNameMini{
-  font-weight:950;
-  font-size:12px;
-  color:rgba(255,255,255,.82);
-}
+/* ---------- PHOTO PICKER ---------- */
 
-/* Photo picker */
 .heroRow{display:flex; flex-direction:column; gap:10px}
+
 .chooseBtn{
   display:flex;
   align-items:center;
@@ -255,32 +95,31 @@ body{
   border-radius:14px;
   border:1px solid rgba(255,255,255,.12);
   background:rgba(31,111,235,.20);
-  padding:14px 14px;
+  padding:14px;
   font-weight:1000;
   letter-spacing:.6px;
   cursor:pointer;
 }
 .chooseBtn input{display:none}
 .chooseBtn span{color:rgba(255,255,255,.92)}
+
 .heroHint{
   color:rgba(255,255,255,.62);
   font-weight:700;
   font-size:13px;
 }
 
-/* Instruction (inside frame) */
+/* ---------- TARGET STAGE ---------- */
+
 .instructionLine{
   padding:10px 12px;
   border-radius:14px;
   border:1px solid rgba(255,255,255,.10);
   background:rgba(0,0,0,.22);
-  font-weight:950;
+  font-weight:900;
   color:rgba(255,255,255,.86);
   margin-bottom:12px;
 }
-
-/* Target stage */
-.targetStage{width:100%}
 
 .imgFrame{
   position:relative;
@@ -307,7 +146,9 @@ body{
   touch-action:pan-y;
 }
 
-.tapLayer.active{pointer-events:auto}
+.tapLayer.active{
+  pointer-events:auto;
+}
 
 .dotsLayer{
   position:absolute;
@@ -316,26 +157,32 @@ body{
   pointer-events:none;
 }
 
-/* Dots */
+/* ---------- TAP DOTS (10px) ---------- */
+
 .dot{
   position:absolute;
-  width:18px;
-  height:18px;
+  width:10px;
+  height:10px;
   border-radius:999px;
   transform:translate(-50%,-50%);
 }
 
-.aimDot{
+.bullDot{
   background:rgba(255,210,0,.95);
-  box-shadow:0 0 0 3px rgba(0,0,0,.45), 0 0 0 1px rgba(255,255,255,.12);
+  box-shadow:
+    0 0 0 2px rgba(0,0,0,.55),
+    0 0 0 1px rgba(255,255,255,.18);
 }
 
 .holeDot{
-  background:rgba(0,180,90,.92);
-  box-shadow:0 0 0 3px rgba(0,0,0,.45), 0 0 0 1px rgba(255,255,255,.12);
+  background:rgba(0,180,90,.95);
+  box-shadow:
+    0 0 0 2px rgba(0,0,0,.55),
+    0 0 0 1px rgba(255,255,255,.18);
 }
 
-/* Status + controls */
+/* ---------- STATUS / CONTROLS ---------- */
+
 .statusRow{
   display:flex;
   align-items:center;
@@ -349,7 +196,7 @@ body{
   border-radius:999px;
   border:1px solid rgba(255,255,255,.10);
   background:rgba(0,0,0,.18);
-  font-weight:950;
+  font-weight:900;
   color:rgba(255,255,255,.82);
 }
 
@@ -361,7 +208,7 @@ body{
 
 .btn{
   border-radius:14px;
-  padding:12px 12px;
+  padding:12px;
   border:1px solid rgba(255,255,255,.12);
   background:rgba(0,0,0,.22);
   color:rgba(255,255,255,.90);
@@ -371,18 +218,16 @@ body{
   flex:1;
 }
 
-.btn:disabled{
-  opacity:.45;
-  cursor:not-allowed;
-}
-
-.btn.ghost{background:rgba(0,0,0,.18)}
 .btn.primary{
   background:rgba(31,111,235,.20);
   border-color:rgba(31,111,235,.28);
 }
 
-/* Lock banner */
+.btn:disabled{
+  opacity:.45;
+  cursor:not-allowed;
+}
+
 .lockBanner{
   margin-top:12px;
   padding:10px 12px;
@@ -390,10 +235,13 @@ body{
   border:1px solid rgba(255,255,255,.10);
   background:rgba(255,59,48,.12);
   color:rgba(255,255,255,.88);
-  font-weight:950;
+  font-weight:900;
 }
 
-/* Results */
+/* ---------- RESULTS / SEC ---------- */
+
+.resultsCard{padding-top:16px}
+
 .resultsHdr{
   display:flex;
   align-items:flex-start;
@@ -409,7 +257,7 @@ body{
 }
 
 .secR{color:var(--red)}
-.secW{color:rgba(255,255,255,.90)}
+.secW{color:rgba(255,255,255,.92)}
 .secB{color:var(--blue)}
 
 .secMini{
@@ -420,36 +268,33 @@ body{
   font-weight:950;
 }
 
-/* Score big row */
-.scoreBigRow{
+.vendorPillMini{
   display:flex;
-  align-items:baseline;
-  justify-content:space-between;
-  gap:12px;
-  padding:12px 12px;
+  align-items:center;
+  gap:8px;
+  padding:8px 10px;
   border:1px solid rgba(255,255,255,.10);
-  border-radius:16px;
-  background:rgba(0,0,0,.16);
-  margin-bottom:12px;
+  border-radius:999px;
+  background:rgba(0,0,0,.18);
 }
 
-.scoreLabel{
-  color:rgba(255,255,255,.70);
+.vendorLogoMini{
+  width:26px;
+  height:26px;
+  border-radius:999px;
+  object-fit:cover;
+  border:1px solid rgba(255,255,255,.14);
+  display:none;
+}
+
+.vendorNameMini{
   font-weight:950;
-  letter-spacing:.3px;
+  font-size:12px;
+  color:rgba(255,255,255,.82);
 }
 
-.scoreBig{
-  font-weight:1000;
-  font-size:44px;
-  line-height:1;
-}
+/* ---------- CORRECTIONS ---------- */
 
-.scoreGood{color:var(--good)}
-.scoreMid{color:var(--mid)}
-.scorePoor{color:var(--poor)}
-
-/* Corrections block */
 .corrBlock{
   border:1px solid rgba(255,255,255,.10);
   border-radius:16px;
@@ -465,6 +310,7 @@ body{
   padding:10px 6px;
   border-bottom:1px solid rgba(255,255,255,.06);
 }
+
 .corrLine:last-child{border-bottom:none}
 
 .corrLabel{
@@ -474,30 +320,13 @@ body{
 }
 
 .corrValue{
-  display:flex;
-  align-items:center;
-  gap:10px;
   font-weight:1000;
   color:rgba(255,255,255,.92);
 }
 
-.dir{color:rgba(255,255,255,.92)}
-.val{color:rgba(255,255,255,.88)}
+.arrow{opacity:.75; padding:0 8px}
 
-/* Direction arrows that actually point */
-.dirArrow{
-  display:inline-block;
-  font-size:18px;
-  opacity:.85;
-  transform-origin:center;
-}
+/* ---------- UTIL ---------- */
 
-/* Base arrow glyph "➤" points RIGHT; rotate for others */
-.arrowRight{transform:rotate(0deg)}
-.arrowLeft{transform:rotate(180deg)}
-.arrowUp{transform:rotate(-90deg)}
-.arrowDown{transform:rotate(90deg)}
-
-/* Utility */
 .hiddenInline{display:none !important}
 .hiddenBtn{display:none !important}
