@@ -1,10 +1,9 @@
 /* ============================================================
-   docs/index.js (FULL REPLACEMENT) — TAP PRECISION MODE (A)
+   docs/index.js (FULL REPLACEMENT) — TAP LOUPE + PRECISION MODE
    Default: Tap Precision ON
-   - 1 finger = taps only (bull + holes), NO accidental drag
-   - 2 fingers = pan + pinch zoom (smooth)
-   - RAF-throttled transforms
-   - Smaller filled dots
+   - 1 finger = taps only (bull + holes)
+   - 2 fingers = pan + pinch zoom
+   - Loupe magnifier appears while tapping for precision placement
    - Baker CTAs with locked tags: catalog, product
 ============================================================ */
 
@@ -16,6 +15,9 @@
   const viewport = $("targetViewport");
   const img = $("targetImg");
   const dotsLayer = $("dotsLayer");
+
+  const loupe = $("loupe");
+  const loupeCtx = loupe.getContext("2d");
 
   const tapCountEl = $("tapCount");
   const undoBtn = $("undoBtn");
@@ -70,8 +72,7 @@
 
   function loadPrecisionSetting() {
     const raw = localStorage.getItem(PRECISION_KEY);
-    if (raw === null) tapPrecisionOn = true; // default A
-    else tapPrecisionOn = raw === "1";
+    tapPrecisionOn = (raw === null) ? true : (raw === "1");
     tapPrecisionToggle.checked = tapPrecisionOn;
     tapPrecisionState.textContent = tapPrecisionOn ? "ON" : "OFF";
   }
@@ -81,6 +82,7 @@
     localStorage.setItem(PRECISION_KEY, tapPrecisionOn ? "1" : "0");
     tapPrecisionToggle.checked = tapPrecisionOn;
     tapPrecisionState.textContent = tapPrecisionOn ? "ON" : "OFF";
+    hideLoupe();
     setUi();
   }
 
@@ -147,16 +149,9 @@
       return;
     }
 
-    // Precision ON: explicit 2-finger pan/zoom instruction
-    if (tapPrecisionOn) {
-      instructionLine.textContent = !bull
-        ? "Tap the bull once. Use TWO fingers to zoom/pan if needed."
-        : "Tap bullet holes. Use TWO fingers to zoom/pan. Then press Show Results.";
-    } else {
-      instructionLine.textContent = !bull
-        ? "Tap the bull once. Pinch/zoom and drag to pan if needed."
-        : "Tap bullet holes. Pinch/zoom and drag to pan. Then press Show Results.";
-    }
+    instructionLine.textContent = !bull
+      ? "Tap the bull once. Use TWO fingers to zoom/pan if needed."
+      : "Tap bullet holes. Use TWO fingers to zoom/pan. Then press Show Results.";
   }
 
   function clearAll() {
@@ -164,6 +159,7 @@
     hits = [];
     dotsLayer.innerHTML = "";
     hideOutput();
+    hideLoupe();
     setUi();
   }
 
@@ -173,12 +169,13 @@
 
     renderDots();
     hideOutput();
+    hideLoupe();
     setUi();
   }
 
   function getViewportPointFromClient(clientX, clientY) {
     const r = viewport.getBoundingClientRect();
-    return { x: clientX - r.left, y: clientY - r.top };
+    return { x: clientX - r.left, y: clientY - r.top, r };
   }
 
   function viewportToImageLocal(pt) {
@@ -231,14 +228,12 @@
     vendorLink.href = "https://bakerprinting.com";
 
     bakerCtas.style.display = "flex";
-
     bakerCatalogBtn.textContent = "Buy Baker Targets";
     bakerProductBtn.textContent = "Learn More About Baker Targets";
 
     bakerCatalogBtn.onclick = () => {
       window.location.href = `${window.location.pathname}?vendor=baker&dest=${BAKER_TAG_CATALOG}`;
     };
-
     bakerProductBtn.onclick = () => {
       window.location.href = `${window.location.pathname}?vendor=baker&dest=${BAKER_TAG_PRODUCT}`;
     };
@@ -256,7 +251,75 @@
     }
   }
 
-  // File load
+  // ---------- Loupe ----------
+  const LOUPE_W = 140;
+  const LOUPE_H = 140;
+  const LOUPE_ZOOM = 3.0;         // magnification factor
+  const LOUPE_SRC = 50;           // source sample radius in image pixels (before zoom)
+
+  function hideLoupe() {
+    loupe.style.display = "none";
+  }
+
+  function drawLoupeAt(viewPt) {
+    if (!img.src) return;
+    if (!tapPrecisionOn) return; // loupe only in precision mode
+    if (!img.naturalWidth || !img.naturalHeight) return;
+
+    // Convert to image-local coords
+    const imgLocal = viewportToImageLocal(viewPt);
+
+    // Source crop in image pixel space
+    const sx = Math.round(imgLocal.x - LOUPE_SRC);
+    const sy = Math.round(imgLocal.y - LOUPE_SRC);
+    const sw = LOUPE_SRC * 2;
+    const sh = LOUPE_SRC * 2;
+
+    // Clamp crop
+    const csx = Math.max(0, Math.min(img.naturalWidth - sw, sx));
+    const csy = Math.max(0, Math.min(img.naturalHeight - sh, sy));
+
+    // Position loupe near finger (offset), clamp inside viewport
+    const r = viewPt.r;
+    let lx = viewPt.x + 18;
+    let ly = viewPt.y - (LOUPE_H + 18);
+
+    lx = clamp(lx, 8, r.width - LOUPE_W - 8);
+    ly = clamp(ly, 8, r.height - LOUPE_H - 8);
+
+    loupe.style.left = `${lx}px`;
+    loupe.style.top = `${ly}px`;
+    loupe.style.display = "block";
+
+    // Draw zoomed sample
+    loupeCtx.clearRect(0, 0, LOUPE_W, LOUPE_H);
+    loupeCtx.imageSmoothingEnabled = false;
+
+    loupeCtx.drawImage(
+      img,
+      csx, csy, sw, sh,
+      0, 0, LOUPE_W, LOUPE_H
+    );
+
+    // Crosshair
+    loupeCtx.beginPath();
+    loupeCtx.strokeStyle = "rgba(255,255,255,0.85)";
+    loupeCtx.lineWidth = 1;
+
+    loupeCtx.moveTo(LOUPE_W / 2, 8);
+    loupeCtx.lineTo(LOUPE_W / 2, LOUPE_H - 8);
+    loupeCtx.moveTo(8, LOUPE_H / 2);
+    loupeCtx.lineTo(LOUPE_W - 8, LOUPE_H / 2);
+    loupeCtx.stroke();
+
+    // Center dot
+    loupeCtx.beginPath();
+    loupeCtx.fillStyle = "rgba(255,43,43,0.9)";
+    loupeCtx.arc(LOUPE_W / 2, LOUPE_H / 2, 2.2, 0, Math.PI * 2);
+    loupeCtx.fill();
+  }
+
+  // ---------- File load ----------
   elFile.addEventListener("change", () => {
     const f = elFile.files && elFile.files[0];
     if (!f) return;
@@ -268,6 +331,7 @@
       resetView();
       clearAll();
 
+      // dots layer uses image-local coordinates (natural size)
       dotsLayer.style.width = img.naturalWidth + "px";
       dotsLayer.style.height = img.naturalHeight + "px";
 
@@ -284,13 +348,10 @@
     viewport.addEventListener(evt, (e) => e.preventDefault(), { passive: false });
   });
 
-  // Touch gesture state
-  // Precision ON:
-  // - 1 touch: tap only (no pan)
-  // - 2 touches: pinch + pan (via midpoint)
-  let mode = "none";     // "tap" | "pan" | "pinch" | "none"
-  let panStart = null;   // { x, y, tx, ty }
-  let pinchStart = null; // { dist, midX, midY, scale, tx, ty }
+  // Touch state
+  let mode = "none";     // "tap" | "pinch" | "pan" | "none"
+  let panStart = null;
+  let pinchStart = null;
 
   function tDist(t1, t2) {
     const dx = t1.clientX - t2.clientX;
@@ -302,7 +363,8 @@
     const r = viewport.getBoundingClientRect();
     return {
       x: ((t1.clientX + t2.clientX) / 2) - r.left,
-      y: ((t1.clientY + t2.clientY) / 2) - r.top
+      y: ((t1.clientY + t2.clientY) / 2) - r.top,
+      r
     };
   }
 
@@ -313,26 +375,25 @@
 
   viewport.addEventListener("touchstart", (e) => {
     if (!img.src) return;
-
-    // Prevent page scrolling/zoom behavior inside viewport
     e.preventDefault();
 
     if (e.touches.length === 1) {
       const t = e.touches[0];
       const pt = getViewportPointFromClient(t.clientX, t.clientY);
-
       downWasPinch = false;
       downPt = pt;
 
+      // Precision ON = tap only (no pan)
       if (tapPrecisionOn) {
         mode = "tap";
         panStart = null;
         pinchStart = null;
+        drawLoupeAt(pt);
       } else {
-        // Allow 1-finger pan when precision OFF
         mode = "pan";
         panStart = { x: pt.x, y: pt.y, tx, ty };
         pinchStart = null;
+        hideLoupe();
       }
     }
 
@@ -354,12 +415,21 @@
       panStart = null;
       downWasPinch = true;
       downPt = null;
+      hideLoupe();
     }
   }, { passive: false });
 
   viewport.addEventListener("touchmove", (e) => {
     if (!img.src) return;
     e.preventDefault();
+
+    if (mode === "tap" && e.touches.length === 1 && tapPrecisionOn) {
+      // Update loupe as finger slides slightly
+      const t = e.touches[0];
+      const pt = getViewportPointFromClient(t.clientX, t.clientY);
+      drawLoupeAt(pt);
+      return;
+    }
 
     if (mode === "pan" && e.touches.length === 1 && panStart) {
       const t = e.touches[0];
@@ -395,8 +465,6 @@
       applyTransform();
       return;
     }
-
-    // mode === "tap": ignore move (prevents accidental drag feeling)
   }, { passive: false });
 
   viewport.addEventListener("touchend", (e) => {
@@ -426,11 +494,14 @@
 
             renderDots();
             hideOutput();
+            done = false;
             setUi();
           }
         }
       }
     }
+
+    hideLoupe();
 
     // Transition mode based on remaining touches
     if (e.touches.length === 0) {
@@ -440,7 +511,6 @@
       downPt = null;
       downWasPinch = false;
     } else if (e.touches.length === 1) {
-      // Remaining one touch:
       const t = e.touches[0];
       const pt = getViewportPointFromClient(t.clientX, t.clientY);
 
@@ -451,6 +521,7 @@
         mode = "tap";
         panStart = null;
         pinchStart = null;
+        drawLoupeAt(pt);
       } else {
         mode = "pan";
         panStart = { x: pt.x, y: pt.y, tx, ty };
