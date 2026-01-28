@@ -1,10 +1,11 @@
 /* ============================================================
-   docs/index.js (FULL REPLACEMENT) — TAP FEEDBACK (TOAST + HAPTIC)
+   docs/index.js (FULL REPLACEMENT) — TAP NUMBERS
    Includes:
    - Tap Precision ON default (1 finger taps; 2 fingers pan/zoom)
    - Loupe magnifier while tapping
-   - Micro toast feedback on key actions
-   - Optional light haptic tick on iOS
+   - Toast feedback + light haptic
+   - Hit dots show #1, #2, #3...
+   - Bull dot shows "B"
    - Baker CTAs with locked tags: catalog, product
 ============================================================ */
 
@@ -62,10 +63,7 @@
 
   // ------------ Toast + Haptic ------------
   function hapticLight() {
-    // Safe optional haptic: some browsers ignore it, that's fine.
-    try {
-      if ("vibrate" in navigator) navigator.vibrate(12);
-    } catch {}
+    try { if ("vibrate" in navigator) navigator.vibrate(12); } catch {}
   }
 
   function showToast(msg) {
@@ -73,14 +71,11 @@
     if (toastTimer) clearTimeout(toastTimer);
 
     toastEl.textContent = msg;
-    toastEl.classList.remove("show"); // restart animation
-    // force reflow
+    toastEl.classList.remove("show");
     void toastEl.offsetWidth;
     toastEl.classList.add("show");
 
-    toastTimer = setTimeout(() => {
-      toastEl.classList.remove("show");
-    }, 980);
+    toastTimer = setTimeout(() => toastEl.classList.remove("show"), 980);
   }
 
   // Image URL
@@ -128,12 +123,11 @@
 
   const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
 
-  // RAF-throttled transforms for smoothness
+  // RAF-throttled transforms
   let rafPending = false;
   function applyTransform() {
     if (rafPending) return;
     rafPending = true;
-
     requestAnimationFrame(() => {
       rafPending = false;
       const t = `translate3d(${tx}px, ${ty}px, 0) scale(${scale})`;
@@ -172,7 +166,6 @@
       instructionLine.textContent = "Upload your target photo to begin.";
       return;
     }
-
     if (done) {
       instructionLine.textContent = "Results ready. You can Undo/Clear or upload a new photo.";
       return;
@@ -218,18 +211,28 @@
     return { x: (pt.x - tx) / scale, y: (pt.y - ty) / scale };
   }
 
-  function addDot(kind, pt) {
+  function addDot(kind, pt, labelText = "") {
     const d = document.createElement("div");
     d.className = `dot ${kind}`;
     d.style.left = `${pt.x}px`;
     d.style.top = `${pt.y}px`;
+
+    if (labelText) {
+      const s = document.createElement("span");
+      s.className = "dotLabel";
+      s.textContent = labelText;
+      d.appendChild(s);
+    }
+
     dotsLayer.appendChild(d);
   }
 
   function renderDots() {
     dotsLayer.innerHTML = "";
-    if (bull) addDot("bull", bull);
-    for (const h of hits) addDot("hit", h);
+    if (bull) addDot("bull", bull, "B");
+    for (let i = 0; i < hits.length; i++) {
+      addDot("hit", hits[i], String(i + 1));
+    }
   }
 
   // keep pan from drifting too far
@@ -349,7 +352,6 @@
     objectUrl = URL.createObjectURL(f);
 
     img.onload = () => {
-      // reset view + state
       scale = 1; tx = 0; ty = 0;
       applyTransform();
 
@@ -514,10 +516,10 @@
               showToast("Bull set ✅");
             } else {
               hits.push(imgLocal);
-              showToast("Hit added ✅");
+              showToast(`Hit #${hits.length} added ✅`);
             }
-            hapticLight();
 
+            hapticLight();
             renderDots();
             hideOutput();
             done = false;
