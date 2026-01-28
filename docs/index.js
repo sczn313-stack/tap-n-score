@@ -1,16 +1,18 @@
 /* ============================================================
-   docs/index.js (FULL REPLACEMENT) — Baker Pilot (iOS-safe load)
-   Fixes:
-   - File picker opens via <label for="photoInput"> (handled in HTML)
-   - Target image reliably loads on iOS (ObjectURL + FileReader fallback)
-   - Image always fits/centers (prevents "blank" due to off-screen transform)
-   - Adds "INDEX.JS READY" badge to prove this JS file is running
+   docs/index.js (FULL REPLACEMENT) — Baker 23×35 1" Grid Pilot
+   Adds:
+   - Guided tap workflow: Bull → Grid X → Grid Y → Hits
+   - 1" grid lock => px/in (X & Y)
+   - POIB + correction in inches
+   - True MOA + Clicks (2 decimals)
+   - Direction mapping locked: Top=Up, Right=Right
+   - Collapsible SEC (doesn't hog screen)
 ============================================================ */
 
 (() => {
   const $ = (id) => document.getElementById(id);
 
-  // ---- Required elements (must exist in index.html)
+  // ---- DOM
   const elFile = $("photoInput");
   const elImg = $("targetImg");
   const elWrap = $("targetWrap");
@@ -32,15 +34,15 @@
   const elCatalog = $("bakerCatalogBtn");
   const elProduct = $("bakerProductBtn");
 
-  // ---- Minimal safety: if any critical element missing, stop
-  const must = [elFile, elImg, elWrap, elDots, elTapCount, elUndo, elClear, elResults, elInstruction, elSec];
+  // ---- Required
+  const must = [elFile, elImg, elWrap, elDots, elTapCount, elUndo, elClear, elResults, elInstruction, elSec, elDistance, elClick, elApply];
   if (must.some((x) => !x)) {
     console.error("Missing required DOM IDs. Check index.html IDs.");
     return;
   }
 
-  // ---- Badge to prove index.js loaded
-  (function showIndexBadge() {
+  // ---- Quick badge (proves this file is running)
+  (function badge() {
     const b = document.createElement("div");
     b.textContent = "INDEX.JS READY";
     b.style.position = "fixed";
@@ -52,142 +54,94 @@
     b.style.fontFamily = "system-ui,-apple-system,Segoe UI,Roboto,Arial";
     b.style.fontSize = "12px";
     b.style.fontWeight = "900";
-    b.style.letterSpacing = "0.2px";
     b.style.background = "rgba(0,90,200,0.85)";
-    b.style.color = "white";
+    b.style.color = "#fff";
     b.style.boxShadow = "0 18px 45px rgba(0,0,0,0.55)";
     document.body.appendChild(b);
-    setTimeout(() => b.remove(), 2500);
+    setTimeout(() => b.remove(), 2200);
   })();
 
-  // ---- Vendor links (safe placeholders — replace later)
-  // Set these to real Baker URLs when ready.
-  elCatalog.href = "https://bakertargets.com/";
-  elProduct.href = "https://bakertargets.com/";
+  // ---- Baker links (replace later if you want deep links)
+  if (elCatalog) elCatalog.href = "https://bakertargets.com/";
+  if (elProduct) elProduct.href = "https://bakertargets.com/";
 
   // ------------------------------------------------------------
-  // State
+  // Constants + formatting
+  // ------------------------------------------------------------
+  const INCHES_PER_METER = 39.37007874015748;
+  const YARDS_PER_METER = 1.0936132983377078;
+
+  function fmt2(n) {
+    const x = Number(n);
+    if (!Number.isFinite(x)) return "0.00";
+    return x.toFixed(2);
+  }
+
+  // True MOA inches per 100yd = 1.047
+  function inchesPerMoa(distanceYds) {
+    return 1.047 * (distanceYds / 100);
+  }
+
+  // ------------------------------------------------------------
+  // Session (pilot defaults)
+  // ------------------------------------------------------------
+  const session = {
+    unit: "in",        // "in" or "m" (display mode for this run only)
+    distanceYds: 100,  // pilot default
+    moaPerClick: 0.25  // pilot default
+  };
+
+  function refreshMomaUI() {
+    // top-right block only (NOT in SEC)
+    if (elUnitLabel) elUnitLabel.textContent = session.unit === "m" ? "M" : "IN";
+    if (elDistanceUnit) elDistanceUnit.textContent = session.unit === "m" ? "m" : "yd";
+
+    elDistance.value = session.unit === "m"
+      ? fmt2(session.distanceYds / YARDS_PER_METER) // yds -> m
+      : fmt2(session.distanceYds);
+
+    elClick.value = fmt2(session.moaPerClick);
+  }
+
+  if (elUnitToggle) {
+    elUnitToggle.addEventListener("change", () => {
+      session.unit = elUnitToggle.checked ? "m" : "in";
+      refreshMomaUI();
+      // per your rule: session-only; clearing resets later anyway
+      renderInstruction();
+      clearSec();
+    });
+  }
+
+  elApply.addEventListener("click", () => {
+    const d = Number(elDistance.value);
+    const c = Number(elClick.value);
+
+    if (Number.isFinite(d) && d > 0) {
+      session.distanceYds = session.unit === "m" ? (d * YARDS_PER_METER) : d;
+    }
+    if (Number.isFinite(c) && c > 0) {
+      session.moaPerClick = c;
+    }
+
+    renderInstruction(`Updated: ${distanceLabel()} • ${fmt2(session.moaPerClick)} MOA/click`);
+    clearSec();
+  });
+
+  function distanceLabel() {
+    return session.unit === "m"
+      ? `${fmt2(session.distanceYds / YARDS_PER_METER)} m`
+      : `${fmt2(session.distanceYds)} yd`;
+  }
+
+  refreshMomaUI();
+
+  // ------------------------------------------------------------
+  // Image load (ObjectURL + FileReader fallback)
   // ------------------------------------------------------------
   let objectUrl = null;
   let imageLoaded = false;
 
-  // Transform for pan/zoom
-  const view = {
-    scale: 1,
-    tx: 0,
-    ty: 0,
-    minScale: 0.25,
-    maxScale: 8
-  };
-
-  // Taps stored in IMAGE PIXEL coordinates
-  let taps = []; // {xPx, yPx}
-
-  // ------------------------------------------------------------
-  // Helpers
-  // ------------------------------------------------------------
-  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
-
-  function setInstruction(msg) {
-    elInstruction.textContent = msg;
-  }
-
-  function setTapCount() {
-    elTapCount.textContent = String(taps.length);
-  }
-
-  function clearSec() {
-    elSec.innerHTML = "";
-  }
-
-  function applyTransform() {
-    const t = `translate(${view.tx}px, ${view.ty}px) scale(${view.scale})`;
-    elImg.style.transform = t;
-    elDots.style.transform = t;
-    redrawDots();
-  }
-
-  function redrawDots() {
-    // dotsLayer is transformed alongside the image,
-    // so dot positions should be in IMAGE pixel space.
-    const w = elImg.naturalWidth || 0;
-    const h = elImg.naturalHeight || 0;
-    if (!imageLoaded || !w || !h) {
-      elDots.innerHTML = "";
-      return;
-    }
-
-    // Make dotsLayer match image pixel size (pre-transform)
-    elDots.style.width = `${w}px`;
-    elDots.style.height = `${h}px`;
-
-    // Draw
-    const dotPx = 10; // locked at 10px per your request
-    const r = dotPx / 2;
-
-    elDots.innerHTML = taps
-      .map((p, i) => {
-        // numbered filled dot (small, visible)
-        const n = i + 1;
-        return `
-          <div style="
-            position:absolute;
-            left:${p.xPx - r}px;
-            top:${p.yPx - r}px;
-            width:${dotPx}px;
-            height:${dotPx}px;
-            border-radius:999px;
-            background: rgba(255,80,80,0.95);
-            box-shadow: 0 0 0 2px rgba(0,0,0,0.55);
-            display:flex;
-            align-items:center;
-            justify-content:center;
-            font-weight:900;
-            font-size:10px;
-            color:#120000;
-            line-height:1;
-            pointer-events:none;
-          ">${n}</div>
-        `;
-      })
-      .join("");
-  }
-
-  function resetViewToFit() {
-    const w = elImg.naturalWidth || 0;
-    const h = elImg.naturalHeight || 0;
-    const wrapW = elWrap.clientWidth || 1;
-    const wrapH = elWrap.clientHeight || 1;
-
-    if (!w || !h) return;
-
-    const s = Math.min(wrapW / w, wrapH / h);
-    view.scale = clamp(s, view.minScale, view.maxScale);
-
-    // center image in viewport
-    const scaledW = w * view.scale;
-    const scaledH = h * view.scale;
-    view.tx = (wrapW - scaledW) / 2;
-    view.ty = (wrapH - scaledH) / 2;
-
-    applyTransform();
-  }
-
-  function screenToImagePx(clientX, clientY) {
-    const rect = elWrap.getBoundingClientRect();
-    const x = clientX - rect.left;
-    const y = clientY - rect.top;
-
-    // inverse of transform: (x - tx)/scale
-    const ix = (x - view.tx) / view.scale;
-    const iy = (y - view.ty) / view.scale;
-
-    return { ix, iy };
-  }
-
-  // ------------------------------------------------------------
-  // Image loading (ObjectURL + FileReader fallback)
-  // ------------------------------------------------------------
   function revokeOldUrl() {
     if (objectUrl) {
       URL.revokeObjectURL(objectUrl);
@@ -197,29 +151,22 @@
 
   async function loadFileToImage(file) {
     imageLoaded = false;
-    clearSec();
-    taps = [];
-    setTapCount();
-    elDots.innerHTML = "";
+    resetAllForNewPhoto();
+
     setInstruction("Loading photo…");
 
-    // Ensure img is "visible"
-    elImg.style.display = "block";
+    revokeOldUrl();
 
     // Try ObjectURL first
-    revokeOldUrl();
-    let used = "objecturl";
     try {
       objectUrl = URL.createObjectURL(file);
       elImg.src = objectUrl;
-    } catch (e) {
-      used = "dataurl";
+    } catch (_) {
       objectUrl = null;
-      elImg.removeAttribute("src");
     }
 
-    // If ObjectURL path fails, use FileReader DataURL
-    if (used === "dataurl") {
+    // If ObjectURL failed, use FileReader
+    if (!elImg.src) {
       const dataUrl = await new Promise((resolve, reject) => {
         const fr = new FileReader();
         fr.onerror = () => reject(new Error("FileReader failed"));
@@ -229,35 +176,30 @@
       elImg.src = String(dataUrl);
     }
 
-    // Wait for actual decode (more reliable than onload alone)
+    // wait load
     await new Promise((resolve, reject) => {
       const done = () => resolve();
       const fail = () => reject(new Error("Image failed to load"));
       elImg.onload = done;
       elImg.onerror = fail;
-      // If cached and already complete
       if (elImg.complete && elImg.naturalWidth > 0) resolve();
     });
 
-    // Extra decode when available
     if (elImg.decode) {
       try { await elImg.decode(); } catch (_) {}
     }
 
     imageLoaded = true;
 
-    // Make dotsLayer match image pixels
+    // dots layer in image pixel space
     elDots.style.left = "0px";
     elDots.style.top = "0px";
 
     resetViewToFit();
 
-    setInstruction(`Photo loaded. Pinch/zoom + pan. Tap bull first, then tap hits. Then press Show Results.`);
+    renderInstruction();
   }
 
-  // ------------------------------------------------------------
-  // Input handlers
-  // ------------------------------------------------------------
   elFile.addEventListener("change", async () => {
     const f = elFile.files && elFile.files[0];
     if (!f) return;
@@ -271,7 +213,218 @@
   });
 
   // ------------------------------------------------------------
-  // Tap capture (1 finger tap only)
+  // Pan/zoom transform (image + dots together)
+  // ------------------------------------------------------------
+  const view = {
+    scale: 1,
+    tx: 0,
+    ty: 0,
+    minScale: 0.25,
+    maxScale: 8
+  };
+
+  function applyTransform() {
+    const t = `translate(${view.tx}px, ${view.ty}px) scale(${view.scale})`;
+    elImg.style.transformOrigin = "0 0";
+    elDots.style.transformOrigin = "0 0";
+    elImg.style.transform = t;
+    elDots.style.transform = t;
+    redrawDots();
+  }
+
+  function resetViewToFit() {
+    const w = elImg.naturalWidth || 0;
+    const h = elImg.naturalHeight || 0;
+    const wrapW = elWrap.clientWidth || 1;
+    const wrapH = elWrap.clientHeight || 1;
+
+    if (!w || !h) return;
+
+    const s = Math.min(wrapW / w, wrapH / h);
+    view.scale = Math.max(view.minScale, Math.min(view.maxScale, s));
+
+    const scaledW = w * view.scale;
+    const scaledH = h * view.scale;
+
+    view.tx = (wrapW - scaledW) / 2;
+    view.ty = (wrapH - scaledH) / 2;
+
+    applyTransform();
+  }
+
+  function screenToImagePx(clientX, clientY) {
+    const rect = elWrap.getBoundingClientRect();
+    const x = clientX - rect.left;
+    const y = clientY - rect.top;
+
+    const ix = (x - view.tx) / view.scale;
+    const iy = (y - view.ty) / view.scale;
+
+    return { ix, iy };
+  }
+
+  // ------------------------------------------------------------
+  // Tap Workflow State
+  // ------------------------------------------------------------
+  // Bull + Grid lock taps are NOT "hits"
+  let bull = null;              // {xPx, yPx}
+  let gridX = { a: null, b: null }; // two points 1" apart horizontally
+  let gridY = { a: null, b: null }; // two points 1" apart vertically
+  let pxPerInchX = null;
+  let pxPerInchY = null;
+  let hits = [];                // [{xPx,yPx},...]
+
+  function gridLocked() {
+    return Number.isFinite(pxPerInchX) && pxPerInchX > 0 && Number.isFinite(pxPerInchY) && pxPerInchY > 0;
+  }
+
+  function currentStep() {
+    if (!bull) return "BULL";
+    if (!gridX.a) return "GRIDX_A";
+    if (!gridX.b) return "GRIDX_B";
+    if (!gridY.a) return "GRIDY_A";
+    if (!gridY.b) return "GRIDY_B";
+    if (!gridLocked()) return "LOCKING";
+    return "HITS";
+  }
+
+  function setInstruction(msg) {
+    elInstruction.textContent = msg;
+  }
+
+  function renderInstruction(extra = "") {
+    if (!imageLoaded) {
+      setInstruction("Upload your Baker 23×35 1-inch grid target photo to begin.");
+      return;
+    }
+
+    const step = currentStep();
+    const lockText = gridLocked()
+      ? `Grid Lock: ON (${fmt2(pxPerInchX)} px/in X • ${fmt2(pxPerInchY)} px/in Y)`
+      : `Grid Lock: OFF`;
+
+    let line = "";
+    if (step === "BULL") {
+      line = `Step 1: Tap the bull center.  (${lockText})`;
+    } else if (step === "GRIDX_A") {
+      line = `Step 2: Tap a grid intersection (X cal point A). 1" square target. (${lockText})`;
+    } else if (step === "GRIDX_B") {
+      line = `Step 2: Tap the next grid intersection exactly 1 square to the RIGHT of A (X cal point B). (${lockText})`;
+    } else if (step === "GRIDY_A") {
+      line = `Step 3: Tap a grid intersection (Y cal point A). (${lockText})`;
+    } else if (step === "GRIDY_B") {
+      line = `Step 3: Tap the next grid intersection exactly 1 square DOWN from A (Y cal point B). (${lockText})`;
+    } else {
+      line = `Now tap your hits. (Hits: ${hits.length}) • ${lockText}`;
+    }
+
+    if (extra) line += ` — ${extra}`;
+    setInstruction(line);
+  }
+
+  function setHitCount() {
+    elTapCount.textContent = String(hits.length);
+  }
+
+  function clearSec() {
+    elSec.innerHTML = "";
+  }
+
+  function resetAllForNewPhoto() {
+    bull = null;
+    gridX = { a: null, b: null };
+    gridY = { a: null, b: null };
+    pxPerInchX = null;
+    pxPerInchY = null;
+    hits = [];
+    setHitCount();
+    clearSec();
+    elDots.innerHTML = "";
+    renderInstruction();
+  }
+
+  // ------------------------------------------------------------
+  // Dot drawing (locked sizes)
+  // ------------------------------------------------------------
+  function redrawDots() {
+    if (!imageLoaded || !elImg.naturalWidth || !elImg.naturalHeight) {
+      elDots.innerHTML = "";
+      return;
+    }
+
+    const w = elImg.naturalWidth;
+    const h = elImg.naturalHeight;
+
+    elDots.style.width = `${w}px`;
+    elDots.style.height = `${h}px`;
+
+    const dotPx = 10; // locked at 10
+    const r = dotPx / 2;
+
+    const parts = [];
+
+    // Bull (blue with B)
+    if (bull) {
+      parts.push(`
+        <div style="
+          position:absolute;
+          left:${bull.xPx - r}px; top:${bull.yPx - r}px;
+          width:${dotPx}px; height:${dotPx}px; border-radius:999px;
+          background: rgba(90,170,255,0.95);
+          box-shadow: 0 0 0 2px rgba(0,0,0,0.55);
+          display:flex; align-items:center; justify-content:center;
+          font-weight:900; font-size:10px; color:#001425;
+          pointer-events:none;
+        ">B</div>
+      `);
+    }
+
+    // Grid cal points (yellow)
+    const calPoints = [
+      { p: gridX.a, label: "X1" },
+      { p: gridX.b, label: "X2" },
+      { p: gridY.a, label: "Y1" },
+      { p: gridY.b, label: "Y2" }
+    ];
+    for (const c of calPoints) {
+      if (!c.p) continue;
+      parts.push(`
+        <div style="
+          position:absolute;
+          left:${c.p.xPx - r}px; top:${c.p.yPx - r}px;
+          width:${dotPx}px; height:${dotPx}px; border-radius:999px;
+          background: rgba(255,220,90,0.95);
+          box-shadow: 0 0 0 2px rgba(0,0,0,0.55);
+          display:flex; align-items:center; justify-content:center;
+          font-weight:900; font-size:9px; color:#2a1c00;
+          pointer-events:none;
+        ">${c.label}</div>
+      `);
+    }
+
+    // Hits (red numbered)
+    for (let i = 0; i < hits.length; i++) {
+      const p = hits[i];
+      const n = i + 1;
+      parts.push(`
+        <div style="
+          position:absolute;
+          left:${p.xPx - r}px; top:${p.yPx - r}px;
+          width:${dotPx}px; height:${dotPx}px; border-radius:999px;
+          background: rgba(255,80,80,0.95);
+          box-shadow: 0 0 0 2px rgba(0,0,0,0.55);
+          display:flex; align-items:center; justify-content:center;
+          font-weight:900; font-size:10px; color:#120000;
+          pointer-events:none;
+        ">${n}</div>
+      `);
+    }
+
+    elDots.innerHTML = parts.join("");
+  }
+
+  // ------------------------------------------------------------
+  // Pointer handling (tap vs pan vs pinch)
   // ------------------------------------------------------------
   let activePointers = new Map();
   let isPanning = false;
@@ -283,16 +436,9 @@
     activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
 
     if (activePointers.size === 1) {
-      // potential tap/pan start
       isPanning = true;
-      panStart = {
-        x: e.clientX,
-        y: e.clientY,
-        tx: view.tx,
-        ty: view.ty
-      };
+      panStart = { x: e.clientX, y: e.clientY, tx: view.tx, ty: view.ty };
     } else {
-      // multi-touch => stop panning as "tap"
       isPanning = false;
       panStart = null;
     }
@@ -302,7 +448,7 @@
     if (!activePointers.has(e.pointerId)) return;
     activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
 
-    // Pan with 1 pointer
+    // Pan (1 pointer)
     if (activePointers.size === 1 && isPanning && panStart) {
       const dx = e.clientX - panStart.x;
       const dy = e.clientY - panStart.y;
@@ -311,7 +457,7 @@
       applyTransform();
     }
 
-    // Pinch with 2 pointers (simple)
+    // Pinch (2 pointers)
     if (activePointers.size === 2) {
       const pts = Array.from(activePointers.values());
       const d = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
@@ -322,23 +468,19 @@
           startScale: view.scale,
           startTx: view.tx,
           startTy: view.ty,
-          // pinch center
           cx: (pts[0].x + pts[1].x) / 2,
           cy: (pts[0].y + pts[1].y) / 2
         };
       } else {
         const p = elWrap._pinch;
         const factor = d / (p.startDist || 1);
+        const newScale = Math.max(view.minScale, Math.min(view.maxScale, p.startScale * factor));
 
-        // zoom around center
-        const newScale = clamp(p.startScale * factor, view.minScale, view.maxScale);
-
-        // Convert center point to wrap coords
         const rect = elWrap.getBoundingClientRect();
         const cx = p.cx - rect.left;
         const cy = p.cy - rect.top;
 
-        // Keep the image point under the pinch center stable
+        // keep point under center stable
         const ix = (cx - p.startTx) / p.startScale;
         const iy = (cy - p.startTy) / p.startScale;
 
@@ -352,21 +494,19 @@
   });
 
   elWrap.addEventListener("pointerup", (e) => {
-    // detect tap (1-finger quick without big movement)
-    const wasSingle = activePointers.size === 1;
     const down = activePointers.get(e.pointerId);
-    activePointers.delete(e.pointerId);
+    const wasSingle = activePointers.size === 1;
 
-    // clear pinch state when leaving 2 pointers
+    activePointers.delete(e.pointerId);
     if (activePointers.size < 2) elWrap._pinch = null;
 
     if (!imageLoaded) return;
     if (!wasSingle || !down) return;
 
     const moved = Math.hypot(e.clientX - down.x, e.clientY - down.y);
-    if (moved > 10) return; // treated as pan
+    if (moved > 10) return; // treat as pan
 
-    // Double-tap to reset view
+    // Double-tap reset view
     const now = Date.now();
     if (now - lastTapTime < 280) {
       resetViewToFit();
@@ -375,15 +515,11 @@
     }
     lastTapTime = now;
 
-    // Record a hit tap
+    // Record tap in image pixels
     const { ix, iy } = screenToImagePx(e.clientX, e.clientY);
-
-    // bounds
     if (ix < 0 || iy < 0 || ix > elImg.naturalWidth || iy > elImg.naturalHeight) return;
 
-    taps.push({ xPx: ix, yPx: iy });
-    setTapCount();
-    redrawDots();
+    handleWorkflowTap({ xPx: ix, yPx: iy });
   });
 
   elWrap.addEventListener("pointercancel", (e) => {
@@ -392,130 +528,289 @@
   });
 
   // ------------------------------------------------------------
-  // Undo / Clear
+  // Workflow tap handler (Bull → Grid X → Grid Y → Hits)
   // ------------------------------------------------------------
-  elUndo.addEventListener("click", () => {
-    if (taps.length) taps.pop();
-    setTapCount();
+  function handleWorkflowTap(p) {
+    clearSec(); // any new tap invalidates old SEC (until Show Results)
+
+    const step = currentStep();
+
+    if (step === "BULL") {
+      bull = p;
+    } else if (step === "GRIDX_A") {
+      gridX.a = p;
+    } else if (step === "GRIDX_B") {
+      gridX.b = p;
+      // px/in X: expect exactly 1 square to the right (1")
+      pxPerInchX = Math.abs(gridX.b.xPx - gridX.a.xPx);
+    } else if (step === "GRIDY_A") {
+      gridY.a = p;
+    } else if (step === "GRIDY_B") {
+      gridY.b = p;
+      // px/in Y: expect exactly 1 square down (1")
+      pxPerInchY = Math.abs(gridY.b.yPx - gridY.a.yPx);
+    } else {
+      // HITS
+      hits.push(p);
+      setHitCount();
+    }
+
+    // Validate lock reasonableness (avoid 0 or tiny)
+    if ((step === "GRIDX_B" || step === "GRIDY_B") && gridLocked()) {
+      if (pxPerInchX < 5 || pxPerInchY < 5) {
+        // clearly wrong taps
+        pxPerInchX = null;
+        pxPerInchY = null;
+        gridX = { a: null, b: null };
+        gridY = { a: null, b: null };
+        renderInstruction("Grid lock failed — tap two points exactly 1 square apart.");
+      }
+    }
+
     redrawDots();
+    renderInstruction();
+  }
+
+  // ------------------------------------------------------------
+  // Undo / Clear
+  // Undo reverses the most recent step (including bull/cal/hit)
+  // Clear = clears everything (bull + lock + hits) but keeps photo
+  // Grid lock only truly resets by uploading a new photo OR Clear.
+  // ------------------------------------------------------------
+  function undoLast() {
     clearSec();
-  });
+
+    // Priority: hits -> gridY -> gridX -> bull
+    if (hits.length) {
+      hits.pop();
+      setHitCount();
+      redrawDots();
+      renderInstruction();
+      return;
+    }
+
+    if (gridY.b) { gridY.b = null; pxPerInchY = null; redrawDots(); renderInstruction(); return; }
+    if (gridY.a) { gridY.a = null; redrawDots(); renderInstruction(); return; }
+
+    if (gridX.b) { gridX.b = null; pxPerInchX = null; redrawDots(); renderInstruction(); return; }
+    if (gridX.a) { gridX.a = null; redrawDots(); renderInstruction(); return; }
+
+    if (bull) { bull = null; redrawDots(); renderInstruction(); return; }
+  }
+
+  elUndo.addEventListener("click", undoLast);
 
   elClear.addEventListener("click", () => {
-    taps = [];
-    setTapCount();
+    bull = null;
+    gridX = { a: null, b: null };
+    gridY = { a: null, b: null };
+    pxPerInchX = null;
+    pxPerInchY = null;
+    hits = [];
+    setHitCount();
     redrawDots();
     clearSec();
-    setInstruction("Cleared taps. Tap bull first, then tap hits.");
+    renderInstruction("Cleared. Start again: tap bull, then grid lock, then hits.");
   });
 
   // ------------------------------------------------------------
-  // Units + MOMA inputs (UI only for now)
-  // Default pilot: 100 yd, 0.25 MOA/click, inches mode
+  // Math: POIB, correction inches, MOA, clicks, directions
   // ------------------------------------------------------------
-  const session = {
-    unit: "in",         // "in" or "m"
-    distanceYds: 100,
-    moaPerClick: 0.25
-  };
-
-  function fmt2(n) {
-    const x = Number(n);
-    if (!Number.isFinite(x)) return "0.00";
-    return x.toFixed(2);
+  function computePOIB() {
+    if (!hits.length) return null;
+    let sx = 0, sy = 0;
+    for (const p of hits) { sx += p.xPx; sy += p.yPx; }
+    return { xPx: sx / hits.length, yPx: sy / hits.length };
   }
 
-  function refreshMomaUI() {
-    elUnitLabel.textContent = session.unit === "m" ? "M" : "IN";
-    elDistanceUnit.textContent = session.unit === "m" ? "m" : "yd";
-
-    // show defaults
-    elDistance.value = session.unit === "m"
-      ? fmt2(session.distanceYds * 0.9144) // yd -> m
-      : fmt2(session.distanceYds);
-
-    elClick.value = fmt2(session.moaPerClick);
+  function toInchesFromBull(p) {
+    // returns offset from bull in inches: (+x right, +y down)
+    const dxPx = p.xPx - bull.xPx;
+    const dyPx = p.yPx - bull.yPx;
+    return { xIn: dxPx / pxPerInchX, yIn: dyPx / pxPerInchY };
   }
 
-  elUnitToggle.addEventListener("change", () => {
-    session.unit = elUnitToggle.checked ? "m" : "in";
-    refreshMomaUI();
-    clearSec(); // per your rule: session-only display; clearing resets later
-  });
+  function correctionInches(poib) {
+    // Correction vector = Bull - POIB (inches)
+    // bull - poib in pixel, divide by px/in
+    const dxIn = (bull.xPx - poib.xPx) / pxPerInchX;
+    const dyIn = (bull.yPx - poib.yPx) / pxPerInchY;
+    return { dxIn, dyIn };
+  }
 
-  elApply.addEventListener("click", () => {
-    // parse distance
-    const d = Number(elDistance.value);
-    const c = Number(elClick.value);
+  function directionsFromCorrection(dxIn, dyIn) {
+    // dxIn > 0 => RIGHT, dxIn < 0 => LEFT
+    // dyIn is screen-space: positive means bull is BELOW POIB => need DOWN
+    // dyIn negative means bull is ABOVE POIB => need UP
+    const wind = dxIn >= 0 ? "RIGHT" : "LEFT";
+    const elev = dyIn >= 0 ? "DOWN" : "UP";
+    return { wind, elev };
+  }
 
-    if (Number.isFinite(d) && d > 0) {
-      session.distanceYds = session.unit === "m" ? (d / 0.9144) : d;
+  function moaFromInches(inches, distanceYds) {
+    const ipm = inchesPerMoa(distanceYds);
+    return inches / ipm;
+  }
+
+  function clicksFromMoa(moa, moaPerClick) {
+    return moa / moaPerClick;
+  }
+
+  function convertDisplayLengthInches(valIn) {
+    // display either inches or meters (meters throughout for that run)
+    if (session.unit === "m") {
+      const meters = valIn / INCHES_PER_METER;
+      return { value: meters, unit: "m" };
     }
-    if (Number.isFinite(c) && c > 0) {
-      session.moaPerClick = c;
-    }
-
-    setInstruction(
-      `Updated: ${session.unit === "m" ? fmt2(session.distanceYds * 0.9144) + " m" : fmt2(session.distanceYds) + " yd"} • ${fmt2(session.moaPerClick)} MOA/click`
-    );
-    clearSec();
-  });
-
-  refreshMomaUI();
+    return { value: valIn, unit: "in" };
+  }
 
   // ------------------------------------------------------------
-  // Show Results (placeholder SEC — we’ll wire bull + inches math next)
+  // SEC render (collapsible)
+  // ------------------------------------------------------------
+  function renderSEC(result) {
+    const {
+      verifiedHits,
+      poibOffIn,      // POIB relative to bull (inches)
+      corrIn,         // correction (bull - poib) inches
+      moa,
+      clicks,
+      dir,
+      grid
+    } = result;
+
+    // Display conversions
+    const poibX = convertDisplayLengthInches(poibOffIn.xIn);
+    const poibY = convertDisplayLengthInches(poibOffIn.yIn);
+
+    const corrX = convertDisplayLengthInches(corrIn.dxIn);
+    const corrY = convertDisplayLengthInches(corrIn.dyIn);
+
+    const gridX = convertDisplayLengthInches(1); // 1 inch in current units (for label only)
+    const unitLabel = session.unit === "m" ? "m" : "in";
+
+    elSec.innerHTML = `
+      <details open style="margin-top:8px;">
+        <summary style="
+          cursor:pointer;
+          list-style:none;
+          font-weight:900;
+          letter-spacing:0.2px;
+          padding:10px 12px;
+          border-radius:14px;
+          border:1px solid rgba(255,255,255,0.10);
+          background: rgba(0,0,0,0.25);
+          color: rgba(255,255,255,0.92);
+          user-select:none;
+        ">Shooter Experience Card</summary>
+
+        <div style="
+          margin-top:10px;
+          background: rgba(0,0,0,0.25);
+          border: 1px solid rgba(255,255,255,0.10);
+          border-radius: 16px;
+          padding: 12px;
+        ">
+          <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+            <div style="padding:10px; border-radius:14px; border:1px solid rgba(255,255,255,0.10); background:rgba(255,255,255,0.04);">
+              <div style="color:rgba(255,255,255,0.65); font-weight:800; font-size:12px;">Verified Hits</div>
+              <div style="font-size:26px; font-weight:900;">${verifiedHits}</div>
+            </div>
+
+            <div style="padding:10px; border-radius:14px; border:1px solid rgba(255,255,255,0.10); background:rgba(255,255,255,0.04);">
+              <div style="color:rgba(255,255,255,0.65); font-weight:800; font-size:12px;">POIB (${unitLabel})</div>
+              <div style="font-size:22px; font-weight:900;">X ${fmt2(poibX.value)} • Y ${fmt2(poibY.value)}</div>
+            </div>
+
+            <div style="padding:10px; border-radius:14px; border:1px solid rgba(255,255,255,0.10); background:rgba(255,255,255,0.04);">
+              <div style="color:rgba(255,255,255,0.65); font-weight:800; font-size:12px;">Correction (Bull − POIB) (${unitLabel})</div>
+              <div style="font-size:22px; font-weight:900;">ΔX ${fmt2(corrX.value)} • ΔY ${fmt2(corrY.value)}</div>
+            </div>
+
+            <div style="padding:10px; border-radius:14px; border:1px solid rgba(255,255,255,0.10); background:rgba(255,255,255,0.04);">
+              <div style="color:rgba(255,255,255,0.65); font-weight:800; font-size:12px;">Directions</div>
+              <div style="font-size:22px; font-weight:900;">${dir.wind} • ${dir.elev}</div>
+            </div>
+
+            <div style="padding:10px; border-radius:14px; border:1px solid rgba(255,255,255,0.10); background:rgba(255,255,255,0.04);">
+              <div style="color:rgba(255,255,255,0.65); font-weight:800; font-size:12px;">MOA</div>
+              <div style="font-size:22px; font-weight:900;">X ${fmt2(moa.x)} • Y ${fmt2(moa.y)}</div>
+            </div>
+
+            <div style="padding:10px; border-radius:14px; border:1px solid rgba(255,255,255,0.10); background:rgba(255,255,255,0.04);">
+              <div style="color:rgba(255,255,255,0.65); font-weight:800; font-size:12px;">Clicks</div>
+              <div style="font-size:22px; font-weight:900;">X ${fmt2(clicks.x)} • Y ${fmt2(clicks.y)}</div>
+            </div>
+          </div>
+
+          <div style="margin-top:10px; color:rgba(255,255,255,0.60); font-weight:800; font-size:12px;">
+            1" grid detected: ${fmt2(grid.pxPerInchX)} px/in (X) • ${fmt2(grid.pxPerInchY)} px/in (Y) • ${distanceLabel()} • ${fmt2(session.moaPerClick)} MOA/click
+          </div>
+        </div>
+      </details>
+    `;
+  }
+
+  // ------------------------------------------------------------
+  // Show Results
   // ------------------------------------------------------------
   elResults.addEventListener("click", () => {
     if (!imageLoaded) {
-      setInstruction("Upload a target photo first.");
+      renderInstruction("Upload a target photo first.");
       return;
     }
-    if (taps.length < 2) {
-      setInstruction("Tap bull first, then tap at least one hit.");
+    if (!bull) {
+      renderInstruction("Tap the bull center first.");
+      return;
+    }
+    if (!gridLocked()) {
+      renderInstruction("Grid lock required: do the 1-inch X + Y calibration taps.");
+      return;
+    }
+    if (hits.length < 1) {
+      renderInstruction("Tap at least 1 hit.");
       return;
     }
 
-    // For now, just prove SEC renders and values are session-correct.
-    const unitShown = session.unit === "m" ? "m" : "in";
-    const distShown = session.unit === "m"
-      ? fmt2(session.distanceYds * 0.9144)
-      : fmt2(session.distanceYds);
+    const poib = computePOIB();
 
-    elSec.innerHTML = `
-      <div style="
-        background: rgba(0,0,0,0.25);
-        border: 1px solid rgba(255,255,255,0.10);
-        border-radius: 16px;
-        padding: 12px;
-      ">
-        <div style="font-weight:900; letter-spacing:0.2px; margin-bottom:8px;">Shooter Experience Card</div>
-        <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:10px;">
-          <div style="padding:6px 10px; border-radius:999px; border:1px solid rgba(255,255,255,0.10); background:rgba(255,255,255,0.06); font-weight:900;">True MOA</div>
-          <div style="padding:6px 10px; border-radius:999px; border:1px solid rgba(255,255,255,0.10); background:rgba(255,255,255,0.06); font-weight:900;">${distShown} ${session.unit === "m" ? "m" : "yd"}</div>
-          <div style="padding:6px 10px; border-radius:999px; border:1px solid rgba(255,255,255,0.10); background:rgba(255,255,255,0.06); font-weight:900;">${fmt2(session.moaPerClick)} MOA/click</div>
-        </div>
+    // POIB relative to bull (inches)
+    const poibOff = toInchesFromBull(poib); // +x right, +y down
 
-        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
-          <div style="padding:10px; border-radius:14px; border:1px solid rgba(255,255,255,0.10); background:rgba(255,255,255,0.04);">
-            <div style="color:rgba(255,255,255,0.65); font-weight:800; font-size:12px;">Verified Hits</div>
-            <div style="font-size:26px; font-weight:900;">${taps.length - 1}</div>
-          </div>
-          <div style="padding:10px; border-radius:14px; border:1px solid rgba(255,255,255,0.10); background:rgba(255,255,255,0.04);">
-            <div style="color:rgba(255,255,255,0.65); font-weight:800; font-size:12px;">Units</div>
-            <div style="font-size:26px; font-weight:900;">${unitShown.toUpperCase()}</div>
-          </div>
-        </div>
+    // Correction (bull - poib) inches
+    const corr = correctionInches(poib);
 
-        <div style="margin-top:10px; color:rgba(255,255,255,0.60); font-weight:800; font-size:12px;">
-          Next: we lock the 1" grid (px/in), compute POIB + correction in inches, then MOA + clicks with correct directions.
-        </div>
-      </div>
-    `;
+    // Directions from correction (locked mapping)
+    const dir = directionsFromCorrection(corr.dxIn, corr.dyIn);
 
-    setInstruction("SEC rendered. Next brick: bull + 1-inch grid lock → real inches math.");
+    // MOA from ABS inches (magnitude)
+    const moaX = Math.abs(moaFromInches(corr.dxIn, session.distanceYds));
+    const moaY = Math.abs(moaFromInches(corr.dyIn, session.distanceYds));
+
+    // Clicks from MOA
+    const clkX = clicksFromMoa(moaX, session.moaPerClick);
+    const clkY = clicksFromMoa(moaY, session.moaPerClick);
+
+    renderSEC({
+      verifiedHits: hits.length,
+      poibOffIn: { xIn: poibOff.xIn, yIn: poibOff.yIn },
+      corrIn: { dxIn: corr.dxIn, dyIn: corr.dyIn },
+      moa: { x: moaX, y: moaY },
+      clicks: { x: clkX, y: clkY },
+      dir,
+      grid: { pxPerInchX, pxPerInchY }
+    });
+
+    renderInstruction("SEC ready. Undo/Clear stays available. Uploading a new photo resets grid lock.");
   });
 
-  // Initial instruction
-  setInstruction("Upload your Baker 23×35 1-inch grid target photo to begin.");
+  // ------------------------------------------------------------
+  // Set baseline UI
+  // ------------------------------------------------------------
+  function setInstruction(msg) { elInstruction.textContent = msg; }
+  function clearSec() { elSec.innerHTML = ""; }
+  function setHitCount() { elTapCount.textContent = String(hits.length); }
+
+  // Initial message
+  renderInstruction();
 })();
