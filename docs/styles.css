@@ -166,7 +166,7 @@ body{
 
 .stage{ margin-top: 14px; }
 
-/* Pinch/zoom surface */
+/* Surface */
 .viewport{
   position: relative;
   width: 100%;
@@ -224,7 +224,7 @@ body{
   border: 2px solid rgba(255,255,255,.85);
 }
 
-/* Loupe (magnifier) */
+/* Loupe */
 .loupe{
   position:absolute;
   left: 12px;
@@ -237,6 +237,33 @@ body{
   box-shadow: 0 14px 40px rgba(0,0,0,.55);
   display:none;
   pointer-events:none;
+}
+
+/* Toast (micro feedback) */
+.toast{
+  position:absolute;
+  left: 12px;
+  bottom: 12px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,.22);
+  background: rgba(0,0,0,.68);
+  color: rgba(255,255,255,.92);
+  font-size: 13px;
+  box-shadow: 0 14px 40px rgba(0,0,0,.55);
+  display:none;
+  pointer-events:none;
+  max-width: calc(100% - 24px);
+}
+.toast.show{
+  display:block;
+  animation: toastInOut 0.95s ease-in-out both;
+}
+@keyframes toastInOut{
+  0%{ opacity:0; transform: translateY(8px); }
+  15%{ opacity:1; transform: translateY(0); }
+  80%{ opacity:1; transform: translateY(0); }
+  100%{ opacity:0; transform: translateY(8px); }
 }
 
 .output{ margin-top: 14px; }
