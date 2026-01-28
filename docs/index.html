@@ -1,147 +1,102 @@
+<!-- docs/index.html (FULL REPLACEMENT) — BRICK 2A (MOMA top-right + remove Tap Precision toggle) -->
 <!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport"
-        content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="color-scheme" content="dark" />
   <meta name="theme-color" content="#000000" />
   <title>Tap-n-Score™</title>
 
-  <link rel="stylesheet" href="./styles.css?v=baker-gridlock-1" />
+  <link rel="stylesheet" href="./styles.css?v=pilot-moma-1" />
 </head>
 
 <body>
   <main class="page">
 
+    <!-- Header -->
     <header class="header">
-      <div class="brandRow">
+      <div class="brandRow" aria-label="Tap-n-Score brand">
         <div class="brand">
           <span class="brandTap">TAP</span><span class="brandN">-N-</span><span class="brandScore">SCORE</span><span class="brandTm">™</span>
+        </div>
+
+        <!-- MOMA block (TOP RIGHT ONLY) -->
+        <div id="momaBlock" class="momaBlock" aria-label="MOMA settings">
+          <div class="momaTop">
+            <div class="momaTitle">MOMA</div>
+
+            <label class="momaToggle" title="Toggle Inches / Meters">
+              <input id="unitToggle" type="checkbox" />
+              <span class="momaToggleTrack"></span>
+              <span id="unitLabel" class="momaToggleText">IN</span>
+            </label>
+          </div>
+
+          <div class="momaFields">
+            <label class="momaField">
+              <span class="momaLabel">Distance</span>
+              <input id="distanceInput" class="momaInput" inputmode="decimal" type="text" value="100" />
+              <span id="distanceUnit" class="momaUnit">yd</span>
+            </label>
+
+            <label class="momaField">
+              <span class="momaLabel">Click</span>
+              <input id="clickInput" class="momaInput" inputmode="decimal" type="text" value="0.25" />
+              <span class="momaUnit">MOA</span>
+            </label>
+
+            <button id="momaApplyBtn" class="momaApplyBtn" type="button">Update</button>
+          </div>
         </div>
 
         <a id="vendorLink" class="vendorLink" href="#" target="_blank" rel="noopener">Vendor</a>
       </div>
 
-      <div id="bakerCtas" class="bakerCtas" aria-label="Baker buttons">
-        <button id="bakerCatalogBtn" class="btn ctaPrimary" type="button">Buy Baker Targets</button>
-        <button id="bakerProductBtn" class="btn ctaSecondary" type="button">Learn More About Baker Targets</button>
-      </div>
-
       <p id="instructionLine" class="instruction">
-        Upload your Baker 23×35 1″ grid target photo. Tap bull once, then tap bullet holes.
+        1) Upload your target photo. 2) Pinch/zoom + pan. 3) Tap bull, then tap hits. 4) Show Results.
       </p>
     </header>
 
-    <section class="controls">
-      <div class="topControls">
-        <label class="fileBtn">
-          Upload Target Photo
-          <input id="photoInput" type="file" accept="image/*" />
-        </label>
+    <!-- Controls -->
+    <section class="panel" aria-label="Controls">
+      <!-- Hidden file input + visible button -->
+      <input id="photoInput" type="file" accept="image/*" hidden />
+      <div class="controlsRow">
+        <button id="uploadBtn" class="btn btnPrimary" type="button">Upload Target Photo</button>
 
-        <label class="togglePill" title="When ON: 1 finger taps only. Use 2 fingers to pan/zoom.">
-          <input id="tapPrecisionToggle" type="checkbox" />
-          <span class="toggleText">Tap Precision</span>
-          <span id="tapPrecisionState" class="toggleState">ON</span>
-        </label>
-      </div>
-
-      <div class="metaRow">
-        <div class="pill">
-          Taps: <span id="tapCount">0</span>
+        <div class="pill" aria-label="Tap count">
+          <span class="pillLabel">Taps:</span>
+          <span id="tapCount" class="pillValue">0</span>
         </div>
 
-        <div id="gridLockPill" class="pill gridPill">
-          Grid Lock: <span id="gridLockStatus">—</span>
+        <div class="btnGroup">
+          <button id="undoTapsBtn" class="btn" type="button">Undo</button>
+          <button id="clearTapsBtn" class="btn" type="button">Clear</button>
+          <button id="showResultsBtn" class="btn btnDanger" type="button">Show Results</button>
         </div>
-
-        <button id="undoBtn" class="btn" type="button" disabled>Undo</button>
-        <button id="clearBtn" class="btn" type="button" disabled>Clear</button>
-        <button id="showResultsBtn" class="btn primary" type="button" disabled>Show Results</button>
       </div>
 
       <div class="hintRow">
-        <span class="hint">
-          2 fingers: pinch zoom + pan • Double-tap: reset view • 1 finger: tap bull/holes
-        </span>
+        2 fingers: pinch zoom + pan • Double-tap: reset view • 1 finger: tap bull/hits
       </div>
     </section>
 
-    <section class="stage">
-      <div id="targetViewport" class="viewport" aria-label="Target viewport">
+    <!-- Target image + tap overlay -->
+    <section class="targetCard" aria-label="Target image">
+      <div id="targetWrap" class="targetWrap">
         <img id="targetImg" class="targetImg" alt="Target" />
-
-        <!-- Halo layer (viewport coords) -->
-        <div id="haloLayer" class="haloLayer" aria-hidden="true"></div>
-
-        <!-- Dots (transformed with image) -->
         <div id="dotsLayer" class="dotsLayer" aria-hidden="true"></div>
-
-        <!-- Loupe -->
-        <canvas id="loupe" class="loupe" width="140" height="140" aria-hidden="true"></canvas>
-
-        <!-- Toast -->
-        <div id="toast" class="toast" aria-live="polite" aria-atomic="true"></div>
       </div>
     </section>
 
-    <!-- SEC -->
-    <section class="output">
-      <div id="outputBox" class="sec hidden" aria-label="Shooter Experience Card">
-        <div class="secTop">
-          <div class="secTitle">Shooter Experience Card</div>
-          <div class="secMeta">
-            <span class="secMetaPill">True MOA</span>
-            <span class="secMetaPill">50 yds</span>
-            <span class="secMetaPill">0.25 MOA/click</span>
-          </div>
-        </div>
-
-        <div class="secGrid">
-          <div class="secBlock">
-            <div class="secLabel">Verified Hits</div>
-            <div class="secValue" id="secHits">—</div>
-          </div>
-
-          <div class="secBlock">
-            <div class="secLabel">POIB (in)</div>
-            <div class="secValue" id="secPoib">—</div>
-          </div>
-
-          <div class="secBlock">
-            <div class="secLabel">Correction (Bull − POIB) (in)</div>
-            <div class="secValue" id="secDelta">—</div>
-          </div>
-
-          <div class="secBlock">
-            <div class="secLabel">Directions</div>
-            <div class="secValue" id="secDir">—</div>
-          </div>
-
-          <div class="secBlock">
-            <div class="secLabel">MOA</div>
-            <div class="secValue" id="secMoa">—</div>
-          </div>
-
-          <div class="secBlock">
-            <div class="secLabel">Clicks</div>
-            <div class="secValue" id="secClicks">—</div>
-          </div>
-        </div>
-
-        <div class="secNote" id="secNote">
-          Grid Lock must be READY to produce true-inch SEC outputs.
-        </div>
-      </div>
+    <!-- SEC (your JS controls visibility/size; compact UI happens in CSS/JS bricks) -->
+    <section id="secPanel" class="secPanel" aria-label="Shooter Experience Card">
+      <!-- JS will populate this panel -->
     </section>
-
-    <footer class="footer">
-      <span class="muted">Pilot build — Baker 23×35 1″ grid — Grid Lock inches + SEC.</span>
-    </footer>
 
   </main>
 
-  <script src="./index.js?v=baker-gridlock-1"></script>
+  <script src="./index.js?v=pilot-moma-1"></script>
 </body>
 </html>
