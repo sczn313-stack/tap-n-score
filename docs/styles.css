@@ -5,6 +5,11 @@
   --muted2:rgba(255,255,255,.55);
   --line:rgba(255,255,255,.14);
   --accent:#ff2b2b;
+
+  /* LOCKED DOT SIZE */
+  --dotSize: 10px;
+  --dotBorder: 2px;
+  --labelSize: 9px;
 }
 
 *{ box-sizing:border-box; }
@@ -110,6 +115,11 @@ body{
   color: var(--muted);
 }
 
+.gridPill{
+  border-color: rgba(255,255,255,.18);
+  background: rgba(255,255,255,.05);
+}
+
 .btn{
   padding: 10px 12px;
   border-radius: 12px;
@@ -128,9 +138,8 @@ body{
 .hintRow{ margin-top: 10px; }
 .hint{ color: var(--muted2); font-size: 12.5px; }
 
+/* Stage */
 .stage{ margin-top: 14px; }
-
-/* Surface */
 .viewport{
   position: relative;
   width: 100%;
@@ -167,7 +176,7 @@ body{
   pointer-events:none;
 }
 
-/* Dots */
+/* Dots layer (transformed with image) */
 .dotsLayer{
   position:absolute;
   inset:0;
@@ -175,10 +184,11 @@ body{
   transform-origin: 0 0;
 }
 
+/* LOCKED DOTS */
 .dot{
   position:absolute;
-  width: 10px;
-  height: 10px;
+  width: var(--dotSize);
+  height: var(--dotSize);
   border-radius: 999px;
   transform: translate(-50%, -50%);
   box-shadow: 0 6px 18px rgba(0,0,0,.35);
@@ -189,21 +199,17 @@ body{
 }
 
 .dot.bull{
-  width: 13px;
-  height: 13px;
   background: rgba(0,200,255,.95);
-  border: 2px solid rgba(255,255,255,.88);
+  border: var(--dotBorder) solid rgba(255,255,255,.88);
 }
 
 .dot.hit{
-  width: 12px;
-  height: 12px;
   background: rgba(255,43,43,.95);
-  border: 2px solid rgba(255,255,255,.88);
+  border: var(--dotBorder) solid rgba(255,255,255,.88);
 }
 
 .dotLabel{
-  font-size: 9px;
+  font-size: var(--labelSize);
   line-height: 1;
   font-weight: 900;
   color: rgba(0,0,0,.88);
@@ -222,12 +228,8 @@ body{
   box-shadow: 0 10px 28px rgba(0,0,0,.40);
   animation: haloPulse 220ms ease-out forwards;
 }
-.halo.bullHalo{
-  border-color: rgba(0,200,255,.95);
-}
-.halo.hitHalo{
-  border-color: rgba(255,43,43,.95);
-}
+.halo.bullHalo{ border-color: rgba(0,200,255,.95); }
+.halo.hitHalo{ border-color: rgba(255,43,43,.95); }
 
 @keyframes haloPulse{
   0%   { opacity: 0.95; transform: translate(-50%, -50%) scale(0.85); }
@@ -277,16 +279,75 @@ body{
   100%{ opacity:0; transform: translateY(8px); }
 }
 
+/* SEC */
 .output{ margin-top: 14px; }
-.outputBox{
-  border: 1px solid var(--line);
-  border-radius: 14px;
-  padding: 12px;
+.hidden{ display:none; }
+
+.sec{
+  border: 1px solid rgba(255,255,255,.16);
+  border-radius: 16px;
+  padding: 14px;
   background: rgba(255,255,255,.04);
 }
-.outputTitle{ font-weight: 800; margin-bottom: 6px; }
-.outputText{ color: var(--muted); font-size: 14px; line-height: 1.35; }
-.hidden{ display:none; }
+
+.secTop{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:12px;
+  flex-wrap:wrap;
+  margin-bottom: 12px;
+}
+.secTitle{
+  font-weight: 900;
+  letter-spacing: .2px;
+  font-size: 16px;
+}
+.secMeta{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+}
+.secMetaPill{
+  border: 1px solid rgba(255,255,255,.16);
+  border-radius: 999px;
+  padding: 6px 10px;
+  font-size: 12px;
+  color: rgba(255,255,255,.86);
+  background: rgba(255,255,255,.05);
+}
+
+.secGrid{
+  display:grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap:10px;
+}
+@media (max-width: 560px){
+  .secGrid{ grid-template-columns: 1fr; }
+}
+
+.secBlock{
+  border: 1px solid rgba(255,255,255,.14);
+  border-radius: 14px;
+  padding: 10px 12px;
+  background: rgba(0,0,0,.20);
+}
+.secLabel{
+  color: rgba(255,255,255,.68);
+  font-size: 12px;
+  margin-bottom: 6px;
+}
+.secValue{
+  font-size: 16px;
+  font-weight: 900;
+  letter-spacing: .2px;
+}
+.secNote{
+  margin-top: 12px;
+  color: rgba(255,255,255,.62);
+  font-size: 12.5px;
+  line-height: 1.35;
+}
 
 .footer{
   margin-top: 16px;
