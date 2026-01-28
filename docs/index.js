@@ -1,6 +1,14 @@
+Got you — full replacements only from here forward in this chat.
+
+docs/index.js (FULL REPLACEMENT) — now includes Grid Lock (one-shot sacred ruler)
+
+Paste this over your entire docs/index.js:
+
 /* ============================================================
    docs/index.js (FULL REPLACEMENT) — Baker 23×35 1" Grid Pilot
    Includes:
+   - GRID LOCK (sacred ruler): detect once per photo, then lock
+     Only unlocks on: NEW UPLOAD or CLEAR
    - MOMA top-right only (IN⇄M toggle + Distance + Click MOA + Update)
    - LIVE MOMA behavior (toggle converts instantly; blur/Enter applies)
    - Session-only metric toggle (resets on Clear + New Upload)
@@ -159,6 +167,19 @@
   let pxPerInchX = null;
   let pxPerInchY = null;
 
+  // ----- GRID LOCK (sacred ruler: detect once per photo)
+  let gridLocked = false;
+
+  function lockGrid() {
+    gridLocked = true;
+  }
+
+  function unlockGrid() {
+    gridLocked = false;
+    pxPerInchX = null;
+    pxPerInchY = null;
+  }
+
   // results cache
   let lastResult = null;
 
@@ -270,7 +291,7 @@
     undoBtn.disabled = totalTaps === 0;
     clearBtn.disabled = totalTaps === 0;
 
-    const gridReady = !!(pxPerInchX && pxPerInchY);
+    const gridReady = !!(pxPerInchX && pxPerInchY && gridLocked);
     showBtn.disabled = !(bullPx && hitsPx.length > 0 && gridReady);
 
     if (!img.src) {
@@ -283,13 +304,13 @@
       return;
     }
     if (!bullPx) {
-      instructionLine.textContent = "Tap the bull once. (2 fingers: zoom/pan)";
+      instructionLine.textContent = "Grid locked. Tap the bull once. (2 fingers: zoom/pan)";
       return;
     }
-    instructionLine.textContent = "Tap bullet holes. Then press Show Results.";
+    instructionLine.textContent = "Grid locked. Tap bullet holes. Then press Show Results.";
   }
 
-  // ----- Grid spacing detection (px per 1 inch)
+  // ----- Grid spacing detection (px per 1 inch) — SACRED + ONE-SHOT
   function median(arr) {
     const a = arr.slice().sort((x, y) => x - y);
     if (!a.length) return null;
@@ -322,6 +343,10 @@
   }
 
   function detectGridSpacing() {
+    // If already locked, never re-run
+    if (gridLocked && pxPerInchX && pxPerInchY) return true;
+
+    // Fresh attempt state
     pxPerInchX = null;
     pxPerInchY = null;
 
@@ -399,6 +424,8 @@
     pxPerInchX = medX / scaleDown;
     pxPerInchY = medY / scaleDown;
 
+    // LOCK ON SUCCESS — sacred ruler
+    lockGrid();
     return true;
   }
 
@@ -444,6 +471,7 @@
       clicksX, clicksY,
       unit: session.unit,
       pxPerInchX, pxPerInchY,
+      gridLocked,
     };
   }
 
@@ -504,9 +532,9 @@
           </div>
 
           <div style="padding:10px 12px; border-radius:14px; border:1px solid rgba(255,255,255,0.10); background:rgba(255,255,255,0.03);">
-            <div style="font-size:12px; opacity:0.70; font-weight:900;">Integrity</div>
+            <div style="font-size:12px; opacity:0.70; font-weight:900;">Grid</div>
             <div style="margin-top:6px; font-size:12px; opacity:0.72;">
-              Grid lock: ${fmt2(result.pxPerInchX)} px/in (X) • ${fmt2(result.pxPerInchY)} px/in (Y)
+              Locked: ${result.gridLocked ? "YES" : "NO"} • ${fmt2(result.pxPerInchX)} px/in (X) • ${fmt2(result.pxPerInchY)} px/in (Y)
             </div>
           </div>
 
@@ -527,7 +555,7 @@
   }
 
   // ============================================================
-  // BRICK 7 (FULL REPLACEMENT) — MOMA WIRING (LIVE + IN⇄M CONVERT)
+  // MOMA WIRING (LIVE + IN⇄M CONVERT)
   // ============================================================
 
   function syncMomaUIFromSession() {
@@ -547,12 +575,10 @@
   function normalizeAndApplyMomaFromUI() {
     const wantsMetric = !!unitToggle.checked;
 
-    // 1) Unit
     session.unit = wantsMetric ? "m" : "in";
     unitLabel.textContent = wantsMetric ? "M" : "IN";
     distanceUnit.textContent = wantsMetric ? "m" : "yd";
 
-    // 2) Distance (what user sees is either yards or meters)
     const distRaw = (distanceInput.value || "").trim();
     const distFallback = wantsMetric ? (100 / YARDS_PER_METER) : 100;
     const distNum = clampNum(distRaw, distFallback);
@@ -560,16 +586,13 @@
     session.distanceYds = wantsMetric ? (distNum * YARDS_PER_METER) : distNum;
     if (session.distanceYds <= 0) session.distanceYds = 100;
 
-    // 3) Click value
     const clickRaw = (clickInput.value || "").trim();
     const clickNum = clampNum(clickRaw, 0.25);
     session.clickMoa = (clickNum > 0) ? clickNum : 0.25;
 
-    // 4) Normalize UI fields back to clean formatted values
     syncMomaUIFromSession();
 
-    // 5) Live re-render SEC if we have computed state
-    if (bullPx && hitsPx.length > 0 && pxPerInchX && pxPerInchY) {
+    if (bullPx && hitsPx.length > 0 && pxPerInchX && pxPerInchY && gridLocked) {
       lastResult = computeResult();
       renderSEC(lastResult);
     }
@@ -578,18 +601,15 @@
   function convertDistanceFieldOnUnitFlip() {
     const currentlyMetric = session.unit === "m";
     const nextMetric = !!unitToggle.checked;
-
     if (currentlyMetric === nextMetric) return;
 
     const raw = (distanceInput.value || "").trim();
     let val = clampNum(raw, currentlyMetric ? (100 / YARDS_PER_METER) : 100);
 
     if (!currentlyMetric && nextMetric) {
-      // yards -> meters (display)
-      val = val / YARDS_PER_METER;
+      val = val / YARDS_PER_METER; // yards -> meters
     } else if (currentlyMetric && !nextMetric) {
-      // meters -> yards (display)
-      val = val * YARDS_PER_METER;
+      val = val * YARDS_PER_METER; // meters -> yards
     }
 
     distanceInput.value = fmt2(val);
@@ -624,7 +644,8 @@
     const f = elFile.files && elFile.files[0];
     if (!f) return;
 
-    // new upload resets everything (including unit back to IN)
+    // NEW PHOTO: unlock grid + reset session + clear taps
+    unlockGrid();
     resetSessionToPilotDefaults();
     syncMomaUIFromSession();
 
@@ -634,17 +655,15 @@
     clearSEC();
     resetView();
 
-    pxPerInchX = null;
-    pxPerInchY = null;
-
     if (objectUrl) URL.revokeObjectURL(objectUrl);
     objectUrl = URL.createObjectURL(f);
 
     img.onload = () => {
       resetView();
-      const ok = detectGridSpacing();
+      const ok = detectGridSpacing(); // locks on success
       setUi();
       if (!ok) {
+        unlockGrid();
         instructionLine.textContent =
           "Grid not detected. Re-take photo: straight, full-frame, clear grid lines.";
       }
@@ -665,17 +684,21 @@
   });
 
   clearBtn.addEventListener("click", () => {
+    // CLEAR = cancel session: unlock grid + reset everything
     bullPx = null;
     hitsPx = [];
     renderDots();
     clearSEC();
+
+    unlockGrid();
     resetSessionToPilotDefaults();
     syncMomaUIFromSession();
+
     setUi();
   });
 
   showBtn.addEventListener("click", () => {
-    if (!(bullPx && hitsPx.length > 0 && pxPerInchX && pxPerInchY)) return;
+    if (!(bullPx && hitsPx.length > 0 && pxPerInchX && pxPerInchY && gridLocked)) return;
     lastResult = computeResult();
     secExpanded = false; // compact by default
     renderSEC(lastResult);
@@ -791,7 +814,6 @@
       const pt = getViewportPointFromClient(t.clientX, t.clientY);
 
       const moved = downPt ? Math.hypot(pt.x - downPt.x, pt.y - downPt.y) : 999;
-
       if (mode === "tap" && moved >= PAN_START) mode = "pan";
 
       if (mode === "pan") {
@@ -857,3 +879,12 @@
   syncMomaUIFromSession();
   setUi();
 })();
+
+What to test right now (30 seconds)
+	1.	Upload photo → wait for “Grid locked” instruction line
+	2.	Pinch/zoom/pan → should stay smooth
+	3.	Tap bull + 3 holes → Show Results
+	4.	Toggle IN→M → SEC numbers should convert (grid stays locked)
+	5.	Hit Clear → grid unlocks (back to “detecting” next upload)
+
+Say Next and tell me what’s still feeling “not smooth” (pinch, taps, or load), and I’ll do the next full replacement to optimize that path.
