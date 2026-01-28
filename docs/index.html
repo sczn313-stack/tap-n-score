@@ -2,15 +2,13 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-
   <meta name="viewport"
         content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
-
   <meta name="color-scheme" content="dark" />
   <meta name="theme-color" content="#000000" />
   <title>Tap-n-Score™</title>
 
-  <link rel="stylesheet" href="./styles.css?v=pilot-loupe-1" />
+  <link rel="stylesheet" href="./styles.css?v=pilot-toast-1" />
 </head>
 
 <body>
@@ -71,8 +69,11 @@
         <img id="targetImg" class="targetImg" alt="Target" />
         <div id="dotsLayer" class="dotsLayer" aria-hidden="true"></div>
 
-        <!-- Loupe (magnifier) -->
+        <!-- Loupe -->
         <canvas id="loupe" class="loupe" width="140" height="140" aria-hidden="true"></canvas>
+
+        <!-- Toast -->
+        <div id="toast" class="toast" aria-live="polite" aria-atomic="true"></div>
       </div>
     </section>
 
@@ -84,11 +85,11 @@
     </section>
 
     <footer class="footer">
-      <span class="muted">Pilot build — Tap Precision + Tap Loupe.</span>
+      <span class="muted">Pilot build — Tap Precision + Loupe + Tap Feedback.</span>
     </footer>
 
   </main>
 
-  <script src="./index.js?v=pilot-loupe-1"></script>
+  <script src="./index.js?v=pilot-toast-1"></script>
 </body>
 </html>
