@@ -1,11 +1,11 @@
 /* ============================================================
-   docs/index.js (FULL REPLACEMENT) — TAP NUMBERS
+   docs/index.js (FULL REPLACEMENT) — TAP HALO (RIPPLE PULSE)
    Includes:
    - Tap Precision ON default (1 finger taps; 2 fingers pan/zoom)
    - Loupe magnifier while tapping
    - Toast feedback + light haptic
-   - Hit dots show #1, #2, #3...
-   - Bull dot shows "B"
+   - Tap Numbers (#1, #2, #3...) + bull "B"
+   - Halo ripple at exact tap point (viewport coords)
    - Baker CTAs with locked tags: catalog, product
 ============================================================ */
 
@@ -16,6 +16,7 @@
   const elFile = $("photoInput");
   const viewport = $("targetViewport");
   const img = $("targetImg");
+  const haloLayer = $("haloLayer");
   const dotsLayer = $("dotsLayer");
 
   const loupe = $("loupe");
@@ -78,6 +79,23 @@
     toastTimer = setTimeout(() => toastEl.classList.remove("show"), 980);
   }
 
+  // ------------ Halo ------------
+  function pulseHalo(viewPt, kind /* "bull" | "hit" */) {
+    if (!haloLayer) return;
+
+    const d = document.createElement("div");
+    d.className = `halo ${kind === "bull" ? "bullHalo" : "hitHalo"}`;
+    d.style.left = `${viewPt.x}px`;
+    d.style.top = `${viewPt.y}px`;
+
+    haloLayer.appendChild(d);
+
+    // Clean up
+    setTimeout(() => {
+      if (d && d.parentNode) d.parentNode.removeChild(d);
+    }, 260);
+  }
+
   // Image URL
   let objectUrl = null;
 
@@ -120,7 +138,6 @@
 
   const MIN_SCALE = 1;
   const MAX_SCALE = 6;
-
   const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
 
   // RAF-throttled transforms
@@ -503,6 +520,7 @@
       if (moved <= TAP_SLOP) {
         const now = Date.now();
 
+        // Double tap = reset view
         if (now - lastTapTime < 300) {
           resetView();
           lastTapTime = 0;
@@ -513,9 +531,11 @@
           if (Number.isFinite(imgLocal.x) && Number.isFinite(imgLocal.y)) {
             if (!bull) {
               bull = imgLocal;
+              pulseHalo(upPt, "bull");
               showToast("Bull set ✅");
             } else {
               hits.push(imgLocal);
+              pulseHalo(upPt, "hit");
               showToast(`Hit #${hits.length} added ✅`);
             }
 
@@ -557,8 +577,31 @@
   }, { passive: false });
 
   // Buttons
-  undoBtn.addEventListener("click", undo);
-  clearBtn.addEventListener("click", clearAll);
+  undoBtn.addEventListener("click", () => {
+    if (hits.length > 0) {
+      hits.pop();
+      showToast("Hit removed ✅");
+    } else if (bull) {
+      bull = null;
+      showToast("Bull cleared ✅");
+    }
+    renderDots();
+    hideOutput();
+    hideLoupe();
+    setUi();
+    hapticLight();
+  });
+
+  clearBtn.addEventListener("click", () => {
+    bull = null;
+    hits = [];
+    dotsLayer.innerHTML = "";
+    hideOutput();
+    hideLoupe();
+    setUi();
+    hapticLight();
+    showToast("Cleared ✅");
+  });
 
   showBtn.addEventListener("click", () => {
     if (!(bull && hits.length > 0)) return;
