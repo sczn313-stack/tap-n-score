@@ -8,7 +8,7 @@
   <meta name="theme-color" content="#000000" />
   <title>Tap-n-Score™</title>
 
-  <link rel="stylesheet" href="./styles.css?v=pilot-tapnumbers-1" />
+  <link rel="stylesheet" href="./styles.css?v=pilot-halo-1" />
 </head>
 
 <body>
@@ -67,6 +67,11 @@
     <section class="stage">
       <div id="targetViewport" class="viewport" aria-label="Target viewport">
         <img id="targetImg" class="targetImg" alt="Target" />
+
+        <!-- Halo layer (not transformed; always in viewport coords) -->
+        <div id="haloLayer" class="haloLayer" aria-hidden="true"></div>
+
+        <!-- Dots (transformed with image) -->
         <div id="dotsLayer" class="dotsLayer" aria-hidden="true"></div>
 
         <!-- Loupe -->
@@ -85,11 +90,11 @@
     </section>
 
     <footer class="footer">
-      <span class="muted">Pilot build — Tap Precision + Loupe + Tap Feedback + Tap Numbers.</span>
+      <span class="muted">Pilot build — Tap Precision + Loupe + Toast + Tap Numbers + Tap Halo.</span>
     </footer>
 
   </main>
 
-  <script src="./index.js?v=pilot-tapnumbers-1"></script>
+  <script src="./index.js?v=pilot-halo-1"></script>
 </body>
 </html>
