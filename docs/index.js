@@ -1,29 +1,18 @@
-Got you — full replacements only from here forward in this chat.
+docs/index.js (FULL REPLACEMENT) — BRICK 12 (Defer Grid Detect for speed + keep Grid Lock sacred)
 
-docs/index.js (FULL REPLACEMENT) — now includes Grid Lock (one-shot sacred ruler)
+This brick makes the app feel faster by doing this:
+	•	Photo loads → UI is responsive immediately
+	•	Grid detection runs “after paint” (idle/timeout) instead of blocking the load
+	•	Grid still locks one-shot and only unlocks on New Upload / Clear
 
 Paste this over your entire docs/index.js:
 
 /* ============================================================
-   docs/index.js (FULL REPLACEMENT) — Baker 23×35 1" Grid Pilot
-   Includes:
-   - GRID LOCK (sacred ruler): detect once per photo, then lock
-     Only unlocks on: NEW UPLOAD or CLEAR
-   - MOMA top-right only (IN⇄M toggle + Distance + Click MOA + Update)
-   - LIVE MOMA behavior (toggle converts instantly; blur/Enter applies)
-   - Session-only metric toggle (resets on Clear + New Upload)
-   - 1" grid detect (px per inch) from photo
-   - Real inches math (True MOA @ distance, default 100y, 0.25 MOA/click)
-   - Canonical directions:
-       ΔX = bullX − POIBx  (+ RIGHT, − LEFT)
-       ΔY = bullY − POIBy  (+ UP,    − DOWN)
-   - 2-finger pinch/zoom + pan
-   - 1-finger tap bull then hits (NO-JUMP taps)
-   - Dots: locked 10px, colored filled markers
-   - SEC compact + expandable (NO MOMA duplication)
-   - Baker buttons: Catalog + Product links + landing selection via:
-       ?baker=catalog
-       ?baker=product
+   docs/index.js (FULL REPLACEMENT) — BRICK 12 (Deferred Grid Detect)
+   Adds:
+   - Grid detect deferred (idle/timeout) so UI stays smooth on load
+   - Grid remains sacred: detect once per photo, locks on success
+   - Only unlocks on: NEW UPLOAD or CLEAR
 ============================================================ */
 
 (() => {
@@ -180,6 +169,43 @@ Paste this over your entire docs/index.js:
     pxPerInchY = null;
   }
 
+  // deferred grid detect scheduling
+  let gridDetectScheduled = false;
+
+  function scheduleGridDetect() {
+    if (gridDetectScheduled) return;
+    if (!img.src) return;
+    if (gridLocked && pxPerInchX && pxPerInchY) return;
+
+    gridDetectScheduled = true;
+
+    const run = () => {
+      gridDetectScheduled = false;
+      if (!img.src) return;
+      if (gridLocked && pxPerInchX && pxPerInchY) return;
+
+      // show lightweight status before heavy work
+      setUi();
+
+      const ok = detectGridSpacing(); // locks on success
+      setUi();
+
+      if (!ok) {
+        unlockGrid();
+        instructionLine.textContent =
+          "Grid not detected. Re-take photo: straight, full-frame, clear grid lines.";
+      }
+    };
+
+    // Prefer idle time so pinch/tap stays snappy
+    if (typeof window.requestIdleCallback === "function") {
+      window.requestIdleCallback(run, { timeout: 900 });
+    } else {
+      // next tick after paint
+      setTimeout(run, 120);
+    }
+  }
+
   // results cache
   let lastResult = null;
 
@@ -222,7 +248,6 @@ Paste this over your entire docs/index.js:
   }
 
   function wireVendor() {
-    // Hide legacy single vendor link if present
     if (vendorLink) vendorLink.style.display = "none";
 
     if (bakerCatalogBtn) {
@@ -298,15 +323,18 @@ Paste this over your entire docs/index.js:
       instructionLine.textContent = "Upload your Baker 23×35 1-inch grid target photo to begin.";
       return;
     }
+
     if (!gridReady) {
       instructionLine.textContent =
-        "Photo loaded. Detecting 1-inch grid… (Tip: keep photo straight & full-frame)";
+        "Photo loaded. Grid lock pending… (You can zoom/pan now)";
       return;
     }
+
     if (!bullPx) {
       instructionLine.textContent = "Grid locked. Tap the bull once. (2 fingers: zoom/pan)";
       return;
     }
+
     instructionLine.textContent = "Grid locked. Tap bullet holes. Then press Show Results.";
   }
 
@@ -343,10 +371,8 @@ Paste this over your entire docs/index.js:
   }
 
   function detectGridSpacing() {
-    // If already locked, never re-run
     if (gridLocked && pxPerInchX && pxPerInchY) return true;
 
-    // Fresh attempt state
     pxPerInchX = null;
     pxPerInchY = null;
 
@@ -354,7 +380,6 @@ Paste this over your entire docs/index.js:
     const h = img.naturalHeight;
     if (!w || !h) return false;
 
-    // downscale for speed
     const maxW = 1200;
     const scaleDown = Math.min(1, maxW / w);
     const cw = Math.round(w * scaleDown);
@@ -424,7 +449,6 @@ Paste this over your entire docs/index.js:
     pxPerInchX = medX / scaleDown;
     pxPerInchY = medY / scaleDown;
 
-    // LOCK ON SUCCESS — sacred ruler
     lockGrid();
     return true;
   }
@@ -444,13 +468,11 @@ Paste this over your entire docs/index.js:
     const poibInX = poibPx.x / pxPerInchX;
     const poibInY = poibPx.y / pxPerInchY;
 
-    // Canonical correction vector (Bull − POIB)
     const dxIn = bullInX - poibInX;
     const dyIn = bullInY - poibInY;
 
     const { horiz, vert } = directionsFromDelta(dxIn, dyIn);
 
-    // True MOA conversion
     const inPerMoa = inchesPerMoaAtDistance();
     const moaX = Math.abs(dxIn) / inPerMoa;
     const moaY = Math.abs(dyIn) / inPerMoa;
@@ -458,12 +480,11 @@ Paste this over your entire docs/index.js:
     const clicksX = moaX / session.clickMoa;
     const clicksY = moaY / session.clickMoa;
 
-    const poibRelInX = poibInX - bullInX; // POIB − Bull (signed)
+    const poibRelInX = poibInX - bullInX;
     const poibRelInY = poibInY - bullInY;
 
     return {
       hits: hitsPx.length,
-      poibPx,
       dxIn, dyIn,
       poibRelInX, poibRelInY,
       horiz, vert,
@@ -516,7 +537,6 @@ Paste this over your entire docs/index.js:
 
       <div id="secBody" style="margin-top:10px; display:${secExpanded ? "block" : "none"};">
         <div style="display:grid; grid-template-columns: 1fr; gap:10px;">
-
           <div style="padding:10px 12px; border-radius:14px; border:1px solid rgba(255,255,255,0.10); background:rgba(255,255,255,0.03);">
             <div style="font-size:12px; opacity:0.70; font-weight:900;">Correction (Bull − POIB)</div>
             <div style="margin-top:6px; font-size:13px; opacity:0.92;">
@@ -537,7 +557,6 @@ Paste this over your entire docs/index.js:
               Locked: ${result.gridLocked ? "YES" : "NO"} • ${fmt2(result.pxPerInchX)} px/in (X) • ${fmt2(result.pxPerInchY)} px/in (Y)
             </div>
           </div>
-
         </div>
       </div>
     `;
@@ -566,8 +585,8 @@ Paste this over your entire docs/index.js:
     distanceUnit.textContent = isMetric ? "m" : "yd";
 
     distanceInput.value = isMetric
-      ? fmt2(session.distanceYds / YARDS_PER_METER) // show meters
-      : fmt2(session.distanceYds);                 // show yards
+      ? fmt2(session.distanceYds / YARDS_PER_METER)
+      : fmt2(session.distanceYds);
 
     clickInput.value = fmt2(session.clickMoa);
   }
@@ -606,11 +625,8 @@ Paste this over your entire docs/index.js:
     const raw = (distanceInput.value || "").trim();
     let val = clampNum(raw, currentlyMetric ? (100 / YARDS_PER_METER) : 100);
 
-    if (!currentlyMetric && nextMetric) {
-      val = val / YARDS_PER_METER; // yards -> meters
-    } else if (currentlyMetric && !nextMetric) {
-      val = val * YARDS_PER_METER; // meters -> yards
-    }
+    if (!currentlyMetric && nextMetric) val = val / YARDS_PER_METER;
+    else if (currentlyMetric && !nextMetric) val = val * YARDS_PER_METER;
 
     distanceInput.value = fmt2(val);
     normalizeAndApplyMomaFromUI();
@@ -646,6 +662,8 @@ Paste this over your entire docs/index.js:
 
     // NEW PHOTO: unlock grid + reset session + clear taps
     unlockGrid();
+    gridDetectScheduled = false;
+
     resetSessionToPilotDefaults();
     syncMomaUIFromSession();
 
@@ -660,13 +678,8 @@ Paste this over your entire docs/index.js:
 
     img.onload = () => {
       resetView();
-      const ok = detectGridSpacing(); // locks on success
-      setUi();
-      if (!ok) {
-        unlockGrid();
-        instructionLine.textContent =
-          "Grid not detected. Re-take photo: straight, full-frame, clear grid lines.";
-      }
+      setUi();              // fast UI first
+      scheduleGridDetect(); // heavy work later
     };
 
     img.src = objectUrl;
@@ -691,6 +704,8 @@ Paste this over your entire docs/index.js:
     clearSEC();
 
     unlockGrid();
+    gridDetectScheduled = false;
+
     resetSessionToPilotDefaults();
     syncMomaUIFromSession();
 
@@ -700,7 +715,7 @@ Paste this over your entire docs/index.js:
   showBtn.addEventListener("click", () => {
     if (!(bullPx && hitsPx.length > 0 && pxPerInchX && pxPerInchY && gridLocked)) return;
     lastResult = computeResult();
-    secExpanded = false; // compact by default
+    secExpanded = false;
     renderSEC(lastResult);
   });
 
@@ -727,8 +742,8 @@ Paste this over your entire docs/index.js:
     };
   }
 
-  const TAP_SLOP = 10;   // still tap
-  const PAN_START = 14;  // intentional drag becomes pan
+  const TAP_SLOP = 10;
+  const PAN_START = 14;
   let downPt = null;
   let lastTapTime = 0;
 
@@ -755,7 +770,6 @@ Paste this over your entire docs/index.js:
     if (e.touches.length === 1) {
       const t = e.touches[0];
       const pt = getViewportPointFromClient(t.clientX, t.clientY);
-
       mode = "tap";
       downPt = pt;
       panStart = { x: pt.x, y: pt.y, tx, ty };
@@ -851,6 +865,9 @@ Paste this over your entire docs/index.js:
           renderDots();
           clearSEC();
           setUi();
+
+          // If grid isn't locked yet, make sure detection is scheduled
+          if (!gridLocked) scheduleGridDetect();
         }
       }
     }
@@ -880,11 +897,5 @@ Paste this over your entire docs/index.js:
   setUi();
 })();
 
-What to test right now (30 seconds)
-	1.	Upload photo → wait for “Grid locked” instruction line
-	2.	Pinch/zoom/pan → should stay smooth
-	3.	Tap bull + 3 holes → Show Results
-	4.	Toggle IN→M → SEC numbers should convert (grid stays locked)
-	5.	Hit Clear → grid unlocks (back to “detecting” next upload)
-
-Say Next and tell me what’s still feeling “not smooth” (pinch, taps, or load), and I’ll do the next full replacement to optimize that path.
+Reply Next brick and tell me which “slow” you still feel most:
+	1.	upload/load, 2) pinch/pan, or 3) tapping hits.
