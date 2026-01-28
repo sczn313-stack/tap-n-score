@@ -1,16 +1,11 @@
-Copy that — “nothing happened” means one of only two things:
-	1.	The click handler isn’t firing (button is covered / not actually clickable)
-or
-	2.	Your JS isn’t loading/running at all (most common)
+Perfect screenshot — JS READY is showing, so scripts are running.
 
-So we’re going to force a guaranteed test that works even if index.js is dead.
+If JS runs but the photo picker still doesn’t open, that’s a classic iOS/Safari thing: sometimes input.click() on a hidden file input gets blocked.
 
-✅ docs/index.html (FULL REPLACEMENT) — HARD FAILSAFE UPLOAD
+✅ The most reliable fix on iOS is NOT JavaScript for opening the picker.
+Instead, use a <label for="photoInput"> — iOS treats that as a true user gesture every time.
 
-This version does 3 things:
-	•	Makes the Upload button un-coverable (z-index + pointer events)
-	•	Adds an inline click handler (so it works even if external JS fails)
-	•	Shows a “JS READY” badge if the inline script runs (proof the page is executing scripts)
+docs/index.html (FULL REPLACEMENT) — iOS-SAFE UPLOAD (NO JS NEEDED TO OPEN PICKER)
 
 Paste this over your entire docs/index.html:
 
@@ -44,14 +39,12 @@ Paste this over your entire docs/index.html:
       color:var(--txt);
       font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial;
     }
-
     .page{ max-width: 980px; margin: 0 auto; padding: 14px 14px 40px; }
 
     .topbar{
       display:flex; align-items:center; justify-content:space-between;
       gap:12px; margin-bottom:12px;
     }
-
     .brand{ display:flex; align-items:baseline; gap:10px; flex-wrap:wrap; }
     .brand .name{ font-weight:900; letter-spacing:0.4px; font-size:18px; white-space:nowrap; }
     .brand .sub{ font-size:12px; color:var(--muted2); font-weight:800; letter-spacing:0.3px; }
@@ -74,13 +67,10 @@ Paste this over your entire docs/index.html:
       align-items:center;
       justify-content:center;
       min-height: 40px;
-
-      /* FORCE clickability */
-      position: relative;
-      z-index: 9999;
-      pointer-events: auto;
+      user-select:none;
+      -webkit-tap-highlight-color: transparent;
     }
-
+    .btn:active{ transform: translateY(1px); }
     .btn.secondary{ background: var(--panel2); box-shadow:none; }
 
     .grid{ display:grid; grid-template-columns: 1fr; gap:12px; }
@@ -98,7 +88,6 @@ Paste this over your entire docs/index.html:
       display:flex; align-items:center; justify-content:space-between;
       gap:10px; flex-wrap:wrap;
     }
-
     .momaLeft{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
 
     .field{
@@ -151,7 +140,6 @@ Paste this over your entire docs/index.html:
       background: rgba(255,255,255,0.03);
       touch-action: none;
     }
-
     #targetImg{
       position:absolute;
       left:0; top:0;
@@ -162,7 +150,6 @@ Paste this over your entire docs/index.html:
       max-height:none;
       display:block;
     }
-
     #dotsLayer{
       position:absolute;
       left:0; top:0;
@@ -183,14 +170,15 @@ Paste this over your entire docs/index.html:
 
     .sec{ margin-top:12px; }
 
-    /* Hidden input: NOT display:none (iOS can be picky) */
+    /* iOS-safe: keep file input present (not display:none), but visually hidden */
     #photoInput{
-      position:absolute;
-      left:-9999px;
-      width:1px;
-      height:1px;
-      opacity:0.001;
-      pointer-events:none;
+      position: fixed;
+      left: 12px;
+      top: 12px;
+      width: 1px;
+      height: 1px;
+      opacity: 0.01;
+      z-index: 1;
     }
 
     /* Debug badge */
@@ -227,7 +215,7 @@ Paste this over your entire docs/index.html:
       </div>
     </div>
 
-    <!-- Hidden file input -->
+    <!-- File input (iOS needs it to be "real" in the page) -->
     <input id="photoInput" type="file" accept="image/*" />
 
     <div class="grid">
@@ -235,11 +223,8 @@ Paste this over your entire docs/index.html:
       <div class="card">
         <div class="moma">
           <div class="momaLeft">
-            <!-- FAILSAFE: inline onclick opens picker even if external JS fails -->
-            <button id="uploadBtn" class="btn" type="button"
-              onclick="(function(){var i=document.getElementById('photoInput'); if(i){ i.click(); } })()">
-              Upload Target
-            </button>
+            <!-- iOS-safe: label triggers file picker without JS -->
+            <label id="uploadBtn" class="btn" for="photoInput">Upload Target</label>
 
             <div class="toggle">
               <div class="tag">Units</div>
@@ -291,43 +276,26 @@ Paste this over your entire docs/index.html:
       </div>
 
       <a id="vendorLink" href="#" style="display:none">Vendor</a>
-
     </div>
 
     <div id="jsBadge">JS READY</div>
-
-    <!-- Inline boot check + backup wiring (runs even if index.js fails) -->
     <script>
+      // Show badge so we know scripts are executing
       (function(){
-        var badge = document.getElementById('jsBadge');
-        if (badge) badge.style.display = 'block';
-
-        // backup: also wire click via JS (in case inline onclick removed later)
-        var btn = document.getElementById('uploadBtn');
-        var input = document.getElementById('photoInput');
-
-        if (btn && input) {
-          btn.addEventListener('click', function(){
-            // MUST be direct user gesture (no setTimeout) for iOS
-            input.click();
-          }, { passive: true });
-        }
+        var b = document.getElementById('jsBadge');
+        if (b) b.style.display = 'block';
       })();
     </script>
 
-    <!-- Your main app JS (keep this) -->
-    <script src="./index.js?v=baker_pilot_12b"></script>
+    <!-- Main app JS -->
+    <script src="./index.js?v=baker_pilot_upload_label_1"></script>
   </main>
 </body>
 </html>
 
-What this tells us immediately
+What you should see after this deploy
+	•	Tapping Upload Target should open the photo picker every time (because it’s a label → input)
+	•	If it still doesn’t open after this, the issue is not code — it’s iOS permissions / content restrictions / or you’re not on the latest deployed build
 
-After you deploy this:
-	•	If you do NOT see the green “JS READY” badge → your page is not running scripts (or you aren’t on the updated deploy)
-	•	If you see JS READY but Upload still does nothing → something is blocking the file picker at the browser/OS level (rare) or you’re not actually tapping the real button (overlay)
-	•	If Upload now works → your prior issue was JS not loading / ID mismatch / button not type=button / overlay
-
-Send me exactly which outcome you get:
-	1.	JS READY badge shows (yes/no)
-	2.	When you tap Upload: picker opens (yes/no)
+When you test it, tell me:
+	•	Does the picker open now? Yes/No
