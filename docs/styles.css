@@ -1,4 +1,8 @@
-/* docs/styles.css (FULL REPLACEMENT) — PILOT UI + MOMA (Top Right) */
+/* docs/styles.css (FULL REPLACEMENT) — BRICK 9
+   Adds:
+   - Header right stack (MOMA + Baker buttons)
+   - Two Baker buttons styled + responsive
+*/
 
 /* ========== Base ========== */
 :root{
@@ -55,26 +59,18 @@ html,body{
 .brandScore{ color: rgba(255, 60, 60, 0.95); }
 .brandTm{ color: rgba(255,255,255,0.65); font-weight:800; font-size: 18px; vertical-align: super; }
 
-.vendorLink{
-  display:inline-flex;
-  align-items:center;
-  justify-content:center;
-  height: 38px;
-  padding: 0 14px;
-  border-radius: 12px;
-  border: 1px solid var(--border);
-  background: rgba(255,255,255,0.04);
-  color: var(--text);
-  text-decoration:none;
-  font-weight:800;
-  font-size: 13px;
-  white-space:nowrap;
-}
-
 .instruction{
   margin: 10px 0 0;
   font-size: 14px;
   color: var(--muted);
+}
+
+/* RIGHT SIDE STACK */
+.headerRight{
+  display:flex;
+  flex-direction:column;
+  align-items:flex-end;
+  gap:10px;
 }
 
 /* ========== Control Panel ========== */
@@ -167,7 +163,7 @@ html,body{
   overflow: hidden;
   background: rgba(0,0,0,0.35);
   border: 1px solid rgba(255,255,255,0.08);
-  touch-action: none; /* JS will manage gestures */
+  touch-action: none; /* JS manages gestures */
 }
 
 .targetImg{
@@ -176,7 +172,7 @@ html,body{
   height: auto;
   user-select:none;
   -webkit-user-drag:none;
-  transform-origin: 0 0; /* JS pan/zoom */
+  transform-origin: 0 0;
 }
 
 .dotsLayer{
@@ -185,7 +181,7 @@ html,body{
   pointer-events:none;
 }
 
-/* ========== SEC Panel (placeholder styling) ========== */
+/* ========== SEC Panel ========== */
 .secPanel{
   margin-top: 14px;
   padding: 14px;
@@ -286,9 +282,7 @@ html,body{
   user-select:none;
 }
 
-.momaToggle input{
-  display:none;
-}
+.momaToggle input{ display:none; }
 
 .momaToggleTrack{
   width:42px;
@@ -324,19 +318,54 @@ html,body{
   text-align:right;
 }
 
+/* ===========================
+   Baker Buttons (Catalog + Product)
+=========================== */
+.bakerBtns{
+  display:flex;
+  gap:10px;
+  align-items:center;
+  justify-content:flex-end;
+  flex-wrap:wrap;
+}
+
+.bakerBtn{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  height: 38px;
+  padding: 0 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,0.14);
+  background: rgba(255,255,255,0.05);
+  color: var(--text);
+  text-decoration:none;
+  font-weight: 900;
+  font-size: 12.5px;
+  letter-spacing: 0.2px;
+  white-space:nowrap;
+}
+
+.bakerBtn:active{ transform: translateY(1px); }
+
 /* ========== Mobile tweaks ========== */
 @media (max-width: 640px){
-  .brand{
-    font-size: 28px;
+  .brand{ font-size: 28px; }
+
+  .headerRight{
+    gap:8px;
   }
-  .brandRow{
-    align-items:flex-start;
-  }
+
   .momaBlock{
     min-width: 190px;
     max-width: 210px;
   }
-  .controlsRow{
-    gap:8px;
+
+  .bakerBtn{
+    height: 36px;
+    padding: 0 12px;
+    font-size: 12px;
   }
+
+  .controlsRow{ gap:8px; }
 }
