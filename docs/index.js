@@ -1,901 +1,521 @@
-docs/index.js (FULL REPLACEMENT) — BRICK 12 (Defer Grid Detect for speed + keep Grid Lock sacred)
-
-This brick makes the app feel faster by doing this:
-	•	Photo loads → UI is responsive immediately
-	•	Grid detection runs “after paint” (idle/timeout) instead of blocking the load
-	•	Grid still locks one-shot and only unlocks on New Upload / Clear
-
-Paste this over your entire docs/index.js:
-
 /* ============================================================
-   docs/index.js (FULL REPLACEMENT) — BRICK 12 (Deferred Grid Detect)
-   Adds:
-   - Grid detect deferred (idle/timeout) so UI stays smooth on load
-   - Grid remains sacred: detect once per photo, locks on success
-   - Only unlocks on: NEW UPLOAD or CLEAR
+   docs/index.js (FULL REPLACEMENT) — Baker Pilot (iOS-safe load)
+   Fixes:
+   - File picker opens via <label for="photoInput"> (handled in HTML)
+   - Target image reliably loads on iOS (ObjectURL + FileReader fallback)
+   - Image always fits/centers (prevents "blank" due to off-screen transform)
+   - Adds "INDEX.JS READY" badge to prove this JS file is running
 ============================================================ */
 
 (() => {
   const $ = (id) => document.getElementById(id);
 
-  // ----- DOM (must exist in docs/index.html)
+  // ---- Required elements (must exist in index.html)
   const elFile = $("photoInput");
-  const uploadBtn = $("uploadBtn");
-  const viewport = $("targetWrap");
-  const img = $("targetImg");
-  const dotsLayer = $("dotsLayer");
+  const elImg = $("targetImg");
+  const elWrap = $("targetWrap");
+  const elDots = $("dotsLayer");
+  const elTapCount = $("tapCount");
+  const elUndo = $("undoTapsBtn");
+  const elClear = $("clearTapsBtn");
+  const elResults = $("showResultsBtn");
+  const elInstruction = $("instructionLine");
+  const elSec = $("secPanel");
 
-  const tapCountEl = $("tapCount");
-  const undoBtn = $("undoTapsBtn");
-  const clearBtn = $("clearTapsBtn");
-  const showBtn = $("showResultsBtn");
-  const instructionLine = $("instructionLine");
+  const elUnitToggle = $("unitToggle");
+  const elUnitLabel = $("unitLabel");
+  const elDistance = $("distanceInput");
+  const elDistanceUnit = $("distanceUnit");
+  const elClick = $("clickInput");
+  const elApply = $("momaApplyBtn");
 
-  const secPanel = $("secPanel");
+  const elCatalog = $("bakerCatalogBtn");
+  const elProduct = $("bakerProductBtn");
 
-  // Baker buttons
-  const bakerCatalogBtn = $("bakerCatalogBtn");
-  const bakerProductBtn = $("bakerProductBtn");
-
-  // Legacy single link (safe if missing)
-  const vendorLink = $("vendorLink");
-
-  // MOMA
-  const unitToggle = $("unitToggle");
-  const unitLabel = $("unitLabel");
-  const distanceInput = $("distanceInput");
-  const clickInput = $("clickInput");
-  const distanceUnit = $("distanceUnit");
-  const momaApplyBtn = $("momaApplyBtn");
-
-  // ----- Inject dot styles (LOCKED 10px, filled colored markers)
-  const DOT_PX = 10; // locked dot size
-  const style = document.createElement("style");
-  style.textContent = `
-    .dot{
-      position:absolute;
-      width:${DOT_PX}px;
-      height:${DOT_PX}px;
-      border-radius:999px;
-      transform: translate(-50%, -50%);
-      pointer-events:none;
-      will-change: transform;
-    }
-    .dot::before{
-      content:"";
-      position:absolute;
-      inset:-2px;
-      border-radius:999px;
-      border: 1.5px solid rgba(255,255,255,0.55);
-      box-shadow: 0 8px 18px rgba(0,0,0,0.55);
-    }
-    .dot::after{
-      content:"";
-      position:absolute;
-      inset:0;
-      border-radius:999px;
-      background: rgba(255,255,255,0.85);
-      opacity: 0.18;
-      mix-blend-mode: screen;
-    }
-    .dot.bull{
-      background: rgba(255, 165, 0, 0.98);
-      box-shadow:
-        0 0 0 1px rgba(0,0,0,0.35),
-        0 10px 22px rgba(0,0,0,0.55),
-        0 0 14px rgba(255,165,0,0.50);
-    }
-    .dot.bull::before{ border-color: rgba(255,255,255,0.70); }
-    .dot.hit{
-      background: rgba(0, 170, 255, 0.98);
-      box-shadow:
-        0 0 0 1px rgba(0,0,0,0.35),
-        0 10px 22px rgba(0,0,0,0.55),
-        0 0 14px rgba(0,170,255,0.50);
-    }
-    .dot.hit::before{ border-color: rgba(255,255,255,0.65); }
-  `;
-  document.head.appendChild(style);
-
-  // ----- Constants
-  const TRUE_MOA_IN_PER_100Y = 1.047;
-  const IN_PER_METER = 39.37007874015748;
-  const YARDS_PER_METER = 1.0936132983377078;
-
-  const fmt2 = (n) => Number(n).toFixed(2);
-  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
-  const clampNum = (n, fallback = 0) => {
-    const x = Number(n);
-    return Number.isFinite(x) ? x : fallback;
-  };
-
-  // ----- Session (pilot defaults)
-  const session = {
-    unit: "in",          // "in" | "m" (display only)
-    distanceYds: 100,    // pilot standard
-    clickMoa: 0.25,      // pilot standard
-    isTrueMoa: true,     // pilot uses True MOA
-  };
-
-  function resetSessionToPilotDefaults() {
-    session.unit = "in";
-    session.distanceYds = 100;
-    session.clickMoa = 0.25;
-    session.isTrueMoa = true;
+  // ---- Minimal safety: if any critical element missing, stop
+  const must = [elFile, elImg, elWrap, elDots, elTapCount, elUndo, elClear, elResults, elInstruction, elSec];
+  if (must.some((x) => !x)) {
+    console.error("Missing required DOM IDs. Check index.html IDs.");
+    return;
   }
 
-  function inchesToSessionUnits(inches) {
-    return session.unit === "m" ? (inches / IN_PER_METER) : inches;
-  }
+  // ---- Badge to prove index.js loaded
+  (function showIndexBadge() {
+    const b = document.createElement("div");
+    b.textContent = "INDEX.JS READY";
+    b.style.position = "fixed";
+    b.style.left = "10px";
+    b.style.bottom = "10px";
+    b.style.zIndex = "999999";
+    b.style.padding = "8px 10px";
+    b.style.borderRadius = "12px";
+    b.style.fontFamily = "system-ui,-apple-system,Segoe UI,Roboto,Arial";
+    b.style.fontSize = "12px";
+    b.style.fontWeight = "900";
+    b.style.letterSpacing = "0.2px";
+    b.style.background = "rgba(0,90,200,0.85)";
+    b.style.color = "white";
+    b.style.boxShadow = "0 18px 45px rgba(0,0,0,0.55)";
+    document.body.appendChild(b);
+    setTimeout(() => b.remove(), 2500);
+  })();
 
-  function inchesPerMoaAtDistance() {
-    return TRUE_MOA_IN_PER_100Y * (session.distanceYds / 100);
-  }
+  // ---- Vendor links (safe placeholders — replace later)
+  // Set these to real Baker URLs when ready.
+  elCatalog.href = "https://bakertargets.com/";
+  elProduct.href = "https://bakertargets.com/";
 
-  function directionsFromDelta(dxIn, dyIn) {
-    const horiz = dxIn > 0 ? "RIGHT" : dxIn < 0 ? "LEFT" : "—";
-    const vert  = dyIn > 0 ? "UP"    : dyIn < 0 ? "DOWN" : "—";
-    return { horiz, vert };
-  }
-
-  // ----- State
+  // ------------------------------------------------------------
+  // State
+  // ------------------------------------------------------------
   let objectUrl = null;
+  let imageLoaded = false;
 
-  // image-local taps (pixels)
-  let bullPx = null;
-  let hitsPx = [];
-
-  // view transform
-  let scale = 1;
-  let tx = 0;
-  let ty = 0;
-  const MIN_SCALE = 1;
-  const MAX_SCALE = 6;
-
-  // grid detection result (px per 1 inch)
-  let pxPerInchX = null;
-  let pxPerInchY = null;
-
-  // ----- GRID LOCK (sacred ruler: detect once per photo)
-  let gridLocked = false;
-
-  function lockGrid() {
-    gridLocked = true;
-  }
-
-  function unlockGrid() {
-    gridLocked = false;
-    pxPerInchX = null;
-    pxPerInchY = null;
-  }
-
-  // deferred grid detect scheduling
-  let gridDetectScheduled = false;
-
-  function scheduleGridDetect() {
-    if (gridDetectScheduled) return;
-    if (!img.src) return;
-    if (gridLocked && pxPerInchX && pxPerInchY) return;
-
-    gridDetectScheduled = true;
-
-    const run = () => {
-      gridDetectScheduled = false;
-      if (!img.src) return;
-      if (gridLocked && pxPerInchX && pxPerInchY) return;
-
-      // show lightweight status before heavy work
-      setUi();
-
-      const ok = detectGridSpacing(); // locks on success
-      setUi();
-
-      if (!ok) {
-        unlockGrid();
-        instructionLine.textContent =
-          "Grid not detected. Re-take photo: straight, full-frame, clear grid lines.";
-      }
-    };
-
-    // Prefer idle time so pinch/tap stays snappy
-    if (typeof window.requestIdleCallback === "function") {
-      window.requestIdleCallback(run, { timeout: 900 });
-    } else {
-      // next tick after paint
-      setTimeout(run, 120);
-    }
-  }
-
-  // results cache
-  let lastResult = null;
-
-  // ----- Baker URLs (EDIT these when you have exact pages)
-  const BAKER_URLS = {
-    catalog: "https://bakertargets.com",
-    product: "https://bakertargets.com",
+  // Transform for pan/zoom
+  const view = {
+    scale: 1,
+    tx: 0,
+    ty: 0,
+    minScale: 0.25,
+    maxScale: 8
   };
 
-  function getQueryParam(name) {
-    try {
-      const url = new URL(window.location.href);
-      return (url.searchParams.get(name) || "").trim().toLowerCase();
-    } catch {
-      return "";
-    }
+  // Taps stored in IMAGE PIXEL coordinates
+  let taps = []; // {xPx, yPx}
+
+  // ------------------------------------------------------------
+  // Helpers
+  // ------------------------------------------------------------
+  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+
+  function setInstruction(msg) {
+    elInstruction.textContent = msg;
   }
 
-  function highlightBtn(el) {
-    if (!el) return;
-    el.style.outline = "2px solid rgba(255,255,255,0.35)";
-    el.style.boxShadow = "0 0 0 3px rgba(255,255,255,0.08), 0 18px 40px rgba(0,0,0,0.45)";
-    el.style.background = "rgba(255,255,255,0.09)";
+  function setTapCount() {
+    elTapCount.textContent = String(taps.length);
   }
 
-  function clearBtnHighlight(el) {
-    if (!el) return;
-    el.style.outline = "";
-    el.style.boxShadow = "";
-    el.style.background = "";
+  function clearSec() {
+    elSec.innerHTML = "";
   }
 
-  function applyBakerLandingSelection() {
-    const sel = getQueryParam("baker"); // "catalog" | "product" | ""
-    clearBtnHighlight(bakerCatalogBtn);
-    clearBtnHighlight(bakerProductBtn);
-
-    if (sel === "catalog") highlightBtn(bakerCatalogBtn);
-    else if (sel === "product") highlightBtn(bakerProductBtn);
-  }
-
-  function wireVendor() {
-    if (vendorLink) vendorLink.style.display = "none";
-
-    if (bakerCatalogBtn) {
-      bakerCatalogBtn.href = BAKER_URLS.catalog;
-      bakerCatalogBtn.target = "_blank";
-      bakerCatalogBtn.rel = "noopener";
-    }
-
-    if (bakerProductBtn) {
-      bakerProductBtn.href = BAKER_URLS.product;
-      bakerProductBtn.target = "_blank";
-      bakerProductBtn.rel = "noopener";
-    }
-
-    applyBakerLandingSelection();
-  }
-
-  // ----- Transform apply
-  let rafPending = false;
   function applyTransform() {
-    if (rafPending) return;
-    rafPending = true;
-    requestAnimationFrame(() => {
-      rafPending = false;
-      const t = `translate3d(${tx}px, ${ty}px, 0) scale(${scale})`;
-      img.style.transform = t;
-      dotsLayer.style.transform = t;
-    });
+    const t = `translate(${view.tx}px, ${view.ty}px) scale(${view.scale})`;
+    elImg.style.transform = t;
+    elDots.style.transform = t;
+    redrawDots();
   }
 
-  function resetView() {
-    scale = 1; tx = 0; ty = 0;
+  function redrawDots() {
+    // dotsLayer is transformed alongside the image,
+    // so dot positions should be in IMAGE pixel space.
+    const w = elImg.naturalWidth || 0;
+    const h = elImg.naturalHeight || 0;
+    if (!imageLoaded || !w || !h) {
+      elDots.innerHTML = "";
+      return;
+    }
+
+    // Make dotsLayer match image pixel size (pre-transform)
+    elDots.style.width = `${w}px`;
+    elDots.style.height = `${h}px`;
+
+    // Draw
+    const dotPx = 10; // locked at 10px per your request
+    const r = dotPx / 2;
+
+    elDots.innerHTML = taps
+      .map((p, i) => {
+        // numbered filled dot (small, visible)
+        const n = i + 1;
+        return `
+          <div style="
+            position:absolute;
+            left:${p.xPx - r}px;
+            top:${p.yPx - r}px;
+            width:${dotPx}px;
+            height:${dotPx}px;
+            border-radius:999px;
+            background: rgba(255,80,80,0.95);
+            box-shadow: 0 0 0 2px rgba(0,0,0,0.55);
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            font-weight:900;
+            font-size:10px;
+            color:#120000;
+            line-height:1;
+            pointer-events:none;
+          ">${n}</div>
+        `;
+      })
+      .join("");
+  }
+
+  function resetViewToFit() {
+    const w = elImg.naturalWidth || 0;
+    const h = elImg.naturalHeight || 0;
+    const wrapW = elWrap.clientWidth || 1;
+    const wrapH = elWrap.clientHeight || 1;
+
+    if (!w || !h) return;
+
+    const s = Math.min(wrapW / w, wrapH / h);
+    view.scale = clamp(s, view.minScale, view.maxScale);
+
+    // center image in viewport
+    const scaledW = w * view.scale;
+    const scaledH = h * view.scale;
+    view.tx = (wrapW - scaledW) / 2;
+    view.ty = (wrapH - scaledH) / 2;
+
     applyTransform();
   }
 
-  // ----- Coordinate helpers
-  function getViewportPointFromClient(clientX, clientY) {
-    const r = viewport.getBoundingClientRect();
-    return { x: clientX - r.left, y: clientY - r.top, r };
+  function screenToImagePx(clientX, clientY) {
+    const rect = elWrap.getBoundingClientRect();
+    const x = clientX - rect.left;
+    const y = clientY - rect.top;
+
+    // inverse of transform: (x - tx)/scale
+    const ix = (x - view.tx) / view.scale;
+    const iy = (y - view.ty) / view.scale;
+
+    return { ix, iy };
   }
 
-  function viewportToImageLocal(pt) {
-    return { x: (pt.x - tx) / scale, y: (pt.y - ty) / scale };
+  // ------------------------------------------------------------
+  // Image loading (ObjectURL + FileReader fallback)
+  // ------------------------------------------------------------
+  function revokeOldUrl() {
+    if (objectUrl) {
+      URL.revokeObjectURL(objectUrl);
+      objectUrl = null;
+    }
   }
 
-  // ----- Dots
-  function addDot(kind, pt) {
-    const d = document.createElement("div");
-    d.className = `dot ${kind}`;
-    d.style.left = `${pt.x}px`;
-    d.style.top = `${pt.y}px`;
-    dotsLayer.appendChild(d);
+  async function loadFileToImage(file) {
+    imageLoaded = false;
+    clearSec();
+    taps = [];
+    setTapCount();
+    elDots.innerHTML = "";
+    setInstruction("Loading photo…");
+
+    // Ensure img is "visible"
+    elImg.style.display = "block";
+
+    // Try ObjectURL first
+    revokeOldUrl();
+    let used = "objecturl";
+    try {
+      objectUrl = URL.createObjectURL(file);
+      elImg.src = objectUrl;
+    } catch (e) {
+      used = "dataurl";
+      objectUrl = null;
+      elImg.removeAttribute("src");
+    }
+
+    // If ObjectURL path fails, use FileReader DataURL
+    if (used === "dataurl") {
+      const dataUrl = await new Promise((resolve, reject) => {
+        const fr = new FileReader();
+        fr.onerror = () => reject(new Error("FileReader failed"));
+        fr.onload = () => resolve(fr.result);
+        fr.readAsDataURL(file);
+      });
+      elImg.src = String(dataUrl);
+    }
+
+    // Wait for actual decode (more reliable than onload alone)
+    await new Promise((resolve, reject) => {
+      const done = () => resolve();
+      const fail = () => reject(new Error("Image failed to load"));
+      elImg.onload = done;
+      elImg.onerror = fail;
+      // If cached and already complete
+      if (elImg.complete && elImg.naturalWidth > 0) resolve();
+    });
+
+    // Extra decode when available
+    if (elImg.decode) {
+      try { await elImg.decode(); } catch (_) {}
+    }
+
+    imageLoaded = true;
+
+    // Make dotsLayer match image pixels
+    elDots.style.left = "0px";
+    elDots.style.top = "0px";
+
+    resetViewToFit();
+
+    setInstruction(`Photo loaded. Pinch/zoom + pan. Tap bull first, then tap hits. Then press Show Results.`);
   }
 
-  function renderDots() {
-    dotsLayer.innerHTML = "";
-    if (bullPx) addDot("bull", bullPx);
-    for (const h of hitsPx) addDot("hit", h);
+  // ------------------------------------------------------------
+  // Input handlers
+  // ------------------------------------------------------------
+  elFile.addEventListener("change", async () => {
+    const f = elFile.files && elFile.files[0];
+    if (!f) return;
+
+    try {
+      await loadFileToImage(f);
+    } catch (err) {
+      console.error(err);
+      setInstruction("Could not load that image. Try a different photo or screenshot.");
+    }
+  });
+
+  // ------------------------------------------------------------
+  // Tap capture (1 finger tap only)
+  // ------------------------------------------------------------
+  let activePointers = new Map();
+  let isPanning = false;
+  let panStart = null;
+  let lastTapTime = 0;
+
+  elWrap.addEventListener("pointerdown", (e) => {
+    elWrap.setPointerCapture(e.pointerId);
+    activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+    if (activePointers.size === 1) {
+      // potential tap/pan start
+      isPanning = true;
+      panStart = {
+        x: e.clientX,
+        y: e.clientY,
+        tx: view.tx,
+        ty: view.ty
+      };
+    } else {
+      // multi-touch => stop panning as "tap"
+      isPanning = false;
+      panStart = null;
+    }
+  });
+
+  elWrap.addEventListener("pointermove", (e) => {
+    if (!activePointers.has(e.pointerId)) return;
+    activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+    // Pan with 1 pointer
+    if (activePointers.size === 1 && isPanning && panStart) {
+      const dx = e.clientX - panStart.x;
+      const dy = e.clientY - panStart.y;
+      view.tx = panStart.tx + dx;
+      view.ty = panStart.ty + dy;
+      applyTransform();
+    }
+
+    // Pinch with 2 pointers (simple)
+    if (activePointers.size === 2) {
+      const pts = Array.from(activePointers.values());
+      const d = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
+
+      if (!elWrap._pinch) {
+        elWrap._pinch = {
+          startDist: d,
+          startScale: view.scale,
+          startTx: view.tx,
+          startTy: view.ty,
+          // pinch center
+          cx: (pts[0].x + pts[1].x) / 2,
+          cy: (pts[0].y + pts[1].y) / 2
+        };
+      } else {
+        const p = elWrap._pinch;
+        const factor = d / (p.startDist || 1);
+
+        // zoom around center
+        const newScale = clamp(p.startScale * factor, view.minScale, view.maxScale);
+
+        // Convert center point to wrap coords
+        const rect = elWrap.getBoundingClientRect();
+        const cx = p.cx - rect.left;
+        const cy = p.cy - rect.top;
+
+        // Keep the image point under the pinch center stable
+        const ix = (cx - p.startTx) / p.startScale;
+        const iy = (cy - p.startTy) / p.startScale;
+
+        view.scale = newScale;
+        view.tx = cx - ix * view.scale;
+        view.ty = cy - iy * view.scale;
+
+        applyTransform();
+      }
+    }
+  });
+
+  elWrap.addEventListener("pointerup", (e) => {
+    // detect tap (1-finger quick without big movement)
+    const wasSingle = activePointers.size === 1;
+    const down = activePointers.get(e.pointerId);
+    activePointers.delete(e.pointerId);
+
+    // clear pinch state when leaving 2 pointers
+    if (activePointers.size < 2) elWrap._pinch = null;
+
+    if (!imageLoaded) return;
+    if (!wasSingle || !down) return;
+
+    const moved = Math.hypot(e.clientX - down.x, e.clientY - down.y);
+    if (moved > 10) return; // treated as pan
+
+    // Double-tap to reset view
+    const now = Date.now();
+    if (now - lastTapTime < 280) {
+      resetViewToFit();
+      lastTapTime = 0;
+      return;
+    }
+    lastTapTime = now;
+
+    // Record a hit tap
+    const { ix, iy } = screenToImagePx(e.clientX, e.clientY);
+
+    // bounds
+    if (ix < 0 || iy < 0 || ix > elImg.naturalWidth || iy > elImg.naturalHeight) return;
+
+    taps.push({ xPx: ix, yPx: iy });
+    setTapCount();
+    redrawDots();
+  });
+
+  elWrap.addEventListener("pointercancel", (e) => {
+    activePointers.delete(e.pointerId);
+    if (activePointers.size < 2) elWrap._pinch = null;
+  });
+
+  // ------------------------------------------------------------
+  // Undo / Clear
+  // ------------------------------------------------------------
+  elUndo.addEventListener("click", () => {
+    if (taps.length) taps.pop();
+    setTapCount();
+    redrawDots();
+    clearSec();
+  });
+
+  elClear.addEventListener("click", () => {
+    taps = [];
+    setTapCount();
+    redrawDots();
+    clearSec();
+    setInstruction("Cleared taps. Tap bull first, then tap hits.");
+  });
+
+  // ------------------------------------------------------------
+  // Units + MOMA inputs (UI only for now)
+  // Default pilot: 100 yd, 0.25 MOA/click, inches mode
+  // ------------------------------------------------------------
+  const session = {
+    unit: "in",         // "in" or "m"
+    distanceYds: 100,
+    moaPerClick: 0.25
+  };
+
+  function fmt2(n) {
+    const x = Number(n);
+    if (!Number.isFinite(x)) return "0.00";
+    return x.toFixed(2);
   }
 
-  // ----- UI state
-  function setUi() {
-    const totalTaps = (bullPx ? 1 : 0) + hitsPx.length;
-    tapCountEl.textContent = String(totalTaps);
+  function refreshMomaUI() {
+    elUnitLabel.textContent = session.unit === "m" ? "M" : "IN";
+    elDistanceUnit.textContent = session.unit === "m" ? "m" : "yd";
 
-    undoBtn.disabled = totalTaps === 0;
-    clearBtn.disabled = totalTaps === 0;
+    // show defaults
+    elDistance.value = session.unit === "m"
+      ? fmt2(session.distanceYds * 0.9144) // yd -> m
+      : fmt2(session.distanceYds);
 
-    const gridReady = !!(pxPerInchX && pxPerInchY && gridLocked);
-    showBtn.disabled = !(bullPx && hitsPx.length > 0 && gridReady);
+    elClick.value = fmt2(session.moaPerClick);
+  }
 
-    if (!img.src) {
-      instructionLine.textContent = "Upload your Baker 23×35 1-inch grid target photo to begin.";
+  elUnitToggle.addEventListener("change", () => {
+    session.unit = elUnitToggle.checked ? "m" : "in";
+    refreshMomaUI();
+    clearSec(); // per your rule: session-only display; clearing resets later
+  });
+
+  elApply.addEventListener("click", () => {
+    // parse distance
+    const d = Number(elDistance.value);
+    const c = Number(elClick.value);
+
+    if (Number.isFinite(d) && d > 0) {
+      session.distanceYds = session.unit === "m" ? (d / 0.9144) : d;
+    }
+    if (Number.isFinite(c) && c > 0) {
+      session.moaPerClick = c;
+    }
+
+    setInstruction(
+      `Updated: ${session.unit === "m" ? fmt2(session.distanceYds * 0.9144) + " m" : fmt2(session.distanceYds) + " yd"} • ${fmt2(session.moaPerClick)} MOA/click`
+    );
+    clearSec();
+  });
+
+  refreshMomaUI();
+
+  // ------------------------------------------------------------
+  // Show Results (placeholder SEC — we’ll wire bull + inches math next)
+  // ------------------------------------------------------------
+  elResults.addEventListener("click", () => {
+    if (!imageLoaded) {
+      setInstruction("Upload a target photo first.");
+      return;
+    }
+    if (taps.length < 2) {
+      setInstruction("Tap bull first, then tap at least one hit.");
       return;
     }
 
-    if (!gridReady) {
-      instructionLine.textContent =
-        "Photo loaded. Grid lock pending… (You can zoom/pan now)";
-      return;
-    }
+    // For now, just prove SEC renders and values are session-correct.
+    const unitShown = session.unit === "m" ? "m" : "in";
+    const distShown = session.unit === "m"
+      ? fmt2(session.distanceYds * 0.9144)
+      : fmt2(session.distanceYds);
 
-    if (!bullPx) {
-      instructionLine.textContent = "Grid locked. Tap the bull once. (2 fingers: zoom/pan)";
-      return;
-    }
+    elSec.innerHTML = `
+      <div style="
+        background: rgba(0,0,0,0.25);
+        border: 1px solid rgba(255,255,255,0.10);
+        border-radius: 16px;
+        padding: 12px;
+      ">
+        <div style="font-weight:900; letter-spacing:0.2px; margin-bottom:8px;">Shooter Experience Card</div>
+        <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:10px;">
+          <div style="padding:6px 10px; border-radius:999px; border:1px solid rgba(255,255,255,0.10); background:rgba(255,255,255,0.06); font-weight:900;">True MOA</div>
+          <div style="padding:6px 10px; border-radius:999px; border:1px solid rgba(255,255,255,0.10); background:rgba(255,255,255,0.06); font-weight:900;">${distShown} ${session.unit === "m" ? "m" : "yd"}</div>
+          <div style="padding:6px 10px; border-radius:999px; border:1px solid rgba(255,255,255,0.10); background:rgba(255,255,255,0.06); font-weight:900;">${fmt2(session.moaPerClick)} MOA/click</div>
+        </div>
 
-    instructionLine.textContent = "Grid locked. Tap bullet holes. Then press Show Results.";
-  }
-
-  // ----- Grid spacing detection (px per 1 inch) — SACRED + ONE-SHOT
-  function median(arr) {
-    const a = arr.slice().sort((x, y) => x - y);
-    if (!a.length) return null;
-    const mid = Math.floor(a.length / 2);
-    return (a.length % 2) ? a[mid] : (a[mid - 1] + a[mid]) / 2;
-  }
-
-  function diffsSorted(peaks) {
-    const d = [];
-    for (let i = 1; i < peaks.length; i++) {
-      const dx = peaks[i] - peaks[i - 1];
-      if (dx > 4) d.push(dx);
-    }
-    return d;
-  }
-
-  function findPeaks(signal, threshold) {
-    const peaks = [];
-    for (let i = 1; i < signal.length - 1; i++) {
-      if (signal[i] > threshold && signal[i] >= signal[i - 1] && signal[i] >= signal[i + 1]) {
-        peaks.push(i);
-      }
-    }
-    const thinned = [];
-    const minSep = 6;
-    for (const p of peaks) {
-      if (!thinned.length || (p - thinned[thinned.length - 1]) >= minSep) thinned.push(p);
-    }
-    return thinned;
-  }
-
-  function detectGridSpacing() {
-    if (gridLocked && pxPerInchX && pxPerInchY) return true;
-
-    pxPerInchX = null;
-    pxPerInchY = null;
-
-    const w = img.naturalWidth;
-    const h = img.naturalHeight;
-    if (!w || !h) return false;
-
-    const maxW = 1200;
-    const scaleDown = Math.min(1, maxW / w);
-    const cw = Math.round(w * scaleDown);
-    const ch = Math.round(h * scaleDown);
-
-    const c = document.createElement("canvas");
-    c.width = cw;
-    c.height = ch;
-    const ctx = c.getContext("2d", { willReadFrequently: true });
-    ctx.drawImage(img, 0, 0, cw, ch);
-
-    function scanHorizontal(y) {
-      const data = ctx.getImageData(0, y, cw, 1).data;
-      const edge = new Float32Array(cw);
-      for (let x = 1; x < cw - 1; x++) {
-        const iL = (x - 1) * 4;
-        const iR = (x + 1) * 4;
-        const gL = (data[iL] + data[iL + 1] + data[iL + 2]) / 3;
-        const gR = (data[iR] + data[iR + 1] + data[iR + 2]) / 3;
-        edge[x] = Math.abs(gR - gL);
-      }
-      return edge;
-    }
-
-    function scanVertical(x) {
-      const data = ctx.getImageData(x, 0, 1, ch).data;
-      const edge = new Float32Array(ch);
-      for (let y = 1; y < ch - 1; y++) {
-        const iU = (y - 1) * 4;
-        const iD = (y + 1) * 4;
-        const gU = (data[iU] + data[iU + 1] + data[iU + 2]) / 3;
-        const gD = (data[iD] + data[iD + 1] + data[iD + 2]) / 3;
-        edge[y] = Math.abs(gD - gU);
-      }
-      return edge;
-    }
-
-    const ys = [Math.round(ch * 0.20), Math.round(ch * 0.30), Math.round(ch * 0.75)];
-    const xs = [Math.round(cw * 0.20), Math.round(cw * 0.50), Math.round(cw * 0.80)];
-
-    const spacingsX = [];
-    for (const y of ys) {
-      const edge = scanHorizontal(y);
-      let max = 0;
-      for (let i = 0; i < edge.length; i++) if (edge[i] > max) max = edge[i];
-      const th = max * 0.55;
-      const peaks = findPeaks(edge, th);
-      const diffs = diffsSorted(peaks);
-      for (const d of diffs) if (d >= 12 && d <= 120) spacingsX.push(d);
-    }
-
-    const spacingsY = [];
-    for (const x of xs) {
-      const edge = scanVertical(x);
-      let max = 0;
-      for (let i = 0; i < edge.length; i++) if (edge[i] > max) max = edge[i];
-      const th = max * 0.55;
-      const peaks = findPeaks(edge, th);
-      const diffs = diffsSorted(peaks);
-      for (const d of diffs) if (d >= 12 && d <= 120) spacingsY.push(d);
-    }
-
-    const medX = median(spacingsX);
-    const medY = median(spacingsY);
-    if (!medX || !medY) return false;
-
-    pxPerInchX = medX / scaleDown;
-    pxPerInchY = medY / scaleDown;
-
-    lockGrid();
-    return true;
-  }
-
-  // ----- Compute POIB & results
-  function meanPoint(points) {
-    let sx = 0, sy = 0;
-    for (const p of points) { sx += p.x; sy += p.y; }
-    return { x: sx / points.length, y: sy / points.length };
-  }
-
-  function computeResult() {
-    const poibPx = meanPoint(hitsPx);
-
-    const bullInX = bullPx.x / pxPerInchX;
-    const bullInY = bullPx.y / pxPerInchY;
-    const poibInX = poibPx.x / pxPerInchX;
-    const poibInY = poibPx.y / pxPerInchY;
-
-    const dxIn = bullInX - poibInX;
-    const dyIn = bullInY - poibInY;
-
-    const { horiz, vert } = directionsFromDelta(dxIn, dyIn);
-
-    const inPerMoa = inchesPerMoaAtDistance();
-    const moaX = Math.abs(dxIn) / inPerMoa;
-    const moaY = Math.abs(dyIn) / inPerMoa;
-
-    const clicksX = moaX / session.clickMoa;
-    const clicksY = moaY / session.clickMoa;
-
-    const poibRelInX = poibInX - bullInX;
-    const poibRelInY = poibInY - bullInY;
-
-    return {
-      hits: hitsPx.length,
-      dxIn, dyIn,
-      poibRelInX, poibRelInY,
-      horiz, vert,
-      moaX, moaY,
-      clicksX, clicksY,
-      unit: session.unit,
-      pxPerInchX, pxPerInchY,
-      gridLocked,
-    };
-  }
-
-  // ----- SEC (compact + expandable) — NO MOMA duplication
-  let secExpanded = false;
-
-  function renderSEC(result) {
-    const unitLabelLocal = (result.unit === "m") ? "m" : "in";
-
-    const dxDisp = inchesToSessionUnits(result.dxIn);
-    const dyDisp = inchesToSessionUnits(result.dyIn);
-    const poibRelXDisp = inchesToSessionUnits(result.poibRelInX);
-    const poibRelYDisp = inchesToSessionUnits(result.poibRelInY);
-
-    const score = result.hits;
-
-    secPanel.innerHTML = `
-      <div style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
-        <div style="display:flex; flex-direction:column; gap:3px; min-width:0;">
-          <div style="display:flex; align-items:baseline; gap:10px; flex-wrap:wrap;">
-            <div style="font-weight:900; letter-spacing:0.4px;">SEC</div>
-            <div style="font-size:12px; opacity:0.78;">
-              Score: <span style="font-weight:900; opacity:0.98;">${score}</span>
-              <span style="opacity:0.55;">•</span>
-              Hits: <span style="font-weight:900; opacity:0.98;">${result.hits}</span>
-            </div>
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+          <div style="padding:10px; border-radius:14px; border:1px solid rgba(255,255,255,0.10); background:rgba(255,255,255,0.04);">
+            <div style="color:rgba(255,255,255,0.65); font-weight:800; font-size:12px;">Verified Hits</div>
+            <div style="font-size:26px; font-weight:900;">${taps.length - 1}</div>
           </div>
-
-          <div style="font-weight:900; font-size:15px; line-height:1.25; word-break:break-word;">
-            ${result.horiz} • ${result.vert}
-            <span style="opacity:0.65; font-weight:900;"> | </span>
-            X ${fmt2(result.clicksX)} • Y ${fmt2(result.clicksY)}
-            <span style="opacity:0.70; font-weight:900;"> clicks</span>
+          <div style="padding:10px; border-radius:14px; border:1px solid rgba(255,255,255,0.10); background:rgba(255,255,255,0.04);">
+            <div style="color:rgba(255,255,255,0.65); font-weight:800; font-size:12px;">Units</div>
+            <div style="font-size:26px; font-weight:900;">${unitShown.toUpperCase()}</div>
           </div>
         </div>
 
-        <button id="secToggleBtn" class="btn" type="button"
-          style="height:34px; padding:0 12px; border-radius:12px; font-size:12px; white-space:nowrap;">
-          ${secExpanded ? "Less" : "More"}
-        </button>
-      </div>
-
-      <div id="secBody" style="margin-top:10px; display:${secExpanded ? "block" : "none"};">
-        <div style="display:grid; grid-template-columns: 1fr; gap:10px;">
-          <div style="padding:10px 12px; border-radius:14px; border:1px solid rgba(255,255,255,0.10); background:rgba(255,255,255,0.03);">
-            <div style="font-size:12px; opacity:0.70; font-weight:900;">Correction (Bull − POIB)</div>
-            <div style="margin-top:6px; font-size:13px; opacity:0.92;">
-              ΔX ${fmt2(dxDisp)} ${unitLabelLocal} • ΔY ${fmt2(dyDisp)} ${unitLabelLocal}
-            </div>
-          </div>
-
-          <div style="padding:10px 12px; border-radius:14px; border:1px solid rgba(255,255,255,0.10); background:rgba(255,255,255,0.03);">
-            <div style="font-size:12px; opacity:0.70; font-weight:900;">POIB Offset (POIB − Bull)</div>
-            <div style="margin-top:6px; font-size:13px; opacity:0.92;">
-              X ${fmt2(poibRelXDisp)} ${unitLabelLocal} • Y ${fmt2(poibRelYDisp)} ${unitLabelLocal}
-            </div>
-          </div>
-
-          <div style="padding:10px 12px; border-radius:14px; border:1px solid rgba(255,255,255,0.10); background:rgba(255,255,255,0.03);">
-            <div style="font-size:12px; opacity:0.70; font-weight:900;">Grid</div>
-            <div style="margin-top:6px; font-size:12px; opacity:0.72;">
-              Locked: ${result.gridLocked ? "YES" : "NO"} • ${fmt2(result.pxPerInchX)} px/in (X) • ${fmt2(result.pxPerInchY)} px/in (Y)
-            </div>
-          </div>
+        <div style="margin-top:10px; color:rgba(255,255,255,0.60); font-weight:800; font-size:12px;">
+          Next: we lock the 1" grid (px/in), compute POIB + correction in inches, then MOA + clicks with correct directions.
         </div>
       </div>
     `;
 
-    const toggleBtn = $("secToggleBtn");
-    toggleBtn.addEventListener("click", () => {
-      secExpanded = !secExpanded;
-      if (lastResult) renderSEC(lastResult);
-    });
-  }
-
-  function clearSEC() {
-    lastResult = null;
-    secPanel.innerHTML = "";
-  }
-
-  // ============================================================
-  // MOMA WIRING (LIVE + IN⇄M CONVERT)
-  // ============================================================
-
-  function syncMomaUIFromSession() {
-    const isMetric = session.unit === "m";
-
-    unitToggle.checked = isMetric;
-    unitLabel.textContent = isMetric ? "M" : "IN";
-    distanceUnit.textContent = isMetric ? "m" : "yd";
-
-    distanceInput.value = isMetric
-      ? fmt2(session.distanceYds / YARDS_PER_METER)
-      : fmt2(session.distanceYds);
-
-    clickInput.value = fmt2(session.clickMoa);
-  }
-
-  function normalizeAndApplyMomaFromUI() {
-    const wantsMetric = !!unitToggle.checked;
-
-    session.unit = wantsMetric ? "m" : "in";
-    unitLabel.textContent = wantsMetric ? "M" : "IN";
-    distanceUnit.textContent = wantsMetric ? "m" : "yd";
-
-    const distRaw = (distanceInput.value || "").trim();
-    const distFallback = wantsMetric ? (100 / YARDS_PER_METER) : 100;
-    const distNum = clampNum(distRaw, distFallback);
-
-    session.distanceYds = wantsMetric ? (distNum * YARDS_PER_METER) : distNum;
-    if (session.distanceYds <= 0) session.distanceYds = 100;
-
-    const clickRaw = (clickInput.value || "").trim();
-    const clickNum = clampNum(clickRaw, 0.25);
-    session.clickMoa = (clickNum > 0) ? clickNum : 0.25;
-
-    syncMomaUIFromSession();
-
-    if (bullPx && hitsPx.length > 0 && pxPerInchX && pxPerInchY && gridLocked) {
-      lastResult = computeResult();
-      renderSEC(lastResult);
-    }
-  }
-
-  function convertDistanceFieldOnUnitFlip() {
-    const currentlyMetric = session.unit === "m";
-    const nextMetric = !!unitToggle.checked;
-    if (currentlyMetric === nextMetric) return;
-
-    const raw = (distanceInput.value || "").trim();
-    let val = clampNum(raw, currentlyMetric ? (100 / YARDS_PER_METER) : 100);
-
-    if (!currentlyMetric && nextMetric) val = val / YARDS_PER_METER;
-    else if (currentlyMetric && !nextMetric) val = val * YARDS_PER_METER;
-
-    distanceInput.value = fmt2(val);
-    normalizeAndApplyMomaFromUI();
-  }
-
-  unitToggle.addEventListener("change", convertDistanceFieldOnUnitFlip);
-  momaApplyBtn.addEventListener("click", normalizeAndApplyMomaFromUI);
-
-  distanceInput.addEventListener("keydown", (e) => {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      normalizeAndApplyMomaFromUI();
-      distanceInput.blur();
-    }
-  });
-  clickInput.addEventListener("keydown", (e) => {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      normalizeAndApplyMomaFromUI();
-      clickInput.blur();
-    }
+    setInstruction("SEC rendered. Next brick: bull + 1-inch grid lock → real inches math.");
   });
 
-  distanceInput.addEventListener("blur", normalizeAndApplyMomaFromUI);
-  clickInput.addEventListener("blur", normalizeAndApplyMomaFromUI);
-
-  // ----- Upload handling
-  uploadBtn.addEventListener("click", () => elFile.click());
-
-  elFile.addEventListener("change", () => {
-    const f = elFile.files && elFile.files[0];
-    if (!f) return;
-
-    // NEW PHOTO: unlock grid + reset session + clear taps
-    unlockGrid();
-    gridDetectScheduled = false;
-
-    resetSessionToPilotDefaults();
-    syncMomaUIFromSession();
-
-    bullPx = null;
-    hitsPx = [];
-    renderDots();
-    clearSEC();
-    resetView();
-
-    if (objectUrl) URL.revokeObjectURL(objectUrl);
-    objectUrl = URL.createObjectURL(f);
-
-    img.onload = () => {
-      resetView();
-      setUi();              // fast UI first
-      scheduleGridDetect(); // heavy work later
-    };
-
-    img.src = objectUrl;
-    setUi();
-  });
-
-  // ----- Undo / Clear / Show
-  undoBtn.addEventListener("click", () => {
-    if (hitsPx.length > 0) hitsPx.pop();
-    else bullPx = null;
-
-    renderDots();
-    clearSEC();
-    setUi();
-  });
-
-  clearBtn.addEventListener("click", () => {
-    // CLEAR = cancel session: unlock grid + reset everything
-    bullPx = null;
-    hitsPx = [];
-    renderDots();
-    clearSEC();
-
-    unlockGrid();
-    gridDetectScheduled = false;
-
-    resetSessionToPilotDefaults();
-    syncMomaUIFromSession();
-
-    setUi();
-  });
-
-  showBtn.addEventListener("click", () => {
-    if (!(bullPx && hitsPx.length > 0 && pxPerInchX && pxPerInchY && gridLocked)) return;
-    lastResult = computeResult();
-    secExpanded = false;
-    renderSEC(lastResult);
-  });
-
-  // ----- Gestures (NO-JUMP TAPS)
-  ["gesturestart", "gesturechange", "gestureend"].forEach((evt) => {
-    viewport.addEventListener(evt, (e) => e.preventDefault(), { passive: false });
-  });
-
-  let mode = "none"; // "tap" | "pan" | "pinch"
-  let panStart = null;
-  let pinchStart = null;
-
-  function tDist(t1, t2) {
-    const dx = t1.clientX - t2.clientX;
-    const dy = t1.clientY - t2.clientY;
-    return Math.hypot(dx, dy);
-  }
-  function tMid(t1, t2) {
-    const r = viewport.getBoundingClientRect();
-    return {
-      x: ((t1.clientX + t2.clientX) / 2) - r.left,
-      y: ((t1.clientY + t2.clientY) / 2) - r.top,
-      r
-    };
-  }
-
-  const TAP_SLOP = 10;
-  const PAN_START = 14;
-  let downPt = null;
-  let lastTapTime = 0;
-
-  function clampPan() {
-    const r = viewport.getBoundingClientRect();
-    const slack = 120;
-
-    const baseW = r.width;
-    const baseH = r.height;
-
-    const minTx = -(baseW * (scale - 1)) - slack;
-    const maxTx = slack;
-    const minTy = -(baseH * (scale - 1)) - slack;
-    const maxTy = slack;
-
-    tx = clamp(tx, minTx, maxTx);
-    ty = clamp(ty, minTy, maxTy);
-  }
-
-  viewport.addEventListener("touchstart", (e) => {
-    if (!img.src) return;
-    e.preventDefault();
-
-    if (e.touches.length === 1) {
-      const t = e.touches[0];
-      const pt = getViewportPointFromClient(t.clientX, t.clientY);
-      mode = "tap";
-      downPt = pt;
-      panStart = { x: pt.x, y: pt.y, tx, ty };
-      pinchStart = null;
-      return;
-    }
-
-    if (e.touches.length === 2) {
-      mode = "pinch";
-      const t1 = e.touches[0];
-      const t2 = e.touches[1];
-      const m = tMid(t1, t2);
-
-      pinchStart = {
-        dist: tDist(t1, t2),
-        midX: m.x,
-        midY: m.y,
-        scale,
-        tx,
-        ty
-      };
-
-      downPt = null;
-      panStart = null;
-    }
-  }, { passive: false });
-
-  viewport.addEventListener("touchmove", (e) => {
-    if (!img.src) return;
-    e.preventDefault();
-
-    if (mode === "pinch" && e.touches.length === 2 && pinchStart) {
-      const t1 = e.touches[0];
-      const t2 = e.touches[1];
-      const m = tMid(t1, t2);
-      const d = tDist(t1, t2);
-
-      const nextScale = clamp(pinchStart.scale * (d / pinchStart.dist), MIN_SCALE, MAX_SCALE);
-
-      const imgLocalAtStartMid = {
-        x: (pinchStart.midX - pinchStart.tx) / pinchStart.scale,
-        y: (pinchStart.midY - pinchStart.ty) / pinchStart.scale
-      };
-
-      scale = nextScale;
-      tx = m.x - imgLocalAtStartMid.x * scale;
-      ty = m.y - imgLocalAtStartMid.y * scale;
-
-      clampPan();
-      applyTransform();
-      return;
-    }
-
-    if (e.touches.length === 1 && panStart) {
-      const t = e.touches[0];
-      const pt = getViewportPointFromClient(t.clientX, t.clientY);
-
-      const moved = downPt ? Math.hypot(pt.x - downPt.x, pt.y - downPt.y) : 999;
-      if (mode === "tap" && moved >= PAN_START) mode = "pan";
-
-      if (mode === "pan") {
-        tx = panStart.tx + (pt.x - panStart.x);
-        ty = panStart.ty + (pt.y - panStart.y);
-        clampPan();
-        applyTransform();
-      }
-    }
-  }, { passive: false });
-
-  viewport.addEventListener("touchend", (e) => {
-    if (!img.src) return;
-    e.preventDefault();
-
-    if (mode === "tap" && e.changedTouches.length === 1 && downPt) {
-      const t = e.changedTouches[0];
-      const upPt = getViewportPointFromClient(t.clientX, t.clientY);
-      const moved = Math.hypot(upPt.x - downPt.x, upPt.y - downPt.y);
-
-      if (moved <= TAP_SLOP) {
-        const now = Date.now();
-        if (now - lastTapTime < 300) {
-          resetView();
-          lastTapTime = 0;
-        } else {
-          lastTapTime = now;
-
-          const imgLocal = viewportToImageLocal(upPt);
-          if (!Number.isFinite(imgLocal.x) || !Number.isFinite(imgLocal.y)) return;
-
-          if (!bullPx) bullPx = imgLocal;
-          else hitsPx.push(imgLocal);
-
-          renderDots();
-          clearSEC();
-          setUi();
-
-          // If grid isn't locked yet, make sure detection is scheduled
-          if (!gridLocked) scheduleGridDetect();
-        }
-      }
-    }
-
-    if (e.touches.length === 0) {
-      mode = "none";
-      panStart = null;
-      pinchStart = null;
-      downPt = null;
-      return;
-    }
-
-    if (e.touches.length === 1) {
-      const t = e.touches[0];
-      const pt = getViewportPointFromClient(t.clientX, t.clientY);
-      mode = "tap";
-      downPt = pt;
-      panStart = { x: pt.x, y: pt.y, tx, ty };
-      pinchStart = null;
-    }
-  }, { passive: false });
-
-  // ----- Init
-  wireVendor();
-  resetSessionToPilotDefaults();
-  syncMomaUIFromSession();
-  setUi();
+  // Initial instruction
+  setInstruction("Upload your Baker 23×35 1-inch grid target photo to begin.");
 })();
-
-Reply Next brick and tell me which “slow” you still feel most:
-	1.	upload/load, 2) pinch/pan, or 3) tapping hits.
