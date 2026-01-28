@@ -1,14 +1,3 @@
-Perfect screenshot — JS READY is showing, so scripts are running.
-
-If JS runs but the photo picker still doesn’t open, that’s a classic iOS/Safari thing: sometimes input.click() on a hidden file input gets blocked.
-
-✅ The most reliable fix on iOS is NOT JavaScript for opening the picker.
-Instead, use a <label for="photoInput"> — iOS treats that as a true user gesture every time.
-
-docs/index.html (FULL REPLACEMENT) — iOS-SAFE UPLOAD (NO JS NEEDED TO OPEN PICKER)
-
-Paste this over your entire docs/index.html:
-
 <!doctype html>
 <html lang="en">
 <head>
@@ -292,10 +281,3 @@ Paste this over your entire docs/index.html:
   </main>
 </body>
 </html>
-
-What you should see after this deploy
-	•	Tapping Upload Target should open the photo picker every time (because it’s a label → input)
-	•	If it still doesn’t open after this, the issue is not code — it’s iOS permissions / content restrictions / or you’re not on the latest deployed build
-
-When you test it, tell me:
-	•	Does the picker open now? Yes/No
