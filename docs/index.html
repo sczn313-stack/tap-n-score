@@ -1,4 +1,4 @@
-<!-- docs/index.html (FULL REPLACEMENT) — BRICK 2A (MOMA top-right + remove Tap Precision toggle) -->
+<!-- docs/index.html (FULL REPLACEMENT) — BRICK 8 (Two Baker buttons: Catalog + Product) -->
 <!doctype html>
 <html lang="en">
 <head>
@@ -8,7 +8,7 @@
   <meta name="theme-color" content="#000000" />
   <title>Tap-n-Score™</title>
 
-  <link rel="stylesheet" href="./styles.css?v=pilot-moma-1" />
+  <link rel="stylesheet" href="./styles.css?v=pilot-baker-2btn-1" />
 </head>
 
 <body>
@@ -21,36 +21,49 @@
           <span class="brandTap">TAP</span><span class="brandN">-N-</span><span class="brandScore">SCORE</span><span class="brandTm">™</span>
         </div>
 
-        <!-- MOMA block (TOP RIGHT ONLY) -->
-        <div id="momaBlock" class="momaBlock" aria-label="MOMA settings">
-          <div class="momaTop">
-            <div class="momaTitle">MOMA</div>
+        <!-- Right side: MOMA + Baker buttons -->
+        <div class="headerRight">
 
-            <label class="momaToggle" title="Toggle Inches / Meters">
-              <input id="unitToggle" type="checkbox" />
-              <span class="momaToggleTrack"></span>
-              <span id="unitLabel" class="momaToggleText">IN</span>
-            </label>
+          <!-- MOMA block (TOP RIGHT ONLY) -->
+          <div id="momaBlock" class="momaBlock" aria-label="MOMA settings">
+            <div class="momaTop">
+              <div class="momaTitle">MOMA</div>
+
+              <label class="momaToggle" title="Toggle Inches / Meters">
+                <input id="unitToggle" type="checkbox" />
+                <span class="momaToggleTrack"></span>
+                <span id="unitLabel" class="momaToggleText">IN</span>
+              </label>
+            </div>
+
+            <div class="momaFields">
+              <label class="momaField">
+                <span class="momaLabel">Distance</span>
+                <input id="distanceInput" class="momaInput" inputmode="decimal" type="text" value="100" />
+                <span id="distanceUnit" class="momaUnit">yd</span>
+              </label>
+
+              <label class="momaField">
+                <span class="momaLabel">Click</span>
+                <input id="clickInput" class="momaInput" inputmode="decimal" type="text" value="0.25" />
+                <span class="momaUnit">MOA</span>
+              </label>
+
+              <button id="momaApplyBtn" class="momaApplyBtn" type="button">Update</button>
+            </div>
           </div>
 
-          <div class="momaFields">
-            <label class="momaField">
-              <span class="momaLabel">Distance</span>
-              <input id="distanceInput" class="momaInput" inputmode="decimal" type="text" value="100" />
-              <span id="distanceUnit" class="momaUnit">yd</span>
-            </label>
-
-            <label class="momaField">
-              <span class="momaLabel">Click</span>
-              <input id="clickInput" class="momaInput" inputmode="decimal" type="text" value="0.25" />
-              <span class="momaUnit">MOA</span>
-            </label>
-
-            <button id="momaApplyBtn" class="momaApplyBtn" type="button">Update</button>
+          <!-- Baker buttons (working links) -->
+          <div class="bakerBtns" aria-label="Baker links">
+            <a id="bakerCatalogBtn" class="bakerBtn" href="#" target="_blank" rel="noopener">
+              Baker Catalog
+            </a>
+            <a id="bakerProductBtn" class="bakerBtn" href="#" target="_blank" rel="noopener">
+              Baker Product
+            </a>
           </div>
+
         </div>
-
-        <a id="vendorLink" class="vendorLink" href="#" target="_blank" rel="noopener">Vendor</a>
       </div>
 
       <p id="instructionLine" class="instruction">
@@ -60,7 +73,6 @@
 
     <!-- Controls -->
     <section class="panel" aria-label="Controls">
-      <!-- Hidden file input + visible button -->
       <input id="photoInput" type="file" accept="image/*" hidden />
       <div class="controlsRow">
         <button id="uploadBtn" class="btn btnPrimary" type="button">Upload Target Photo</button>
@@ -90,13 +102,11 @@
       </div>
     </section>
 
-    <!-- SEC (your JS controls visibility/size; compact UI happens in CSS/JS bricks) -->
-    <section id="secPanel" class="secPanel" aria-label="Shooter Experience Card">
-      <!-- JS will populate this panel -->
-    </section>
+    <!-- SEC -->
+    <section id="secPanel" class="secPanel" aria-label="Shooter Experience Card"></section>
 
   </main>
 
-  <script src="./index.js?v=pilot-moma-1"></script>
+  <script src="./index.js?v=pilot-baker-2btn-1"></script>
 </body>
 </html>
