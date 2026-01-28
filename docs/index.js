@@ -1,9 +1,10 @@
 /* ============================================================
-   docs/index.js (FULL REPLACEMENT) — TAP LOUPE + PRECISION MODE
-   Default: Tap Precision ON
-   - 1 finger = taps only (bull + holes)
-   - 2 fingers = pan + pinch zoom
-   - Loupe magnifier appears while tapping for precision placement
+   docs/index.js (FULL REPLACEMENT) — TAP FEEDBACK (TOAST + HAPTIC)
+   Includes:
+   - Tap Precision ON default (1 finger taps; 2 fingers pan/zoom)
+   - Loupe magnifier while tapping
+   - Micro toast feedback on key actions
+   - Optional light haptic tick on iOS
    - Baker CTAs with locked tags: catalog, product
 ============================================================ */
 
@@ -18,6 +19,9 @@
 
   const loupe = $("loupe");
   const loupeCtx = loupe.getContext("2d");
+
+  const toastEl = $("toast");
+  let toastTimer = null;
 
   const tapCountEl = $("tapCount");
   const undoBtn = $("undoBtn");
@@ -56,6 +60,29 @@
     return { vendor, dest };
   }
 
+  // ------------ Toast + Haptic ------------
+  function hapticLight() {
+    // Safe optional haptic: some browsers ignore it, that's fine.
+    try {
+      if ("vibrate" in navigator) navigator.vibrate(12);
+    } catch {}
+  }
+
+  function showToast(msg) {
+    if (!toastEl) return;
+    if (toastTimer) clearTimeout(toastTimer);
+
+    toastEl.textContent = msg;
+    toastEl.classList.remove("show"); // restart animation
+    // force reflow
+    void toastEl.offsetWidth;
+    toastEl.classList.add("show");
+
+    toastTimer = setTimeout(() => {
+      toastEl.classList.remove("show");
+    }, 980);
+  }
+
   // Image URL
   let objectUrl = null;
 
@@ -83,6 +110,7 @@
     tapPrecisionToggle.checked = tapPrecisionOn;
     tapPrecisionState.textContent = tapPrecisionOn ? "ON" : "OFF";
     hideLoupe();
+    showToast(tapPrecisionOn ? "Tap Precision ON ✅" : "Tap Precision OFF ✅");
     setUi();
   }
 
@@ -117,6 +145,7 @@
   function resetView() {
     scale = 1; tx = 0; ty = 0;
     applyTransform();
+    showToast("View reset ✅");
   }
 
   function showOutput(title, html) {
@@ -161,16 +190,23 @@
     hideOutput();
     hideLoupe();
     setUi();
+    hapticLight();
+    showToast("Cleared ✅");
   }
 
   function undo() {
-    if (hits.length > 0) hits.pop();
-    else if (bull) bull = null;
-
+    if (hits.length > 0) {
+      hits.pop();
+      showToast("Hit removed ✅");
+    } else if (bull) {
+      bull = null;
+      showToast("Bull cleared ✅");
+    }
     renderDots();
     hideOutput();
     hideLoupe();
     setUi();
+    hapticLight();
   }
 
   function getViewportPointFromClient(clientX, clientY) {
@@ -254,32 +290,25 @@
   // ---------- Loupe ----------
   const LOUPE_W = 140;
   const LOUPE_H = 140;
-  const LOUPE_ZOOM = 3.0;         // magnification factor
-  const LOUPE_SRC = 50;           // source sample radius in image pixels (before zoom)
+  const LOUPE_SRC = 50;
 
-  function hideLoupe() {
-    loupe.style.display = "none";
-  }
+  function hideLoupe() { loupe.style.display = "none"; }
 
   function drawLoupeAt(viewPt) {
     if (!img.src) return;
-    if (!tapPrecisionOn) return; // loupe only in precision mode
+    if (!tapPrecisionOn) return;
     if (!img.naturalWidth || !img.naturalHeight) return;
 
-    // Convert to image-local coords
     const imgLocal = viewportToImageLocal(viewPt);
 
-    // Source crop in image pixel space
     const sx = Math.round(imgLocal.x - LOUPE_SRC);
     const sy = Math.round(imgLocal.y - LOUPE_SRC);
     const sw = LOUPE_SRC * 2;
     const sh = LOUPE_SRC * 2;
 
-    // Clamp crop
     const csx = Math.max(0, Math.min(img.naturalWidth - sw, sx));
     const csy = Math.max(0, Math.min(img.naturalHeight - sh, sy));
 
-    // Position loupe near finger (offset), clamp inside viewport
     const r = viewPt.r;
     let lx = viewPt.x + 18;
     let ly = viewPt.y - (LOUPE_H + 18);
@@ -291,28 +320,20 @@
     loupe.style.top = `${ly}px`;
     loupe.style.display = "block";
 
-    // Draw zoomed sample
     loupeCtx.clearRect(0, 0, LOUPE_W, LOUPE_H);
     loupeCtx.imageSmoothingEnabled = false;
 
-    loupeCtx.drawImage(
-      img,
-      csx, csy, sw, sh,
-      0, 0, LOUPE_W, LOUPE_H
-    );
+    loupeCtx.drawImage(img, csx, csy, sw, sh, 0, 0, LOUPE_W, LOUPE_H);
 
-    // Crosshair
     loupeCtx.beginPath();
     loupeCtx.strokeStyle = "rgba(255,255,255,0.85)";
     loupeCtx.lineWidth = 1;
-
     loupeCtx.moveTo(LOUPE_W / 2, 8);
     loupeCtx.lineTo(LOUPE_W / 2, LOUPE_H - 8);
     loupeCtx.moveTo(8, LOUPE_H / 2);
     loupeCtx.lineTo(LOUPE_W - 8, LOUPE_H / 2);
     loupeCtx.stroke();
 
-    // Center dot
     loupeCtx.beginPath();
     loupeCtx.fillStyle = "rgba(255,43,43,0.9)";
     loupeCtx.arc(LOUPE_W / 2, LOUPE_H / 2, 2.2, 0, Math.PI * 2);
@@ -328,22 +349,28 @@
     objectUrl = URL.createObjectURL(f);
 
     img.onload = () => {
-      resetView();
-      clearAll();
+      // reset view + state
+      scale = 1; tx = 0; ty = 0;
+      applyTransform();
 
-      // dots layer uses image-local coordinates (natural size)
+      bull = null;
+      hits = [];
+      dotsLayer.innerHTML = "";
+      hideOutput();
+      hideLoupe();
+
       dotsLayer.style.width = img.naturalWidth + "px";
       dotsLayer.style.height = img.naturalHeight + "px";
 
-      applyTransform();
       setUi();
+      showToast("Photo loaded ✅");
     };
 
     img.src = objectUrl;
     setUi();
   });
 
-  // iOS: stop gesture hijack inside viewport
+  // iOS: stop gesture hijack
   ["gesturestart", "gesturechange", "gestureend"].forEach((evt) => {
     viewport.addEventListener(evt, (e) => e.preventDefault(), { passive: false });
   });
@@ -358,7 +385,6 @@
     const dy = t1.clientY - t2.clientY;
     return Math.hypot(dx, dy);
   }
-
   function tMid(t1, t2) {
     const r = viewport.getBoundingClientRect();
     return {
@@ -383,7 +409,6 @@
       downWasPinch = false;
       downPt = pt;
 
-      // Precision ON = tap only (no pan)
       if (tapPrecisionOn) {
         mode = "tap";
         panStart = null;
@@ -424,7 +449,6 @@
     e.preventDefault();
 
     if (mode === "tap" && e.touches.length === 1 && tapPrecisionOn) {
-      // Update loupe as finger slides slightly
       const t = e.touches[0];
       const pt = getViewportPointFromClient(t.clientX, t.clientY);
       drawLoupeAt(pt);
@@ -434,10 +458,8 @@
     if (mode === "pan" && e.touches.length === 1 && panStart) {
       const t = e.touches[0];
       const pt = getViewportPointFromClient(t.clientX, t.clientY);
-
       tx = panStart.tx + (pt.x - panStart.x);
       ty = panStart.ty + (pt.y - panStart.y);
-
       clampPan();
       applyTransform();
       return;
@@ -471,7 +493,6 @@
     if (!img.src) return;
     e.preventDefault();
 
-    // Single-finger tap handling (place dot + double tap reset)
     if (!downWasPinch && e.changedTouches.length === 1 && downPt) {
       const t = e.changedTouches[0];
       const upPt = getViewportPointFromClient(t.clientX, t.clientY);
@@ -480,7 +501,6 @@
       if (moved <= TAP_SLOP) {
         const now = Date.now();
 
-        // Double tap reset
         if (now - lastTapTime < 300) {
           resetView();
           lastTapTime = 0;
@@ -489,8 +509,14 @@
 
           const imgLocal = viewportToImageLocal(upPt);
           if (Number.isFinite(imgLocal.x) && Number.isFinite(imgLocal.y)) {
-            if (!bull) bull = imgLocal;
-            else hits.push(imgLocal);
+            if (!bull) {
+              bull = imgLocal;
+              showToast("Bull set ✅");
+            } else {
+              hits.push(imgLocal);
+              showToast("Hit added ✅");
+            }
+            hapticLight();
 
             renderDots();
             hideOutput();
@@ -503,7 +529,6 @@
 
     hideLoupe();
 
-    // Transition mode based on remaining touches
     if (e.touches.length === 0) {
       mode = "none";
       panStart = null;
@@ -513,7 +538,6 @@
     } else if (e.touches.length === 1) {
       const t = e.touches[0];
       const pt = getViewportPointFromClient(t.clientX, t.clientY);
-
       downWasPinch = false;
       downPt = pt;
 
@@ -544,6 +568,8 @@
        Bull anchored + <b>${hits.length}</b> hits recorded.<br/>
        You can Undo/Clear to adjust, or upload a new photo.`
     );
+    showToast("Results ready ✅");
+    hapticLight();
     setUi();
   });
 
