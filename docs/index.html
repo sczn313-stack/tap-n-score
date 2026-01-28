@@ -1,12 +1,16 @@
-Yep — when the Upload Target button “does nothing,” it’s almost always one of these:
-	1.	The button’s id in HTML doesn’t match what JS is listening to (uploadBtn)
-	2.	The button is inside a <form> and is submitting/refreshing (missing type="button")
-	3.	The hidden file input (photoInput) is missing, disabled, or covered
-	4.	A top-layer element is intercepting taps (z-index / overlay)
+Copy that — “nothing happened” means one of only two things:
+	1.	The click handler isn’t firing (button is covered / not actually clickable)
+or
+	2.	Your JS isn’t loading/running at all (most common)
 
-Since you want full replacements only, here’s a known-good docs/index.html that matches the JS you’re running (the one with uploadBtn and photoInput).
+So we’re going to force a guaranteed test that works even if index.js is dead.
 
-docs/index.html (FULL REPLACEMENT)
+✅ docs/index.html (FULL REPLACEMENT) — HARD FAILSAFE UPLOAD
+
+This version does 3 things:
+	•	Makes the Upload button un-coverable (z-index + pointer events)
+	•	Adds an inline click handler (so it works even if external JS fails)
+	•	Shows a “JS READY” badge if the inline script runs (proof the page is executing scripts)
 
 Paste this over your entire docs/index.html:
 
@@ -29,7 +33,6 @@ Paste this over your entire docs/index.html:
       --muted: rgba(255,255,255,0.70);
       --muted2: rgba(255,255,255,0.55);
       --btn: rgba(255,255,255,0.10);
-      --btn2: rgba(255,255,255,0.14);
       --shadow: 0 18px 45px rgba(0,0,0,0.55);
       --r: 18px;
     }
@@ -42,45 +45,18 @@ Paste this over your entire docs/index.html:
       font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial;
     }
 
-    .page{
-      max-width: 980px;
-      margin: 0 auto;
-      padding: 14px 14px 40px;
-    }
+    .page{ max-width: 980px; margin: 0 auto; padding: 14px 14px 40px; }
 
     .topbar{
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap:12px;
-      margin-bottom:12px;
+      display:flex; align-items:center; justify-content:space-between;
+      gap:12px; margin-bottom:12px;
     }
 
-    .brand{
-      display:flex;
-      align-items:baseline;
-      gap:10px;
-      flex-wrap:wrap;
-    }
-    .brand .name{
-      font-weight:900;
-      letter-spacing:0.4px;
-      font-size:18px;
-      white-space:nowrap;
-    }
-    .brand .sub{
-      font-size:12px;
-      color:var(--muted2);
-      font-weight:800;
-      letter-spacing:0.3px;
-    }
+    .brand{ display:flex; align-items:baseline; gap:10px; flex-wrap:wrap; }
+    .brand .name{ font-weight:900; letter-spacing:0.4px; font-size:18px; white-space:nowrap; }
+    .brand .sub{ font-size:12px; color:var(--muted2); font-weight:800; letter-spacing:0.3px; }
 
-    .btnRow{
-      display:flex;
-      align-items:center;
-      gap:10px;
-      flex-wrap:wrap;
-    }
+    .btnRow{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
 
     .btn{
       appearance:none;
@@ -98,18 +74,16 @@ Paste this over your entire docs/index.html:
       align-items:center;
       justify-content:center;
       min-height: 40px;
-    }
-    .btn:active{ transform: translateY(1px); }
-    .btn.secondary{
-      background: var(--panel2);
-      box-shadow:none;
+
+      /* FORCE clickability */
+      position: relative;
+      z-index: 9999;
+      pointer-events: auto;
     }
 
-    .grid{
-      display:grid;
-      grid-template-columns: 1fr;
-      gap:12px;
-    }
+    .btn.secondary{ background: var(--panel2); box-shadow:none; }
+
+    .grid{ display:grid; grid-template-columns: 1fr; gap:12px; }
 
     .card{
       background: var(--panel);
@@ -117,38 +91,26 @@ Paste this over your entire docs/index.html:
       border-radius: var(--r);
       padding: 12px;
       box-shadow: var(--shadow);
+      position: relative;
     }
 
     .moma{
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap:10px;
-      flex-wrap:wrap;
+      display:flex; align-items:center; justify-content:space-between;
+      gap:10px; flex-wrap:wrap;
     }
 
-    .momaLeft{
-      display:flex;
-      align-items:center;
-      gap:10px;
-      flex-wrap:wrap;
-    }
+    .momaLeft{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
 
     .field{
-      display:flex;
-      align-items:center;
-      gap:8px;
+      display:flex; align-items:center; gap:8px;
       padding: 8px 10px;
       border: 1px solid var(--line);
       border-radius: 14px;
       background: rgba(0,0,0,0.25);
     }
     .field label{
-      font-size: 12px;
-      color: var(--muted);
-      font-weight: 900;
-      letter-spacing: 0.2px;
-      white-space:nowrap;
+      font-size: 12px; color: var(--muted);
+      font-weight: 900; letter-spacing: 0.2px; white-space:nowrap;
     }
     .field input{
       width: 84px;
@@ -161,41 +123,22 @@ Paste this over your entire docs/index.html:
       outline: none;
     }
     .field .unit{
-      font-size: 12px;
-      color: var(--muted2);
-      font-weight: 900;
-      min-width: 18px;
-      text-align:center;
+      font-size: 12px; color: var(--muted2);
+      font-weight: 900; min-width: 18px; text-align:center;
     }
 
     .toggle{
-      display:flex;
-      align-items:center;
-      gap:10px;
+      display:flex; align-items:center; gap:10px;
       padding: 8px 10px;
       border: 1px solid var(--line);
       border-radius: 14px;
       background: rgba(0,0,0,0.25);
     }
-    .toggle .tag{
-      font-size:12px;
-      color: var(--muted);
-      font-weight: 900;
-      letter-spacing:0.2px;
-    }
-    .toggle .pill{
-      display:flex;
-      align-items:center;
-      gap:8px;
-    }
+    .toggle .tag{ font-size:12px; color: var(--muted); font-weight: 900; letter-spacing:0.2px; }
+    .toggle .pill{ display:flex; align-items:center; gap:8px; }
     .toggle input{ width: 44px; height: 26px; }
 
-    .instruction{
-      font-size: 13px;
-      color: var(--muted);
-      font-weight: 800;
-      letter-spacing: 0.2px;
-    }
+    .instruction{ font-size: 13px; color: var(--muted); font-weight: 800; letter-spacing: 0.2px; }
 
     /* Target viewport */
     #targetWrap{
@@ -206,7 +149,7 @@ Paste this over your entire docs/index.html:
       border-radius: 18px;
       border: 1px solid var(--line);
       background: rgba(255,255,255,0.03);
-      touch-action: none; /* we handle gestures */
+      touch-action: none;
     }
 
     #targetImg{
@@ -230,40 +173,41 @@ Paste this over your entire docs/index.html:
     }
 
     .controls{
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap:10px;
-      flex-wrap:wrap;
-      margin-top:10px;
+      display:flex; align-items:center; justify-content:space-between;
+      gap:10px; flex-wrap:wrap; margin-top:10px;
     }
-    .controls .left,
-    .controls .right{
-      display:flex;
-      gap:10px;
-      flex-wrap:wrap;
-      align-items:center;
+    .controls .left, .controls .right{
+      display:flex; gap:10px; flex-wrap:wrap; align-items:center;
     }
+    .mini{ font-size: 12px; color: var(--muted2); font-weight: 900; letter-spacing: 0.2px; }
 
-    .mini{
-      font-size: 12px;
-      color: var(--muted2);
-      font-weight: 900;
-      letter-spacing: 0.2px;
-    }
+    .sec{ margin-top:12px; }
 
-    .sec{
-      margin-top:12px;
-    }
-
-    /* IMPORTANT: input must be present but hidden */
+    /* Hidden input: NOT display:none (iOS can be picky) */
     #photoInput{
       position:absolute;
       left:-9999px;
       width:1px;
       height:1px;
-      opacity:0;
+      opacity:0.001;
       pointer-events:none;
+    }
+
+    /* Debug badge */
+    #jsBadge{
+      position: fixed;
+      right: 10px;
+      bottom: 10px;
+      padding: 8px 10px;
+      border-radius: 12px;
+      background: rgba(0,140,0,0.85);
+      color: #fff;
+      font-weight: 900;
+      font-size: 12px;
+      letter-spacing: 0.2px;
+      box-shadow: 0 18px 45px rgba(0,0,0,0.55);
+      z-index: 999999;
+      display: none;
     }
   </style>
 </head>
@@ -278,12 +222,8 @@ Paste this over your entire docs/index.html:
       </div>
 
       <div class="btnRow">
-        <a id="bakerCatalogBtn" class="btn secondary" href="#" target="_blank" rel="noopener">
-          Baker Catalog
-        </a>
-        <a id="bakerProductBtn" class="btn secondary" href="#" target="_blank" rel="noopener">
-          Baker Product
-        </a>
+        <a id="bakerCatalogBtn" class="btn secondary" href="#" target="_blank" rel="noopener">Baker Catalog</a>
+        <a id="bakerProductBtn" class="btn secondary" href="#" target="_blank" rel="noopener">Baker Product</a>
       </div>
     </div>
 
@@ -292,11 +232,14 @@ Paste this over your entire docs/index.html:
 
     <div class="grid">
 
-      <!-- MOMA / distance block (top-right requirement satisfied by layout; it stays in this top card) -->
       <div class="card">
         <div class="moma">
           <div class="momaLeft">
-            <button id="uploadBtn" class="btn" type="button">Upload Target</button>
+            <!-- FAILSAFE: inline onclick opens picker even if external JS fails -->
+            <button id="uploadBtn" class="btn" type="button"
+              onclick="(function(){var i=document.getElementById('photoInput'); if(i){ i.click(); } })()">
+              Upload Target
+            </button>
 
             <div class="toggle">
               <div class="tag">Units</div>
@@ -327,7 +270,6 @@ Paste this over your entire docs/index.html:
         </div>
       </div>
 
-      <!-- Target viewport -->
       <div class="card">
         <div id="targetWrap" aria-label="Target viewport">
           <img id="targetImg" alt="Target" />
@@ -348,28 +290,44 @@ Paste this over your entire docs/index.html:
         <div class="sec" id="secPanel"></div>
       </div>
 
-      <!-- legacy (safe to keep hidden; JS hides it anyway) -->
       <a id="vendorLink" href="#" style="display:none">Vendor</a>
 
     </div>
 
-    <script src="./index.js?v=baker_pilot_12"></script>
+    <div id="jsBadge">JS READY</div>
+
+    <!-- Inline boot check + backup wiring (runs even if index.js fails) -->
+    <script>
+      (function(){
+        var badge = document.getElementById('jsBadge');
+        if (badge) badge.style.display = 'block';
+
+        // backup: also wire click via JS (in case inline onclick removed later)
+        var btn = document.getElementById('uploadBtn');
+        var input = document.getElementById('photoInput');
+
+        if (btn && input) {
+          btn.addEventListener('click', function(){
+            // MUST be direct user gesture (no setTimeout) for iOS
+            input.click();
+          }, { passive: true });
+        }
+      })();
+    </script>
+
+    <!-- Your main app JS (keep this) -->
+    <script src="./index.js?v=baker_pilot_12b"></script>
   </main>
 </body>
 </html>
 
-Why this fixes Upload immediately
-	•	The button is exactly id="uploadBtn" and is type="button" (no form submit weirdness)
-	•	The file input is present as id="photoInput" and is not display:none (iOS can be picky); it’s off-screen instead
-	•	No overlay steals the click
+What this tells us immediately
 
-If it still doesn’t work after this, it’s 99% one of these:
-	•	You’re not actually editing the file the site is serving (wrong folder / wrong deploy path)
-	•	index.js isn’t loading (wrong script path or caching)
+After you deploy this:
+	•	If you do NOT see the green “JS READY” badge → your page is not running scripts (or you aren’t on the updated deploy)
+	•	If you see JS READY but Upload still does nothing → something is blocking the file picker at the browser/OS level (rare) or you’re not actually tapping the real button (overlay)
+	•	If Upload now works → your prior issue was JS not loading / ID mismatch / button not type=button / overlay
 
-If you want, tell me what happens when you tap Upload:
-	•	Nothing at all (no picker)
-	•	Picker opens but selection doesn’t stick
-	•	Picker opens and selects but image doesn’t load
-
-…and I’ll do the next full replacement to target that exact failure mode.
+Send me exactly which outcome you get:
+	1.	JS READY badge shows (yes/no)
+	2.	When you tap Upload: picker opens (yes/no)
