@@ -8,7 +8,7 @@
   <meta name="theme-color" content="#000000" />
   <title>Tap-n-Score™</title>
 
-  <link rel="stylesheet" href="./styles.css?v=pilot-halo-1" />
+  <link rel="stylesheet" href="./styles.css?v=baker-gridlock-1" />
 </head>
 
 <body>
@@ -29,7 +29,7 @@
       </div>
 
       <p id="instructionLine" class="instruction">
-        Upload your target photo. Tap bull once, then tap bullet holes. Use TWO fingers to zoom/pan.
+        Upload your Baker 23×35 1″ grid target photo. Tap bull once, then tap bullet holes.
       </p>
     </header>
 
@@ -52,6 +52,10 @@
           Taps: <span id="tapCount">0</span>
         </div>
 
+        <div id="gridLockPill" class="pill gridPill">
+          Grid Lock: <span id="gridLockStatus">—</span>
+        </div>
+
         <button id="undoBtn" class="btn" type="button" disabled>Undo</button>
         <button id="clearBtn" class="btn" type="button" disabled>Clear</button>
         <button id="showResultsBtn" class="btn primary" type="button" disabled>Show Results</button>
@@ -68,7 +72,7 @@
       <div id="targetViewport" class="viewport" aria-label="Target viewport">
         <img id="targetImg" class="targetImg" alt="Target" />
 
-        <!-- Halo layer (not transformed; always in viewport coords) -->
+        <!-- Halo layer (viewport coords) -->
         <div id="haloLayer" class="haloLayer" aria-hidden="true"></div>
 
         <!-- Dots (transformed with image) -->
@@ -82,19 +86,62 @@
       </div>
     </section>
 
+    <!-- SEC -->
     <section class="output">
-      <div id="outputBox" class="outputBox hidden">
-        <div class="outputTitle" id="outputTitle">Pilot</div>
-        <div id="outputText" class="outputText"></div>
+      <div id="outputBox" class="sec hidden" aria-label="Shooter Experience Card">
+        <div class="secTop">
+          <div class="secTitle">Shooter Experience Card</div>
+          <div class="secMeta">
+            <span class="secMetaPill">True MOA</span>
+            <span class="secMetaPill">50 yds</span>
+            <span class="secMetaPill">0.25 MOA/click</span>
+          </div>
+        </div>
+
+        <div class="secGrid">
+          <div class="secBlock">
+            <div class="secLabel">Verified Hits</div>
+            <div class="secValue" id="secHits">—</div>
+          </div>
+
+          <div class="secBlock">
+            <div class="secLabel">POIB (in)</div>
+            <div class="secValue" id="secPoib">—</div>
+          </div>
+
+          <div class="secBlock">
+            <div class="secLabel">Correction (Bull − POIB) (in)</div>
+            <div class="secValue" id="secDelta">—</div>
+          </div>
+
+          <div class="secBlock">
+            <div class="secLabel">Directions</div>
+            <div class="secValue" id="secDir">—</div>
+          </div>
+
+          <div class="secBlock">
+            <div class="secLabel">MOA</div>
+            <div class="secValue" id="secMoa">—</div>
+          </div>
+
+          <div class="secBlock">
+            <div class="secLabel">Clicks</div>
+            <div class="secValue" id="secClicks">—</div>
+          </div>
+        </div>
+
+        <div class="secNote" id="secNote">
+          Grid Lock must be READY to produce true-inch SEC outputs.
+        </div>
       </div>
     </section>
 
     <footer class="footer">
-      <span class="muted">Pilot build — Tap Precision + Loupe + Toast + Tap Numbers + Tap Halo.</span>
+      <span class="muted">Pilot build — Baker 23×35 1″ grid — Grid Lock inches + SEC.</span>
     </footer>
 
   </main>
 
-  <script src="./index.js?v=pilot-halo-1"></script>
+  <script src="./index.js?v=baker-gridlock-1"></script>
 </body>
 </html>
