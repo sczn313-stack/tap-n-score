@@ -1,371 +1,404 @@
-/* docs/styles.css (FULL REPLACEMENT) — BRICK 9
-   Adds:
-   - Header right stack (MOMA + Baker buttons)
-   - Two Baker buttons styled + responsive
-*/
-
-/* ========== Base ========== */
 :root{
-  --bg:#000;
-  --card: rgba(255,255,255,0.05);
-  --card2: rgba(255,255,255,0.04);
-  --border: rgba(255,255,255,0.10);
-  --border2: rgba(255,255,255,0.14);
-  --text: rgba(255,255,255,0.92);
-  --muted: rgba(255,255,255,0.65);
-  --muted2: rgba(255,255,255,0.45);
-  --danger: rgba(140, 0, 0, 0.60);
-  --dangerBorder: rgba(255, 80, 80, 0.45);
+  --bg0:#050607;
+  --bg1:#0a0c0f;
+
+  /* CTA red (single source of truth) */
+  --cta:#d61b2a;
+
+  --text:#f2f4f7;
+  --muted:#b9c0c9;
+
+  --card:#0f1216;
+  --line:#20262e;
+
+  --radius:14px;   /* locked */
+  --btnH:56px;     /* locked */
 }
 
-*{ box-sizing:border-box; }
-html,body{
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
   margin:0;
-  padding:0;
-  background:var(--bg);
+  background:#000;
   color:var(--text);
   font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
 }
 
-.page{
-  max-width: 980px;
-  margin: 0 auto;
-  padding: 18px 14px 32px;
+.hidden{display:none !important;}
+
+.app{
+  min-height:100vh;
+  display:flex;
+  flex-direction:column;
 }
 
-/* ========== Header ========== */
-.header{
-  margin-bottom: 12px;
+/* =========================
+   View containers
+   ========================= */
+.view{
+  min-height:100vh;
+  position:relative;
+  overflow:hidden;
 }
 
-.brandRow{
+/* =========================
+   PAGE 1 — Landing
+   ========================= */
+.viewLanding{
+  background: var(--bg0);
+}
+
+/* Camera-lens vignette feel (subtle) */
+.landingBg{
+  position:absolute;
+  inset:0;
+  background:
+    radial-gradient(circle at 50% 45%,
+      rgba(255,255,255,0.06) 0%,
+      rgba(255,255,255,0.02) 20%,
+      rgba(0,0,0,0.55) 55%,
+      rgba(0,0,0,0.85) 75%,
+      rgba(0,0,0,0.95) 100%
+    ),
+    linear-gradient(180deg, #030405 0%, #0a0c10 60%, #07080a 100%);
+}
+
+.brandMark{
+  position:absolute;
+  top:18px;
+  left:18px;
+  z-index:3;
+  user-select:none;
+  pointer-events:none; /* NOT a CTA */
+}
+.brandLine1{font-weight:800; letter-spacing:0.5px; font-size:18px;}
+.brandTap{color:#e0222f;}
+.brandN{color:#ffffff;}
+.brandScore{color:#2b6cff;}
+.brandTm{color:#ffffff; font-weight:700; font-size:14px; vertical-align:top;}
+.brandLine2{
+  margin-top:4px;
+  color:#dfe6ef;
+  font-size:12px;
+  opacity:0.9;
+}
+
+.landingCenter{
+  position:relative;
+  z-index:3;
+  min-height:100vh;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  padding:24px;
+  gap:10px;
+}
+
+.fileInput{ display:none; }
+
+.tipLine{
+  max-width:520px;
+  text-align:center;
+  font-size:14px;
+  line-height:1.25;
+  color:#ffffff;     /* bright enough */
+  opacity:0.92;      /* after-shot formatting feel */
+}
+
+/* =========================
+   Buttons
+   ========================= */
+.btn{
+  border:0;
+  border-radius:var(--radius);
+  height:var(--btnH);
+  padding:0 16px;
+  font-size:16px;
+  font-weight:650;
+  color:#fff;
+  background:var(--cta);
+  width:100%;
+  max-width:520px;
+  cursor:pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.btn:active{ transform: translateY(1px); }
+
+.btnPrimary{
+  font-size:16px;
+}
+
+.btnCta{
+  font-size:15px;
+  max-width:none;
+  width:auto;
+  min-width:96px;
+  height:48px; /* bottom bar tighter */
+  border-radius:12px;
+}
+
+.btnCtaWide{
+  min-width:140px;
+}
+
+@media (max-width:420px){
+  .btnCta{ min-width:88px; }
+  .btnCtaWide{ min-width:120px; }
+}
+
+/* =========================
+   PAGE 2 — Target Tap
+   ========================= */
+.viewTarget{
+  background:
+    radial-gradient(circle at 50% 35%,
+      rgba(255,255,255,0.05) 0%,
+      rgba(0,0,0,0.75) 60%,
+      rgba(0,0,0,0.92) 100%
+    ),
+    linear-gradient(180deg, #050607 0%, #0b0e12 100%);
+  padding-bottom:92px; /* reserve space for CTA bar */
+}
+
+.topBar{
+  height:56px;
+  display:flex;
+  align-items:center;
+  padding:10px 14px;
+}
+.vendorLeft{
+  display:flex;
+  align-items:center;
+  gap:10px;
+}
+.vendorLogo{
+  width:72px;
+  height:36px;
+  border-radius:10px;
+  background:#14181f;
+  border:1px solid #262e38;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-weight:800;
+  letter-spacing:1px;
+  font-size:12px;
+  color:#ffffff;
+  opacity:0.95;
+}
+
+/* instruction line directly above target */
+.instructionLine{
+  padding:10px 14px 8px 14px;
+  font-size:15px;
+  color:#ffffff;
+  opacity:0.92;
+}
+
+/* target frame */
+.targetFrame{
+  padding:0 12px;
+}
+.targetCanvasWrap{
+  position:relative;
+  width:100%;
+  height:58vh; /* starting frame height; tweak later */
+  background:#0b0d10;
+  border:1px solid #1d232c;
+  border-radius:16px;
+  overflow:hidden;
+}
+
+/* image itself can be zoom/pan via transform */
+.targetImg{
+  position:absolute;
+  top:50%;
+  left:50%;
+  transform: translate(-50%,-50%) scale(1);
+  transform-origin: center center;
+  max-width:none;
+  max-height:none;
+  width:auto;
+  height:auto;
+  user-select:none;
+  -webkit-user-drag:none;
+  touch-action:none; /* we manage gestures */
+}
+
+/* tap dots layer */
+.tapLayer{
+  position:absolute;
+  inset:0;
+  pointer-events:none;
+}
+.dot{
+  position:absolute;
+  width:14px;
+  height:14px;
+  border-radius:50%;
+  background:#ff3b30;
+  border:2px solid #fff;
+  box-shadow:0 2px 12px rgba(0,0,0,0.45);
+  transform: translate(-50%,-50%);
+}
+.dot.bull{
+  width:16px;
+  height:16px;
+  background:#2b6cff;
+}
+
+/* Bottom CTA bar */
+.ctaBar{
+  position:fixed;
+  left:0; right:0;
+  bottom:0;
+  padding:10px 10px calc(10px + env(safe-area-inset-bottom));
+  background: rgba(9,11,14,0.92);
+  border-top:1px solid #1c232c;
+  display:flex;
+  gap:8px;
+  justify-content:center;
+  flex-wrap:wrap;
+  z-index:50;
+}
+
+/* =========================
+   PAGE 3 — SEC
+   ========================= */
+.viewSEC{
+  background:
+    radial-gradient(circle at 50% 20%,
+      rgba(255,255,255,0.05) 0%,
+      rgba(0,0,0,0.86) 65%,
+      rgba(0,0,0,0.94) 100%
+    ),
+    linear-gradient(180deg, #050607 0%, #0b0e12 100%);
+  padding:16px 14px 18px 14px;
+}
+
+.secHeader{
   display:flex;
   align-items:flex-start;
   justify-content:space-between;
   gap:12px;
 }
 
-.brand{
+.secWordmark{
   font-weight:900;
-  letter-spacing:0.5px;
-  font-size: 34px;
-  line-height: 1;
-  padding-top: 6px;
-  white-space:nowrap;
+  letter-spacing:0.4px;
+  font-size:18px;
 }
+.secR{ color:#e0222f; }
+.secW{ color:#ffffff; }
+.secB{ color:#2b6cff; }
 
-.brandTap{ color: rgba(255,255,255,0.92); }
-.brandN{ color: rgba(255,255,255,0.75); }
-.brandScore{ color: rgba(255, 60, 60, 0.95); }
-.brandTm{ color: rgba(255,255,255,0.65); font-weight:800; font-size: 18px; vertical-align: super; }
-
-.instruction{
-  margin: 10px 0 0;
-  font-size: 14px;
-  color: var(--muted);
-}
-
-/* RIGHT SIDE STACK */
-.headerRight{
-  display:flex;
-  flex-direction:column;
-  align-items:flex-end;
-  gap:10px;
-}
-
-/* ========== Control Panel ========== */
-.panel{
-  margin-top: 14px;
-  padding: 14px;
-  border-radius: 18px;
-  border: 1px solid var(--border);
-  background: var(--card2);
-  backdrop-filter: blur(10px);
-}
-
-.controlsRow{
-  display:flex;
-  align-items:center;
-  flex-wrap:wrap;
-  gap:10px;
-}
-
-.btn{
-  height: 42px;
-  padding: 0 16px;
-  border-radius: 14px;
-  border: 1px solid var(--border);
-  background: rgba(255,255,255,0.05);
-  color: var(--text);
-  font-weight: 800;
-  font-size: 14px;
-}
-
-.btn:active{ transform: translateY(1px); }
-
-.btnPrimary{
-  background: rgba(255,255,255,0.08);
-  border-color: rgba(255,255,255,0.16);
-}
-
-.btnDanger{
-  background: var(--danger);
-  border-color: var(--dangerBorder);
-}
-
-.btnGroup{
-  display:flex;
-  gap:10px;
-  flex-wrap:wrap;
-}
-
-.pill{
-  display:inline-flex;
-  align-items:center;
-  gap:8px;
-  height: 42px;
-  padding: 0 14px;
-  border-radius: 999px;
-  border: 1px solid var(--border);
-  background: rgba(255,255,255,0.03);
-}
-
-.pillLabel{
-  font-size: 13px;
-  color: var(--muted);
-  font-weight: 800;
-}
-
-.pillValue{
-  font-size: 14px;
-  font-weight: 900;
-}
-
-.hintRow{
-  margin-top: 10px;
-  font-size: 12px;
-  color: var(--muted2);
-}
-
-/* ========== Target Area ========== */
-.targetCard{
-  margin-top: 14px;
-  padding: 12px;
-  border-radius: 18px;
-  border: 1px solid var(--border);
-  background: rgba(255,255,255,0.03);
-}
-
-.targetWrap{
-  position: relative;
-  width: 100%;
-  border-radius: 16px;
-  overflow: hidden;
-  background: rgba(0,0,0,0.35);
-  border: 1px solid rgba(255,255,255,0.08);
-  touch-action: none; /* JS manages gestures */
-}
-
-.targetImg{
-  display:block;
-  width: 100%;
-  height: auto;
-  user-select:none;
-  -webkit-user-drag:none;
-  transform-origin: 0 0;
-}
-
-.dotsLayer{
-  position:absolute;
-  inset:0;
-  pointer-events:none;
-}
-
-/* ========== SEC Panel ========== */
-.secPanel{
-  margin-top: 14px;
-  padding: 14px;
-  border-radius: 18px;
-  border: 1px solid var(--border);
-  background: rgba(255,255,255,0.03);
-}
-
-/* ===========================
-   MOMA BLOCK (Top Right)
-=========================== */
-.momaBlock{
-  display:flex;
-  flex-direction:column;
-  gap:8px;
-  padding:10px 10px;
+.secBuyBox{
+  border:1px solid #223044;
+  background:#0f141c;
+  color:#fff;
   border-radius:14px;
-  border:1px solid var(--border);
-  background: rgba(255,255,255,0.04);
-  backdrop-filter: blur(10px);
-  min-width: 210px;
-  max-width: 240px;
+  padding:10px 12px;
+  min-width:150px;
+  cursor:pointer;
 }
+.secBuyTop{ font-weight:900; letter-spacing:0.6px; font-size:14px; }
+.secBuyBottom{ margin-top:2px; font-size:12px; opacity:0.92; }
 
-.momaTop{
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap:10px;
-}
-
-.momaTitle{
-  font-weight:900;
-  letter-spacing:0.6px;
-  font-size:12px;
-  opacity:0.95;
-}
-
-.momaFields{
+.secBody{
+  margin-top:16px;
   display:grid;
-  grid-template-columns: 1fr 1fr auto;
-  gap:8px;
-  align-items:end;
+  grid-template-columns: 1fr 1fr;
+  gap:14px;
 }
 
-.momaField{
+@media (max-width:720px){
+  .secBody{ grid-template-columns:1fr; }
+}
+
+.secClicksBox{
+  background: rgba(15,18,22,0.85);
+  border:1px solid #202632;
+  border-radius:16px;
+  padding:14px;
+}
+
+.secClicksTitle{
+  font-weight:800;
+  letter-spacing:0.4px;
+  font-size:13px;
+  opacity:0.95;
+  margin-bottom:10px;
+}
+
+.secClicksGrid{
+  display:grid;
+  grid-template-columns: 1fr 1fr;
+  gap:10px 12px;
+}
+
+.kv .k{
+  font-size:12px;
+  opacity:0.8;
+}
+.kv .v{
+  margin-top:2px;
+  font-weight:850;
+  font-size:16px;
+}
+
+.secSessionId{
+  margin-top:10px;
+  font-size:11px;
+  opacity:0.75;
+}
+
+.secScorePanel{
+  background: rgba(15,18,22,0.85);
+  border:1px solid #202632;
+  border-radius:16px;
+  padding:14px;
   display:flex;
   flex-direction:column;
-  gap:4px;
+  justify-content:flex-start;
 }
 
-.momaLabel{
-  font-size:10px;
-  opacity:0.70;
-}
-
-.momaInput{
-  height:34px;
-  border-radius:10px;
-  border:1px solid var(--border2);
-  background:rgba(0,0,0,0.35);
-  color:#fff;
-  padding:0 10px;
+.secScoreLabel{
+  font-weight:800;
+  letter-spacing:0.4px;
   font-size:13px;
-  outline:none;
+  opacity:0.95;
+  margin-bottom:4px;
 }
 
-.momaInput:focus{
-  border-color: rgba(255,255,255,0.22);
+.secScoreValue{
+  font-weight:950;
+  font-size:64px; /* largest on page */
+  line-height:1;
+  margin:6px 0 10px 0;
 }
 
-.momaUnit{
-  font-size:10px;
-  opacity:0.70;
-  margin-top:2px;
-}
+/* score color classes */
+.scoreGood{ color:#39d98a; }
+.scoreMid{ color:#ffd166; }
+.scoreLow{ color:#ff5c5c; }
 
-.momaApplyBtn{
-  height:34px;
-  padding:0 12px;
-  border-radius:10px;
-  border:1px solid var(--border2);
-  background:rgba(255,255,255,0.06);
-  color:#fff;
-  font-weight:900;
-  font-size:12px;
-}
-
-.momaApplyBtn:active{
-  transform: translateY(1px);
-}
-
-/* Toggle */
-.momaToggle{
+.secScoreHistory{
+  margin-top:4px;
+  font-size:13px;
+  opacity:0.92;
   display:flex;
-  align-items:center;
-  gap:8px;
-  user-select:none;
+  flex-direction:column;
+  gap:6px;
 }
+.hLabel{ opacity:0.75; }
+.hVal{ font-weight:800; }
 
-.momaToggle input{ display:none; }
-
-.momaToggleTrack{
-  width:42px;
-  height:24px;
-  border-radius:999px;
-  border:1px solid var(--border2);
-  background:rgba(0,0,0,0.35);
-  position:relative;
-}
-
-.momaToggleTrack::after{
-  content:"";
-  width:18px;
-  height:18px;
-  border-radius:50%;
-  background:rgba(255,255,255,0.85);
-  position:absolute;
-  top:50%;
-  left:3px;
-  transform:translateY(-50%);
-  transition: left 140ms ease;
-}
-
-.momaToggle input:checked + .momaToggleTrack::after{
-  left:21px;
-}
-
-.momaToggleText{
-  font-size:11px;
-  font-weight:900;
-  opacity:0.90;
-  width:22px;
-  text-align:right;
-}
-
-/* ===========================
-   Baker Buttons (Catalog + Product)
-=========================== */
-.bakerBtns{
+.secFooter{
+  margin-top:18px;
   display:flex;
-  gap:10px;
-  align-items:center;
-  justify-content:flex-end;
-  flex-wrap:wrap;
-}
-
-.bakerBtn{
-  display:inline-flex;
-  align-items:center;
   justify-content:center;
-  height: 38px;
-  padding: 0 14px;
-  border-radius: 12px;
-  border: 1px solid rgba(255,255,255,0.14);
-  background: rgba(255,255,255,0.05);
-  color: var(--text);
-  text-decoration:none;
-  font-weight: 900;
-  font-size: 12.5px;
-  letter-spacing: 0.2px;
-  white-space:nowrap;
-}
-
-.bakerBtn:active{ transform: translateY(1px); }
-
-/* ========== Mobile tweaks ========== */
-@media (max-width: 640px){
-  .brand{ font-size: 28px; }
-
-  .headerRight{
-    gap:8px;
-  }
-
-  .momaBlock{
-    min-width: 190px;
-    max-width: 210px;
-  }
-
-  .bakerBtn{
-    height: 36px;
-    padding: 0 12px;
-    font-size: 12px;
-  }
-
-  .controlsRow{ gap:8px; }
+  gap:10px;
+  flex-wrap:wrap;
+  padding-bottom: calc(12px + env(safe-area-inset-bottom));
 }
