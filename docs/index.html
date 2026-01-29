@@ -38,7 +38,7 @@
     .brand .name{ font-weight:900; letter-spacing:0.4px; font-size:18px; white-space:nowrap; }
     .brand .sub{ font-size:12px; color:var(--muted2); font-weight:800; letter-spacing:0.3px; }
 
-    .btnRow{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+    .btnRow{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; justify-content:flex-end; }
 
     .btn{
       appearance:none;
@@ -58,9 +58,32 @@
       min-height: 40px;
       user-select:none;
       -webkit-tap-highlight-color: transparent;
+      white-space: nowrap;
     }
     .btn:active{ transform: translateY(1px); }
     .btn.secondary{ background: var(--panel2); box-shadow:none; }
+
+    /* Two-line button label */
+    .btn .btnStack{
+      display:flex;
+      flex-direction:column;
+      line-height:1.05;
+      text-align:center;
+      gap:4px;
+    }
+    .btn .btnTop{
+      font-size:12px;
+      font-weight:900;
+      letter-spacing:0.3px;
+      color: rgba(255,255,255,0.92);
+      text-transform: uppercase;
+    }
+    .btn .btnBottom{
+      font-size:13px;
+      font-weight:900;
+      letter-spacing:0.2px;
+      color: rgba(255,255,255,0.88);
+    }
 
     .grid{ display:grid; grid-template-columns: 1fr; gap:12px; }
 
@@ -91,7 +114,7 @@
       font-weight: 900; letter-spacing: 0.2px; white-space:nowrap;
     }
     .field input{
-      width: 84px;
+      width: 92px;
       padding: 6px 8px;
       border-radius: 10px;
       border: 1px solid rgba(255,255,255,0.12);
@@ -198,9 +221,14 @@
         <div class="sub">Baker 23×35 • 1" Grid Pilot</div>
       </div>
 
+      <!-- ONLY ONE Baker button in the upper-right -->
       <div class="btnRow">
-        <a id="bakerCatalogBtn" class="btn secondary" href="#" target="_blank" rel="noopener">Baker Catalog</a>
-        <a id="bakerProductBtn" class="btn secondary" href="#" target="_blank" rel="noopener">Baker Product</a>
+        <a id="bakerCatalogBtn" class="btn secondary" href="#" target="_blank" rel="noopener">
+          <span class="btnStack">
+            <span class="btnTop">Browse</span>
+            <span class="btnBottom">Baker Catalog</span>
+          </span>
+        </a>
       </div>
     </div>
 
@@ -264,12 +292,10 @@
         <div class="sec" id="secPanel"></div>
       </div>
 
-      <a id="vendorLink" href="#" style="display:none">Vendor</a>
     </div>
 
     <div id="jsBadge">JS READY</div>
     <script>
-      // Show badge so we know scripts are executing
       (function(){
         var b = document.getElementById('jsBadge');
         if (b) b.style.display = 'block';
@@ -277,7 +303,7 @@
     </script>
 
     <!-- Main app JS -->
-    <script src="./index.js?v=baker_pilot_upload_label_1"></script>
+    <script src="./index.js?v=baker_pilot_one_top_button_sec_button_placeholders_1"></script>
   </main>
 </body>
 </html>
