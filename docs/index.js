@@ -1,11 +1,12 @@
 /* ============================================================
-   index.js (FULL REPLACEMENT) — Baker 23×35 Grid Pilot
-   Declared Geometry Mode (no grid lock taps)
+   index.js (FULL REPLACEMENT) — Baker Grid Pilot
+   CROP-SAFE GRID MATH (1"×1" boxes) — no grid lock taps
 
-   - Shooter flow: Upload → Tap bull → Tap holes → Show Results
-   - Inches derived from known target dimensions mapped to image pixels
-   - Direction truth: Up is up, Right is right (dial directions)
-   - Dot size fixed at 10
+   Key:
+   - We compute pxPerBoxX / pxPerBoxY automatically from the grid.
+   - 1 box = 1.00 inch (by definition in the pilot).
+   - POIB is computed from tapped holes.
+   - Correction = Bull − POIB (dial directions). Up is up. Right is right.
 ============================================================ */
 
 (() => {
@@ -36,14 +37,15 @@
   // Constants
   const DOT_PX = 10;
   const YARDS_PER_METER = 1.0936132983;
-
-  // DECLARED TARGET DIMENSIONS (Baker Pilot)
-  // Landscape vs portrait doesn’t matter as long as the photo contains the full page.
-  const TARGET_W_IN = 23.0;
-  const TARGET_H_IN = 35.0;
-
   const DEFAULT_DISTANCE_YDS = 100;
   const DEFAULT_CLICK_MOA = 0.25;
+
+  // Grid detection tuning
+  const GRID_LAG_MIN = 10;    // px
+  const GRID_LAG_MAX = 220;   // px
+  const GRID_LAG_STEP = 1;
+  const GRID_SAMPLES = 6;     // how many rows/cols to sample for robustness
+  const GRID_TOP_K = 3;       // average top K autocorr peaks
 
   // State
   const state = {
@@ -67,10 +69,19 @@
     taps: [], // [0]=bull, [1+]=holes
 
     // units and MOMA
-    unit: "in",      // "in" or "m" (display choice for distance only)
+    unit: "in", // "in" or "m" (display for distance)
     distanceYds: DEFAULT_DISTANCE_YDS,
     clickMoa: DEFAULT_CLICK_MOA,
+
+    // AUTO GRID SCALE (px per 1" box)
+    pxPerBoxX: null,
+    pxPerBoxY: null,
+    gridStatus: "GRID: not measured",
   };
+
+  // Hidden canvas for analysis
+  const cnv = document.createElement("canvas");
+  const ctx = cnv.getContext("2d", { willReadFrequently: true });
 
   // Helpers
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
@@ -137,10 +148,8 @@
       d.style.border = "2px solid rgba(0,0,0,0.55)";
 
       if (idx === 0) {
-        // bull
         d.style.background = "rgba(80,170,255,0.95)";
       } else {
-        // holes
         d.style.background = "rgba(255,70,70,0.92)";
         const num = document.createElement("div");
         num.textContent = String(idx);
@@ -163,6 +172,7 @@
 
   function stepHint() {
     if (!state.imgLoaded) return "Upload photo → Tap bull → Tap bullet holes → Show Results.";
+    if (!state.pxPerBoxX || !state.pxPerBoxY) return "Measuring grid… (upload a clear grid photo).";
     if (state.taps.length === 0) return "Step 1: Tap the bull (aim point).";
     if (state.taps.length === 1) return "Step 2: Tap your bullet holes.";
     return "Tap more holes, then Show Results.";
@@ -195,18 +205,148 @@
     return (distanceYds * 1.047) / 100;
   }
 
-  // Declared-geometry conversion: px -> inches
-  function pxToInX(px) {
-    const iw = elImg.naturalWidth || 1;
-    return (px / iw) * TARGET_W_IN;
+  /* ============================
+     GRID AUTO-DETECTION
+     ============================ */
+
+  function computeEdgeMap(imageData, w, h) {
+    // Very simple edge magnitude using |dx| + |dy| on grayscale
+    const data = imageData.data;
+    const gray = new Uint8ClampedArray(w * h);
+
+    for (let i = 0, p = 0; i < gray.length; i++, p += 4) {
+      const r = data[p], g = data[p + 1], b = data[p + 2];
+      gray[i] = (r * 0.299 + g * 0.587 + b * 0.114) | 0;
+    }
+
+    const edge = new Float32Array(w * h);
+    for (let y = 1; y < h - 1; y++) {
+      for (let x = 1; x < w - 1; x++) {
+        const i = y * w + x;
+        const dx = gray[i + 1] - gray[i - 1];
+        const dy = gray[i + w] - gray[i - w];
+        edge[i] = Math.abs(dx) + Math.abs(dy);
+      }
+    }
+    return edge;
   }
-  function pxToInY(px) {
-    const ih = elImg.naturalHeight || 1;
-    return (px / ih) * TARGET_H_IN;
+
+  function buildProfileX(edge, w, h) {
+    // Sum edge energy by column (ignore margins)
+    const prof = new Float32Array(w);
+    const y0 = Math.floor(h * 0.15);
+    const y1 = Math.floor(h * 0.85);
+
+    for (let x = 0; x < w; x++) {
+      let s = 0;
+      for (let y = y0; y < y1; y++) s += edge[y * w + x];
+      prof[x] = s;
+    }
+    // normalize
+    const mean = prof.reduce((a, v) => a + v, 0) / w;
+    for (let x = 0; x < w; x++) prof[x] = prof[x] - mean;
+    return prof;
   }
+
+  function buildProfileY(edge, w, h) {
+    const prof = new Float32Array(h);
+    const x0 = Math.floor(w * 0.15);
+    const x1 = Math.floor(w * 0.85);
+
+    for (let y = 0; y < h; y++) {
+      let s = 0;
+      for (let x = x0; x < x1; x++) s += edge[y * w + x];
+      prof[y] = s;
+    }
+    const mean = prof.reduce((a, v) => a + v, 0) / h;
+    for (let y = 0; y < h; y++) prof[y] = prof[y] - mean;
+    return prof;
+  }
+
+  function autocorrBestLag(signal, lagMin, lagMax) {
+    // Find dominant repeating lag. Returns {lag, score}
+    const n = signal.length;
+    let bestLag = null;
+    let bestScore = -Infinity;
+
+    for (let lag = lagMin; lag <= lagMax; lag += GRID_LAG_STEP) {
+      let s = 0;
+      // dot product
+      for (let i = 0; i < n - lag; i++) s += signal[i] * signal[i + lag];
+      if (s > bestScore) { bestScore = s; bestLag = lag; }
+    }
+    return { lag: bestLag, score: bestScore };
+  }
+
+  function refineLagTopK(signal, lagMin, lagMax, k) {
+    // Compute scores for all lags, take top k, average their lags (stabilizes noisy grids)
+    const n = signal.length;
+    const scores = [];
+    for (let lag = lagMin; lag <= lagMax; lag += GRID_LAG_STEP) {
+      let s = 0;
+      for (let i = 0; i < n - lag; i++) s += signal[i] * signal[i + lag];
+      scores.push({ lag, s });
+    }
+    scores.sort((a, b) => b.s - a.s);
+    const top = scores.slice(0, Math.max(1, k));
+    const avgLag = top.reduce((a, o) => a + o.lag, 0) / top.length;
+    return { lag: avgLag, score: top[0].s };
+  }
+
+  function measureGridPxPerBox() {
+    // Draw full image to canvas at native size (fast enough for pilot)
+    const w = elImg.naturalWidth || 0;
+    const h = elImg.naturalHeight || 0;
+    if (w < 200 || h < 200) return false;
+
+    cnv.width = w;
+    cnv.height = h;
+    ctx.drawImage(elImg, 0, 0, w, h);
+
+    // Use a downscaled working copy to speed up (still fine for spacing)
+    const maxW = 900;
+    const scaleDown = w > maxW ? (maxW / w) : 1;
+    const ww = Math.round(w * scaleDown);
+    const hh = Math.round(h * scaleDown);
+
+    const cnv2 = document.createElement("canvas");
+    cnv2.width = ww;
+    cnv2.height = hh;
+    const ctx2 = cnv2.getContext("2d", { willReadFrequently: true });
+    ctx2.drawImage(elImg, 0, 0, ww, hh);
+
+    const imgData = ctx2.getImageData(0, 0, ww, hh);
+    const edge = computeEdgeMap(imgData, ww, hh);
+
+    const profX = buildProfileX(edge, ww, hh);
+    const profY = buildProfileY(edge, ww, hh);
+
+    // Autocorrelation to find grid spacing
+    const rx = refineLagTopK(profX, GRID_LAG_MIN, Math.min(GRID_LAG_MAX, ww - 5), GRID_TOP_K);
+    const ry = refineLagTopK(profY, GRID_LAG_MIN, Math.min(GRID_LAG_MAX, hh - 5), GRID_TOP_K);
+
+    // Convert back to native px spacing
+    const pxBoxX = rx.lag / scaleDown;
+    const pxBoxY = ry.lag / scaleDown;
+
+    // Sanity: typical 1" spacing should not be absurd
+    if (!Number.isFinite(pxBoxX) || !Number.isFinite(pxBoxY)) return false;
+    if (pxBoxX < 12 || pxBoxY < 12) return false;        // too small → detection failed
+    if (pxBoxX > w * 0.5 || pxBoxY > h * 0.5) return false;
+
+    state.pxPerBoxX = pxBoxX;
+    state.pxPerBoxY = pxBoxY;
+    state.gridStatus = `GRID: ${fmt2(pxBoxX)} px/box X • ${fmt2(pxBoxY)} px/box Y`;
+    return true;
+  }
+
+  /* ============================
+     SEC computation (box-based)
+     ============================ */
 
   function computeSEC() {
     if (!state.imgLoaded) return { ok: false, err: "Upload a target photo first." };
+    if (!state.pxPerBoxX || !state.pxPerBoxY) return { ok: false, err: "Grid not measured yet. Use a clearer grid photo." };
     if (state.taps.length < 2) return { ok: false, err: "Tap the bull and at least 1 bullet hole." };
 
     const bull = state.taps[0];
@@ -217,13 +357,15 @@
     poibPx.x /= hits.length;
     poibPx.y /= hits.length;
 
-    // Convert pixel deltas to inches (target-space)
-    // X: right positive
-    // Y: up positive (invert because screen Y down)
-    const poibX_in = pxToInX(poibPx.x - bull.x);
-    const poibY_in = -pxToInY(poibPx.y - bull.y);
+    // Pixel deltas (hit center relative to bull)
+    const dxPx = poibPx.x - bull.x; // right positive
+    const dyPx = poibPx.y - bull.y; // down positive
 
-    // Correction = bull - poib = negative of POIB offset
+    // Convert to BOXES (1 box = 1 inch)
+    const poibX_in = dxPx / state.pxPerBoxX;      // right positive
+    const poibY_in = -(dyPx / state.pxPerBoxY);   // up positive (invert)
+
+    // Correction = Bull − POIB
     const corrX_in = -poibX_in;
     const corrY_in = -poibY_in;
 
@@ -250,8 +392,7 @@
       moaY,
       clicksX,
       clicksY,
-      targetW: TARGET_W_IN,
-      targetH: TARGET_H_IN,
+      gridStatus: state.gridStatus,
     };
   }
 
@@ -322,13 +463,13 @@
         </div>
 
         <div style="margin-top:10px; color:rgba(255,255,255,0.65); font-weight:900; font-size:12px;">
-          Declared Geometry: ${fmt2(res.targetW)}" × ${fmt2(res.targetH)}"
+          ${res.gridStatus}
         </div>
       </div>
     `;
   }
 
-  // Pointer/touch interactions (pinch + pan + tap)
+  // Touch/pointer interactions (pinch + pan + tap)
   function onPointerDown(e) {
     if (!state.imgLoaded) return;
 
@@ -436,7 +577,6 @@
     if (clientX < r.left || clientX > r.right || clientY < r.top || clientY > r.bottom) return;
 
     const p = screenToImagePx(clientX, clientY);
-
     const iw = elImg.naturalWidth || 1;
     const ih = elImg.naturalHeight || 1;
     if (p.x < 0 || p.y < 0 || p.x > iw || p.y > ih) return;
@@ -457,15 +597,28 @@
 
     state.imgLoaded = false;
     state.taps = [];
+    state.pxPerBoxX = null;
+    state.pxPerBoxY = null;
+    state.gridStatus = "GRID: measuring…";
     redrawDots();
     clearSEC();
 
     elImg.onload = () => {
       state.imgLoaded = true;
       fitImageToWrap();
+
+      // Measure grid spacing automatically (crop-safe)
+      const ok = measureGridPxPerBox();
+      if (!ok) {
+        state.pxPerBoxX = null;
+        state.pxPerBoxY = null;
+        state.gridStatus = "GRID: could not measure (use a clearer grid photo)";
+      }
+
       redrawDots();
       setInstruction(stepHint());
     };
+
     elImg.onerror = () => {
       state.imgLoaded = false;
       setInstruction("Image failed to load. Try a different photo.");
@@ -486,16 +639,17 @@
   elClear.addEventListener("click", () => {
     state.taps = [];
     redrawDots();
-    setInstruction(stepHint());
     clearSEC();
 
-    // reset per-session units back to default (your preference)
+    // reset per-session units back to default
     state.unit = "in";
     elUnitToggle.checked = false;
     setUnitsUI();
     state.distanceYds = DEFAULT_DISTANCE_YDS;
     state.clickMoa = DEFAULT_CLICK_MOA;
     writeStateToMomaInputs();
+
+    setInstruction(stepHint());
   });
 
   elShow.addEventListener("click", () => {
