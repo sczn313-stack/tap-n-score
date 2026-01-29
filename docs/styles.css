@@ -15,8 +15,19 @@
 }
 
 *{ box-sizing:border-box; }
-html,body{ height:100%; margin:0; background:radial-gradient(1200px 900px at 40% 30%, #0b1830 0%, #000 60%); color:var(--text); font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial; }
+html,body{
+  height:100%;
+  margin:0;
+  background:radial-gradient(1200px 900px at 40% 30%, #0b1830 0%, #000 60%);
+  color:var(--text);
+  font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;
+}
 button, input{ font-family:inherit; }
+
+/* ADDED: make taps feel clean on iOS */
+a, button, label{
+  -webkit-tap-highlight-color: transparent;
+}
 
 .app{
   min-height:100%;
@@ -66,6 +77,21 @@ button, input{ font-family:inherit; }
   box-shadow:var(--shadow);
   text-align:center;
   min-width:min(520px, 90vw);
+
+  /* ADDED: make <label class="cta"> act exactly like a button */
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  user-select:none;
+
+  /* ADDED: normalize iOS button/label rendering */
+  -webkit-appearance:none;
+  appearance:none;
+}
+
+/* ADDED: keep label CTAs looking identical */
+label.cta{
+  text-decoration:none;
 }
 
 .ctaPrimary{
@@ -95,6 +121,11 @@ button, input{ font-family:inherit; }
   width:1px;
   height:1px;
   opacity:0;
+}
+
+/* ADDED: extra iOS safety — NEVER display:none on the file input */
+input[type="file"]{
+  display:block;
 }
 
 /* Tap Page */
