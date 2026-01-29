@@ -1,20 +1,25 @@
 /* ============================================================
-   index.js (FULL REPLACEMENT)
+   index.js (FULL REPLACEMENT) — Tap-n-Score
    Fixes:
-   - iOS/iPad picker reliably shows Photo Library + Take Photo
-     by using <label for="photoInput"> as the CTA (NOT JS click).
-   - Stores selected file immediately on change (iOS safe).
-   - Minimal tap flow scaffolding:
-       1) Load image
-       2) Tap bull once
-       3) Tap holes
-       4) Undo / Clear / Show Results buttons appear AFTER bull tap
+   1) Landing page not showing (CSS uses .page/.pageActive):
+      - Forces .pageActive onto the main container at boot.
+   2) Picker CTA reliability (iOS/iPad):
+      - Uses <label for="photoInput"> (NO JS .click()).
+      - Ensures capture is NOT set, so Photo Library is offered.
+      - Resets input value to allow re-picking the same image.
+   3) Visual overlap bug:
+      - Hides the landing/hero section once a photo is chosen.
+      - Shows work area only after image is ready.
+   4) Tap flow:
+      - Phase 1: Tap bull’s-eye to center
+      - Phase 2: Tap bullet holes to be scored
+      - CTA row appears ONLY after bull is set
    ============================================================ */
 
 (() => {
   const $ = (id) => document.getElementById(id);
 
-  // --- Elements
+  // --- Elements (by ID)
   const elFile = $("photoInput");
   const elWork = $("workArea");
   const elImg = $("targetImg");
@@ -28,18 +33,43 @@
   const elShow = $("showResultsBtn");
   const elReady = $("jsReady");
 
-  // --- State
-  let selectedFile = null;
-  let objectUrl = null;
+  // --- Elements (by class / structure)
+  const elPage = document.querySelector(".page");
+  const elHero = document.querySelector(".hero"); // landing section
 
-  let bull = null;     // {x,y} in image display coords
-  let holes = [];      // [{x,y}...]
+  // --- Guard (missing critical elements)
+  if (!elFile || !elWork || !elImg || !elWrap || !elDots || !elInstruction || !elTapCount || !elCtaRow || !elUndo || !elClear || !elShow) {
+    console.error("Missing required DOM elements. Check index.html IDs.");
+    return;
+  }
+
+  // --- State
+  let objectUrl = null;
+  let bull = null;     // {x,y} within targetWrap box
+  let holes = [];      // array of {x,y}
   let phase = "idle";  // idle | bull | holes
+
+  // --- Boot visibility (fixes “No landing page opens” when CSS expects .pageActive)
+  if (elPage && !elPage.classList.contains("pageActive")) {
+    elPage.classList.add("pageActive");
+  }
+
+  // --- iOS / iPad: make sure Photo Library is available
+  // (If capture exists, many devices show camera-only.)
+  elFile.removeAttribute("capture");
 
   // --- Helpers
   function setReadyPill() {
     if (!elReady) return;
     elReady.style.display = "inline-flex";
+    elReady.textContent = "JS READY";
+  }
+
+  function releaseObjectUrl() {
+    if (objectUrl) {
+      URL.revokeObjectURL(objectUrl);
+      objectUrl = null;
+    }
   }
 
   function clamp01(v) {
@@ -78,12 +108,23 @@
 
     if (bull) drawDot(bull.x, bull.y, "bull");
 
-    holes.forEach((p, i) => {
-      drawDot(p.x, p.y, "hole", i + 1);
-    });
+    holes.forEach((p, i) => drawDot(p.x, p.y, "hole", i + 1));
 
     const tapsTotal = (bull ? 1 : 0) + holes.length;
     elTapCount.textContent = `Taps: ${tapsTotal}`;
+  }
+
+  function showLanding() {
+    if (elHero) elHero.hidden = false;
+    elWork.hidden = true;
+    // keep CTA row hidden until bull is set
+    elCtaRow.hidden = true;
+  }
+
+  function showWorkArea() {
+    // Hide landing so it does NOT show behind target (your screenshot issue)
+    if (elHero) elHero.hidden = true;
+    elWork.hidden = false;
   }
 
   function setPhaseBull() {
@@ -91,53 +132,54 @@
     bull = null;
     holes = [];
     elInstruction.textContent = "Tap bull’s-eye to center";
-    elCtaRow.hidden = true; // IMPORTANT: CTAs appear AFTER bull tap
+    elCtaRow.hidden = true; // CTAs appear AFTER bull tap
     redrawAll();
   }
 
   function setPhaseHoles() {
     phase = "holes";
     elInstruction.textContent = "Tap bullet holes to be scored";
-    elCtaRow.hidden = false; // show Undo/Clear/Show Results
+    elCtaRow.hidden = false;
   }
 
-  function releaseObjectUrl() {
-    if (objectUrl) {
-      URL.revokeObjectURL(objectUrl);
-      objectUrl = null;
-    }
-  }
-
-  // --- iOS-safe file selection
-  // NOTE: We do NOT do elFile.click() anywhere.
-  // The <label for="photoInput"> handles opening the picker.
+  // --- File selection (label opens picker; change loads image)
   elFile.addEventListener("change", () => {
-    selectedFile = elFile.files && elFile.files[0] ? elFile.files[0] : null;
-    if (!selectedFile) return;
+    const f = elFile.files && elFile.files[0] ? elFile.files[0] : null;
+    if (!f) return;
 
+    // Reset the input value AFTER we read the file reference
+    // so user can pick the same photo again if needed.
+    // (iOS Safari is picky; do it at end of handler too.)
     releaseObjectUrl();
-    objectUrl = URL.createObjectURL(selectedFile);
+    objectUrl = URL.createObjectURL(f);
 
     // Show image
     elImg.onload = () => {
-      // Ensure dots layer matches the displayed image size
+      // Swap UI mode only when the image is actually ready
       requestAnimationFrame(() => {
-        elWork.hidden = false;
+        showWorkArea();
         setPhaseBull();
       });
     };
 
+    elImg.onerror = () => {
+      alert("That photo couldn’t be loaded. Try again.");
+      showLanding();
+    };
+
     elImg.src = objectUrl;
+
+    // allow same-file reselect
+    elFile.value = "";
   });
 
-  // --- Tap handler
-  // We attach to the WRAP so taps land consistently even if image has padding.
+  // --- Tap handler (bull first, then holes)
   elWrap.addEventListener("click", (evt) => {
     if (phase !== "bull" && phase !== "holes") return;
 
     const pt = getLocalPoint(evt, elWrap);
 
-    // Bounds guard
+    // normalize + clamp to wrap bounds
     const x = clamp01(pt.x / pt.w) * pt.w;
     const y = clamp01(pt.y / pt.h) * pt.h;
 
@@ -148,46 +190,40 @@
       return;
     }
 
-    // phase === holes
     holes.push({ x, y });
     redrawAll();
   });
 
-  // --- Undo / Clear
+  // --- Undo / Clear / Show Results
   elUndo.addEventListener("click", () => {
     if (phase !== "holes") return;
+
     if (holes.length > 0) {
       holes.pop();
       redrawAll();
       return;
     }
-    // If no holes, undo bull puts you back to bull phase
-    if (bull) {
-      setPhaseBull();
-    }
+
+    // No holes left -> undo bull goes back to bull phase
+    if (bull) setPhaseBull();
   });
 
   elClear.addEventListener("click", () => {
-    if (phase !== "holes" && phase !== "bull") return;
+    if (phase !== "bull" && phase !== "holes") return;
     setPhaseBull();
   });
 
-  // --- Show Results (placeholder hook)
   elShow.addEventListener("click", () => {
     if (!bull || holes.length === 0) {
       alert("Tap bull’s-eye once, then tap at least one bullet hole.");
       return;
     }
 
-    // TODO: Replace with your backend call / SEC page routing.
-    // For now, just confirm the flow works.
+    // Placeholder hook for your final routing / backend call
     alert(`Bull set + ${holes.length} holes captured. Ready for results.`);
   });
 
   // --- Boot
   setReadyPill();
-
-  // Safety: ensure input is NOT capture-only
-  // (If your HTML had capture before, this confirms it's gone.)
-  elFile.removeAttribute("capture");
+  showLanding();
 })();
