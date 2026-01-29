@@ -1,12 +1,13 @@
 :root{
   --bg0:#000;
-  --bg1:#05070b;
   --card:rgba(255,255,255,0.06);
   --stroke:rgba(255,255,255,0.14);
   --text:rgba(255,255,255,0.92);
-  --muted:rgba(255,255,255,0.72);
-  --cta:#d61f2c;          /* ONE CTA COLOR */
+  --muted:rgba(255,255,255,0.70);
+
+  --cta:#d61f2c;     /* ONE CTA COLOR */
   --ctaText:#fff;
+
   --shadow:0 14px 40px rgba(0,0,0,0.45);
   --radius:18px;
   --radius2:22px;
@@ -22,23 +23,17 @@ html,body{
   color:var(--text);
   font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;
 }
-button,input{ font-family:inherit; }
+button, input{ font-family:inherit; }
 
-.app{
-  min-height:100%;
-  display:flex;
-  justify-content:center;
-}
-
+/* Root page: ALWAYS visible */
 .page{
   width:100%;
   max-width:var(--maxw);
+  margin:0 auto;
   padding:calc(var(--pad) + env(safe-area-inset-top)) var(--pad) calc(var(--pad) + env(safe-area-inset-bottom));
-  display:none;
 }
-.pageActive{ display:block; }
 
-/* Brand */
+/* Brand (NOT CTA) */
 .brandTop{ padding-top:10px; }
 .brandTitle{
   font-weight:900;
@@ -62,7 +57,6 @@ button,input{ font-family:inherit; }
   gap:18px;
 }
 
-/* CTA */
 .cta{
   border:none;
   border-radius:24px;
@@ -72,26 +66,29 @@ button,input{ font-family:inherit; }
   cursor:pointer;
   box-shadow:var(--shadow);
   text-align:center;
-  min-width:min(520px, 92vw);
-  user-select:none;
-  -webkit-tap-highlight-color: transparent;
+  min-width:min(560px, 92vw);
 }
+
 .ctaPrimary{
   background:var(--cta);
   color:var(--ctaText);
 }
-.cta:disabled{ opacity:0.5; cursor:not-allowed; }
+
+.cta:disabled{
+  opacity:0.5;
+  cursor:not-allowed;
+}
 
 .tipLine{
   font-size:26px;
   font-weight:750;
-  color:rgba(255,255,255,0.90);
+  color:rgba(255,255,255,0.92);
   text-align:center;
-  max-width:640px;
+  max-width:720px;
   line-height:1.25;
 }
 
-/* File input: present, but visually hidden (iOS-safe) */
+/* Keep input real + accessible, but hidden */
 .fileInput{
   position:absolute;
   left:-9999px;
@@ -100,37 +97,43 @@ button,input{ font-family:inherit; }
   opacity:0;
 }
 
-/* Pills */
+/* Tap Page */
+.tapHeader{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:12px;
+  margin:18px 0 12px;
+}
+
+.hdrLeft{ display:flex; flex-direction:column; gap:10px; }
+
+.instructionLine{
+  font-size:22px;
+  font-weight:850;
+  color:rgba(255,255,255,0.92);
+}
+
 .pill{
   border:1px solid var(--stroke);
   background:rgba(255,255,255,0.06);
   color:rgba(255,255,255,0.92);
   border-radius:999px;
   padding:8px 12px;
-  font-weight:850;
+  font-weight:900;
   letter-spacing:0.6px;
-  display:inline-flex;
-  align-items:center;
-  gap:8px;
+  width:fit-content;
 }
 
-/* Tap Page */
-.targetStage{ margin-top:20px; }
-
-.tapHeader{
-  display:flex;
-  justify-content:space-between;
-  align-items:flex-start;
-  gap:12px;
-  margin-bottom:12px;
+.pillBuy{
+  padding:12px 16px;
+  text-align:center;
+  min-width:220px;
 }
-.hdrLeft{ display:flex; flex-direction:column; gap:10px; }
-
-.instructionLine{
-  font-size:20px;
-  font-weight:800;
-  color:rgba(255,255,255,0.92);
-}
+.pillTop{ font-weight:950; letter-spacing:0.8px; }
+.buyBlue{ color:#2f7bff; }
+.buyWhite{ color:#fff; }
+.pillBuy .pillSub{ font-weight:750; opacity:0.92; margin-top:2px; }
 
 .targetWrap{
   position:relative;
@@ -140,7 +143,6 @@ button,input{ font-family:inherit; }
   overflow:hidden;
   box-shadow:var(--shadow);
   height:min(62vh, 640px);
-  width:100%;
 }
 
 .targetImg{
@@ -150,7 +152,6 @@ button,input{ font-family:inherit; }
   height:100%;
   object-fit:contain;
   transform-origin:center center;
-  touch-action:none; /* we manage interactions */
 }
 
 .dotsLayer{
@@ -159,47 +160,148 @@ button,input{ font-family:inherit; }
   pointer-events:none;
 }
 
-/* Dots */
 .dot{
   position:absolute;
-  width:26px;
-  height:26px;
+  width:28px;
+  height:28px;
   border-radius:999px;
-  background:rgba(255,40,40,0.88);
+  background:rgba(255,40,40,0.92);
   border:2px solid rgba(255,255,255,0.95);
   transform:translate(-50%, -50%);
   display:flex;
   align-items:center;
   justify-content:center;
-  font-weight:900;
+  font-weight:950;
   font-size:14px;
   color:#fff;
   text-shadow:0 2px 6px rgba(0,0,0,0.65);
 }
-.dotBull{ background:rgba(40,170,255,0.88); }
+.dotBull{
+  background:rgba(40,170,255,0.92);
+}
 
+/* CTA row: big, same color, same sizing */
 .ctaRow{
   display:flex;
   gap:12px;
   justify-content:center;
-  margin-top:14px;
   flex-wrap:wrap;
+  margin-top:14px;
 }
 .ctaRow .cta{
-  min-width:min(260px, 44vw);
-  padding:14px 18px;
+  min-width:min(280px, 30vw);
+  padding:16px 18px;
   font-size:20px;
   border-radius:20px;
 }
 
 .tapMeta{
-  margin-top:12px;
+  margin-top:10px;
   display:flex;
   justify-content:flex-start;
 }
+.tapCount{
+  font-weight:850;
+  opacity:0.9;
+}
 
-/* Responsive */
+/* SEC Page */
+.secHeader{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:14px;
+  margin:18px 0 14px;
+}
+
+.secLeftTitle{
+  font-size:30px;
+  font-weight:950;
+  letter-spacing:0.4px;
+}
+.secRed{ color:#ff2a2a; }
+.secWhite{ color:#fff; }
+
+.secGrid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:14px;
+}
+
+.card{
+  border:1px solid var(--stroke);
+  background:var(--card);
+  border-radius:var(--radius2);
+  padding:16px;
+  box-shadow:var(--shadow);
+}
+
+.cardTitle{
+  font-weight:950;
+  opacity:0.95;
+  margin-bottom:10px;
+  font-size:18px;
+}
+
+.clickGrid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:12px;
+}
+
+.kv .k{
+  font-size:14px;
+  opacity:0.88;
+  font-weight:900;
+}
+.kv .v{
+  font-size:28px;
+  font-weight:1000;
+  margin-top:4px;
+}
+
+.sessionLine{
+  margin-top:8px;
+  font-size:14px;
+  opacity:0.9;
+  font-weight:800;
+}
+
+.scoreBig{
+  font-size:92px;
+  line-height:0.95;
+  font-weight:1000;
+  margin:6px 0 12px;
+}
+.scoreGood{ color:#42ff7b; }
+.scoreMid{ color:#ffd166; }
+.scoreBad{ color:#ff4d4d; }
+
+.scoreMeta{
+  font-size:16px;
+  opacity:0.92;
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+  font-weight:800;
+}
+
+.secDownloads{
+  display:flex;
+  justify-content:center;
+  gap:14px;
+  margin-top:18px;
+  flex-wrap:wrap;
+}
+.secDownloads .cta{
+  min-width:min(420px, 92vw);
+  padding:16px 18px;
+  font-size:20px;
+  border-radius:18px;
+}
+
 @media (max-width: 860px){
+  .secGrid{ grid-template-columns:1fr; }
   .brandTitle{ font-size:40px; }
   .tipLine{ font-size:24px; }
 }
