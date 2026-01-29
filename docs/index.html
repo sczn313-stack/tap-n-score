@@ -6,61 +6,58 @@
   <meta name="color-scheme" content="dark" />
   <meta name="theme-color" content="#000000" />
   <title>Tap-n-Score™</title>
-  <link rel="stylesheet" href="./styles.css?v=20260129a" />
+  <link rel="stylesheet" href="./styles.css" />
 </head>
 
 <body>
-  <div class="app">
-    <main class="page pageActive" id="pageLanding">
+  <main class="page pageActive" id="pageRoot">
 
-      <!-- Brand (top-left, NOT a CTA) -->
-      <header class="brandTop" aria-label="Tap-n-Score brand">
-        <div class="brandTitle">
-          <span class="tRed">TAP</span><span class="tWhite">-N-</span><span class="tBlue">SCORE</span><span class="tm">™</span>
-        </div>
-        <div class="brandSub">After-Shot Intelligence</div>
-      </header>
+    <!-- BRAND (NOT a CTA) -->
+    <header class="brandTop">
+      <div class="brandTitle" aria-label="Tap-n-Score brand">
+        <span class="tRed">TAP</span><span class="tWhite">-N-</span><span class="tBlue">SCORE</span><span class="tm">™</span>
+      </div>
+      <div class="brandSub">After-Shot Intelligence</div>
+    </header>
 
-      <!-- Landing center -->
-      <section class="landingCenter" aria-label="Choose target photo">
-        <!-- IMPORTANT: input is present (not hidden attr), just visually hidden -->
-        <input id="photoInput" class="fileInput" type="file" accept="image/*" />
+    <!-- LANDING / PICKER -->
+    <section class="landingCenter" id="landingArea">
+      <!-- Must exist. DO NOT add capture attr. -->
+      <input id="photoInput" type="file" accept="image/*" class="fileInput" />
 
-        <!-- CTA uses label-for (iOS reliable) -->
-        <label id="photoCta" class="cta ctaPrimary" for="photoInput">
-          Take or Choose Target Photo
-        </label>
+      <!-- iOS reliable picker: LABEL triggers the file input -->
+      <label class="cta ctaPrimary" for="photoInput" id="photoCta">
+        Take or Choose Target Photo
+      </label>
 
-        <div class="tipLine" id="tipLine">
-          Tip: Straight-on photos give the most accurate results.
-        </div>
+      <div class="tipLine" id="tipLine">
+        Tip: Straight-on photos give the most accurate results.
+      </div>
+    </section>
 
-        <div class="pill" id="jsReady" style="display:none;">JS READY</div>
-      </section>
+    <!-- PAGE 2: TAP FLOW -->
+    <section class="tapPage" id="workArea" hidden>
 
-      <!-- Tap / Target area -->
-      <section class="targetStage" id="workArea" hidden>
-
-        <div class="tapHeader">
-          <div class="hdrLeft">
-            <!-- Optional vendor pill (can stay / can remove later) -->
-            <div class="pill pillBrand" id="vendorPill" style="display:none;">BAKER</div>
-
-            <div class="instructionLine" id="instructionLine">
-              Tap bull’s-eye to center
-            </div>
-          </div>
-
-          <!-- (Reserved space for future) -->
-          <div></div>
+      <div class="tapHeader">
+        <div class="hdrLeft">
+          <div class="pill pillBrand" id="vendorPill" aria-label="Vendor">BAKER</div>
+          <div class="instructionLine" id="instructionLine">Tap bull’s-eye to center</div>
         </div>
 
+        <!-- SHOW ONLY AFTER BULL IS SET -->
+        <div class="pill pillBuy" id="buyMorePill" hidden>
+          <div class="pillTop"><span class="buyBlue">BUY</span> <span class="buyWhite">MORE</span></div>
+          <div class="pillSub">Targets Like This</div>
+        </div>
+      </div>
+
+      <div class="targetStage">
         <div class="targetWrap" id="targetWrap">
-          <img id="targetImg" class="targetImg" alt="Target" draggable="false" />
+          <img id="targetImg" class="targetImg" alt="Target" />
           <div id="dotsLayer" class="dotsLayer"></div>
         </div>
 
-        <!-- CTAs: appear AFTER bull tap -->
+        <!-- CTA row: appears ONLY after bull tap -->
         <div class="ctaRow" id="ctaRow" hidden>
           <button class="cta ctaPrimary" id="undoBtn" type="button">Undo</button>
           <button class="cta ctaPrimary" id="clearBtn" type="button">Clear</button>
@@ -68,13 +65,73 @@
         </div>
 
         <div class="tapMeta">
-          <span class="pill" id="tapCount">Taps: 0</span>
+          <span class="tapCount" id="tapCount">Taps: 0</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- PAGE 3: SEC CARD -->
+    <section class="secPage" id="secPage" hidden>
+
+      <div class="secHeader">
+        <div>
+          <div class="secLeftTitle"><span class="secRed">SEC</span><span class="secWhite"> Card</span></div>
+          <div class="sessionLine">Session: <span id="secSession">SEC-—</span></div>
         </div>
 
-      </section>
-    </main>
-  </div>
+        <div class="pill pillBuy" id="secBuyMore">
+          <div class="pillTop"><span class="buyBlue">BUY</span> <span class="buyWhite">MORE</span></div>
+          <div class="pillSub">Targets Like This</div>
+        </div>
+      </div>
 
-  <script src="./index.js?v=20260129a"></script>
+      <div class="secGrid">
+        <div class="card">
+          <div class="cardTitle">Target Clicks</div>
+
+          <div class="clickGrid">
+            <div class="kv">
+              <div class="k">Up</div>
+              <div class="v" id="secUp">0.00</div>
+            </div>
+
+            <div class="kv">
+              <div class="k">Down</div>
+              <div class="v" id="secDown">0.00</div>
+            </div>
+
+            <div class="kv">
+              <div class="k">Left</div>
+              <div class="v" id="secLeft">0.00</div>
+            </div>
+
+            <div class="kv">
+              <div class="k">Right</div>
+              <div class="v" id="secRight">0.00</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="cardTitle">Score</div>
+          <div class="scoreBig scoreMid" id="secScore">—</div>
+          <div class="scoreMeta">
+            <div>Current <span id="secCurrent">—</span></div>
+            <div>Previous 3 <span id="secPrev3">—</span></div>
+            <div>Cumulative <span id="secCum">—</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="secDownloads">
+        <button class="cta ctaPrimary" id="downloadImgBtn" type="button">Download SEC (Image)</button>
+        <button class="cta ctaPrimary" id="downloadTxtBtn" type="button">Download SEC (Text)</button>
+      </div>
+
+    </section>
+
+  </main>
+
+  <script src="./index.js"></script>
 </body>
 </html>
