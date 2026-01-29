@@ -2,8 +2,11 @@
    index.js (FULL REPLACEMENT) — Baker Grid Pilot
    CROP-SAFE GRID MATH (1"×1" boxes) — no grid lock taps
 
-   Change in this version:
-   - REMOVED the grid-status line from the SEC display (still measures silently).
+   Changes in this version:
+   - Distance is WHOLE NUMBER ONLY (no decimals) in input + SEC.
+   - Click stays decimal-capable.
+   - One Baker button in header (Catalog).
+   - Other Baker button is rendered inside the SEC (Product).
 ============================================================ */
 
 (() => {
@@ -29,12 +32,15 @@
   const elApply = $("momaApplyBtn");
 
   const elBakerCatalog = $("bakerCatalogBtn");
-  const elBakerProduct = $("bakerProductBtn");
+
+  // URLs (single source of truth)
+  const BAKER_CATALOG_URL = "https://bakertargets.com/";
+  const BAKER_PRODUCT_URL = "https://bakertargets.com/";
 
   // Constants
   const DOT_PX = 10;
   const YARDS_PER_METER = 1.0936132983;
-  const DEFAULT_DISTANCE_YDS = 100;
+  const DEFAULT_DISTANCE_YDS = 100; // whole
   const DEFAULT_CLICK_MOA = 0.25;
 
   // Grid detection tuning
@@ -66,7 +72,7 @@
 
     // units and MOMA
     unit: "in", // "in" or "m" (display for distance)
-    distanceYds: DEFAULT_DISTANCE_YDS,
+    distanceYds: DEFAULT_DISTANCE_YDS, // stored in yds
     clickMoa: DEFAULT_CLICK_MOA,
 
     // AUTO GRID SCALE (px per 1" box)
@@ -75,13 +81,14 @@
     gridStatus: "GRID: not measured",
   };
 
-  // Hidden canvas for analysis
-  const cnv = document.createElement("canvas");
-  const ctx = cnv.getContext("2d", { willReadFrequently: true });
-
   // Helpers
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
   const fmt2 = (n) => (Number.isFinite(n) ? n.toFixed(2) : "0.00");
+  const fmtDist = (n) => {
+    const x = Number(n);
+    if (!Number.isFinite(x)) return "0";
+    return String(Math.round(x)); // WHOLE NUMBER ONLY
+  };
 
   function setInstruction(t) { elInstruction.textContent = t; }
   function setTapCount() { elTapCount.textContent = String(state.taps.length); }
@@ -129,7 +136,6 @@
 
   function redrawDots() {
     elDots.innerHTML = "";
-
     const r = DOT_PX / state.scale;
 
     state.taps.forEach((p, idx) => {
@@ -181,19 +187,24 @@
   }
 
   function readMomaInputsToState() {
-    const d = Number(elDistanceInput.value);
+    const dRaw = Number(elDistanceInput.value);
     const c = Number(elClickInput.value);
 
     if (Number.isFinite(c) && c > 0) state.clickMoa = c;
 
-    if (Number.isFinite(d) && d > 0) {
-      state.distanceYds = (state.unit === "m") ? d * YARDS_PER_METER : d;
+    if (Number.isFinite(dRaw) && dRaw > 0) {
+      const dWhole = Math.round(dRaw); // WHOLE NUMBER ONLY
+      state.distanceYds = (state.unit === "m") ? dWhole * YARDS_PER_METER : dWhole;
     }
   }
 
   function writeStateToMomaInputs() {
-    elDistanceInput.value =
-      state.unit === "m" ? fmt2(state.distanceYds / YARDS_PER_METER) : fmt2(state.distanceYds);
+    const distDisplay =
+      state.unit === "m"
+        ? state.distanceYds / YARDS_PER_METER
+        : state.distanceYds;
+
+    elDistanceInput.value = fmtDist(distDisplay); // WHOLE ONLY
     elClickInput.value = fmt2(state.clickMoa);
   }
 
@@ -206,7 +217,6 @@
      ============================ */
 
   function computeEdgeMap(imageData, w, h) {
-    // Very simple edge magnitude using |dx| + |dy| on grayscale
     const data = imageData.data;
     const gray = new Uint8ClampedArray(w * h);
 
@@ -228,7 +238,6 @@
   }
 
   function buildProfileX(edge, w, h) {
-    // Sum edge energy by column (ignore margins)
     const prof = new Float32Array(w);
     const y0 = Math.floor(h * 0.15);
     const y1 = Math.floor(h * 0.85);
@@ -238,11 +247,12 @@
       for (let y = y0; y < y1; y++) s += edge[y * w + x];
       prof[x] = s;
     }
-    // normalize
+
     let mean = 0;
     for (let x = 0; x < w; x++) mean += prof[x];
     mean /= w;
     for (let x = 0; x < w; x++) prof[x] = prof[x] - mean;
+
     return prof;
   }
 
@@ -256,10 +266,12 @@
       for (let x = x0; x < x1; x++) s += edge[y * w + x];
       prof[y] = s;
     }
+
     let mean = 0;
     for (let y = 0; y < h; y++) mean += prof[y];
     mean /= h;
     for (let y = 0; y < h; y++) prof[y] = prof[y] - mean;
+
     return prof;
   }
 
@@ -278,7 +290,6 @@
   }
 
   function measureGridPxPerBox() {
-    // Use a downscaled working copy to speed up (still fine for spacing)
     const w = elImg.naturalWidth || 0;
     const h = elImg.naturalHeight || 0;
     if (w < 200 || h < 200) return false;
@@ -303,7 +314,6 @@
     const rx = refineLagTopK(profX, GRID_LAG_MIN, Math.min(GRID_LAG_MAX, ww - 5), GRID_TOP_K);
     const ry = refineLagTopK(profY, GRID_LAG_MIN, Math.min(GRID_LAG_MAX, hh - 5), GRID_TOP_K);
 
-    // Convert back to native px spacing
     const pxBoxX = rx.lag / scaleDown;
     const pxBoxY = ry.lag / scaleDown;
 
@@ -329,21 +339,17 @@
     const bull = state.taps[0];
     const hits = state.taps.slice(1);
 
-    // POIB in pixels
     const poibPx = hits.reduce((a, p) => ({ x: a.x + p.x, y: a.y + p.y }), { x: 0, y: 0 });
     poibPx.x /= hits.length;
     poibPx.y /= hits.length;
 
-    // Pixel deltas (POIB relative to bull)
     const dxPx = poibPx.x - bull.x; // right positive
     const dyPx = poibPx.y - bull.y; // down positive
 
-    // Convert to inches via boxes (1 box = 1 inch)
     const poibX_in = dxPx / state.pxPerBoxX;      // right positive
     const poibY_in = -(dyPx / state.pxPerBoxY);   // up positive
 
-    // Correction = Bull − POIB
-    const corrX_in = -poibX_in;
+    const corrX_in = -poibX_in; // Bull − POIB
     const corrY_in = -poibY_in;
 
     const dirX = corrX_in >= 0 ? "RIGHT" : "LEFT";
@@ -369,19 +375,17 @@
       moaY,
       clicksX,
       clicksY,
-      // gridStatus still computed internally, just not displayed
-      gridStatus: state.gridStatus,
     };
   }
 
   function renderSEC(res) {
-    const distanceShown = state.unit === "m"
-      ? `${fmt2(state.distanceYds / YARDS_PER_METER)} m`
-      : `${fmt2(state.distanceYds)} yds`;
+    const distDisplay = state.unit === "m"
+      ? state.distanceYds / YARDS_PER_METER
+      : state.distanceYds;
 
+    const distanceShown = `${fmtDist(distDisplay)} ${state.unit === "m" ? "m" : "yds"}`;
     const clickShown = `${fmt2(state.clickMoa)} MOA/click`;
 
-    // NOTE: grid-status line removed from the SEC output per request.
     elSEC.innerHTML = `
       <div style="
         padding:12px;
@@ -392,10 +396,25 @@
       ">
         <div style="display:flex; justify-content:space-between; gap:10px; flex-wrap:wrap; align-items:center;">
           <div style="font-weight:900; font-size:18px; letter-spacing:0.2px;">Shooter Experience Card</div>
-          <div style="display:flex; gap:10px; flex-wrap:wrap;">
+
+          <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
             <div style="padding:8px 10px; border:1px solid rgba(255,255,255,0.10); border-radius:999px; font-weight:900; color:rgba(255,255,255,0.85);">True MOA</div>
             <div style="padding:8px 10px; border:1px solid rgba(255,255,255,0.10); border-radius:999px; font-weight:900;">${distanceShown}</div>
             <div style="padding:8px 10px; border:1px solid rgba(255,255,255,0.10); border-radius:999px; font-weight:900;">${clickShown}</div>
+
+            <!-- Baker button on the SEC -->
+            <a href="${BAKER_PRODUCT_URL}" target="_blank" rel="noopener"
+               style="
+                 text-decoration:none;
+                 padding:8px 12px;
+                 border:1px solid rgba(255,255,255,0.10);
+                 border-radius:999px;
+                 font-weight:900;
+                 color:rgba(255,255,255,0.92);
+                 background: rgba(255,255,255,0.04);
+               ">
+              See More Baker Targets
+            </a>
           </div>
         </div>
 
@@ -615,10 +634,10 @@
     redrawDots();
     clearSEC();
 
-    // reset per-session units back to default
     state.unit = "in";
     elUnitToggle.checked = false;
     setUnitsUI();
+
     state.distanceYds = DEFAULT_DISTANCE_YDS;
     state.clickMoa = DEFAULT_CLICK_MOA;
     writeStateToMomaInputs();
@@ -635,6 +654,9 @@
 
   elApply.addEventListener("click", () => {
     readMomaInputsToState();
+    // write back to input so it snaps to whole distance immediately
+    writeStateToMomaInputs();
+
     if (elSEC.innerHTML.trim()) {
       const res = computeSEC();
       if (res.ok) renderSEC(res);
@@ -644,6 +666,8 @@
   elUnitToggle.addEventListener("change", () => {
     state.unit = elUnitToggle.checked ? "m" : "in";
     setUnitsUI();
+
+    // keep whole number behavior on toggle as well
     writeStateToMomaInputs();
 
     if (elSEC.innerHTML.trim()) {
@@ -652,12 +676,19 @@
     }
   });
 
-  // Vendor buttons (set your real URLs anytime)
-  elBakerCatalog.href = "https://bakertargets.com/";
-  elBakerProduct.href = "https://bakertargets.com/";
-
   // Init
   function init() {
+    // Header (single button)
+    elBakerCatalog.href = BAKER_CATALOG_URL;
+
+    // Distance: whole only
+    elDistanceInput.placeholder = "100";
+    elDistanceInput.step = "1";
+
+    // Click: decimal ok
+    elClickInput.placeholder = "0.25";
+    elClickInput.step = "0.01";
+
     state.distanceYds = DEFAULT_DISTANCE_YDS;
     state.clickMoa = DEFAULT_CLICK_MOA;
     state.unit = "in";
