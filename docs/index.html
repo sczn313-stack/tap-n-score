@@ -1,4 +1,4 @@
- <!doctype html>
+<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
@@ -11,7 +11,8 @@
 </head>
 
 <body>
-  <main class="page">
+  <!-- NOTE: pageActive is REQUIRED if your CSS hides .page by default -->
+  <main class="page pageActive">
 
     <!-- Brand -->
     <header class="brandHeader">
@@ -24,16 +25,17 @@
     <!-- Picker Section -->
     <section class="hero">
 
-      <!-- REAL file input (hidden) -->
+      <!-- REAL file input (must exist + be clickable on iOS)
+           Keep it in DOM (NOT hidden). Hide via CSS instead. -->
       <input
         id="photoInput"
+        class="fileInput"
         type="file"
         accept="image/*"
-        hidden
       />
 
-      <!-- CTA button that opens picker (iOS reliable) -->
-      <label id="photoCta" class="cta ctaRed" for="photoInput">
+      <!-- CTA button that opens picker -->
+      <label id="photoCta" class="cta ctaRed" for="photoInput" role="button" tabindex="0">
         Take or Choose Target Photo
       </label>
 
@@ -55,7 +57,7 @@
 
       <!-- Target frame -->
       <div class="targetFrame" id="targetWrap">
-        <img id="targetImg" alt="Target" />
+        <img id="targetImg" class="targetImg" alt="Target" />
         <div id="dotsLayer" class="dotsLayer"></div>
       </div>
 
@@ -74,6 +76,6 @@
 
   </main>
 
-  <script src="./index.js"></script>
+  <script src="./index.js" defer></script>
 </body>
 </html>
