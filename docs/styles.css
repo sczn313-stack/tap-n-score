@@ -4,8 +4,8 @@
   --card:rgba(255,255,255,0.06);
   --stroke:rgba(255,255,255,0.14);
   --text:rgba(255,255,255,0.92);
-  --muted:rgba(255,255,255,0.70);
-  --cta:#d61f2c;              /* ONE CTA COLOR */
+  --muted:rgba(255,255,255,0.72);
+  --cta:#d61f2c;          /* ONE CTA COLOR */
   --ctaText:#fff;
   --shadow:0 14px 40px rgba(0,0,0,0.45);
   --radius:18px;
@@ -22,12 +22,7 @@ html,body{
   color:var(--text);
   font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;
 }
-button, input{ font-family:inherit; }
-
-/* ADDED: make taps feel clean on iOS */
-a, button, label{
-  -webkit-tap-highlight-color: transparent;
-}
+button,input{ font-family:inherit; }
 
 .app{
   min-height:100%;
@@ -67,6 +62,7 @@ a, button, label{
   gap:18px;
 }
 
+/* CTA */
 .cta{
   border:none;
   border-radius:24px;
@@ -76,45 +72,26 @@ a, button, label{
   cursor:pointer;
   box-shadow:var(--shadow);
   text-align:center;
-  min-width:min(520px, 90vw);
-
-  /* ADDED: make <label class="cta"> act exactly like a button */
-  display:flex;
-  align-items:center;
-  justify-content:center;
+  min-width:min(520px, 92vw);
   user-select:none;
-
-  /* ADDED: normalize iOS button/label rendering */
-  -webkit-appearance:none;
-  appearance:none;
+  -webkit-tap-highlight-color: transparent;
 }
-
-/* ADDED: keep label CTAs looking identical */
-label.cta{
-  text-decoration:none;
-}
-
 .ctaPrimary{
   background:var(--cta);
   color:var(--ctaText);
 }
-
-.cta:disabled{
-  opacity:0.5;
-  cursor:not-allowed;
-}
+.cta:disabled{ opacity:0.5; cursor:not-allowed; }
 
 .tipLine{
   font-size:26px;
   font-weight:750;
-  color:rgba(255,255,255,0.85);
+  color:rgba(255,255,255,0.90);
   text-align:center;
-  max-width:620px;
+  max-width:640px;
   line-height:1.25;
 }
 
-/* iOS file input: must exist + be clickable.
-   We keep it present but visually hidden and still linked via label[for]. */
+/* File input: present, but visually hidden (iOS-safe) */
 .fileInput{
   position:absolute;
   left:-9999px;
@@ -123,27 +100,7 @@ label.cta{
   opacity:0;
 }
 
-/* ADDED: extra iOS safety — NEVER display:none on the file input */
-input[type="file"]{
-  display:block;
-}
-
-/* Tap Page */
-.tapHeader{
-  display:flex;
-  justify-content:space-between;
-  align-items:flex-start;
-  gap:12px;
-  margin-bottom:12px;
-}
-
-.hdrLeft{ display:flex; flex-direction:column; gap:10px; }
-.instructionLine{
-  font-size:20px;
-  font-weight:800;
-  color:rgba(255,255,255,0.88);
-}
-
+/* Pills */
 .pill{
   border:1px solid var(--stroke);
   background:rgba(255,255,255,0.06);
@@ -152,17 +109,27 @@ input[type="file"]{
   padding:8px 12px;
   font-weight:850;
   letter-spacing:0.6px;
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
 }
-.pillBrand{ width:fit-content; }
-.pillBuy{
-  padding:12px 16px;
-  text-align:center;
-  font-weight:900;
-}
-.pillBuy .pillSub{ font-weight:750; opacity:0.9; }
 
-.targetStage{
-  margin-top:10px;
+/* Tap Page */
+.targetStage{ margin-top:20px; }
+
+.tapHeader{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:12px;
+  margin-bottom:12px;
+}
+.hdrLeft{ display:flex; flex-direction:column; gap:10px; }
+
+.instructionLine{
+  font-size:20px;
+  font-weight:800;
+  color:rgba(255,255,255,0.92);
 }
 
 .targetWrap{
@@ -172,7 +139,8 @@ input[type="file"]{
   background:rgba(0,0,0,0.35);
   overflow:hidden;
   box-shadow:var(--shadow);
-  height:min(62vh, 620px);
+  height:min(62vh, 640px);
+  width:100%;
 }
 
 .targetImg{
@@ -182,7 +150,7 @@ input[type="file"]{
   height:100%;
   object-fit:contain;
   transform-origin:center center;
-  touch-action:none; /* we manage pinch */
+  touch-action:none; /* we manage interactions */
 }
 
 .dotsLayer{
@@ -191,6 +159,7 @@ input[type="file"]{
   pointer-events:none;
 }
 
+/* Dots */
 .dot{
   position:absolute;
   width:26px;
@@ -207,10 +176,7 @@ input[type="file"]{
   color:#fff;
   text-shadow:0 2px 6px rgba(0,0,0,0.65);
 }
-
-.dotBull{
-  background:rgba(40,170,255,0.88);
-}
+.dotBull{ background:rgba(40,170,255,0.88); }
 
 .ctaRow{
   display:flex;
@@ -226,97 +192,14 @@ input[type="file"]{
   border-radius:20px;
 }
 
-/* SEC */
-.secHeader{
+.tapMeta{
+  margin-top:12px;
   display:flex;
-  justify-content:space-between;
-  align-items:flex-start;
-  gap:14px;
-  margin-bottom:14px;
-}
-.secLeftTitle{
-  font-size:28px;
-  font-weight:950;
-  letter-spacing:0.4px;
-}
-.secRed{ color:#ff2a2a; }
-.secWhite{ color:#fff; }
-
-.secGrid{
-  display:grid;
-  grid-template-columns: 1fr 1fr;
-  gap:14px;
+  justify-content:flex-start;
 }
 
-.card{
-  border:1px solid var(--stroke);
-  background:var(--card);
-  border-radius:var(--radius2);
-  padding:16px;
-  box-shadow:var(--shadow);
-}
-.cardTitle{
-  font-weight:900;
-  opacity:0.9;
-  margin-bottom:10px;
-}
-
-.clickGrid{
-  display:grid;
-  grid-template-columns:1fr 1fr;
-  gap:12px;
-}
-.kv .k{
-  font-size:14px;
-  opacity:0.85;
-  font-weight:800;
-}
-.kv .v{
-  font-size:26px;
-  font-weight:950;
-  margin-top:4px;
-}
-
-.sessionLine{
-  margin-top:10px;
-  font-size:14px;
-  opacity:0.85;
-}
-
-.scoreBig{
-  font-size:86px;
-  line-height:0.95;
-  font-weight:1000;
-  margin:4px 0 10px;
-}
-.scoreGood{ color:#42ff7b; }
-.scoreMid{ color:#ffd166; }
-.scoreBad{ color:#ff4d4d; }
-
-.scoreMeta{
-  font-size:16px;
-  opacity:0.9;
-  display:flex;
-  flex-direction:column;
-  gap:6px;
-}
-
-.secDownloads{
-  display:flex;
-  justify-content:center;
-  gap:14px;
-  margin-top:18px;
-  flex-wrap:wrap;
-}
-.secDownloads .cta{
-  min-width:min(360px, 90vw);
-  padding:14px 18px;
-  font-size:20px;
-  border-radius:18px;
-}
-
+/* Responsive */
 @media (max-width: 860px){
-  .secGrid{ grid-template-columns:1fr; }
   .brandTitle{ font-size:40px; }
   .tipLine{ font-size:24px; }
 }
