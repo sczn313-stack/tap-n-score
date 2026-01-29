@@ -1,4 +1,4 @@
-<!doctype html>
+ <!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
@@ -6,130 +6,74 @@
   <meta name="color-scheme" content="dark" />
   <meta name="theme-color" content="#000000" />
   <title>Tap-n-Score™</title>
-  <link rel="stylesheet" href="./styles.css?v=20260129a" />
+
+  <link rel="stylesheet" href="./styles.css" />
 </head>
 
 <body>
-  <main class="app">
+  <main class="page">
 
-    <!-- PAGE 1: LANDING -->
-    <section id="pageLanding" class="page pageActive">
-      <div class="brandTop">
-        <div class="brandTitle">
-          <span class="tRed">TAP</span>-<span class="tWhite">N</span>-<span class="tBlue">SCORE</span><span class="tm">™</span>
-        </div>
-        <div class="brandSub">After-Shot Intelligence</div>
+    <!-- Brand -->
+    <header class="brandHeader">
+      <div class="brandLine">
+        <span class="brandRed">TAP</span><span class="brandWhite">-N-</span><span class="brandBlue">SCORE</span><span class="brandTm">™</span>
+      </div>
+      <div class="brandSub">After-Shot Intelligence</div>
+    </header>
+
+    <!-- Picker Section -->
+    <section class="hero">
+
+      <!-- REAL file input (hidden) -->
+      <input
+        id="photoInput"
+        type="file"
+        accept="image/*"
+        hidden
+      />
+
+      <!-- CTA button that opens picker (iOS reliable) -->
+      <label id="photoCta" class="cta ctaRed" for="photoInput">
+        Take or Choose Target Photo
+      </label>
+
+      <div class="tipLine" id="tipLine">
+        Tip: Straight-on photos give the most accurate results.
       </div>
 
-      <div class="landingCenter">
-
-        <!-- IMPORTANT (iOS): input must be clickable. We use a label that targets the input. -->
-        <label class="cta ctaPrimary" for="photoInput">
-          Take or Choose Target Photo
-        </label>
-
-        <input
-          id="photoInput"
-          class="fileInput"
-          type="file"
-          accept="image/*"
-          capture="environment"
-        />
-
-        <div class="tipLine">
-          Tip: Straight-on photos give the most accurate results.
-        </div>
-      </div>
+      <!-- Debug pill (optional) -->
+      <div class="pillReady" id="jsReady">JS READY</div>
     </section>
 
-    <!-- PAGE 2: TARGET / TAP -->
-    <section id="pageTap" class="page">
-      <header class="tapHeader">
-        <div class="hdrLeft">
-          <div class="pill pillBrand">BAKER</div>
-          <div id="instructionLine" class="instructionLine">Tap bull’s-eye to center</div>
-        </div>
+    <!-- Target + Tap Flow -->
+    <section class="workArea" id="workArea" hidden>
 
-        <div class="hdrRight">
-          <button id="btnBuyMoreTop" class="pill pillBuy" type="button" hidden>
-            Buy More Targets Like This
-          </button>
-        </div>
-      </header>
-
-      <div class="targetStage">
-        <div id="targetWrap" class="targetWrap">
-          <img id="targetImg" class="targetImg" alt="Target" />
-          <div id="dotsLayer" class="dotsLayer"></div>
-        </div>
+      <!-- Instruction line (changes: Tap bull → Tap holes) -->
+      <div class="instructionTop" id="instructionLine">
+        Tap bull’s-eye to center
       </div>
 
-      <!-- CTAs must appear at bottom, while target stays on screen -->
-      <div class="ctaRow">
-        <button id="btnUndo" class="cta ctaPrimary" type="button" disabled hidden>Undo</button>
-        <button id="btnClear" class="cta ctaPrimary" type="button" disabled hidden>Clear</button>
-        <button id="btnShow" class="cta ctaPrimary" type="button" disabled hidden>Show Results</button>
-      </div>
-    </section>
-
-    <!-- PAGE 3: SEC RESULTS -->
-    <section id="pageSEC" class="page">
-      <header class="secHeader">
-        <div class="secLeftTitle">
-          <span class="secRed">SEC</span> <span class="secWhite">Card</span>
-        </div>
-
-        <button id="btnBuyMoreSEC" class="pill pillBuy" type="button">
-          BUY MORE<br><span class="pillSub">Targets Like This</span>
-        </button>
-      </header>
-
-      <div class="secGrid">
-        <div class="card">
-          <div class="cardTitle">Target Clicks</div>
-          <div class="clickGrid">
-            <div class="kv">
-              <div class="k">Up</div>
-              <div id="clickUp" class="v">0.00</div>
-            </div>
-            <div class="kv">
-              <div class="k">Down</div>
-              <div id="clickDown" class="v">0.00</div>
-            </div>
-            <div class="kv">
-              <div class="k">Left</div>
-              <div id="clickLeft" class="v">0.00</div>
-            </div>
-            <div class="kv">
-              <div class="k">Right</div>
-              <div id="clickRight" class="v">0.00</div>
-            </div>
-          </div>
-
-          <div class="sessionLine">
-            Session: <span id="sessionId">SEC-—</span>
-          </div>
-        </div>
-
-        <div class="card">
-          <div class="cardTitle">Score</div>
-          <div id="scoreBig" class="scoreBig scoreMid">82</div>
-          <div class="scoreMeta">
-            <div>Current <span id="scoreCurrent">82</span></div>
-            <div>Previous 3 <span id="scorePrev">—</span></div>
-            <div>Cumulative <span id="scoreCum">—</span></div>
-          </div>
-        </div>
+      <!-- Target frame -->
+      <div class="targetFrame" id="targetWrap">
+        <img id="targetImg" alt="Target" />
+        <div id="dotsLayer" class="dotsLayer"></div>
       </div>
 
-      <div class="secDownloads">
-        <button id="btnDlImg" class="cta ctaPrimary" type="button">Download SEC (Image)</button>
-        <button id="btnDlTxt" class="cta ctaPrimary" type="button">Download SEC (Text)</button>
+      <!-- CTA row (same color / same sizing) -->
+      <div class="ctaRow" id="ctaRow" hidden>
+        <button class="cta ctaRed" id="undoBtn" type="button">Undo</button>
+        <button class="cta ctaRed" id="clearBtn" type="button">Clear</button>
+        <button class="cta ctaRed" id="showResultsBtn" type="button">Show Results</button>
       </div>
+
+      <div class="tapMeta">
+        <span class="tapCount" id="tapCount">Taps: 0</span>
+      </div>
+
     </section>
 
   </main>
 
-  <script src="./index.js?v=20260129a"></script>
+  <script src="./index.js"></script>
 </body>
 </html>
