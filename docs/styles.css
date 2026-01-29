@@ -52,6 +52,7 @@ body{
 .landingBg{
   position:absolute;
   inset:0;
+  pointer-events:none; /* IMPORTANT: never intercept taps */
   background:
     radial-gradient(circle at 50% 45%,
       rgba(255,255,255,0.06) 0%,
@@ -95,15 +96,25 @@ body{
   gap:10px;
 }
 
-.fileInput{ display:none; }
+/* IMPORTANT (iOS): DO NOT use display:none for file input */
+.fileInput{
+  position:fixed;
+  left:-9999px;
+  top:0;
+  width:1px;
+  height:1px;
+  opacity:0;
+  pointer-events:none;
+}
 
+/* Tip styling */
 .tipLine{
   max-width:520px;
   text-align:center;
   font-size:14px;
   line-height:1.25;
-  color:#ffffff;     /* bright enough */
-  opacity:0.92;      /* after-shot formatting feel */
+  color:#ffffff;
+  opacity:0.92;
 }
 
 /* =========================
