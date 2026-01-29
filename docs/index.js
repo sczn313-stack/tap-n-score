@@ -1,523 +1,479 @@
 /* ============================================================
-   frontend_new/index.js (FULL REPLACEMENT) — iOS file picker fix
-============================================================ */
+   index.js (FULL REPLACEMENT) — Tap-n-Score™ 3-Page Flow
+   - Page 1: Landing → Take/Choose Photo (iOS-safe)
+   - Page 2: Target view → Tap bull, then tap holes (pinch zoom)
+   - Page 3: SEC → Clicks ONLY (2 decimals), big score, prev 3, cumulative, session ID
+   ============================================================ */
 
 (() => {
   const $ = (id) => document.getElementById(id);
 
-  // Views
-  const viewLanding = $("viewLanding");
-  const viewTarget  = $("viewTarget");
-  const viewSEC     = $("viewSEC");
+  // Pages
+  const pageLanding = $("pageLanding");
+  const pageTap = $("pageTap");
+  const pageSEC = $("pageSEC");
 
-  // Landing
-  const btnChoosePhoto = $("btnChoosePhoto");
-  const photoInput     = $("photoInput");
+  // Landing input
+  const photoInput = $("photoInput");
 
-  // Target page
-  const targetImg       = $("targetImg");
-  const tapLayer        = $("tapLayer");
+  // Tap page elements
+  const targetWrap = $("targetWrap");
+  const targetImg = $("targetImg");
+  const dotsLayer = $("dotsLayer");
   const instructionLine = $("instructionLine");
-  const targetWrap      = $("targetCanvasWrap");
-  const ctaBar          = $("ctaBar");
-  const btnClear        = $("btnClear");
-  const btnUndo         = $("btnUndo");
-  const btnGetResults   = $("btnGetResults");
-  const btnBuyMore      = $("btnBuyMore");
 
-  // SEC page
+  const btnUndo = $("btnUndo");
+  const btnClear = $("btnClear");
+  const btnShow = $("btnShow");
   const btnBuyMoreTop = $("btnBuyMoreTop");
-  const clickUpEl     = $("clickUp");
-  const clickDownEl   = $("clickDown");
-  const clickLeftEl   = $("clickLeft");
-  const clickRightEl  = $("clickRight");
-  const secSessionId  = $("secSessionId");
-  const secScoreValue = $("secScoreValue");
-  const histCurrent   = $("histCurrent");
-  const histPrev3     = $("histPrev3");
-  const histCum       = $("histCum");
-  const btnDownloadImg= $("btnDownloadImg");
-  const btnDownloadTxt= $("btnDownloadTxt");
-  const secCanvas     = $("secCanvas");
 
-  // -----------------------------
-  // Session ID
-  // -----------------------------
-  function makeSessionId() {
-    const a = Math.random().toString(16).slice(2, 10).toUpperCase();
-    const b = Date.now().toString(16).slice(-6).toUpperCase();
-    return `SEC-${b}-${a}`;
-  }
+  // SEC page elements
+  const clickUp = $("clickUp");
+  const clickDown = $("clickDown");
+  const clickLeft = $("clickLeft");
+  const clickRight = $("clickRight");
+  const sessionIdEl = $("sessionId");
 
-  let sessionId = sessionStorage.getItem("sczn3_session_id");
-  if (!sessionId) {
-    sessionId = makeSessionId();
-    sessionStorage.setItem("sczn3_session_id", sessionId);
-  }
+  const scoreBig = $("scoreBig");
+  const scoreCurrent = $("scoreCurrent");
+  const scorePrev = $("scorePrev");
+  const scoreCum = $("scoreCum");
 
-  // -----------------------------
-  // State
-  // -----------------------------
+  const btnDlImg = $("btnDlImg");
+  const btnDlTxt = $("btnDlTxt");
+  const btnBuyMoreSEC = $("btnBuyMoreSEC");
+
+  // --- State
   let objectUrl = null;
-  let selectedFile = null;
 
-  let bull = null;
-  let holes = [];
+  let stage = "BULL"; // "BULL" | "HOLES"
+  let bull = null;    // {x,y} in WRAP coordinates
+  let holes = [];     // array of {x,y} in WRAP coordinates
 
-  // Zoom/pan
+  // Pinch zoom (applies to target image only; dots stay in wrap coords)
   let scale = 1;
-  let panX = 0;
-  let panY = 0;
-  let isPanning = false;
-  let lastTouchDist = null;
-  let lastTouchMid = null;
-  let lastPanPoint = null;
+  let lastDist = 0;
 
-  let secData = {
-    up: "0.00", down: "0.00", left: "0.00", right: "0.00",
-    score: 0,
-    prev3: [],
-    cumulative: 0,
-    vendor: "BAKER"
-  };
+  // Session
+  let sessionId = null;
 
-  // -----------------------------
-  // Helpers
-  // -----------------------------
-  function show(view) {
-    viewLanding.classList.add("hidden");
-    viewTarget.classList.add("hidden");
-    viewSEC.classList.add("hidden");
-    view.classList.remove("hidden");
-    window.scrollTo(0, 0);
+  // --- Helpers
+  function showPage(which) {
+    [pageLanding, pageTap, pageSEC].forEach(p => p.classList.remove("pageActive"));
+    which.classList.add("pageActive");
   }
 
-  function twoDec(n) {
+  function two(n) {
     const x = Number(n);
     if (!Number.isFinite(x)) return "0.00";
     return x.toFixed(2);
   }
 
-  function clamp(v, min, max) {
-    return Math.max(min, Math.min(max, v));
+  function newSessionId() {
+    // Short, readable
+    const a = Math.random().toString(16).slice(2, 8).toUpperCase();
+    const b = Math.random().toString(16).slice(2, 10).toUpperCase();
+    return `SEC-${a}-${b}`;
   }
 
-  function screenToImagePoint(clientX, clientY) {
-    const imgRect  = targetImg.getBoundingClientRect();
-    const rx = clientX - imgRect.left;
-    const ry = clientY - imgRect.top;
-
-    const nx = (rx / imgRect.width)  * targetImg.naturalWidth;
-    const ny = (ry / imgRect.height) * targetImg.naturalHeight;
-
-    return { x: nx, y: ny };
-  }
-
-  function clearDots() { tapLayer.innerHTML = ""; }
-
-  function drawDotImageCoords(pt, cls = "") {
-    const imgRect = targetImg.getBoundingClientRect();
-    const sx = imgRect.left + (pt.x / targetImg.naturalWidth)  * imgRect.width;
-    const sy = imgRect.top  + (pt.y / targetImg.naturalHeight) * imgRect.height;
-
-    const wrapRect = targetWrap.getBoundingClientRect();
-    const x = sx - wrapRect.left;
-    const y = sy - wrapRect.top;
-
-    const d = document.createElement("div");
-    d.className = `dot ${cls}`.trim();
-    d.style.left = `${x}px`;
-    d.style.top  = `${y}px`;
-    tapLayer.appendChild(d);
-  }
-
-  function redrawDots() {
-    clearDots();
-    if (bull) drawDotImageCoords(bull, "bull");
-    holes.forEach((h) => drawDotImageCoords(h, ""));
-  }
-
-  function applyTransform() {
-    targetImg.style.transform =
-      `translate(-50%,-50%) translate(${panX}px, ${panY}px) scale(${scale})`;
-    redrawDots();
-  }
-
-  // -----------------------------
-  // Landing → choose photo (iOS FIX)
-  // -----------------------------
-  btnChoosePhoto.addEventListener("click", () => {
-    // iOS: allow re-selecting same image
-    photoInput.value = "";
-
-    // iOS: keep it in the same user gesture chain
-    requestAnimationFrame(() => {
-      photoInput.click();
-    });
-  });
-
-  photoInput.addEventListener("change", () => {
-    const f = photoInput.files && photoInput.files[0];
-    if (!f) return;
-
-    selectedFile = f;
-
-    if (objectUrl) URL.revokeObjectURL(objectUrl);
-    objectUrl = URL.createObjectURL(f);
-
-    // reset state
+  function clearAll() {
     bull = null;
     holes = [];
-    scale = 1;
-    panX = 0;
-    panY = 0;
-    lastTouchDist = null;
-    lastTouchMid = null;
-    lastPanPoint = null;
+    stage = "BULL";
+    renderDots();
+    setInstruction();
+    setCtasVisibility();
+  }
 
-    show(viewTarget);
+  function setInstruction() {
+    if (stage === "BULL") {
+      instructionLine.textContent = "Tap bull’s-eye to center";
+    } else {
+      instructionLine.textContent = "Tap bullet holes to be scored";
+    }
+  }
+
+  function setCtasVisibility() {
+    const bullSet = !!bull;
+
+    // CTAs do NOT appear until after bull is set
+    btnUndo.hidden = !bullSet;
+    btnClear.hidden = !bullSet;
+    btnShow.hidden = !bullSet;
+
+    btnUndo.disabled = !bullSet || (holes.length === 0);
+    btnClear.disabled = !bullSet || (holes.length === 0);
+    btnShow.disabled = !bullSet || (holes.length < 1);
+
+    // Buy-more top CTA: also hidden until bull is set
+    btnBuyMoreTop.hidden = !bullSet;
+  }
+
+  function wrapPointFromEvent(e) {
+    const rect = targetWrap.getBoundingClientRect();
+    const x = (e.clientX - rect.left);
+    const y = (e.clientY - rect.top);
+    return { x, y };
+  }
+
+  function addDot(pt, kind, label) {
+    const d = document.createElement("div");
+    d.className = "dot" + (kind === "BULL" ? " dotBull" : "");
+    d.style.left = `${pt.x}px`;
+    d.style.top = `${pt.y}px`;
+    d.textContent = label ?? "";
+    dotsLayer.appendChild(d);
+  }
+
+  function renderDots() {
+    dotsLayer.innerHTML = "";
+    if (bull) addDot(bull, "BULL", "B");
+    holes.forEach((h, i) => addDot(h, "HOLE", String(i + 1)));
+  }
+
+  function dist(t1, t2) {
+    const dx = t1.clientX - t2.clientX;
+    const dy = t1.clientY - t2.clientY;
+    return Math.hypot(dx, dy);
+  }
+
+  function clamp(v, lo, hi) {
+    return Math.max(lo, Math.min(hi, v));
+  }
+
+  function applyScale() {
+    targetImg.style.transform = `scale(${scale})`;
+  }
+
+  // --- Scoring + Clicks (placeholder math for now)
+  // Your backend can replace this later. For pilot UI/perfection, the layout/flow is the win.
+  function computePOIB() {
+    if (!holes.length) return null;
+    const sx = holes.reduce((a, p) => a + p.x, 0);
+    const sy = holes.reduce((a, p) => a + p.y, 0);
+    return { x: sx / holes.length, y: sy / holes.length };
+  }
+
+  function computeClicks() {
+    // UI expects clicks only; two decimals.
+    // For now we create a deterministic demo based on pixel deltas so the page is functional.
+    // Replace with your real MOA math/True MOA + distance once backend is wired.
+    const poib = computePOIB();
+    if (!bull || !poib) return { up:0, down:0, left:0, right:0, score:0 };
+
+    const dx = bull.x - poib.x; // + means bull is right of POIB -> need RIGHT correction
+    const dy = bull.y - poib.y; // + means bull is below POIB -> need DOWN correction (screen-space)
+
+    // Convert px deltas to “clicks” for demo: 50px ~= 1 click (arbitrary but stable)
+    const clicksX = dx / 50;
+    const clicksY = dy / 50;
+
+    const right = Math.max(0, clicksX);
+    const left  = Math.max(0, -clicksX);
+    const down  = Math.max(0, clicksY);
+    const up    = Math.max(0, -clicksY);
+
+    // Score demo: tighter cluster + closer to bull = higher
+    const spread = holes.reduce((acc, p) => acc + Math.hypot(p.x - poib.x, p.y - poib.y), 0) / holes.length;
+    const err = Math.hypot(dx, dy);
+    let score = 100 - (err / 6) - (spread / 8);
+    score = clamp(Math.round(score), 0, 100);
+
+    return { up, down, left, right, score };
+  }
+
+  function scoreClass(score) {
+    if (score >= 90) return "scoreGood";
+    if (score >= 70) return "scoreMid";
+    return "scoreBad";
+  }
+
+  function loadScoreHistory() {
+    try {
+      const raw = localStorage.getItem("sczn3_score_hist");
+      const arr = raw ? JSON.parse(raw) : [];
+      return Array.isArray(arr) ? arr.filter(n => Number.isFinite(n)) : [];
+    } catch {
+      return [];
+    }
+  }
+
+  function saveScoreHistory(arr) {
+    try {
+      localStorage.setItem("sczn3_score_hist", JSON.stringify(arr.slice(-25)));
+    } catch {}
+  }
+
+  function goSEC() {
+    sessionId = newSessionId();
+
+    const out = computeClicks();
+
+    // Two decimals ALWAYS
+    clickUp.textContent = two(out.up);
+    clickDown.textContent = two(out.down);
+    clickLeft.textContent = two(out.left);
+    clickRight.textContent = two(out.right);
+
+    sessionIdEl.textContent = sessionId;
+
+    // Score
+    scoreBig.classList.remove("scoreGood","scoreMid","scoreBad");
+    scoreBig.classList.add(scoreClass(out.score));
+    scoreBig.textContent = String(out.score);
+
+    // History (prev 3 + cumulative)
+    const hist = loadScoreHistory();
+    const prev3 = hist.slice(-3);
+    const nextHist = hist.concat([out.score]);
+    saveScoreHistory(nextHist);
+
+    scoreCurrent.textContent = String(out.score);
+    scorePrev.textContent = prev3.length ? prev3.join(", ") : "—";
+
+    const all = nextHist;
+    const cum = all.length ? Math.round(all.reduce((a,b)=>a+b,0) / all.length) : out.score;
+    scoreCum.textContent = String(cum);
+
+    showPage(pageSEC);
+  }
+
+  function downloadTextFile(filename, text) {
+    const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
+  }
+
+  function downloadCanvasPNG(filename, canvas) {
+    canvas.toBlob((blob) => {
+      if (!blob) return;
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 2000);
+    }, "image/png");
+  }
+
+  function buildSECImageCanvas() {
+    // Creates a simple SEC image from Page 3 data (clean + readable).
+    const w = 1200, h = 700;
+    const c = document.createElement("canvas");
+    c.width = w; c.height = h;
+    const ctx = c.getContext("2d");
+
+    // bg
+    ctx.fillStyle = "#0b0f18";
+    ctx.fillRect(0,0,w,h);
+
+    // header
+    ctx.font = "900 54px system-ui, -apple-system, Segoe UI, Roboto, Arial";
+    ctx.fillStyle = "#ff2a2a";
+    ctx.fillText("SEC", 60, 90);
+    ctx.fillStyle = "#ffffff";
+    ctx.fillText(" Card", 160, 90);
+
+    // session
+    ctx.font = "700 22px system-ui, -apple-system, Segoe UI, Roboto, Arial";
+    ctx.fillStyle = "rgba(255,255,255,0.8)";
+    ctx.fillText(`Session: ${sessionId}`, 60, 130);
+
+    // clicks box
+    ctx.fillStyle = "rgba(255,255,255,0.06)";
+    ctx.strokeStyle = "rgba(255,255,255,0.14)";
+    roundRect(ctx, 60, 170, 520, 420, 26, true, true);
+
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "900 30px system-ui, -apple-system, Segoe UI, Roboto, Arial";
+    ctx.fillText("Target Clicks", 90, 220);
+
+    ctx.font = "800 22px system-ui, -apple-system, Segoe UI, Roboto, Arial";
+    ctx.fillStyle = "rgba(255,255,255,0.8)";
+    const lines = [
+      ["Up", clickUp.textContent],
+      ["Down", clickDown.textContent],
+      ["Left", clickLeft.textContent],
+      ["Right", clickRight.textContent],
+    ];
+
+    let y = 270;
+    lines.forEach(([k,v]) => {
+      ctx.fillStyle = "rgba(255,255,255,0.85)";
+      ctx.fillText(k, 100, y);
+      ctx.fillStyle = "#ffffff";
+      ctx.font = "950 34px system-ui, -apple-system, Segoe UI, Roboto, Arial";
+      ctx.fillText(v, 240, y+6);
+      ctx.font = "800 22px system-ui, -apple-system, Segoe UI, Roboto, Arial";
+      y += 78;
+    });
+
+    // score box
+    roundRect(ctx, 640, 170, 500, 420, 26, true, true);
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "900 30px system-ui, -apple-system, Segoe UI, Roboto, Arial";
+    ctx.fillText("Score", 670, 220);
+
+    // score big
+    const s = scoreBig.textContent;
+    ctx.font = "1000 140px system-ui, -apple-system, Segoe UI, Roboto, Arial";
+    ctx.fillStyle = scoreBig.classList.contains("scoreGood") ? "#42ff7b" :
+                    scoreBig.classList.contains("scoreBad") ? "#ff4d4d" : "#ffd166";
+    ctx.fillText(s, 670, 370);
+
+    ctx.fillStyle = "rgba(255,255,255,0.85)";
+    ctx.font = "800 26px system-ui, -apple-system, Segoe UI, Roboto, Arial";
+    ctx.fillText(`Current ${scoreCurrent.textContent}`, 670, 430);
+    ctx.fillText(`Previous 3 ${scorePrev.textContent}`, 670, 475);
+    ctx.fillText(`Cumulative ${scoreCum.textContent}`, 670, 520);
+
+    return c;
+
+    function roundRect(ctx, x, y, w, h, r, fill, stroke) {
+      const rr = Math.min(r, w/2, h/2);
+      ctx.beginPath();
+      ctx.moveTo(x+rr, y);
+      ctx.arcTo(x+w, y, x+w, y+h, rr);
+      ctx.arcTo(x+w, y+h, x, y+h, rr);
+      ctx.arcTo(x, y+h, x, y, rr);
+      ctx.arcTo(x, y, x+w, y, rr);
+      ctx.closePath();
+      if (fill) ctx.fill();
+      if (stroke) ctx.stroke();
+    }
+  }
+
+  // --- Events
+
+  // Photo chosen
+  photoInput.addEventListener("change", () => {
+    const file = photoInput.files && photoInput.files[0];
+    if (!file) return;
+
+    if (objectUrl) URL.revokeObjectURL(objectUrl);
+    objectUrl = URL.createObjectURL(file);
 
     targetImg.onload = () => {
-      applyTransform();
-      instructionLine.textContent = "Tap bull’s-eye to center";
-      ctaBar.classList.add("hidden"); // CTAs hidden until bull is set
+      // Reset state + zoom
+      scale = 1;
+      applyScale();
+
+      clearAll();
+      showPage(pageTap);
     };
 
     targetImg.src = objectUrl;
   });
 
-  // -----------------------------
-  // Tap logic
-  // -----------------------------
-  targetWrap.addEventListener("click", (e) => {
-    if (!targetImg.naturalWidth) return;
-    if (lastTouchDist !== null) return;
+  // Tap to set bull / holes
+  targetWrap.addEventListener("pointerdown", (e) => {
+    // Ignore if multi-touch pinch is happening (handled below)
+    if (e.pointerType === "touch") {
+      // allow; pinch handled by touch events
+    }
 
-    const pt = screenToImagePoint(e.clientX, e.clientY);
+    // Only register tap if image is loaded
+    if (!targetImg.src) return;
 
-    if (!bull) {
+    const pt = wrapPointFromEvent(e);
+
+    if (stage === "BULL") {
       bull = pt;
-      instructionLine.textContent = "Tap bullet holes to be scored";
-      ctaBar.classList.remove("hidden");
-      redrawDots();
+      stage = "HOLES";
+      setInstruction();
+      renderDots();
+      setCtasVisibility();
       return;
     }
 
+    // HOLES stage
     holes.push(pt);
-    redrawDots();
+    renderDots();
+    setCtasVisibility();
   });
 
-  // -----------------------------
-  // Pinch zoom + pan
-  // -----------------------------
+  // Pinch zoom (touch)
   targetWrap.addEventListener("touchstart", (e) => {
-    if (!targetImg.naturalWidth) return;
-
-    if (e.touches.length === 2) {
-      const t1 = e.touches[0];
-      const t2 = e.touches[1];
-      const dx = t2.clientX - t1.clientX;
-      const dy = t2.clientY - t1.clientY;
-      lastTouchDist = Math.hypot(dx, dy);
-      lastTouchMid = { x: (t1.clientX + t2.clientX) / 2, y: (t1.clientY + t2.clientY) / 2 };
-      e.preventDefault();
-      return;
+    if (e.touches && e.touches.length === 2) {
+      lastDist = dist(e.touches[0], e.touches[1]);
     }
-
-    if (e.touches.length === 1) {
-      isPanning = true;
-      const t = e.touches[0];
-      lastPanPoint = { x: t.clientX, y: t.clientY };
-    }
-  }, { passive: false });
+  }, { passive: true });
 
   targetWrap.addEventListener("touchmove", (e) => {
-    if (!targetImg.naturalWidth) return;
-
-    if (e.touches.length === 2 && lastTouchDist !== null) {
-      const t1 = e.touches[0];
-      const t2 = e.touches[1];
-      const dx = t2.clientX - t1.clientX;
-      const dy = t2.clientY - t1.clientY;
-      const dist = Math.hypot(dx, dy);
-
-      const delta = dist / lastTouchDist;
-      scale = clamp(scale * delta, 0.75, 6);
-      lastTouchDist = dist;
-
-      const mid = { x: (t1.clientX + t2.clientX) / 2, y: (t1.clientY + t2.clientY) / 2 };
-      const mdx = mid.x - lastTouchMid.x;
-      const mdy = mid.y - lastTouchMid.y;
-      panX += mdx;
-      panY += mdy;
-      lastTouchMid = mid;
-
-      applyTransform();
-      e.preventDefault();
-      return;
+    if (e.touches && e.touches.length === 2) {
+      const d = dist(e.touches[0], e.touches[1]);
+      if (lastDist > 0) {
+        const delta = (d - lastDist) / 250; // sensitivity
+        scale = clamp(scale + delta, 1, 4);
+        applyScale();
+      }
+      lastDist = d;
     }
-
-    if (e.touches.length === 1 && isPanning && lastPanPoint) {
-      const t = e.touches[0];
-      const dx = t.clientX - lastPanPoint.x;
-      const dy = t.clientY - lastPanPoint.y;
-      panX += dx;
-      panY += dy;
-      lastPanPoint = { x: t.clientX, y: t.clientY };
-      applyTransform();
-      e.preventDefault();
-    }
-  }, { passive: false });
+  }, { passive: true });
 
   targetWrap.addEventListener("touchend", (e) => {
-    if (e.touches.length < 2) {
-      lastTouchDist = null;
-      lastTouchMid = null;
-    }
-    if (e.touches.length === 0) {
-      isPanning = false;
-      lastPanPoint = null;
-    }
-  });
-
-  // -----------------------------
-  // CTAs
-  // -----------------------------
-  btnClear.addEventListener("click", () => {
-    holes = [];
-    redrawDots();
-  });
+    if (!e.touches || e.touches.length < 2) lastDist = 0;
+  }, { passive: true });
 
   btnUndo.addEventListener("click", () => {
+    if (!holes.length) return;
     holes.pop();
-    redrawDots();
+    renderDots();
+    setCtasVisibility();
   });
 
-  function openVendorLink() {
-    window.open("https://bakertargets.com", "_blank", "noopener,noreferrer");
-  }
-  btnBuyMore.addEventListener("click", openVendorLink);
-  btnBuyMoreTop.addEventListener("click", openVendorLink);
-
-  // -----------------------------
-  // Get Results → SEC
-  // -----------------------------
-  btnGetResults.addEventListener("click", async () => {
+  btnClear.addEventListener("click", () => {
     if (!bull) return;
-    if (holes.length < 1) return;
-
-    try {
-      const endpoint = "/api/analyze";
-      const payload = { sessionId, bull, holes };
-
-      const resp = await fetch(endpoint, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload)
-      });
-
-      if (resp.ok) {
-        const data = await resp.json();
-
-        secData.up    = twoDec(data?.clicks?.up ?? data?.up ?? 0);
-        secData.down  = twoDec(data?.clicks?.down ?? data?.down ?? 0);
-        secData.left  = twoDec(data?.clicks?.left ?? data?.left ?? 0);
-        secData.right = twoDec(data?.clicks?.right ?? data?.right ?? 0);
-
-        secData.score = Number(data?.score ?? 0) || 0;
-        secData.prev3 = Array.isArray(data?.prev3) ? data.prev3.slice(0,3) : [];
-        secData.cumulative = Number(data?.cumulative ?? secData.score) || secData.score;
-      } else {
-        throw new Error("backend not ok");
-      }
-    } catch (err) {
-      secData.up = "0.00";
-      secData.down = "0.00";
-      secData.left = "0.00";
-      secData.right = "0.00";
-      secData.score = 82;
-      secData.prev3 = [78, 80, 76];
-      secData.cumulative = 79;
-    }
-
-    renderSEC();
-    show(viewSEC);
+    holes = [];
+    renderDots();
+    setCtasVisibility();
   });
 
-  function setScoreColor(score) {
-    secScoreValue.classList.remove("scoreGood", "scoreMid", "scoreLow");
-    if (score >= 85) secScoreValue.classList.add("scoreGood");
-    else if (score >= 65) secScoreValue.classList.add("scoreMid");
-    else secScoreValue.classList.add("scoreLow");
-  }
-
-  function renderSEC() {
-    clickUpEl.textContent    = secData.up;
-    clickDownEl.textContent  = secData.down;
-    clickLeftEl.textContent  = secData.left;
-    clickRightEl.textContent = secData.right;
-
-    secSessionId.textContent = `Session: ${sessionId}`;
-
-    secScoreValue.textContent = String(secData.score);
-    setScoreColor(secData.score);
-
-    histCurrent.textContent = String(secData.score);
-    histPrev3.textContent = secData.prev3.length ? secData.prev3.join(", ") : "—";
-    histCum.textContent = String(secData.cumulative);
-  }
-
-  // -----------------------------
-  // Downloads (unchanged from your last build)
-  // -----------------------------
-  btnDownloadImg.addEventListener("click", () => {
-    const ctx = secCanvas.getContext("2d");
-    if (!ctx) return;
-
-    const w = secCanvas.width;
-    const h = secCanvas.height;
-
-    ctx.fillStyle = "#060709";
-    ctx.fillRect(0, 0, w, h);
-
-    const grd = ctx.createRadialGradient(w*0.5, h*0.25, 50, w*0.5, h*0.25, h*0.9);
-    grd.addColorStop(0, "rgba(255,255,255,0.06)");
-    grd.addColorStop(0.25, "rgba(255,255,255,0.02)");
-    grd.addColorStop(0.6, "rgba(0,0,0,0.75)");
-    grd.addColorStop(1, "rgba(0,0,0,0.92)");
-    ctx.fillStyle = grd;
-    ctx.fillRect(0, 0, w, h);
-
-    ctx.font = "900 56px system-ui, -apple-system, Segoe UI, Roboto, Arial";
-    ctx.textBaseline = "top";
-    ctx.fillStyle = "#e0222f";
-    ctx.fillText("SEC", 70, 70);
-    ctx.fillStyle = "#ffffff";
-    ctx.fillText(" Card", 190, 70);
-
-    const boxX = w - 70 - 360;
-    const boxY = 70;
-    const boxW = 360;
-    const boxH = 140;
-    ctx.fillStyle = "rgba(15,20,28,0.92)";
-    ctx.strokeStyle = "#223044";
-    ctx.lineWidth = 3;
-    roundRect(ctx, boxX, boxY, boxW, boxH, 22, true, true);
-
-    ctx.fillStyle = "#2b6cff";
-    ctx.font = "900 34px system-ui, -apple-system, Segoe UI, Roboto, Arial";
-    ctx.fillText("BUY", boxX + 28, boxY + 26);
-    ctx.fillStyle = "#ffffff";
-    ctx.fillText(" MORE", boxX + 110, boxY + 26);
-    ctx.fillStyle = "#ffffff";
-    ctx.font = "700 24px system-ui, -apple-system, Segoe UI, Roboto, Arial";
-    ctx.fillText("Targets Like This", boxX + 28, boxY + 78);
-
-    const cX = 70, cY = 260, cW = 520, cH = 520;
-    ctx.fillStyle = "rgba(15,18,22,0.90)";
-    ctx.strokeStyle = "#202632";
-    ctx.lineWidth = 3;
-    roundRect(ctx, cX, cY, cW, cH, 26, true, true);
-
-    ctx.fillStyle = "#ffffff";
-    ctx.font = "800 28px system-ui, -apple-system, Segoe UI, Roboto, Arial";
-    ctx.fillText("Target Clicks", cX + 30, cY + 28);
-
-    ctx.font = "700 24px system-ui, -apple-system, Segoe UI, Roboto, Arial";
-    ctx.fillStyle = "rgba(255,255,255,0.72)";
-    ctx.fillText("Up", cX + 30, cY + 100);
-    ctx.fillText("Down", cX + 280, cY + 100);
-    ctx.fillText("Left", cX + 30, cY + 230);
-    ctx.fillText("Right", cX + 280, cY + 230);
-
-    ctx.font = "900 44px system-ui, -apple-system, Segoe UI, Roboto, Arial";
-    ctx.fillStyle = "#ffffff";
-    ctx.fillText(secData.up, cX + 30, cY + 130);
-    ctx.fillText(secData.down, cX + 280, cY + 130);
-    ctx.fillText(secData.left, cX + 30, cY + 260);
-    ctx.fillText(secData.right, cX + 280, cY + 260);
-
-    ctx.font = "700 22px system-ui, -apple-system, Segoe UI, Roboto, Arial";
-    ctx.fillStyle = "rgba(255,255,255,0.60)";
-    ctx.fillText(`Session: ${sessionId}`, cX + 30, cY + cH - 54);
-
-    const sX = 640, sY = 260, sW = 370, sH = 520;
-    ctx.fillStyle = "rgba(15,18,22,0.90)";
-    ctx.strokeStyle = "#202632";
-    ctx.lineWidth = 3;
-    roundRect(ctx, sX, sY, sW, sH, 26, true, true);
-
-    ctx.fillStyle = "#ffffff";
-    ctx.font = "800 28px system-ui, -apple-system, Segoe UI, Roboto, Arial";
-    ctx.fillText("Score", sX + 30, sY + 28);
-
-    ctx.font = "950 140px system-ui, -apple-system, Segoe UI, Roboto, Arial";
-    ctx.fillStyle = scoreColor(secData.score);
-    ctx.fillText(String(secData.score), sX + 30, sY + 88);
-
-    ctx.font = "750 26px system-ui, -apple-system, Segoe UI, Roboto, Arial";
-    ctx.fillStyle = "rgba(255,255,255,0.78)";
-    ctx.fillText(`Current: ${secData.score}`, sX + 30, sY + 270);
-
-    const prev = secData.prev3.length ? secData.prev3.join(", ") : "—";
-    ctx.fillText(`Previous 3: ${prev}`, sX + 30, sY + 316);
-    ctx.fillText(`Cumulative: ${secData.cumulative}`, sX + 30, sY + 362);
-
-    secCanvas.toBlob((blob) => {
-      if (!blob) return;
-      const a = document.createElement("a");
-      a.href = URL.createObjectURL(blob);
-      a.download = `${sessionId}_SEC.png`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      setTimeout(() => URL.revokeObjectURL(a.href), 1500);
-    }, "image/png");
+  btnShow.addEventListener("click", () => {
+    goSEC();
   });
 
-  function scoreColor(score) {
-    if (score >= 85) return "#39d98a";
-    if (score >= 65) return "#ffd166";
-    return "#ff5c5c";
-  }
+  // Downloads
+  btnDlTxt.addEventListener("click", () => {
+    const txt =
+`SEC Card
+Session: ${sessionIdEl.textContent}
 
-  function roundRect(ctx, x, y, w, h, r, fill, stroke) {
-    const rr = Math.min(r, w / 2, h / 2);
-    ctx.beginPath();
-    ctx.moveTo(x + rr, y);
-    ctx.arcTo(x + w, y, x + w, y + h, rr);
-    ctx.arcTo(x + w, y + h, x, y + h, rr);
-    ctx.arcTo(x, y + h, x, y, rr);
-    ctx.arcTo(x, y, x + w, y, rr);
-    ctx.closePath();
-    if (fill) ctx.fill();
-    if (stroke) ctx.stroke();
-  }
+Target Clicks (2 decimals)
+Up: ${clickUp.textContent}
+Down: ${clickDown.textContent}
+Left: ${clickLeft.textContent}
+Right: ${clickRight.textContent}
 
-  btnDownloadTxt.addEventListener("click", () => {
-    const lines = [];
-    lines.push(`Session: ${sessionId}`);
-    lines.push(`Score: ${secData.score}`);
-    lines.push(`Target Clicks (two decimals):`);
-    lines.push(`  Up: ${secData.up}`);
-    lines.push(`  Down: ${secData.down}`);
-    lines.push(`  Left: ${secData.left}`);
-    lines.push(`  Right: ${secData.right}`);
-    lines.push(`History:`);
-    lines.push(`  Current: ${secData.score}`);
-    lines.push(`  Previous 3: ${secData.prev3.length ? secData.prev3.join(", ") : "—"}`);
-    lines.push(`  Cumulative: ${secData.cumulative}`);
-
-    const blob = new Blob([lines.join("\n")], { type: "text/plain;charset=utf-8" });
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = `${sessionId}_SEC.txt`;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    setTimeout(() => URL.revokeObjectURL(a.href), 1500);
+Score
+Current: ${scoreCurrent.textContent}
+Previous 3: ${scorePrev.textContent}
+Cumulative: ${scoreCum.textContent}
+`;
+    downloadTextFile(`${sessionIdEl.textContent}.txt`, txt);
   });
 
-  show(viewLanding);
+  btnDlImg.addEventListener("click", () => {
+    const canvas = buildSECImageCanvas();
+    downloadCanvasPNG(`${sessionIdEl.textContent}.png`, canvas);
+  });
 
+  // Vendor CTA hooks (wire your real Baker URL later)
+  btnBuyMoreTop.addEventListener("click", () => {
+    window.open("https://bakertargets.com", "_blank", "noopener,noreferrer");
+  });
+  btnBuyMoreSEC.addEventListener("click", () => {
+    window.open("https://bakertargets.com", "_blank", "noopener,noreferrer");
+  });
+
+  // Initial
+  showPage(pageLanding);
 })();
