@@ -2,11 +2,11 @@
    index.js (FULL REPLACEMENT) — Baker Grid Pilot
    CROP-SAFE GRID MATH (1"×1" boxes) — no grid lock taps
 
-   Changes in this version:
-   - Distance is WHOLE NUMBER ONLY (no decimals) in input + SEC.
+   This version:
+   - Distance is WHOLE NUMBER ONLY (snaps automatically; no decimals).
    - Click stays decimal-capable.
-   - One Baker button in header (Catalog).
-   - Other Baker button is rendered inside the SEC (Product).
+   - Header: ONE Baker button (Catalog).
+   - SEC includes Baker Product button + "Download SEC" (text receipt).
 ============================================================ */
 
 (() => {
@@ -71,14 +71,13 @@
     taps: [], // [0]=bull, [1+]=holes
 
     // units and MOMA
-    unit: "in", // "in" or "m" (display for distance)
-    distanceYds: DEFAULT_DISTANCE_YDS, // stored in yds
+    unit: "in", // "in" or "m" (distance display)
+    distanceYds: DEFAULT_DISTANCE_YDS, // stored in yards always
     clickMoa: DEFAULT_CLICK_MOA,
 
     // AUTO GRID SCALE (px per 1" box)
     pxPerBoxX: null,
     pxPerBoxY: null,
-    gridStatus: "GRID: not measured",
   };
 
   // Helpers
@@ -174,7 +173,7 @@
 
   function stepHint() {
     if (!state.imgLoaded) return "Upload photo → Tap bull → Tap bullet holes → Show Results.";
-    if (!state.pxPerBoxX || !state.pxPerBoxY) return "Measuring grid… (upload a clear grid photo).";
+    if (!state.pxPerBoxX || !state.pxPerBoxY) return "Measuring grid… (upload a clear 1\" grid photo).";
     if (state.taps.length === 0) return "Step 1: Tap the bull (aim point).";
     if (state.taps.length === 1) return "Step 2: Tap your bullet holes.";
     return "Tap more holes, then Show Results.";
@@ -186,35 +185,66 @@
     elDistanceUnit.textContent = isMeters ? "m" : "yd";
   }
 
-  function readMomaInputsToState() {
-    const dRaw = Number(elDistanceInput.value);
-    const c = Number(elClickInput.value);
-
-    if (Number.isFinite(c) && c > 0) state.clickMoa = c;
-
-    if (Number.isFinite(dRaw) && dRaw > 0) {
-      const dWhole = Math.round(dRaw); // WHOLE NUMBER ONLY
-      state.distanceYds = (state.unit === "m") ? dWhole * YARDS_PER_METER : dWhole;
-    }
-  }
-
-  function writeStateToMomaInputs() {
-    const distDisplay =
-      state.unit === "m"
-        ? state.distanceYds / YARDS_PER_METER
-        : state.distanceYds;
-
-    elDistanceInput.value = fmtDist(distDisplay); // WHOLE ONLY
-    elClickInput.value = fmt2(state.clickMoa);
-  }
-
   function inchesPerMOA(distanceYds) {
     return (distanceYds * 1.047) / 100;
   }
 
-  /* ============================
-     GRID AUTO-DETECTION
-     ============================ */
+  // ===== Distance snapping (AUTO)
+  function snapDistanceInputToWhole() {
+    // Whatever user typed, snap to whole, keep it as display unit
+    const v = Number(elDistanceInput.value);
+    if (!Number.isFinite(v) || v <= 0) return false;
+
+    const whole = Math.round(v);
+    elDistanceInput.value = String(whole);
+
+    // Store as yards internally
+    state.distanceYds = (state.unit === "m") ? whole * YARDS_PER_METER : whole;
+    return true;
+  }
+
+  function readClickInput() {
+    const c = Number(elClickInput.value);
+    if (Number.isFinite(c) && c > 0) state.clickMoa = c;
+  }
+
+  function writeStateToInputs() {
+    const distDisplay = state.unit === "m"
+      ? state.distanceYds / YARDS_PER_METER
+      : state.distanceYds;
+
+    elDistanceInput.value = fmtDist(distDisplay);
+    elClickInput.value = fmt2(state.clickMoa);
+  }
+
+  function refreshSECIfVisible() {
+    if (!elSEC.innerHTML.trim()) return;
+    const res = computeSEC();
+    if (res.ok) renderSEC(res);
+  }
+
+  // ===== Download helpers
+  function downloadText(filename, text) {
+    const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+
+  function nowStamp() {
+    const d = new Date();
+    const pad = (n) => String(n).padStart(2, "0");
+    return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}_${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`;
+  }
+
+  // ============================
+  // GRID AUTO-DETECTION
+  // ============================
 
   function computeEdgeMap(imageData, w, h) {
     const data = imageData.data;
@@ -286,7 +316,7 @@
     scores.sort((a, b) => b.s - a.s);
     const top = scores.slice(0, Math.max(1, k));
     const avgLag = top.reduce((a, o) => a + o.lag, 0) / top.length;
-    return { lag: avgLag, score: top[0].s };
+    return { lag: avgLag };
   }
 
   function measureGridPxPerBox() {
@@ -323,17 +353,16 @@
 
     state.pxPerBoxX = pxBoxX;
     state.pxPerBoxY = pxBoxY;
-    state.gridStatus = `GRID: ${fmt2(pxBoxX)} px/box X • ${fmt2(pxBoxY)} px/box Y`;
     return true;
   }
 
-  /* ============================
-     SEC computation (box-based)
-     ============================ */
+  // ============================
+  // SEC computation (box-based)
+  // ============================
 
   function computeSEC() {
     if (!state.imgLoaded) return { ok: false, err: "Upload a target photo first." };
-    if (!state.pxPerBoxX || !state.pxPerBoxY) return { ok: false, err: "Grid not measured yet. Use a clearer grid photo." };
+    if (!state.pxPerBoxX || !state.pxPerBoxY) return { ok: false, err: "Grid not measured yet. Use a clearer 1\" grid photo." };
     if (state.taps.length < 2) return { ok: false, err: "Tap the bull and at least 1 bullet hole." };
 
     const bull = state.taps[0];
@@ -346,12 +375,15 @@
     const dxPx = poibPx.x - bull.x; // right positive
     const dyPx = poibPx.y - bull.y; // down positive
 
+    // Convert to inches using detected px per 1" box
     const poibX_in = dxPx / state.pxPerBoxX;      // right positive
     const poibY_in = -(dyPx / state.pxPerBoxY);   // up positive
 
-    const corrX_in = -poibX_in; // Bull − POIB
+    // Correction = Bull − POIB
+    const corrX_in = -poibX_in;
     const corrY_in = -poibY_in;
 
+    // Directions: Up is up, Right is right
     const dirX = corrX_in >= 0 ? "RIGHT" : "LEFT";
     const dirY = corrY_in >= 0 ? "UP" : "DOWN";
 
@@ -378,6 +410,31 @@
     };
   }
 
+  function buildReceiptText(res) {
+    const distDisplay = state.unit === "m"
+      ? state.distanceYds / YARDS_PER_METER
+      : state.distanceYds;
+
+    const distanceShown = `${fmtDist(distDisplay)} ${state.unit === "m" ? "m" : "yds"}`;
+
+    return [
+      "Tap-n-Score™ — Shooter Experience Card",
+      "Baker 23×35 • 1\" Grid Pilot",
+      "",
+      `Distance: ${distanceShown}`,
+      `Click Value: ${fmt2(state.clickMoa)} MOA/click`,
+      `Verified Hits: ${res.hitsCount}`,
+      "",
+      `POIB (in): X ${fmt2(res.poibX_in)}   Y ${fmt2(res.poibY_in)}`,
+      `Correction (Bull − POIB) (in): ΔX ${fmt2(res.corrX_in)}   ΔY ${fmt2(res.corrY_in)}`,
+      `Dial: ${res.dirX} • ${res.dirY}`,
+      `MOA: X ${fmt2(res.moaX)}   Y ${fmt2(res.moaY)}`,
+      `Clicks: X ${fmt2(res.clicksX)}   Y ${fmt2(res.clicksY)}`,
+      "",
+      `Timestamp: ${new Date().toString()}`
+    ].join("\n");
+  }
+
   function renderSEC(res) {
     const distDisplay = state.unit === "m"
       ? state.distanceYds / YARDS_PER_METER
@@ -402,7 +459,6 @@
             <div style="padding:8px 10px; border:1px solid rgba(255,255,255,0.10); border-radius:999px; font-weight:900;">${distanceShown}</div>
             <div style="padding:8px 10px; border:1px solid rgba(255,255,255,0.10); border-radius:999px; font-weight:900;">${clickShown}</div>
 
-            <!-- Baker button on the SEC -->
             <a href="${BAKER_PRODUCT_URL}" target="_blank" rel="noopener"
                style="
                  text-decoration:none;
@@ -415,6 +471,19 @@
                ">
               See More Baker Targets
             </a>
+
+            <button id="downloadSecBtn" type="button"
+               style="
+                 padding:8px 12px;
+                 border:1px solid rgba(255,255,255,0.10);
+                 border-radius:999px;
+                 font-weight:900;
+                 color:rgba(255,255,255,0.92);
+                 background: rgba(255,255,255,0.08);
+                 cursor:pointer;
+               ">
+              Download SEC
+            </button>
           </div>
         </div>
 
@@ -461,9 +530,22 @@
         </div>
       </div>
     `;
+
+    // Wire the download button (after SEC HTML exists)
+    const btn = document.getElementById("downloadSecBtn");
+    if (btn) {
+      btn.addEventListener("click", () => {
+        const receipt = buildReceiptText(res);
+        const fname = `SEC_Baker_${nowStamp()}.txt`;
+        downloadText(fname, receipt);
+      });
+    }
   }
 
+  // ============================
   // Touch/pointer interactions (pinch + pan + tap)
+  // ============================
+
   function onPointerDown(e) {
     if (!state.imgLoaded) return;
 
@@ -581,7 +663,10 @@
     clearSEC();
   }
 
+  // ============================
   // File chosen
+  // ============================
+
   function onFileChosen() {
     const f = elFile.files && elFile.files[0];
     if (!f) return;
@@ -593,7 +678,6 @@
     state.taps = [];
     state.pxPerBoxX = null;
     state.pxPerBoxY = null;
-    state.gridStatus = "GRID: measuring…";
     redrawDots();
     clearSEC();
 
@@ -605,7 +689,6 @@
       if (!ok) {
         state.pxPerBoxX = null;
         state.pxPerBoxY = null;
-        state.gridStatus = "GRID: could not measure (use a clearer grid photo)";
       }
 
       redrawDots();
@@ -620,7 +703,10 @@
     elImg.src = state.objectUrl;
   }
 
+  // ============================
   // Buttons
+  // ============================
+
   elUndo.addEventListener("click", () => {
     if (state.taps.length === 0) return;
     state.taps.pop();
@@ -640,7 +726,7 @@
 
     state.distanceYds = DEFAULT_DISTANCE_YDS;
     state.clickMoa = DEFAULT_CLICK_MOA;
-    writeStateToMomaInputs();
+    writeStateToInputs();
 
     setInstruction(stepHint());
   });
@@ -652,40 +738,71 @@
     setInstruction("SEC ready. Undo/Clear or upload a new photo.");
   });
 
+  // Keep Update button (optional), but snapping is now automatic
   elApply.addEventListener("click", () => {
-    readMomaInputsToState();
-    // write back to input so it snaps to whole distance immediately
-    writeStateToMomaInputs();
-
-    if (elSEC.innerHTML.trim()) {
-      const res = computeSEC();
-      if (res.ok) renderSEC(res);
-    }
+    const changed = snapDistanceInputToWhole();
+    readClickInput();
+    if (changed) writeStateToInputs();
+    refreshSECIfVisible();
   });
 
   elUnitToggle.addEventListener("change", () => {
     state.unit = elUnitToggle.checked ? "m" : "in";
     setUnitsUI();
 
-    // keep whole number behavior on toggle as well
-    writeStateToMomaInputs();
-
-    if (elSEC.innerHTML.trim()) {
-      const res = computeSEC();
-      if (res.ok) renderSEC(res);
-    }
+    // When switching units, keep the same internal yards,
+    // just rewrite the input display as WHOLE in that unit.
+    writeStateToInputs();
+    refreshSECIfVisible();
   });
+
+  // AUTO SNAP EVENTS (no more waiting for Update)
+  function wireDistanceAutoSnap() {
+    const handler = () => {
+      const ok = snapDistanceInputToWhole();
+      if (!ok) return;
+      refreshSECIfVisible();
+    };
+
+    // As user edits, we keep it responsive but not annoying:
+    // - on blur: always snap
+    // - on change: snap
+    // - on Enter: snap
+    elDistanceInput.addEventListener("blur", handler);
+    elDistanceInput.addEventListener("change", handler);
+    elDistanceInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        handler();
+        elDistanceInput.blur();
+      }
+    });
+  }
+
+  function wireClickLive() {
+    const handler = () => {
+      readClickInput();
+      refreshSECIfVisible();
+    };
+    elClickInput.addEventListener("blur", handler);
+    elClickInput.addEventListener("change", handler);
+    elClickInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        handler();
+        elClickInput.blur();
+      }
+    });
+  }
 
   // Init
   function init() {
-    // Header (single button)
+    // Header button
     elBakerCatalog.href = BAKER_CATALOG_URL;
 
-    // Distance: whole only
+    // Inputs
     elDistanceInput.placeholder = "100";
     elDistanceInput.step = "1";
-
-    // Click: decimal ok
     elClickInput.placeholder = "0.25";
     elClickInput.step = "0.01";
 
@@ -695,13 +812,17 @@
 
     elUnitToggle.checked = false;
     setUnitsUI();
-    writeStateToMomaInputs();
+    writeStateToInputs();
+
+    wireDistanceAutoSnap();
+    wireClickLive();
 
     setInstruction(stepHint());
     setTapCount();
 
     elFile.addEventListener("change", onFileChosen);
 
+    // pointer/touch
     elWrap.addEventListener("pointerdown", onPointerDown, { passive: true });
     elWrap.addEventListener("pointermove", onPointerMove, { passive: true });
     elWrap.addEventListener("pointerup", onPointerUp, { passive: true });
