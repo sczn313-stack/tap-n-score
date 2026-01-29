@@ -2,11 +2,8 @@
    index.js (FULL REPLACEMENT) — Baker Grid Pilot
    CROP-SAFE GRID MATH (1"×1" boxes) — no grid lock taps
 
-   Key:
-   - We compute pxPerBoxX / pxPerBoxY automatically from the grid.
-   - 1 box = 1.00 inch (by definition in the pilot).
-   - POIB is computed from tapped holes.
-   - Correction = Bull − POIB (dial directions). Up is up. Right is right.
+   Change in this version:
+   - REMOVED the grid-status line from the SEC display (still measures silently).
 ============================================================ */
 
 (() => {
@@ -44,7 +41,6 @@
   const GRID_LAG_MIN = 10;    // px
   const GRID_LAG_MAX = 220;   // px
   const GRID_LAG_STEP = 1;
-  const GRID_SAMPLES = 6;     // how many rows/cols to sample for robustness
   const GRID_TOP_K = 3;       // average top K autocorr peaks
 
   // State
@@ -243,7 +239,9 @@
       prof[x] = s;
     }
     // normalize
-    const mean = prof.reduce((a, v) => a + v, 0) / w;
+    let mean = 0;
+    for (let x = 0; x < w; x++) mean += prof[x];
+    mean /= w;
     for (let x = 0; x < w; x++) prof[x] = prof[x] - mean;
     return prof;
   }
@@ -258,28 +256,14 @@
       for (let x = x0; x < x1; x++) s += edge[y * w + x];
       prof[y] = s;
     }
-    const mean = prof.reduce((a, v) => a + v, 0) / h;
+    let mean = 0;
+    for (let y = 0; y < h; y++) mean += prof[y];
+    mean /= h;
     for (let y = 0; y < h; y++) prof[y] = prof[y] - mean;
     return prof;
   }
 
-  function autocorrBestLag(signal, lagMin, lagMax) {
-    // Find dominant repeating lag. Returns {lag, score}
-    const n = signal.length;
-    let bestLag = null;
-    let bestScore = -Infinity;
-
-    for (let lag = lagMin; lag <= lagMax; lag += GRID_LAG_STEP) {
-      let s = 0;
-      // dot product
-      for (let i = 0; i < n - lag; i++) s += signal[i] * signal[i + lag];
-      if (s > bestScore) { bestScore = s; bestLag = lag; }
-    }
-    return { lag: bestLag, score: bestScore };
-  }
-
   function refineLagTopK(signal, lagMin, lagMax, k) {
-    // Compute scores for all lags, take top k, average their lags (stabilizes noisy grids)
     const n = signal.length;
     const scores = [];
     for (let lag = lagMin; lag <= lagMax; lag += GRID_LAG_STEP) {
@@ -294,16 +278,11 @@
   }
 
   function measureGridPxPerBox() {
-    // Draw full image to canvas at native size (fast enough for pilot)
+    // Use a downscaled working copy to speed up (still fine for spacing)
     const w = elImg.naturalWidth || 0;
     const h = elImg.naturalHeight || 0;
     if (w < 200 || h < 200) return false;
 
-    cnv.width = w;
-    cnv.height = h;
-    ctx.drawImage(elImg, 0, 0, w, h);
-
-    // Use a downscaled working copy to speed up (still fine for spacing)
     const maxW = 900;
     const scaleDown = w > maxW ? (maxW / w) : 1;
     const ww = Math.round(w * scaleDown);
@@ -321,7 +300,6 @@
     const profX = buildProfileX(edge, ww, hh);
     const profY = buildProfileY(edge, ww, hh);
 
-    // Autocorrelation to find grid spacing
     const rx = refineLagTopK(profX, GRID_LAG_MIN, Math.min(GRID_LAG_MAX, ww - 5), GRID_TOP_K);
     const ry = refineLagTopK(profY, GRID_LAG_MIN, Math.min(GRID_LAG_MAX, hh - 5), GRID_TOP_K);
 
@@ -329,9 +307,8 @@
     const pxBoxX = rx.lag / scaleDown;
     const pxBoxY = ry.lag / scaleDown;
 
-    // Sanity: typical 1" spacing should not be absurd
     if (!Number.isFinite(pxBoxX) || !Number.isFinite(pxBoxY)) return false;
-    if (pxBoxX < 12 || pxBoxY < 12) return false;        // too small → detection failed
+    if (pxBoxX < 12 || pxBoxY < 12) return false;
     if (pxBoxX > w * 0.5 || pxBoxY > h * 0.5) return false;
 
     state.pxPerBoxX = pxBoxX;
@@ -357,13 +334,13 @@
     poibPx.x /= hits.length;
     poibPx.y /= hits.length;
 
-    // Pixel deltas (hit center relative to bull)
+    // Pixel deltas (POIB relative to bull)
     const dxPx = poibPx.x - bull.x; // right positive
     const dyPx = poibPx.y - bull.y; // down positive
 
-    // Convert to BOXES (1 box = 1 inch)
+    // Convert to inches via boxes (1 box = 1 inch)
     const poibX_in = dxPx / state.pxPerBoxX;      // right positive
-    const poibY_in = -(dyPx / state.pxPerBoxY);   // up positive (invert)
+    const poibY_in = -(dyPx / state.pxPerBoxY);   // up positive
 
     // Correction = Bull − POIB
     const corrX_in = -poibX_in;
@@ -392,6 +369,7 @@
       moaY,
       clicksX,
       clicksY,
+      // gridStatus still computed internally, just not displayed
       gridStatus: state.gridStatus,
     };
   }
@@ -403,6 +381,7 @@
 
     const clickShown = `${fmt2(state.clickMoa)} MOA/click`;
 
+    // NOTE: grid-status line removed from the SEC output per request.
     elSEC.innerHTML = `
       <div style="
         padding:12px;
@@ -460,10 +439,6 @@
               X ${fmt2(res.clicksX)} • Y ${fmt2(res.clicksY)}
             </div>
           </div>
-        </div>
-
-        <div style="margin-top:10px; color:rgba(255,255,255,0.65); font-weight:900; font-size:12px;">
-          ${res.gridStatus}
         </div>
       </div>
     `;
@@ -607,7 +582,6 @@
       state.imgLoaded = true;
       fitImageToWrap();
 
-      // Measure grid spacing automatically (crop-safe)
       const ok = measureGridPxPerBox();
       if (!ok) {
         state.pxPerBoxX = null;
