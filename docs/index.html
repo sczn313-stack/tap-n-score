@@ -6,76 +6,75 @@
   <meta name="color-scheme" content="dark" />
   <meta name="theme-color" content="#000000" />
   <title>Tap-n-Score™</title>
-
-  <link rel="stylesheet" href="./styles.css" />
+  <link rel="stylesheet" href="./styles.css?v=20260129a" />
 </head>
 
 <body>
-  <!-- NOTE: pageActive is REQUIRED if your CSS hides .page by default -->
-  <main class="page pageActive">
+  <div class="app">
+    <main class="page pageActive" id="pageLanding">
 
-    <!-- Brand -->
-    <header class="brandHeader">
-      <div class="brandLine">
-        <span class="brandRed">TAP</span><span class="brandWhite">-N-</span><span class="brandBlue">SCORE</span><span class="brandTm">™</span>
-      </div>
-      <div class="brandSub">After-Shot Intelligence</div>
-    </header>
+      <!-- Brand (top-left, NOT a CTA) -->
+      <header class="brandTop" aria-label="Tap-n-Score brand">
+        <div class="brandTitle">
+          <span class="tRed">TAP</span><span class="tWhite">-N-</span><span class="tBlue">SCORE</span><span class="tm">™</span>
+        </div>
+        <div class="brandSub">After-Shot Intelligence</div>
+      </header>
 
-    <!-- Picker Section -->
-    <section class="hero">
+      <!-- Landing center -->
+      <section class="landingCenter" aria-label="Choose target photo">
+        <!-- IMPORTANT: input is present (not hidden attr), just visually hidden -->
+        <input id="photoInput" class="fileInput" type="file" accept="image/*" />
 
-      <!-- REAL file input (must exist + be clickable on iOS)
-           Keep it in DOM (NOT hidden). Hide via CSS instead. -->
-      <input
-        id="photoInput"
-        class="fileInput"
-        type="file"
-        accept="image/*"
-      />
+        <!-- CTA uses label-for (iOS reliable) -->
+        <label id="photoCta" class="cta ctaPrimary" for="photoInput">
+          Take or Choose Target Photo
+        </label>
 
-      <!-- CTA button that opens picker -->
-      <label id="photoCta" class="cta ctaRed" for="photoInput" role="button" tabindex="0">
-        Take or Choose Target Photo
-      </label>
+        <div class="tipLine" id="tipLine">
+          Tip: Straight-on photos give the most accurate results.
+        </div>
 
-      <div class="tipLine" id="tipLine">
-        Tip: Straight-on photos give the most accurate results.
-      </div>
+        <div class="pill" id="jsReady" style="display:none;">JS READY</div>
+      </section>
 
-      <!-- Debug pill (optional) -->
-      <div class="pillReady" id="jsReady">JS READY</div>
-    </section>
+      <!-- Tap / Target area -->
+      <section class="targetStage" id="workArea" hidden>
 
-    <!-- Target + Tap Flow -->
-    <section class="workArea" id="workArea" hidden>
+        <div class="tapHeader">
+          <div class="hdrLeft">
+            <!-- Optional vendor pill (can stay / can remove later) -->
+            <div class="pill pillBrand" id="vendorPill" style="display:none;">BAKER</div>
 
-      <!-- Instruction line (changes: Tap bull → Tap holes) -->
-      <div class="instructionTop" id="instructionLine">
-        Tap bull’s-eye to center
-      </div>
+            <div class="instructionLine" id="instructionLine">
+              Tap bull’s-eye to center
+            </div>
+          </div>
 
-      <!-- Target frame -->
-      <div class="targetFrame" id="targetWrap">
-        <img id="targetImg" class="targetImg" alt="Target" />
-        <div id="dotsLayer" class="dotsLayer"></div>
-      </div>
+          <!-- (Reserved space for future) -->
+          <div></div>
+        </div>
 
-      <!-- CTA row (same color / same sizing) -->
-      <div class="ctaRow" id="ctaRow" hidden>
-        <button class="cta ctaRed" id="undoBtn" type="button">Undo</button>
-        <button class="cta ctaRed" id="clearBtn" type="button">Clear</button>
-        <button class="cta ctaRed" id="showResultsBtn" type="button">Show Results</button>
-      </div>
+        <div class="targetWrap" id="targetWrap">
+          <img id="targetImg" class="targetImg" alt="Target" draggable="false" />
+          <div id="dotsLayer" class="dotsLayer"></div>
+        </div>
 
-      <div class="tapMeta">
-        <span class="tapCount" id="tapCount">Taps: 0</span>
-      </div>
+        <!-- CTAs: appear AFTER bull tap -->
+        <div class="ctaRow" id="ctaRow" hidden>
+          <button class="cta ctaPrimary" id="undoBtn" type="button">Undo</button>
+          <button class="cta ctaPrimary" id="clearBtn" type="button">Clear</button>
+          <button class="cta ctaPrimary" id="showResultsBtn" type="button">Show Results</button>
+        </div>
 
-    </section>
+        <div class="tapMeta">
+          <span class="pill" id="tapCount">Taps: 0</span>
+        </div>
 
-  </main>
+      </section>
+    </main>
+  </div>
 
-  <script src="./index.js" defer></script>
+  <script src="./index.js?v=20260129a"></script>
 </body>
 </html>
