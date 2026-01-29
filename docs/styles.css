@@ -1,415 +1,291 @@
 :root{
-  --bg0:#050607;
-  --bg1:#0a0c0f;
-
-  /* CTA red (single source of truth) */
-  --cta:#d61b2a;
-
-  --text:#f2f4f7;
-  --muted:#b9c0c9;
-
-  --card:#0f1216;
-  --line:#20262e;
-
-  --radius:14px;   /* locked */
-  --btnH:56px;     /* locked */
+  --bg0:#000;
+  --bg1:#05070b;
+  --card:rgba(255,255,255,0.06);
+  --stroke:rgba(255,255,255,0.14);
+  --text:rgba(255,255,255,0.92);
+  --muted:rgba(255,255,255,0.70);
+  --cta:#d61f2c;              /* ONE CTA COLOR */
+  --ctaText:#fff;
+  --shadow:0 14px 40px rgba(0,0,0,0.45);
+  --radius:18px;
+  --radius2:22px;
+  --maxw:980px;
+  --pad:18px;
 }
 
-*{box-sizing:border-box}
-html,body{height:100%}
-body{
-  margin:0;
-  background:#000;
-  color:var(--text);
-  font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-}
-
-.hidden{display:none !important;}
+*{ box-sizing:border-box; }
+html,body{ height:100%; margin:0; background:radial-gradient(1200px 900px at 40% 30%, #0b1830 0%, #000 60%); color:var(--text); font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial; }
+button, input{ font-family:inherit; }
 
 .app{
-  min-height:100vh;
+  min-height:100%;
   display:flex;
-  flex-direction:column;
+  justify-content:center;
 }
 
-/* =========================
-   View containers
-   ========================= */
-.view{
-  min-height:100vh;
-  position:relative;
-  overflow:hidden;
+.page{
+  width:100%;
+  max-width:var(--maxw);
+  padding:calc(var(--pad) + env(safe-area-inset-top)) var(--pad) calc(var(--pad) + env(safe-area-inset-bottom));
+  display:none;
 }
+.pageActive{ display:block; }
 
-/* =========================
-   PAGE 1 — Landing
-   ========================= */
-.viewLanding{
-  background: var(--bg0);
+/* Brand */
+.brandTop{ padding-top:10px; }
+.brandTitle{
+  font-weight:900;
+  letter-spacing:1px;
+  font-size:42px;
+  line-height:1.0;
 }
+.tm{ font-size:18px; vertical-align:top; margin-left:4px; opacity:0.9; }
+.brandSub{ margin-top:6px; font-size:22px; color:var(--muted); font-weight:650; }
 
-/* Camera-lens vignette feel (subtle) */
-.landingBg{
-  position:absolute;
-  inset:0;
-  pointer-events:none; /* IMPORTANT: never intercept taps */
-  background:
-    radial-gradient(circle at 50% 45%,
-      rgba(255,255,255,0.06) 0%,
-      rgba(255,255,255,0.02) 20%,
-      rgba(0,0,0,0.55) 55%,
-      rgba(0,0,0,0.85) 75%,
-      rgba(0,0,0,0.95) 100%
-    ),
-    linear-gradient(180deg, #030405 0%, #0a0c10 60%, #07080a 100%);
-}
+.tRed{ color:#ff2a2a; }
+.tWhite{ color:#ffffff; }
+.tBlue{ color:#2f7bff; }
 
-.brandMark{
-  position:absolute;
-  top:18px;
-  left:18px;
-  z-index:3;
-  user-select:none;
-  pointer-events:none; /* NOT a CTA */
-}
-.brandLine1{font-weight:800; letter-spacing:0.5px; font-size:18px;}
-.brandTap{color:#e0222f;}
-.brandN{color:#ffffff;}
-.brandScore{color:#2b6cff;}
-.brandTm{color:#ffffff; font-weight:700; font-size:14px; vertical-align:top;}
-.brandLine2{
-  margin-top:4px;
-  color:#dfe6ef;
-  font-size:12px;
-  opacity:0.9;
-}
-
+/* Landing */
 .landingCenter{
-  position:relative;
-  z-index:3;
-  min-height:100vh;
+  margin-top:62px;
   display:flex;
   flex-direction:column;
   align-items:center;
-  justify-content:center;
-  padding:24px;
-  gap:10px;
+  gap:18px;
 }
 
-/* IMPORTANT (iOS): DO NOT use display:none for file input */
+.cta{
+  border:none;
+  border-radius:24px;
+  padding:18px 22px;
+  font-size:22px;
+  font-weight:850;
+  cursor:pointer;
+  box-shadow:var(--shadow);
+  text-align:center;
+  min-width:min(520px, 90vw);
+}
+
+.ctaPrimary{
+  background:var(--cta);
+  color:var(--ctaText);
+}
+
+.cta:disabled{
+  opacity:0.5;
+  cursor:not-allowed;
+}
+
+.tipLine{
+  font-size:26px;
+  font-weight:750;
+  color:rgba(255,255,255,0.85);
+  text-align:center;
+  max-width:620px;
+  line-height:1.25;
+}
+
+/* iOS file input: must exist + be clickable.
+   We keep it present but visually hidden and still linked via label[for]. */
 .fileInput{
-  position:fixed;
+  position:absolute;
   left:-9999px;
-  top:0;
   width:1px;
   height:1px;
   opacity:0;
-  pointer-events:none;
 }
 
-/* Tip styling */
-.tipLine{
-  max-width:520px;
-  text-align:center;
-  font-size:14px;
-  line-height:1.25;
-  color:#ffffff;
-  opacity:0.92;
-}
-
-/* =========================
-   Buttons
-   ========================= */
-.btn{
-  border:0;
-  border-radius:var(--radius);
-  height:var(--btnH);
-  padding:0 16px;
-  font-size:16px;
-  font-weight:650;
-  color:#fff;
-  background:var(--cta);
-  width:100%;
-  max-width:520px;
-  cursor:pointer;
-  -webkit-tap-highlight-color: transparent;
-}
-.btn:active{ transform: translateY(1px); }
-
-.btnPrimary{
-  font-size:16px;
-}
-
-.btnCta{
-  font-size:15px;
-  max-width:none;
-  width:auto;
-  min-width:96px;
-  height:48px; /* bottom bar tighter */
-  border-radius:12px;
-}
-
-.btnCtaWide{
-  min-width:140px;
-}
-
-@media (max-width:420px){
-  .btnCta{ min-width:88px; }
-  .btnCtaWide{ min-width:120px; }
-}
-
-/* =========================
-   PAGE 2 — Target Tap
-   ========================= */
-.viewTarget{
-  background:
-    radial-gradient(circle at 50% 35%,
-      rgba(255,255,255,0.05) 0%,
-      rgba(0,0,0,0.75) 60%,
-      rgba(0,0,0,0.92) 100%
-    ),
-    linear-gradient(180deg, #050607 0%, #0b0e12 100%);
-  padding-bottom:92px; /* reserve space for CTA bar */
-}
-
-.topBar{
-  height:56px;
+/* Tap Page */
+.tapHeader{
   display:flex;
-  align-items:center;
-  padding:10px 14px;
-}
-.vendorLeft{
-  display:flex;
-  align-items:center;
-  gap:10px;
-}
-.vendorLogo{
-  width:72px;
-  height:36px;
-  border-radius:10px;
-  background:#14181f;
-  border:1px solid #262e38;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  font-weight:800;
-  letter-spacing:1px;
-  font-size:12px;
-  color:#ffffff;
-  opacity:0.95;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:12px;
+  margin-bottom:12px;
 }
 
-/* instruction line directly above target */
+.hdrLeft{ display:flex; flex-direction:column; gap:10px; }
 .instructionLine{
-  padding:10px 14px 8px 14px;
-  font-size:15px;
-  color:#ffffff;
-  opacity:0.92;
+  font-size:20px;
+  font-weight:800;
+  color:rgba(255,255,255,0.88);
 }
 
-/* target frame */
-.targetFrame{
-  padding:0 12px;
+.pill{
+  border:1px solid var(--stroke);
+  background:rgba(255,255,255,0.06);
+  color:rgba(255,255,255,0.92);
+  border-radius:999px;
+  padding:8px 12px;
+  font-weight:850;
+  letter-spacing:0.6px;
 }
-.targetCanvasWrap{
+.pillBrand{ width:fit-content; }
+.pillBuy{
+  padding:12px 16px;
+  text-align:center;
+  font-weight:900;
+}
+.pillBuy .pillSub{ font-weight:750; opacity:0.9; }
+
+.targetStage{
+  margin-top:10px;
+}
+
+.targetWrap{
   position:relative;
-  width:100%;
-  height:58vh; /* starting frame height; tweak later */
-  background:#0b0d10;
-  border:1px solid #1d232c;
-  border-radius:16px;
+  border-radius:var(--radius2);
+  border:1px solid var(--stroke);
+  background:rgba(0,0,0,0.35);
   overflow:hidden;
+  box-shadow:var(--shadow);
+  height:min(62vh, 620px);
 }
 
-/* image itself can be zoom/pan via transform */
 .targetImg{
   position:absolute;
-  top:50%;
-  left:50%;
-  transform: translate(-50%,-50%) scale(1);
-  transform-origin: center center;
-  max-width:none;
-  max-height:none;
-  width:auto;
-  height:auto;
-  user-select:none;
-  -webkit-user-drag:none;
-  touch-action:none; /* we manage gestures */
+  inset:0;
+  width:100%;
+  height:100%;
+  object-fit:contain;
+  transform-origin:center center;
+  touch-action:none; /* we manage pinch */
 }
 
-/* tap dots layer */
-.tapLayer{
+.dotsLayer{
   position:absolute;
   inset:0;
   pointer-events:none;
 }
+
 .dot{
   position:absolute;
-  width:14px;
-  height:14px;
-  border-radius:50%;
-  background:#ff3b30;
-  border:2px solid #fff;
-  box-shadow:0 2px 12px rgba(0,0,0,0.45);
-  transform: translate(-50%,-50%);
-}
-.dot.bull{
-  width:16px;
-  height:16px;
-  background:#2b6cff;
-}
-
-/* Bottom CTA bar */
-.ctaBar{
-  position:fixed;
-  left:0; right:0;
-  bottom:0;
-  padding:10px 10px calc(10px + env(safe-area-inset-bottom));
-  background: rgba(9,11,14,0.92);
-  border-top:1px solid #1c232c;
+  width:26px;
+  height:26px;
+  border-radius:999px;
+  background:rgba(255,40,40,0.88);
+  border:2px solid rgba(255,255,255,0.95);
+  transform:translate(-50%, -50%);
   display:flex;
-  gap:8px;
+  align-items:center;
   justify-content:center;
+  font-weight:900;
+  font-size:14px;
+  color:#fff;
+  text-shadow:0 2px 6px rgba(0,0,0,0.65);
+}
+
+.dotBull{
+  background:rgba(40,170,255,0.88);
+}
+
+.ctaRow{
+  display:flex;
+  gap:12px;
+  justify-content:center;
+  margin-top:14px;
   flex-wrap:wrap;
-  z-index:50;
+}
+.ctaRow .cta{
+  min-width:min(260px, 44vw);
+  padding:14px 18px;
+  font-size:20px;
+  border-radius:20px;
 }
 
-/* =========================
-   PAGE 3 — SEC
-   ========================= */
-.viewSEC{
-  background:
-    radial-gradient(circle at 50% 20%,
-      rgba(255,255,255,0.05) 0%,
-      rgba(0,0,0,0.86) 65%,
-      rgba(0,0,0,0.94) 100%
-    ),
-    linear-gradient(180deg, #050607 0%, #0b0e12 100%);
-  padding:16px 14px 18px 14px;
-}
-
+/* SEC */
 .secHeader{
   display:flex;
-  align-items:flex-start;
   justify-content:space-between;
-  gap:12px;
+  align-items:flex-start;
+  gap:14px;
+  margin-bottom:14px;
 }
-
-.secWordmark{
-  font-weight:900;
+.secLeftTitle{
+  font-size:28px;
+  font-weight:950;
   letter-spacing:0.4px;
-  font-size:18px;
 }
-.secR{ color:#e0222f; }
-.secW{ color:#ffffff; }
-.secB{ color:#2b6cff; }
+.secRed{ color:#ff2a2a; }
+.secWhite{ color:#fff; }
 
-.secBuyBox{
-  border:1px solid #223044;
-  background:#0f141c;
-  color:#fff;
-  border-radius:14px;
-  padding:10px 12px;
-  min-width:150px;
-  cursor:pointer;
-}
-.secBuyTop{ font-weight:900; letter-spacing:0.6px; font-size:14px; }
-.secBuyBottom{ margin-top:2px; font-size:12px; opacity:0.92; }
-
-.secBody{
-  margin-top:16px;
+.secGrid{
   display:grid;
   grid-template-columns: 1fr 1fr;
   gap:14px;
 }
 
-@media (max-width:720px){
-  .secBody{ grid-template-columns:1fr; }
+.card{
+  border:1px solid var(--stroke);
+  background:var(--card);
+  border-radius:var(--radius2);
+  padding:16px;
+  box-shadow:var(--shadow);
 }
-
-.secClicksBox{
-  background: rgba(15,18,22,0.85);
-  border:1px solid #202632;
-  border-radius:16px;
-  padding:14px;
-}
-
-.secClicksTitle{
-  font-weight:800;
-  letter-spacing:0.4px;
-  font-size:13px;
-  opacity:0.95;
+.cardTitle{
+  font-weight:900;
+  opacity:0.9;
   margin-bottom:10px;
 }
 
-.secClicksGrid{
+.clickGrid{
   display:grid;
-  grid-template-columns: 1fr 1fr;
-  gap:10px 12px;
+  grid-template-columns:1fr 1fr;
+  gap:12px;
 }
-
 .kv .k{
-  font-size:12px;
-  opacity:0.8;
+  font-size:14px;
+  opacity:0.85;
+  font-weight:800;
 }
 .kv .v{
-  margin-top:2px;
-  font-weight:850;
-  font-size:16px;
-}
-
-.secSessionId{
-  margin-top:10px;
-  font-size:11px;
-  opacity:0.75;
-}
-
-.secScorePanel{
-  background: rgba(15,18,22,0.85);
-  border:1px solid #202632;
-  border-radius:16px;
-  padding:14px;
-  display:flex;
-  flex-direction:column;
-  justify-content:flex-start;
-}
-
-.secScoreLabel{
-  font-weight:800;
-  letter-spacing:0.4px;
-  font-size:13px;
-  opacity:0.95;
-  margin-bottom:4px;
-}
-
-.secScoreValue{
+  font-size:26px;
   font-weight:950;
-  font-size:64px; /* largest on page */
-  line-height:1;
-  margin:6px 0 10px 0;
+  margin-top:4px;
 }
 
-/* score color classes */
-.scoreGood{ color:#39d98a; }
-.scoreMid{ color:#ffd166; }
-.scoreLow{ color:#ff5c5c; }
+.sessionLine{
+  margin-top:10px;
+  font-size:14px;
+  opacity:0.85;
+}
 
-.secScoreHistory{
-  margin-top:4px;
-  font-size:13px;
-  opacity:0.92;
+.scoreBig{
+  font-size:86px;
+  line-height:0.95;
+  font-weight:1000;
+  margin:4px 0 10px;
+}
+.scoreGood{ color:#42ff7b; }
+.scoreMid{ color:#ffd166; }
+.scoreBad{ color:#ff4d4d; }
+
+.scoreMeta{
+  font-size:16px;
+  opacity:0.9;
   display:flex;
   flex-direction:column;
   gap:6px;
 }
-.hLabel{ opacity:0.75; }
-.hVal{ font-weight:800; }
 
-.secFooter{
-  margin-top:18px;
+.secDownloads{
   display:flex;
   justify-content:center;
-  gap:10px;
+  gap:14px;
+  margin-top:18px;
   flex-wrap:wrap;
-  padding-bottom: calc(12px + env(safe-area-inset-bottom));
+}
+.secDownloads .cta{
+  min-width:min(360px, 90vw);
+  padding:14px 18px;
+  font-size:20px;
+  border-radius:18px;
+}
+
+@media (max-width: 860px){
+  .secGrid{ grid-template-columns:1fr; }
+  .brandTitle{ font-size:40px; }
+  .tipLine{ font-size:24px; }
 }
