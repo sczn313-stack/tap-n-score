@@ -6,102 +6,88 @@
   <meta name="color-scheme" content="dark" />
   <meta name="theme-color" content="#000000" />
   <title>Tap-n-Score™</title>
-
   <link rel="stylesheet" href="./styles.css?v=20260129a" />
 </head>
 
 <body>
   <main class="app">
 
-    <!-- =========================
-         PAGE 1 — LANDING (LOCKED)
-         ========================= -->
-    <section id="viewLanding" class="view viewLanding">
-      <div class="landingBg" aria-hidden="true"></div>
-
-      <!-- Upper-left brand mark (NOT a CTA) — paste as is (per your instruction) -->
-      <div class="brandMark" aria-label="Brand mark">
-        <div class="brandLine1">
-          <span class="brandTap">TAP</span><span class="brandN">-N-</span><span class="brandScore">SCORE</span><span class="brandTm">™</span>
+    <!-- PAGE 1: LANDING -->
+    <section id="pageLanding" class="page pageActive">
+      <div class="brandTop">
+        <div class="brandTitle">
+          <span class="tRed">TAP</span>-<span class="tWhite">N</span>-<span class="tBlue">SCORE</span><span class="tm">™</span>
         </div>
-        <div class="brandLine2">After-Shot Intelligence</div>
+        <div class="brandSub">After-Shot Intelligence</div>
       </div>
 
       <div class="landingCenter">
-        <button id="btnChoosePhoto" class="btn btnPrimary" type="button">
+
+        <!-- IMPORTANT (iOS): input must be clickable. We use a label that targets the input. -->
+        <label class="cta ctaPrimary" for="photoInput">
           Take or Choose Target Photo
-        </button>
+        </label>
+
+        <input
+          id="photoInput"
+          class="fileInput"
+          type="file"
+          accept="image/*"
+          capture="environment"
+        />
 
         <div class="tipLine">
           Tip: Straight-on photos give the most accurate results.
         </div>
-
-        <!-- Hidden file input (iOS safe) -->
-        <input id="photoInput" class="fileInput" type="file" accept="image/*" />
       </div>
     </section>
 
-
-    <!-- =========================
-         PAGE 2 — TARGET TAP
-         ========================= -->
-    <section id="viewTarget" class="view viewTarget hidden">
-      <header class="topBar">
-        <!-- No Tap-n-Score branding here; vendor anchored (Baker logo placeholder) -->
-        <div class="vendorLeft">
-          <div class="vendorLogo" id="vendorLogo" aria-label="Vendor logo">BAKER</div>
-        </div>
-      </header>
-
-      <!-- Instruction line sits DIRECTLY above target frame -->
-      <div id="instructionLine" class="instructionLine">
-        Tap bull’s-eye to center
-      </div>
-
-      <!-- Target frame -->
-      <div id="targetFrame" class="targetFrame" aria-label="Target image frame">
-        <div id="targetCanvasWrap" class="targetCanvasWrap">
-          <img id="targetImg" alt="Target photo" class="targetImg" />
-          <div id="tapLayer" class="tapLayer" aria-hidden="true"></div>
-        </div>
-      </div>
-
-      <!-- CTA bar: must NOT appear until AFTER bull is set -->
-      <div id="ctaBar" class="ctaBar hidden" aria-label="Bottom actions">
-        <button id="btnClear" class="btn btnCta" type="button">Clear</button>
-        <button id="btnUndo" class="btn btnCta" type="button">Undo</button>
-        <button id="btnGetResults" class="btn btnCta btnCtaWide" type="button">Get Results</button>
-        <button id="btnBuyMore" class="btn btnCta btnCtaWide" type="button">Buy More Targets Like This</button>
-      </div>
-    </section>
-
-
-    <!-- =========================
-         PAGE 3 — SEC (FINAL)
-         ========================= -->
-    <section id="viewSEC" class="view viewSEC hidden">
-      <header class="secHeader">
-        <div class="secBrandLeft">
-          <div class="secWordmark">
-            <span class="secR">SEC</span> <span class="secW">Card</span>
-          </div>
+    <!-- PAGE 2: TARGET / TAP -->
+    <section id="pageTap" class="page">
+      <header class="tapHeader">
+        <div class="hdrLeft">
+          <div class="pill pillBrand">BAKER</div>
+          <div id="instructionLine" class="instructionLine">Tap bull’s-eye to center</div>
         </div>
 
-        <div class="secBuyRight">
-          <button id="btnBuyMoreTop" class="secBuyBox" type="button">
-            <div class="secBuyTop">
-              <span class="secB">BUY</span> <span class="secW">MORE</span>
-            </div>
-            <div class="secBuyBottom">Targets Like This</div>
+        <div class="hdrRight">
+          <button id="btnBuyMoreTop" class="pill pillBuy" type="button" hidden>
+            Buy More Targets Like This
           </button>
         </div>
       </header>
 
-      <!-- Content: ONLY clicks + score -->
-      <div class="secBody">
-        <div class="secClicksBox" aria-label="Target clicks">
-          <div class="secClicksTitle">Target Clicks</div>
-          <div class="secClicksGrid">
+      <div class="targetStage">
+        <div id="targetWrap" class="targetWrap">
+          <img id="targetImg" class="targetImg" alt="Target" />
+          <div id="dotsLayer" class="dotsLayer"></div>
+        </div>
+      </div>
+
+      <!-- CTAs must appear at bottom, while target stays on screen -->
+      <div class="ctaRow">
+        <button id="btnUndo" class="cta ctaPrimary" type="button" disabled hidden>Undo</button>
+        <button id="btnClear" class="cta ctaPrimary" type="button" disabled hidden>Clear</button>
+        <button id="btnShow" class="cta ctaPrimary" type="button" disabled hidden>Show Results</button>
+      </div>
+    </section>
+
+    <!-- PAGE 3: SEC RESULTS -->
+    <section id="pageSEC" class="page">
+      <header class="secHeader">
+        <div class="secLeftTitle">
+          <span class="secRed">SEC</span> <span class="secWhite">Card</span>
+        </div>
+
+        <button id="btnBuyMoreSEC" class="pill pillBuy" type="button">
+          BUY MORE<br><span class="pillSub">Targets Like This</span>
+        </button>
+      </header>
+
+      <div class="secGrid">
+        <div class="card">
+          <div class="cardTitle">Target Clicks</div>
+          <div class="clickGrid">
             <div class="kv">
               <div class="k">Up</div>
               <div id="clickUp" class="v">0.00</div>
@@ -119,30 +105,27 @@
               <div id="clickRight" class="v">0.00</div>
             </div>
           </div>
-          <!-- Embedded session ID (not loud) -->
-          <div id="secSessionId" class="secSessionId">Session: —</div>
+
+          <div class="sessionLine">
+            Session: <span id="sessionId">SEC-—</span>
+          </div>
         </div>
 
-        <div class="secScorePanel" aria-label="Score panel">
-          <div class="secScoreLabel">Score</div>
-          <div id="secScoreValue" class="secScoreValue scoreGood">0</div>
-
-          <div class="secScoreHistory">
-            <div><span class="hLabel">Current</span> <span id="histCurrent" class="hVal">0</span></div>
-            <div><span class="hLabel">Previous 3</span> <span id="histPrev3" class="hVal">—</span></div>
-            <div><span class="hLabel">Cumulative</span> <span id="histCum" class="hVal">0</span></div>
+        <div class="card">
+          <div class="cardTitle">Score</div>
+          <div id="scoreBig" class="scoreBig scoreMid">82</div>
+          <div class="scoreMeta">
+            <div>Current <span id="scoreCurrent">82</span></div>
+            <div>Previous 3 <span id="scorePrev">—</span></div>
+            <div>Cumulative <span id="scoreCum">—</span></div>
           </div>
         </div>
       </div>
 
-      <!-- Bottom centered: download SEC image/text -->
-      <footer class="secFooter">
-        <button id="btnDownloadImg" class="btn btnCta btnCtaWide" type="button">Download SEC (Image)</button>
-        <button id="btnDownloadTxt" class="btn btnCta btnCtaWide" type="button">Download SEC (Text)</button>
-      </footer>
-
-      <!-- Hidden canvas used to render downloadable SEC image -->
-      <canvas id="secCanvas" class="hidden" width="1080" height="1350"></canvas>
+      <div class="secDownloads">
+        <button id="btnDlImg" class="cta ctaPrimary" type="button">Download SEC (Image)</button>
+        <button id="btnDlTxt" class="cta ctaPrimary" type="button">Download SEC (Text)</button>
+      </div>
     </section>
 
   </main>
