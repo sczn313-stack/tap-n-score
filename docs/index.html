@@ -5,305 +5,148 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="color-scheme" content="dark" />
   <meta name="theme-color" content="#000000" />
-  <title>Tap-n-Score™ — Baker Pilot</title>
+  <title>Tap-n-Score™</title>
 
-  <style>
-    :root{
-      --bg:#070707;
-      --panel: rgba(255,255,255,0.06);
-      --panel2: rgba(255,255,255,0.03);
-      --line: rgba(255,255,255,0.10);
-      --txt: rgba(255,255,255,0.92);
-      --muted: rgba(255,255,255,0.70);
-      --muted2: rgba(255,255,255,0.55);
-      --btn: rgba(255,255,255,0.10);
-      --shadow: 0 18px 45px rgba(0,0,0,0.55);
-      --r: 18px;
-    }
-
-    *{ box-sizing:border-box; }
-    body{
-      margin:0;
-      background:var(--bg);
-      color:var(--txt);
-      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial;
-    }
-    .page{ max-width: 980px; margin: 0 auto; padding: 14px 14px 40px; }
-
-    .topbar{
-      display:flex; align-items:center; justify-content:space-between;
-      gap:12px; margin-bottom:12px;
-    }
-    .brand{ display:flex; align-items:baseline; gap:10px; flex-wrap:wrap; }
-    .brand .name{ font-weight:900; letter-spacing:0.4px; font-size:18px; white-space:nowrap; }
-    .brand .sub{ font-size:12px; color:var(--muted2); font-weight:800; letter-spacing:0.3px; }
-
-    .btnRow{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; justify-content:flex-end; }
-
-    .btn{
-      appearance:none;
-      border:1px solid var(--line);
-      background: var(--btn);
-      color: var(--txt);
-      padding: 10px 12px;
-      border-radius: 14px;
-      font-weight: 900;
-      letter-spacing: 0.2px;
-      cursor: pointer;
-      box-shadow: var(--shadow);
-      text-decoration:none;
-      display:inline-flex;
-      align-items:center;
-      justify-content:center;
-      min-height: 40px;
-      user-select:none;
-      -webkit-tap-highlight-color: transparent;
-      white-space: nowrap;
-    }
-    .btn:active{ transform: translateY(1px); }
-    .btn.secondary{ background: var(--panel2); box-shadow:none; }
-
-    /* Two-line button label */
-    .btn .btnStack{
-      display:flex;
-      flex-direction:column;
-      line-height:1.05;
-      text-align:center;
-      gap:4px;
-    }
-    .btn .btnTop{
-      font-size:12px;
-      font-weight:900;
-      letter-spacing:0.3px;
-      color: rgba(255,255,255,0.92);
-      text-transform: uppercase;
-    }
-    .btn .btnBottom{
-      font-size:13px;
-      font-weight:900;
-      letter-spacing:0.2px;
-      color: rgba(255,255,255,0.88);
-    }
-
-    .grid{ display:grid; grid-template-columns: 1fr; gap:12px; }
-
-    .card{
-      background: var(--panel);
-      border: 1px solid var(--line);
-      border-radius: var(--r);
-      padding: 12px;
-      box-shadow: var(--shadow);
-      position: relative;
-    }
-
-    .moma{
-      display:flex; align-items:center; justify-content:space-between;
-      gap:10px; flex-wrap:wrap;
-    }
-    .momaLeft{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
-
-    .field{
-      display:flex; align-items:center; gap:8px;
-      padding: 8px 10px;
-      border: 1px solid var(--line);
-      border-radius: 14px;
-      background: rgba(0,0,0,0.25);
-    }
-    .field label{
-      font-size: 12px; color: var(--muted);
-      font-weight: 900; letter-spacing: 0.2px; white-space:nowrap;
-    }
-    .field input{
-      width: 92px;
-      padding: 6px 8px;
-      border-radius: 10px;
-      border: 1px solid rgba(255,255,255,0.12);
-      background: rgba(255,255,255,0.04);
-      color: var(--txt);
-      font-weight: 900;
-      outline: none;
-    }
-    .field .unit{
-      font-size: 12px; color: var(--muted2);
-      font-weight: 900; min-width: 18px; text-align:center;
-    }
-
-    .toggle{
-      display:flex; align-items:center; gap:10px;
-      padding: 8px 10px;
-      border: 1px solid var(--line);
-      border-radius: 14px;
-      background: rgba(0,0,0,0.25);
-    }
-    .toggle .tag{ font-size:12px; color: var(--muted); font-weight: 900; letter-spacing:0.2px; }
-    .toggle .pill{ display:flex; align-items:center; gap:8px; }
-    .toggle input{ width: 44px; height: 26px; }
-
-    .instruction{ font-size: 13px; color: var(--muted); font-weight: 800; letter-spacing: 0.2px; }
-
-    /* Target viewport */
-    #targetWrap{
-      position: relative;
-      width: 100%;
-      height: min(70vh, 560px);
-      overflow: hidden;
-      border-radius: 18px;
-      border: 1px solid var(--line);
-      background: rgba(255,255,255,0.03);
-      touch-action: none;
-    }
-    #targetImg{
-      position:absolute;
-      left:0; top:0;
-      transform-origin: 0 0;
-      user-select:none;
-      -webkit-user-drag:none;
-      max-width:none;
-      max-height:none;
-      display:block;
-    }
-    #dotsLayer{
-      position:absolute;
-      left:0; top:0;
-      width:100%;
-      height:100%;
-      transform-origin:0 0;
-      pointer-events:none;
-    }
-
-    .controls{
-      display:flex; align-items:center; justify-content:space-between;
-      gap:10px; flex-wrap:wrap; margin-top:10px;
-    }
-    .controls .left, .controls .right{
-      display:flex; gap:10px; flex-wrap:wrap; align-items:center;
-    }
-    .mini{ font-size: 12px; color: var(--muted2); font-weight: 900; letter-spacing: 0.2px; }
-
-    .sec{ margin-top:12px; }
-
-    /* iOS-safe: keep file input present (not display:none), but visually hidden */
-    #photoInput{
-      position: fixed;
-      left: 12px;
-      top: 12px;
-      width: 1px;
-      height: 1px;
-      opacity: 0.01;
-      z-index: 1;
-    }
-
-    /* Debug badge */
-    #jsBadge{
-      position: fixed;
-      right: 10px;
-      bottom: 10px;
-      padding: 8px 10px;
-      border-radius: 12px;
-      background: rgba(0,140,0,0.85);
-      color: #fff;
-      font-weight: 900;
-      font-size: 12px;
-      letter-spacing: 0.2px;
-      box-shadow: 0 18px 45px rgba(0,0,0,0.55);
-      z-index: 999999;
-      display: none;
-    }
-  </style>
+  <link rel="stylesheet" href="./styles.css?v=20260129a" />
 </head>
 
 <body>
-  <main class="page">
+  <main class="app">
 
-    <div class="topbar">
-      <div class="brand">
-        <div class="name">Tap-n-Score™</div>
-        <div class="sub">Baker 23×35 • 1" Grid Pilot</div>
+    <!-- =========================
+         PAGE 1 — LANDING (LOCKED)
+         ========================= -->
+    <section id="viewLanding" class="view viewLanding">
+      <div class="landingBg" aria-hidden="true"></div>
+
+      <!-- Upper-left brand mark (NOT a CTA) — paste as is (per your instruction) -->
+      <div class="brandMark" aria-label="Brand mark">
+        <div class="brandLine1">
+          <span class="brandTap">TAP</span><span class="brandN">-N-</span><span class="brandScore">SCORE</span><span class="brandTm">™</span>
+        </div>
+        <div class="brandLine2">After-Shot Intelligence</div>
       </div>
 
-      <!-- ONLY ONE Baker button in the upper-right -->
-      <div class="btnRow">
-        <a id="bakerCatalogBtn" class="btn secondary" href="#" target="_blank" rel="noopener">
-          <span class="btnStack">
-            <span class="btnTop">Browse</span>
-            <span class="btnBottom">Baker Catalog</span>
-          </span>
-        </a>
+      <div class="landingCenter">
+        <button id="btnChoosePhoto" class="btn btnPrimary" type="button">
+          Take or Choose Target Photo
+        </button>
+
+        <div class="tipLine">
+          Tip: Straight-on photos give the most accurate results.
+        </div>
+
+        <!-- Hidden file input (iOS safe) -->
+        <input id="photoInput" class="fileInput" type="file" accept="image/*" />
       </div>
-    </div>
+    </section>
 
-    <!-- File input (iOS needs it to be "real" in the page) -->
-    <input id="photoInput" type="file" accept="image/*" />
 
-    <div class="grid">
+    <!-- =========================
+         PAGE 2 — TARGET TAP
+         ========================= -->
+    <section id="viewTarget" class="view viewTarget hidden">
+      <header class="topBar">
+        <!-- No Tap-n-Score branding here; vendor anchored (Baker logo placeholder) -->
+        <div class="vendorLeft">
+          <div class="vendorLogo" id="vendorLogo" aria-label="Vendor logo">BAKER</div>
+        </div>
+      </header>
 
-      <div class="card">
-        <div class="moma">
-          <div class="momaLeft">
-            <!-- iOS-safe: label triggers file picker without JS -->
-            <label id="uploadBtn" class="btn" for="photoInput">Upload Target</label>
+      <!-- Instruction line sits DIRECTLY above target frame -->
+      <div id="instructionLine" class="instructionLine">
+        Tap bull’s-eye to center
+      </div>
 
-            <div class="toggle">
-              <div class="tag">Units</div>
-              <div class="pill">
-                <span id="unitLabel" class="mini">IN</span>
-                <input id="unitToggle" type="checkbox" />
-              </div>
-            </div>
+      <!-- Target frame -->
+      <div id="targetFrame" class="targetFrame" aria-label="Target image frame">
+        <div id="targetCanvasWrap" class="targetCanvasWrap">
+          <img id="targetImg" alt="Target photo" class="targetImg" />
+          <div id="tapLayer" class="tapLayer" aria-hidden="true"></div>
+        </div>
+      </div>
 
-            <div class="field">
-              <label for="distanceInput">Distance</label>
-              <input id="distanceInput" inputmode="decimal" />
-              <span id="distanceUnit" class="unit">yd</span>
-            </div>
+      <!-- CTA bar: must NOT appear until AFTER bull is set -->
+      <div id="ctaBar" class="ctaBar hidden" aria-label="Bottom actions">
+        <button id="btnClear" class="btn btnCta" type="button">Clear</button>
+        <button id="btnUndo" class="btn btnCta" type="button">Undo</button>
+        <button id="btnGetResults" class="btn btnCta btnCtaWide" type="button">Get Results</button>
+        <button id="btnBuyMore" class="btn btnCta btnCtaWide" type="button">Buy More Targets Like This</button>
+      </div>
+    </section>
 
-            <div class="field">
-              <label for="clickInput">Click</label>
-              <input id="clickInput" inputmode="decimal" />
-              <span class="unit">MOA</span>
-            </div>
 
-            <button id="momaApplyBtn" class="btn secondary" type="button">Update</button>
+    <!-- =========================
+         PAGE 3 — SEC (FINAL)
+         ========================= -->
+    <section id="viewSEC" class="view viewSEC hidden">
+      <header class="secHeader">
+        <div class="secBrandLeft">
+          <div class="secWordmark">
+            <span class="secR">SEC</span> <span class="secW">Card</span>
           </div>
+        </div>
 
-          <div class="instruction" id="instructionLine">
-            Upload your Baker 23×35 1-inch grid target photo to begin.
+        <div class="secBuyRight">
+          <button id="btnBuyMoreTop" class="secBuyBox" type="button">
+            <div class="secBuyTop">
+              <span class="secB">BUY</span> <span class="secW">MORE</span>
+            </div>
+            <div class="secBuyBottom">Targets Like This</div>
+          </button>
+        </div>
+      </header>
+
+      <!-- Content: ONLY clicks + score -->
+      <div class="secBody">
+        <div class="secClicksBox" aria-label="Target clicks">
+          <div class="secClicksTitle">Target Clicks</div>
+          <div class="secClicksGrid">
+            <div class="kv">
+              <div class="k">Up</div>
+              <div id="clickUp" class="v">0.00</div>
+            </div>
+            <div class="kv">
+              <div class="k">Down</div>
+              <div id="clickDown" class="v">0.00</div>
+            </div>
+            <div class="kv">
+              <div class="k">Left</div>
+              <div id="clickLeft" class="v">0.00</div>
+            </div>
+            <div class="kv">
+              <div class="k">Right</div>
+              <div id="clickRight" class="v">0.00</div>
+            </div>
+          </div>
+          <!-- Embedded session ID (not loud) -->
+          <div id="secSessionId" class="secSessionId">Session: —</div>
+        </div>
+
+        <div class="secScorePanel" aria-label="Score panel">
+          <div class="secScoreLabel">Score</div>
+          <div id="secScoreValue" class="secScoreValue scoreGood">0</div>
+
+          <div class="secScoreHistory">
+            <div><span class="hLabel">Current</span> <span id="histCurrent" class="hVal">0</span></div>
+            <div><span class="hLabel">Previous 3</span> <span id="histPrev3" class="hVal">—</span></div>
+            <div><span class="hLabel">Cumulative</span> <span id="histCum" class="hVal">0</span></div>
           </div>
         </div>
       </div>
 
-      <div class="card">
-        <div id="targetWrap" aria-label="Target viewport">
-          <img id="targetImg" alt="Target" />
-          <div id="dotsLayer" aria-hidden="true"></div>
-        </div>
+      <!-- Bottom centered: download SEC image/text -->
+      <footer class="secFooter">
+        <button id="btnDownloadImg" class="btn btnCta btnCtaWide" type="button">Download SEC (Image)</button>
+        <button id="btnDownloadTxt" class="btn btnCta btnCtaWide" type="button">Download SEC (Text)</button>
+      </footer>
 
-        <div class="controls">
-          <div class="left">
-            <div class="mini">Taps: <span id="tapCount">0</span></div>
-          </div>
-          <div class="right">
-            <button id="undoTapsBtn" class="btn secondary" type="button">Undo</button>
-            <button id="clearTapsBtn" class="btn secondary" type="button">Clear</button>
-            <button id="showResultsBtn" class="btn" type="button">Show Results</button>
-          </div>
-        </div>
+      <!-- Hidden canvas used to render downloadable SEC image -->
+      <canvas id="secCanvas" class="hidden" width="1080" height="1350"></canvas>
+    </section>
 
-        <div class="sec" id="secPanel"></div>
-      </div>
-
-    </div>
-
-    <div id="jsBadge">JS READY</div>
-    <script>
-      (function(){
-        var b = document.getElementById('jsBadge');
-        if (b) b.style.display = 'block';
-      })();
-    </script>
-
-    <!-- Main app JS -->
-    <script src="./index.js?v=baker_pilot_one_top_button_sec_button_placeholders_1"></script>
   </main>
+
+  <script src="./index.js?v=20260129a"></script>
 </body>
 </html>
