@@ -1,21 +1,18 @@
 /* ============================================================
-   docs/index.js (FULL REPLACEMENT) — Baker 23×35 1" Grid Pilot
-   Fixes:
-   - Direction authority uses real-world axes:
-       X: right = +, left = -
-       Y: up = +, down = -
-     (browser pixel Y is inverted when computing corrections)
-   - Dot size fixed at 10 (no user control)
-   - Stable iOS file loading + immediate image render
-   - Grid lock calibration: Bull + X(A,B) + Y(A,B) then hits
+   index.js (FULL REPLACEMENT) — Baker 23×35 Grid Pilot
+   Declared Geometry Mode (no grid lock taps)
+
+   - Shooter flow: Upload → Tap bull → Tap holes → Show Results
+   - Inches derived from known target dimensions mapped to image pixels
+   - Direction truth: Up is up, Right is right (dial directions)
+   - Dot size fixed at 10
 ============================================================ */
 
 (() => {
-  // ---------- DOM
   const $ = (id) => document.getElementById(id);
 
+  // DOM
   const elFile = $("photoInput");
-  const elUploadBtn = $("uploadBtn");
   const elImg = $("targetImg");
   const elWrap = $("targetWrap");
   const elDots = $("dotsLayer");
@@ -36,99 +33,58 @@
   const elBakerCatalog = $("bakerCatalogBtn");
   const elBakerProduct = $("bakerProductBtn");
 
-  // ---------- Constants
-  const DOT_PX = 10; // locked
+  // Constants
+  const DOT_PX = 10;
   const YARDS_PER_METER = 1.0936132983;
 
-  // Defaults (pilot standard)
+  // DECLARED TARGET DIMENSIONS (Baker Pilot)
+  // Landscape vs portrait doesn’t matter as long as the photo contains the full page.
+  const TARGET_W_IN = 23.0;
+  const TARGET_H_IN = 35.0;
+
   const DEFAULT_DISTANCE_YDS = 100;
   const DEFAULT_CLICK_MOA = 0.25;
 
-  // Tap roles
-  // 0: bull
-  // 1: X cal A
-  // 2: X cal B (1" to the right)
-  // 3: Y cal A
-  // 4: Y cal B (1" down)
-  // 5+: hits
-  const REQUIRED_BASE_TAPS = 5;
-
-  // ---------- State
+  // State
   const state = {
     objectUrl: null,
     imgLoaded: false,
 
-    // transforms
+    // view transform
     scale: 1,
     minScale: 1,
     maxScale: 6,
     panX: 0,
     panY: 0,
 
-    // touch gesture state
+    // touch
     touches: new Map(),
     lastPinchDist: null,
     lastPinchMid: null,
     lastPanPoint: null,
 
-    // taps stored in IMAGE PIXEL SPACE (natural image coords)
-    taps: [], // {x,y}
-    // calibration
-    pxPerInX: null,
-    pxPerInY: null,
+    // taps in IMAGE PIXEL SPACE (natural coords)
+    taps: [], // [0]=bull, [1+]=holes
 
-    // units per session
-    unit: "in", // "in" or "m"
+    // units and MOMA
+    unit: "in",      // "in" or "m" (display choice for distance only)
     distanceYds: DEFAULT_DISTANCE_YDS,
     clickMoa: DEFAULT_CLICK_MOA,
   };
 
-  // ---------- Helpers
+  // Helpers
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
   const fmt2 = (n) => (Number.isFinite(n) ? n.toFixed(2) : "0.00");
-  const dist = (a, b) => Math.hypot(b.x - a.x, b.y - a.y);
 
-  function setInstruction(text) {
-    if (elInstruction) elInstruction.textContent = text;
-  }
-
-  function setTapCount() {
-    if (elTapCount) elTapCount.textContent = String(state.taps.length);
-  }
-
-  function clearSEC() {
-    elSEC.innerHTML = "";
-  }
+  function setInstruction(t) { elInstruction.textContent = t; }
+  function setTapCount() { elTapCount.textContent = String(state.taps.length); }
+  function clearSEC() { elSEC.innerHTML = ""; }
 
   function safeRevokeUrl() {
     if (state.objectUrl) {
       URL.revokeObjectURL(state.objectUrl);
       state.objectUrl = null;
     }
-  }
-
-  function resetSessionVisuals() {
-    state.scale = 1;
-    state.panX = 0;
-    state.panY = 0;
-    state.lastPinchDist = null;
-    state.lastPinchMid = null;
-    state.lastPanPoint = null;
-    applyTransform();
-    redrawDots();
-    clearSEC();
-  }
-
-  // Convert screen point -> image pixel point
-  function screenToImagePx(clientX, clientY) {
-    const r = elWrap.getBoundingClientRect();
-    const xInWrap = clientX - r.left;
-    const yInWrap = clientY - r.top;
-
-    // undo pan/scale (transform origin 0,0)
-    const xImg = (xInWrap - state.panX) / state.scale;
-    const yImg = (yInWrap - state.panY) / state.scale;
-    return { x: xImg, y: yImg };
   }
 
   function applyTransform() {
@@ -147,16 +103,26 @@
     const s = Math.min(sx, sy);
 
     state.scale = clamp(s, 0.1, state.maxScale);
-    state.minScale = state.scale; // lock minimum to "fit"
+    state.minScale = state.scale;
     state.panX = (wrapR.width - iw * state.scale) / 2;
     state.panY = (wrapR.height - ih * state.scale) / 2;
     applyTransform();
   }
 
+  // screen -> image px
+  function screenToImagePx(clientX, clientY) {
+    const r = elWrap.getBoundingClientRect();
+    const xInWrap = clientX - r.left;
+    const yInWrap = clientY - r.top;
+    return {
+      x: (xInWrap - state.panX) / state.scale,
+      y: (yInWrap - state.panY) / state.scale,
+    };
+  }
+
   function redrawDots() {
     elDots.innerHTML = "";
 
-    // size in screen px (not scaled), so divide by scale
     const r = DOT_PX / state.scale;
 
     state.taps.forEach((p, idx) => {
@@ -168,23 +134,16 @@
       d.style.height = `${r * 2}px`;
       d.style.borderRadius = "999px";
       d.style.pointerEvents = "none";
+      d.style.border = "2px solid rgba(0,0,0,0.55)";
 
-      // Color roles
-      // bull = blue
-      // cal points = yellow
-      // hits = red
       if (idx === 0) {
+        // bull
         d.style.background = "rgba(80,170,255,0.95)";
-        d.style.border = "2px solid rgba(0,0,0,0.55)";
-      } else if (idx >= 1 && idx <= 4) {
-        d.style.background = "rgba(255,210,0,0.92)";
-        d.style.border = "2px solid rgba(0,0,0,0.55)";
       } else {
+        // holes
         d.style.background = "rgba(255,70,70,0.92)";
-        d.style.border = "2px solid rgba(0,0,0,0.55)";
-
         const num = document.createElement("div");
-        num.textContent = String(idx - 4);
+        num.textContent = String(idx);
         num.style.position = "absolute";
         num.style.left = "50%";
         num.style.top = "50%";
@@ -202,38 +161,11 @@
     setTapCount();
   }
 
-  function updateCalibration() {
-    state.pxPerInX = null;
-    state.pxPerInY = null;
-
-    if (state.taps.length >= REQUIRED_BASE_TAPS) {
-      const xA = state.taps[1];
-      const xB = state.taps[2];
-      const yA = state.taps[3];
-      const yB = state.taps[4];
-      const pxX = dist(xA, xB);
-      const pxY = dist(yA, yB);
-
-      // Guard against junk taps
-      if (pxX > 5) state.pxPerInX = pxX; // 1 inch
-      if (pxY > 5) state.pxPerInY = pxY; // 1 inch
-    }
-  }
-
-  function gridLockStatus() {
-    const ok = Number.isFinite(state.pxPerInX) && Number.isFinite(state.pxPerInY);
-    return ok ? "ON" : "OFF";
-  }
-
   function stepHint() {
-    const n = state.taps.length;
-    if (!state.imgLoaded) return 'Upload your Baker 23×35 1-inch grid target photo to begin.';
-    if (n === 0) return "Step 1: Tap the bull (center aim point).";
-    if (n === 1) return "Step 2: Tap a grid intersection (X cal point A).";
-    if (n === 2) return 'Step 3: Tap the next grid intersection exactly 1 square RIGHT from A (X cal point B).';
-    if (n === 3) return "Step 4: Tap a grid intersection (Y cal point A).";
-    if (n === 4) return 'Step 5: Tap the next grid intersection exactly 1 square DOWN from A (Y cal point B).';
-    return `Grid Lock: ${gridLockStatus()} — Tap bullet holes, then Show Results.`;
+    if (!state.imgLoaded) return "Upload photo → Tap bull → Tap bullet holes → Show Results.";
+    if (state.taps.length === 0) return "Step 1: Tap the bull (aim point).";
+    if (state.taps.length === 1) return "Step 2: Tap your bullet holes.";
+    return "Tap more holes, then Show Results.";
   }
 
   function setUnitsUI() {
@@ -249,68 +181,55 @@
     if (Number.isFinite(c) && c > 0) state.clickMoa = c;
 
     if (Number.isFinite(d) && d > 0) {
-      if (state.unit === "m") {
-        // store internally as yards
-        state.distanceYds = d * YARDS_PER_METER;
-      } else {
-        state.distanceYds = d;
-      }
+      state.distanceYds = (state.unit === "m") ? d * YARDS_PER_METER : d;
     }
   }
 
   function writeStateToMomaInputs() {
-    if (state.unit === "m") {
-      elDistanceInput.value = fmt2(state.distanceYds / YARDS_PER_METER);
-    } else {
-      elDistanceInput.value = fmt2(state.distanceYds);
-    }
+    elDistanceInput.value =
+      state.unit === "m" ? fmt2(state.distanceYds / YARDS_PER_METER) : fmt2(state.distanceYds);
     elClickInput.value = fmt2(state.clickMoa);
   }
 
   function inchesPerMOA(distanceYds) {
-    // 1 MOA ≈ 1.047 inches at 100 yards
     return (distanceYds * 1.047) / 100;
   }
 
-  function computeSEC() {
-    updateCalibration();
+  // Declared-geometry conversion: px -> inches
+  function pxToInX(px) {
+    const iw = elImg.naturalWidth || 1;
+    return (px / iw) * TARGET_W_IN;
+  }
+  function pxToInY(px) {
+    const ih = elImg.naturalHeight || 1;
+    return (px / ih) * TARGET_H_IN;
+  }
 
-    if (!state.imgLoaded) {
-      return { ok: false, err: "Upload a target photo first." };
-    }
-    if (gridLockStatus() !== "ON") {
-      return { ok: false, err: "Grid lock required: complete the 1-inch X and Y calibration taps." };
-    }
-    if (state.taps.length <= REQUIRED_BASE_TAPS) {
-      return { ok: false, err: "Tap at least 1 bullet hole after calibration." };
-    }
+  function computeSEC() {
+    if (!state.imgLoaded) return { ok: false, err: "Upload a target photo first." };
+    if (state.taps.length < 2) return { ok: false, err: "Tap the bull and at least 1 bullet hole." };
 
     const bull = state.taps[0];
-    const hits = state.taps.slice(5);
+    const hits = state.taps.slice(1);
 
-    // POIB in IMAGE PIXELS
-    const poib = hits.reduce(
-      (acc, p) => ({ x: acc.x + p.x, y: acc.y + p.y }),
-      { x: 0, y: 0 }
-    );
-    poib.x /= hits.length;
-    poib.y /= hits.length;
+    // POIB in pixels
+    const poibPx = hits.reduce((a, p) => ({ x: a.x + p.x, y: a.y + p.y }), { x: 0, y: 0 });
+    poibPx.x /= hits.length;
+    poibPx.y /= hits.length;
 
-    // POIB offset from bull in inches with real-world axes:
-    // X: right positive (same as pixels)
-    // Y: up positive (invert pixel Y)
-    const poibX_in = (poib.x - bull.x) / state.pxPerInX;
-    const poibY_in = (bull.y - poib.y) / state.pxPerInY; // INVERTED so UP is +
+    // Convert pixel deltas to inches (target-space)
+    // X: right positive
+    // Y: up positive (invert because screen Y down)
+    const poibX_in = pxToInX(poibPx.x - bull.x);
+    const poibY_in = -pxToInY(poibPx.y - bull.y);
 
-    // Correction (Bull - POIB) in inches, same axis convention
+    // Correction = bull - poib = negative of POIB offset
     const corrX_in = -poibX_in;
     const corrY_in = -poibY_in;
 
-    // Directions from correction signs
     const dirX = corrX_in >= 0 ? "RIGHT" : "LEFT";
     const dirY = corrY_in >= 0 ? "UP" : "DOWN";
 
-    // MOA + clicks
     const ipm = inchesPerMOA(state.distanceYds);
     const moaX = Math.abs(corrX_in) / ipm;
     const moaY = Math.abs(corrY_in) / ipm;
@@ -331,8 +250,8 @@
       moaY,
       clicksX,
       clicksY,
-      pxPerInX: state.pxPerInX,
-      pxPerInY: state.pxPerInY,
+      targetW: TARGET_W_IN,
+      targetH: TARGET_H_IN,
     };
   }
 
@@ -367,21 +286,21 @@
           </div>
 
           <div style="padding:12px; border:1px solid rgba(255,255,255,0.10); border-radius:16px;">
-            <div style="color:rgba(255,255,255,0.70); font-weight:900; font-size:12px;">POIB (${state.unit})</div>
+            <div style="color:rgba(255,255,255,0.70); font-weight:900; font-size:12px;">POIB (in)</div>
             <div style="font-weight:900; font-size:26px; margin-top:6px;">
               X ${fmt2(res.poibX_in)} • Y ${fmt2(res.poibY_in)}
             </div>
           </div>
 
           <div style="padding:12px; border:1px solid rgba(255,255,255,0.10); border-radius:16px;">
-            <div style="color:rgba(255,255,255,0.70); font-weight:900; font-size:12px;">Correction (Bull − POIB) (${state.unit})</div>
+            <div style="color:rgba(255,255,255,0.70); font-weight:900; font-size:12px;">Correction (Bull − POIB) (in)</div>
             <div style="font-weight:900; font-size:26px; margin-top:6px;">
               ΔX ${fmt2(res.corrX_in)} • ΔY ${fmt2(res.corrY_in)}
             </div>
           </div>
 
           <div style="padding:12px; border:1px solid rgba(255,255,255,0.10); border-radius:16px;">
-            <div style="color:rgba(255,255,255,0.70); font-weight:900; font-size:12px;">Directions</div>
+            <div style="color:rgba(255,255,255,0.70); font-weight:900; font-size:12px;">Dial</div>
             <div style="font-weight:900; font-size:26px; margin-top:6px;">
               ${res.dirX} • ${res.dirY}
             </div>
@@ -403,24 +322,22 @@
         </div>
 
         <div style="margin-top:10px; color:rgba(255,255,255,0.65); font-weight:900; font-size:12px;">
-          1" grid detected: ${fmt2(res.pxPerInX)} px/in (X) • ${fmt2(res.pxPerInY)} px/in (Y)
+          Declared Geometry: ${fmt2(res.targetW)}" × ${fmt2(res.targetH)}"
         </div>
       </div>
     `;
   }
 
-  // ---------- Touch / gesture handlers
+  // Pointer/touch interactions (pinch + pan + tap)
   function onPointerDown(e) {
-    // ignore if no image yet
     if (!state.imgLoaded) return;
 
-    // Track touches for pinch/pan
     if (e.pointerType === "touch") {
       elWrap.setPointerCapture(e.pointerId);
       state.touches.set(e.pointerId, { x: e.clientX, y: e.clientY });
-      if (state.touches.size === 1) {
-        state.lastPanPoint = { x: e.clientX, y: e.clientY };
-      }
+
+      if (state.touches.size === 1) state.lastPanPoint = { x: e.clientX, y: e.clientY };
+
       if (state.touches.size === 2) {
         const pts = Array.from(state.touches.values());
         state.lastPinchDist = Math.hypot(pts[1].x - pts[0].x, pts[1].y - pts[0].y);
@@ -429,17 +346,14 @@
       return;
     }
 
-    // Mouse = tap
-    if (e.pointerType === "mouse") {
-      addTapFromEvent(e);
-    }
+    if (e.pointerType === "mouse") addTapFromClient(e.clientX, e.clientY);
   }
 
   function onPointerMove(e) {
     if (!state.imgLoaded) return;
     if (e.pointerType !== "touch") return;
-
     if (!state.touches.has(e.pointerId)) return;
+
     state.touches.set(e.pointerId, { x: e.clientX, y: e.clientY });
 
     if (state.touches.size === 1 && state.lastPanPoint) {
@@ -461,7 +375,6 @@
       const scaleFactor = d / state.lastPinchDist;
       const newScale = clamp(state.scale * scaleFactor, state.minScale, state.maxScale);
 
-      // Zoom around midpoint
       const wrapR = elWrap.getBoundingClientRect();
       const mx = mid.x - wrapR.left;
       const my = mid.y - wrapR.top;
@@ -487,85 +400,54 @@
   function onPointerUp(e) {
     if (e.pointerType !== "touch") return;
     state.touches.delete(e.pointerId);
-    if (state.touches.size < 2) {
-      state.lastPinchDist = null;
-      state.lastPinchMid = null;
-    }
-    if (state.touches.size === 0) {
-      state.lastPanPoint = null;
-    }
+    if (state.touches.size < 2) { state.lastPinchDist = null; state.lastPinchMid = null; }
+    if (state.touches.size === 0) state.lastPanPoint = null;
   }
 
-  // Tap with touch = single finger quick tap (no move)
+  // Single-finger quick tap detection for touch
   let touchTapCandidate = null;
 
   function onTouchStart(e) {
     if (!state.imgLoaded) return;
     if (e.touches.length === 1) {
       const t = e.touches[0];
-      touchTapCandidate = { id: t.identifier, x: t.clientX, y: t.clientY, time: Date.now() };
-    } else {
-      touchTapCandidate = null;
-    }
+      touchTapCandidate = { x: t.clientX, y: t.clientY, time: Date.now() };
+    } else touchTapCandidate = null;
   }
+
   function onTouchEnd(e) {
     if (!state.imgLoaded) return;
     if (!touchTapCandidate) return;
 
-    // If ended quickly and didn’t move much, count as tap
     const dt = Date.now() - touchTapCandidate.time;
-    const moved = (() => {
-      // best effort: use changedTouches end position
-      const ct = e.changedTouches && e.changedTouches[0];
-      if (!ct) return true;
-      const dx = ct.clientX - touchTapCandidate.x;
-      const dy = ct.clientY - touchTapCandidate.y;
-      return Math.hypot(dx, dy) > 8;
-    })();
+    const ct = e.changedTouches && e.changedTouches[0];
+    if (!ct) return;
 
-    if (dt < 350 && !moved) {
-      const ct = e.changedTouches[0];
-      addTapFromClient(ct.clientX, ct.clientY);
-    }
+    const dx = ct.clientX - touchTapCandidate.x;
+    const dy = ct.clientY - touchTapCandidate.y;
+    const moved = Math.hypot(dx, dy) > 8;
+
+    if (dt < 350 && !moved) addTapFromClient(ct.clientX, ct.clientY);
     touchTapCandidate = null;
   }
 
-  function addTapFromEvent(e) {
-    addTapFromClient(e.clientX, e.clientY);
-  }
-
   function addTapFromClient(clientX, clientY) {
-    // avoid tapping outside wrap
     const r = elWrap.getBoundingClientRect();
     if (clientX < r.left || clientX > r.right || clientY < r.top || clientY > r.bottom) return;
 
     const p = screenToImagePx(clientX, clientY);
 
-    // guard: must be within image bounds
     const iw = elImg.naturalWidth || 1;
     const ih = elImg.naturalHeight || 1;
     if (p.x < 0 || p.y < 0 || p.x > iw || p.y > ih) return;
 
     state.taps.push(p);
-    updateCalibration();
     redrawDots();
     setInstruction(stepHint());
     clearSEC();
   }
 
-  // Double tap to reset view
-  let lastTapTime = 0;
-  elWrap.addEventListener("click", (e) => {
-    // mouse click already adds tap in pointerdown; this click is just for double-tap reset
-    const now = Date.now();
-    if (now - lastTapTime < 260) {
-      fitImageToWrap();
-      applyTransform();
-    }
-    lastTapTime = now;
-  });
-
-  // ---------- File load
+  // File chosen
   function onFileChosen() {
     const f = elFile.files && elFile.files[0];
     if (!f) return;
@@ -575,9 +457,7 @@
 
     state.imgLoaded = false;
     state.taps = [];
-    state.pxPerInX = null;
-    state.pxPerInY = null;
-    setTapCount();
+    redrawDots();
     clearSEC();
 
     elImg.onload = () => {
@@ -594,11 +474,10 @@
     elImg.src = state.objectUrl;
   }
 
-  // ---------- Buttons
+  // Buttons
   elUndo.addEventListener("click", () => {
     if (state.taps.length === 0) return;
     state.taps.pop();
-    updateCalibration();
     redrawDots();
     setInstruction(stepHint());
     clearSEC();
@@ -606,26 +485,28 @@
 
   elClear.addEventListener("click", () => {
     state.taps = [];
-    state.pxPerInX = null;
-    state.pxPerInY = null;
     redrawDots();
     setInstruction(stepHint());
     clearSEC();
+
+    // reset per-session units back to default (your preference)
+    state.unit = "in";
+    elUnitToggle.checked = false;
+    setUnitsUI();
+    state.distanceYds = DEFAULT_DISTANCE_YDS;
+    state.clickMoa = DEFAULT_CLICK_MOA;
+    writeStateToMomaInputs();
   });
 
   elShow.addEventListener("click", () => {
     const res = computeSEC();
-    if (!res.ok) {
-      setInstruction(res.err);
-      return;
-    }
+    if (!res.ok) { setInstruction(res.err); return; }
     renderSEC(res);
-    setInstruction("SEC ready. You can Undo/Clear or upload a new photo.");
+    setInstruction("SEC ready. Undo/Clear or upload a new photo.");
   });
 
   elApply.addEventListener("click", () => {
     readMomaInputsToState();
-    // refresh SEC if already showing
     if (elSEC.innerHTML.trim()) {
       const res = computeSEC();
       if (res.ok) renderSEC(res);
@@ -633,7 +514,6 @@
   });
 
   elUnitToggle.addEventListener("change", () => {
-    // NOTE: You asked: meters applies only to this instance; clearing resets to default.
     state.unit = elUnitToggle.checked ? "m" : "in";
     setUnitsUI();
     writeStateToMomaInputs();
@@ -644,28 +524,16 @@
     }
   });
 
-  // Reset unit back to IN when cleared (your rule)
-  const originalClear = elClear.onclick;
-  elClear.addEventListener("click", () => {
-    state.unit = "in";
-    elUnitToggle.checked = false;
-    setUnitsUI();
-    state.distanceYds = DEFAULT_DISTANCE_YDS;
-    state.clickMoa = DEFAULT_CLICK_MOA;
-    writeStateToMomaInputs();
-  });
-
-  // ---------- Vendor buttons (set your URLs)
-  // Put your real Baker URLs here anytime:
+  // Vendor buttons (set your real URLs anytime)
   elBakerCatalog.href = "https://bakertargets.com/";
   elBakerProduct.href = "https://bakertargets.com/";
 
-  // ---------- Init
+  // Init
   function init() {
-    // defaults
     state.distanceYds = DEFAULT_DISTANCE_YDS;
     state.clickMoa = DEFAULT_CLICK_MOA;
     state.unit = "in";
+
     elUnitToggle.checked = false;
     setUnitsUI();
     writeStateToMomaInputs();
@@ -673,25 +541,18 @@
     setInstruction(stepHint());
     setTapCount();
 
-    // file handling
     elFile.addEventListener("change", onFileChosen);
 
-    // gestures
     elWrap.addEventListener("pointerdown", onPointerDown, { passive: true });
     elWrap.addEventListener("pointermove", onPointerMove, { passive: true });
     elWrap.addEventListener("pointerup", onPointerUp, { passive: true });
     elWrap.addEventListener("pointercancel", onPointerUp, { passive: true });
 
-    // touch tap detection (single finger)
     elWrap.addEventListener("touchstart", onTouchStart, { passive: true });
     elWrap.addEventListener("touchend", onTouchEnd, { passive: true });
 
-    // Prevent page scroll inside wrap
-    elWrap.addEventListener("touchmove", (e) => {
-      if (e.touches.length >= 2) return; // allow pinch handling
-      // single finger drag should pan, so don't let page scroll
-      e.preventDefault();
-    }, { passive: false });
+    // Stop page scroll while interacting inside viewport
+    elWrap.addEventListener("touchmove", (e) => { e.preventDefault(); }, { passive: false });
   }
 
   init();
