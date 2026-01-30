@@ -1,18 +1,15 @@
 /* ============================================================
-   frontend_new/index.js (FULL REPLACEMENT) — vBANNER+LOAD-PROOF-2
-
-   Fix focus:
-   - Bind to ANY <input type="file">, not only #photoInput
-   - Show selected filename in banner + console
-   - Load preview reliably (ObjectURL -> DataURL fallback)
-   - Enable taps via overlay canvas + visible dots + counter
+   frontend_new/index.js (FULL REPLACEMENT) — vBANNER+LOAD-PROOF-3
+   Purpose:
+   - Use our own hidden #photoInput + #chooseBtn button (iOS proof)
+   - Always load preview + show thumbnail
+   - Always capture taps on #tapCanvas and draw dots
 ============================================================ */
 
 (() => {
   const $ = (id) => document.getElementById(id);
 
-  // ---------- PROOF BANNER ----------
-  function showBanner(msg, ms = 2500) {
+  function showBanner(msg, ms = 2200) {
     let b = document.getElementById("scznBanner");
     if (!b) {
       b = document.createElement("div");
@@ -26,8 +23,7 @@
       b.style.borderRadius = "12px";
       b.style.fontFamily = "system-ui,-apple-system,Segoe UI,Roboto,Arial";
       b.style.fontSize = "14px";
-      b.style.fontWeight = "800";
-      b.style.letterSpacing = "0.2px";
+      b.style.fontWeight = "900";
       b.style.background = "rgba(0,160,70,0.92)";
       b.style.color = "#fff";
       b.style.boxShadow = "0 12px 32px rgba(0,0,0,0.45)";
@@ -36,130 +32,19 @@
     b.textContent = msg;
     b.style.display = "block";
     clearTimeout(showBanner._t);
-    showBanner._t = setTimeout(() => {
-      try { b.style.display = "none"; } catch (_) {}
-    }, ms);
+    showBanner._t = setTimeout(() => (b.style.display = "none"), ms);
   }
 
   const log = (...a) => console.log("[SCZN3]", ...a);
 
-  // ---------- STATE ----------
   let taps = [];
   let objectUrl = null;
 
-  // ---------- ENSURE ELEMENTS ----------
-  function ensureTargetWrap() {
-    let wrap = $("targetWrap");
-    if (!wrap) {
-      wrap = document.createElement("div");
-      wrap.id = "targetWrap";
-      wrap.style.marginTop = "12px";
-      wrap.style.position = "relative";
-      wrap.style.maxWidth = "980px";
-      wrap.style.marginLeft = "auto";
-      wrap.style.marginRight = "auto";
-      document.body.appendChild(wrap);
-      log("Created missing #targetWrap");
+  function revokeUrl() {
+    if (objectUrl) {
+      try { URL.revokeObjectURL(objectUrl); } catch (_) {}
+      objectUrl = null;
     }
-    wrap.style.position = "relative";
-    wrap.style.touchAction = "none";
-    return wrap;
-  }
-
-  function ensureTargetImg(wrap) {
-    let img = $("targetImg");
-    if (!img) {
-      img = document.createElement("img");
-      img.id = "targetImg";
-      img.alt = "Selected target preview";
-      img.style.display = "none"; // hidden until load
-      img.style.width = "100%";
-      img.style.height = "auto";
-      img.style.borderRadius = "12px";
-      img.style.boxShadow = "0 10px 30px rgba(0,0,0,0.35)";
-      img.style.pointerEvents = "none"; // taps go to canvas
-      wrap.appendChild(img);
-      log("Created missing #targetImg");
-    } else {
-      img.style.pointerEvents = "none";
-    }
-    return img;
-  }
-
-  function ensureDotsLayer(wrap) {
-    let dots = $("dotsLayer");
-    if (!dots) {
-      dots = document.createElement("div");
-      dots.id = "dotsLayer";
-      wrap.appendChild(dots);
-      log("Created missing #dotsLayer");
-    }
-    dots.style.position = "absolute";
-    dots.style.inset = "0";
-    dots.style.zIndex = "40";
-    dots.style.pointerEvents = "none";
-    return dots;
-  }
-
-  function ensureTapCanvas(wrap) {
-    let c = $("tapCanvas");
-    if (!c) {
-      c = document.createElement("canvas");
-      c.id = "tapCanvas";
-      wrap.appendChild(c);
-      log("Created missing #tapCanvas");
-    }
-    c.style.position = "absolute";
-    c.style.inset = "0";
-    c.style.width = "100%";
-    c.style.height = "100%";
-    c.style.zIndex = "30";
-    c.style.pointerEvents = "auto";
-    c.style.touchAction = "none";
-    c.style.background = "transparent";
-    return c;
-  }
-
-  function ensureTapCount() {
-    let el = $("tapCount");
-    if (!el) {
-      el = document.createElement("div");
-      el.id = "tapCount";
-      el.style.position = "fixed";
-      el.style.top = "12px";
-      el.style.right = "12px";
-      el.style.zIndex = "999999";
-      el.style.padding = "8px 10px";
-      el.style.borderRadius = "10px";
-      el.style.background = "rgba(0,0,0,0.6)";
-      el.style.color = "#fff";
-      el.style.fontFamily = "system-ui,-apple-system,Segoe UI,Roboto,Arial";
-      el.style.fontSize = "14px";
-      el.style.fontWeight = "800";
-      document.body.appendChild(el);
-    }
-    return el;
-  }
-
-  function ensureInstruction() {
-    let el = $("instructionLine");
-    if (!el) {
-      el = document.createElement("div");
-      el.id = "instructionLine";
-      el.style.position = "fixed";
-      el.style.top = "12px";
-      el.style.left = "12px";
-      el.style.zIndex = "999999";
-      el.style.padding = "8px 10px";
-      el.style.borderRadius = "10px";
-      el.style.background = "rgba(0,0,0,0.6)";
-      el.style.color = "#fff";
-      el.style.fontFamily = "system-ui,-apple-system,Segoe UI,Roboto,Arial";
-      el.style.fontSize = "14px";
-      el.style.fontWeight = "800";
-      document.body.appendChild(el);
-    }
-    return el;
   }
 
   function syncCanvasToWrap(canvas, wrap) {
@@ -170,8 +55,7 @@
     if (canvas.height !== h) canvas.height = h;
   }
 
-  // ---------- DOTS ----------
-  function renderDots(dotsLayer, wrap, tapCountEl, instructionEl) {
+  function renderDots(dotsLayer, wrap, tapCountEl) {
     dotsLayer.innerHTML = "";
     const r = wrap.getBoundingClientRect();
     const w = r.width;
@@ -193,108 +77,17 @@
     });
 
     tapCountEl.textContent = `Taps: ${taps.length}`;
-    instructionEl.textContent = taps.length === 0 ? "Tap bull’s-eye (anchor)" : "Tap confirmed hits";
   }
 
-  // ---------- IMAGE LOADING ----------
-  function revokeUrl() {
-    if (objectUrl) {
-      try { URL.revokeObjectURL(objectUrl); } catch (_) {}
-      objectUrl = null;
-    }
-  }
-
-  function loadViaObjectUrl(img, file) {
-    return new Promise((resolve, reject) => {
-      revokeUrl();
-      objectUrl = URL.createObjectURL(file);
-
-      const ok = () => cleanup(resolve);
-      const bad = () => cleanup(() => reject(new Error("ObjectURL decode failed")));
-
-      const cleanup = (done) => {
-        img.removeEventListener("load", ok);
-        img.removeEventListener("error", bad);
-        done();
-      };
-
-      img.addEventListener("load", ok, { once: true });
-      img.addEventListener("error", bad, { once: true });
-      img.src = objectUrl;
-    });
-  }
-
-  function loadViaDataUrl(img, file) {
-    return new Promise((resolve, reject) => {
-      const fr = new FileReader();
-      fr.onerror = () => reject(new Error("FileReader failed"));
-      fr.onload = () => {
-        const dataUrl = fr.result;
-        if (!dataUrl || typeof dataUrl !== "string") return reject(new Error("Bad dataURL"));
-
-        const ok = () => cleanup(resolve);
-        const bad = () => cleanup(() => reject(new Error("dataURL decode failed")));
-
-        const cleanup = (done) => {
-          img.removeEventListener("load", ok);
-          img.removeEventListener("error", bad);
-          done();
-        };
-
-        img.addEventListener("load", ok, { once: true });
-        img.addEventListener("error", bad, { once: true });
-
-        revokeUrl();
-        img.src = dataUrl;
-      };
-      fr.readAsDataURL(file);
-    });
-  }
-
-  async function loadSelectedFile(file, img, canvas, wrap, dotsLayer, tapCountEl, instructionEl) {
-    if (!file) return;
-
-    // Guard: must be image
-    if (!String(file.type || "").startsWith("image/")) {
-      alert("Please choose an image file.");
-      return;
-    }
-
-    taps = [];
-    renderDots(dotsLayer, wrap, tapCountEl, instructionEl);
-    instructionEl.textContent = "Loading image…";
-
-    // show it even before load finishes (so layout exists)
-    img.style.display = "block";
-
-    try {
-      await loadViaObjectUrl(img, file);
-      log("Loaded via ObjectURL:", file.name, file.type, file.size);
-    } catch (e1) {
-      log("ObjectURL failed -> DataURL:", e1.message);
-      await loadViaDataUrl(img, file);
-      log("Loaded via DataURL:", file.name, file.type, file.size);
-    }
-
-    requestAnimationFrame(() => {
-      syncCanvasToWrap(canvas, wrap);
-      renderDots(dotsLayer, wrap, tapCountEl, instructionEl);
-      instructionEl.textContent = "Tap bull’s-eye (anchor)";
-    });
-  }
-
-  // ---------- TAP CAPTURE ----------
   function getClientPoint(evt) {
     if (evt.touches && evt.touches.length) {
       return { x: evt.touches[0].clientX, y: evt.touches[0].clientY };
     }
-    if (typeof evt.clientX === "number" && typeof evt.clientY === "number") {
-      return { x: evt.clientX, y: evt.clientY };
-    }
+    if (typeof evt.clientX === "number") return { x: evt.clientX, y: evt.clientY };
     return null;
   }
 
-  function bindTap(canvas, wrap, dotsLayer, tapCountEl, instructionEl) {
+  function bindTap(canvas, wrap, dotsLayer, tapCountEl) {
     const handler = (evt) => {
       if (evt.cancelable) evt.preventDefault();
       evt.stopPropagation();
@@ -309,7 +102,7 @@
       const ny = Math.max(0, Math.min(1, (pt.y - r.top) / r.height));
 
       taps.push({ nx, ny });
-      renderDots(dotsLayer, wrap, tapCountEl, instructionEl);
+      renderDots(dotsLayer, wrap, tapCountEl);
     };
 
     canvas.addEventListener("pointerdown", handler, { passive: false });
@@ -318,78 +111,98 @@
     canvas.addEventListener("contextmenu", (e) => e.preventDefault());
   }
 
-  // ---------- FILE INPUT (BULLETPROOF) ----------
-  function getAnyFileInput() {
-    // Prefer #photoInput if it exists, otherwise first file input found.
-    return $("photoInput") || document.querySelector('input[type="file"]');
-  }
+  async function loadFileToImg(file, imgEl) {
+    revokeUrl();
+    objectUrl = URL.createObjectURL(file);
 
-  function bindAllFileInputs(onFile) {
-    const bindOne = (input) => {
-      if (!input || input._scznBound) return;
-      input._scznBound = true;
-
-      input.addEventListener("change", () => {
-        const f = input.files && input.files[0] ? input.files[0] : null;
-        if (!f) return;
-        showBanner(`FILE: ${f.name}`, 1800);
-        log("File change:", f.name, f.type, f.size);
-        onFile(f);
-      });
-
-      log("Bound file input:", input.id ? `#${input.id}` : "(no id)");
-    };
-
-    // bind existing inputs now
-    document.querySelectorAll('input[type="file"]').forEach(bindOne);
-
-    // and keep binding if DOM changes
-    const mo = new MutationObserver(() => {
-      document.querySelectorAll('input[type="file"]').forEach(bindOne);
+    await new Promise((resolve, reject) => {
+      const ok = () => cleanup(resolve);
+      const bad = () => cleanup(() => reject(new Error("Image decode failed")));
+      const cleanup = (done) => {
+        imgEl.removeEventListener("load", ok);
+        imgEl.removeEventListener("error", bad);
+        done();
+      };
+      imgEl.addEventListener("load", ok, { once: true });
+      imgEl.addEventListener("error", bad, { once: true });
+      imgEl.src = objectUrl;
     });
-    mo.observe(document.documentElement, { childList: true, subtree: true });
   }
 
-  // ---------- INIT ----------
+  function setThumb(thumbBox, imgSrc) {
+    thumbBox.innerHTML = "";
+    const im = document.createElement("img");
+    im.src = imgSrc;
+    im.alt = "Selected target thumbnail";
+    thumbBox.appendChild(im);
+  }
+
   function init() {
-    showBanner("INDEX.JS LOADED ✅ vBANNER+LOAD-PROOF-2", 2500);
-    log("INDEX.JS LOADED v2");
+    showBanner("INDEX.JS LOADED ✅ vBANNER+LOAD-PROOF-3", 2500);
+    log("Loaded v3");
 
-    const wrap = ensureTargetWrap();
-    const img = ensureTargetImg(wrap);
-    const dotsLayer = ensureDotsLayer(wrap);
-    const canvas = ensureTapCanvas(wrap);
-    const tapCountEl = ensureTapCount();
-    const instructionEl = ensureInstruction();
+    const input = $("photoInput");
+    const chooseBtn = $("chooseBtn");
+    const fileName = $("fileName");
+    const thumbBox = $("thumbBox");
 
-    tapCountEl.textContent = "Taps: 0";
-    instructionEl.textContent = "Choose a photo to begin";
+    const wrap = $("targetWrap");
+    const img = $("targetImg");
+    const canvas = $("tapCanvas");
+    const dots = $("dotsLayer");
+    const tapCountEl = $("tapCount");
+    const instructionEl = $("instructionLine");
 
-    // keep overlay synced
+    // Ensure overlay sizing
     const resync = () => {
       syncCanvasToWrap(canvas, wrap);
-      renderDots(dotsLayer, wrap, tapCountEl, instructionEl);
+      renderDots(dots, wrap, tapCountEl);
     };
     window.addEventListener("resize", resync);
 
-    bindTap(canvas, wrap, dotsLayer, tapCountEl, instructionEl);
+    bindTap(canvas, wrap, dots, tapCountEl);
 
-    bindAllFileInputs(async (file) => {
+    // Our own button triggers the hidden input
+    chooseBtn.addEventListener("click", () => {
+      showBanner("OPENING PHOTO PICKER…", 900);
+      input.click();
+    });
+
+    // When the file is chosen, we always handle it
+    input.addEventListener("change", async () => {
+      const file = input.files && input.files[0] ? input.files[0] : null;
+      if (!file) return;
+
+      showBanner(`FILE: ${file.name}`, 1700);
+      log("Selected file:", file.name, file.type, file.size);
+
+      fileName.textContent = file.name;
+
+      taps = [];
+      tapCountEl.textContent = "Taps: 0";
+      instructionEl.textContent = "Loading image…";
+
       try {
-        await loadSelectedFile(file, img, canvas, wrap, dotsLayer, tapCountEl, instructionEl);
-      } catch (err) {
-        log("LOAD FAILED:", err);
+        img.style.display = "block";
+        await loadFileToImg(file, img);
+
+        // set thumbnail using same src
+        setThumb(thumbBox, img.src);
+
+        requestAnimationFrame(() => {
+          resync();
+          instructionEl.textContent = "Tap bull’s-eye (anchor)";
+        });
+      } catch (e) {
+        log("Load failed:", e);
         alert("Couldn’t load image. Try a different photo.");
         instructionEl.textContent = "Image load failed";
       }
     });
 
-    // Helpful: if there is NO file input found at all, call it out
-    const fi = getAnyFileInput();
-    if (!fi) {
-      showBanner("NO <input type='file'> FOUND ON PAGE ❌", 4000);
-      log("No file input found.");
-    }
+    // Initial state
+    tapCountEl.textContent = "Taps: 0";
+    instructionEl.textContent = "Choose a photo to begin";
   }
 
   if (document.readyState === "loading") {
