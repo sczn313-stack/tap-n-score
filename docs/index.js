@@ -1,68 +1,56 @@
 /* ============================================================
-   frontend_new/index.js (FULL REPLACEMENT) — vBANNER+LOAD-PROOF-1
+   frontend_new/index.js (FULL REPLACEMENT) — vBANNER+LOAD-PROOF-2
 
-   Primary goals:
-   1) PROVE the JS is actually running (green banner + console logs)
-   2) PROVE file input change is firing (filename shown)
-   3) PROVE image is loading (ObjectURL -> DataURL fallback)
-   4) PROVE taps are captured (dot appears + tapCount increments)
-
-   Works even if some IDs differ by creating missing elements.
-
-   Expected / common IDs (but we guard hard):
-   - photoInput
-   - targetWrap
-   - targetImg (optional; we will create if missing)
-   - dotsLayer (optional; we will create if missing)
-   - tapCount (optional; we will create if missing)
-   - instructionLine (optional; we will create if missing)
+   Fix focus:
+   - Bind to ANY <input type="file">, not only #photoInput
+   - Show selected filename in banner + console
+   - Load preview reliably (ObjectURL -> DataURL fallback)
+   - Enable taps via overlay canvas + visible dots + counter
 ============================================================ */
 
 (() => {
   const $ = (id) => document.getElementById(id);
 
   // ---------- PROOF BANNER ----------
-  function showBanner(msg) {
-    const existing = document.getElementById("scznBanner");
-    if (existing) existing.remove();
-
-    const b = document.createElement("div");
-    b.id = "scznBanner";
+  function showBanner(msg, ms = 2500) {
+    let b = document.getElementById("scznBanner");
+    if (!b) {
+      b = document.createElement("div");
+      b.id = "scznBanner";
+      b.style.position = "fixed";
+      b.style.left = "12px";
+      b.style.right = "12px";
+      b.style.bottom = "12px";
+      b.style.zIndex = "999999";
+      b.style.padding = "12px 14px";
+      b.style.borderRadius = "12px";
+      b.style.fontFamily = "system-ui,-apple-system,Segoe UI,Roboto,Arial";
+      b.style.fontSize = "14px";
+      b.style.fontWeight = "800";
+      b.style.letterSpacing = "0.2px";
+      b.style.background = "rgba(0,160,70,0.92)";
+      b.style.color = "#fff";
+      b.style.boxShadow = "0 12px 32px rgba(0,0,0,0.45)";
+      document.body.appendChild(b);
+    }
     b.textContent = msg;
-    b.style.position = "fixed";
-    b.style.left = "12px";
-    b.style.right = "12px";
-    b.style.bottom = "12px";
-    b.style.zIndex = "999999";
-    b.style.padding = "12px 14px";
-    b.style.borderRadius = "12px";
-    b.style.fontFamily = "system-ui,-apple-system,Segoe UI,Roboto,Arial";
-    b.style.fontSize = "14px";
-    b.style.fontWeight = "700";
-    b.style.letterSpacing = "0.3px";
-    b.style.background = "rgba(0,160,70,0.92)";
-    b.style.color = "#fff";
-    b.style.boxShadow = "0 12px 32px rgba(0,0,0,0.45)";
-    document.body.appendChild(b);
-
-    setTimeout(() => {
-      try { b.style.opacity = "0.92"; } catch (_) {}
-    }, 50);
+    b.style.display = "block";
+    clearTimeout(showBanner._t);
+    showBanner._t = setTimeout(() => {
+      try { b.style.display = "none"; } catch (_) {}
+    }, ms);
   }
 
-  function log(...args) {
-    console.log("[SCZN3]", ...args);
-  }
+  const log = (...a) => console.log("[SCZN3]", ...a);
 
   // ---------- STATE ----------
   let taps = [];
   let objectUrl = null;
 
-  // ---------- ELEMENT ENSURE ----------
+  // ---------- ENSURE ELEMENTS ----------
   function ensureTargetWrap() {
     let wrap = $("targetWrap");
     if (!wrap) {
-      // last-resort: create a wrap so you still get a preview
       wrap = document.createElement("div");
       wrap.id = "targetWrap";
       wrap.style.marginTop = "12px";
@@ -84,12 +72,12 @@
       img = document.createElement("img");
       img.id = "targetImg";
       img.alt = "Selected target preview";
-      img.style.display = "block";
+      img.style.display = "none"; // hidden until load
       img.style.width = "100%";
       img.style.height = "auto";
       img.style.borderRadius = "12px";
       img.style.boxShadow = "0 10px 30px rgba(0,0,0,0.35)";
-      img.style.pointerEvents = "none"; // taps go to overlay
+      img.style.pointerEvents = "none"; // taps go to canvas
       wrap.appendChild(img);
       log("Created missing #targetImg");
     } else {
@@ -147,10 +135,8 @@
       el.style.color = "#fff";
       el.style.fontFamily = "system-ui,-apple-system,Segoe UI,Roboto,Arial";
       el.style.fontSize = "14px";
-      el.style.fontWeight = "700";
-      el.textContent = "Taps: 0";
+      el.style.fontWeight = "800";
       document.body.appendChild(el);
-      log("Created missing #tapCount (floating counter)");
     }
     return el;
   }
@@ -170,10 +156,8 @@
       el.style.color = "#fff";
       el.style.fontFamily = "system-ui,-apple-system,Segoe UI,Roboto,Arial";
       el.style.fontSize = "14px";
-      el.style.fontWeight = "700";
-      el.textContent = "Ready";
+      el.style.fontWeight = "800";
       document.body.appendChild(el);
-      log("Created missing #instructionLine (floating)");
     }
     return el;
   }
@@ -220,7 +204,7 @@
     }
   }
 
-  function loadImgViaObjectUrl(img, file) {
+  function loadViaObjectUrl(img, file) {
     return new Promise((resolve, reject) => {
       revokeUrl();
       objectUrl = URL.createObjectURL(file);
@@ -240,13 +224,14 @@
     });
   }
 
-  function loadImgViaDataUrl(img, file) {
+  function loadViaDataUrl(img, file) {
     return new Promise((resolve, reject) => {
       const fr = new FileReader();
       fr.onerror = () => reject(new Error("FileReader failed"));
       fr.onload = () => {
         const dataUrl = fr.result;
         if (!dataUrl || typeof dataUrl !== "string") return reject(new Error("Bad dataURL"));
+
         const ok = () => cleanup(resolve);
         const bad = () => cleanup(() => reject(new Error("dataURL decode failed")));
 
@@ -267,21 +252,30 @@
   }
 
   async function loadSelectedFile(file, img, canvas, wrap, dotsLayer, tapCountEl, instructionEl) {
+    if (!file) return;
+
+    // Guard: must be image
+    if (!String(file.type || "").startsWith("image/")) {
+      alert("Please choose an image file.");
+      return;
+    }
+
     taps = [];
     renderDots(dotsLayer, wrap, tapCountEl, instructionEl);
-
     instructionEl.textContent = "Loading image…";
 
+    // show it even before load finishes (so layout exists)
+    img.style.display = "block";
+
     try {
-      await loadImgViaObjectUrl(img, file);
+      await loadViaObjectUrl(img, file);
       log("Loaded via ObjectURL:", file.name, file.type, file.size);
     } catch (e1) {
-      log("ObjectURL failed, falling back to DataURL:", e1.message);
-      await loadImgViaDataUrl(img, file);
+      log("ObjectURL failed -> DataURL:", e1.message);
+      await loadViaDataUrl(img, file);
       log("Loaded via DataURL:", file.name, file.type, file.size);
     }
 
-    // After load, ensure overlay matches size
     requestAnimationFrame(() => {
       syncCanvasToWrap(canvas, wrap);
       renderDots(dotsLayer, wrap, tapCountEl, instructionEl);
@@ -309,6 +303,8 @@
       if (!pt) return;
 
       const r = wrap.getBoundingClientRect();
+      if (r.width <= 1 || r.height <= 1) return;
+
       const nx = Math.max(0, Math.min(1, (pt.x - r.left) / r.width));
       const ny = Math.max(0, Math.min(1, (pt.y - r.top) / r.height));
 
@@ -319,51 +315,45 @@
     canvas.addEventListener("pointerdown", handler, { passive: false });
     canvas.addEventListener("touchstart", handler, { passive: false });
     canvas.addEventListener("click", handler);
-
     canvas.addEventListener("contextmenu", (e) => e.preventDefault());
   }
 
-  // ---------- FILE INPUT LISTEN (DELEGATED) ----------
-  function setChosenFilenameUI(file) {
-    // If you have a dedicated filename element, we’ll update it if found:
-    // common ones: #fileName, #chosenName, #selectedFileName
-    const candidates = ["fileName", "chosenName", "selectedFileName"];
-    for (const id of candidates) {
-      const el = $(id);
-      if (el) el.textContent = file ? file.name : "";
-    }
-    log("Selected file:", file ? file.name : "(none)");
+  // ---------- FILE INPUT (BULLETPROOF) ----------
+  function getAnyFileInput() {
+    // Prefer #photoInput if it exists, otherwise first file input found.
+    return $("photoInput") || document.querySelector('input[type="file"]');
   }
 
-  function wireFileInput(onFile) {
-    // Direct binding if exists
-    const input = $("photoInput");
-    if (input) {
-      input.addEventListener("change", (e) => {
-        const f = e.target?.files?.[0] || null;
+  function bindAllFileInputs(onFile) {
+    const bindOne = (input) => {
+      if (!input || input._scznBound) return;
+      input._scznBound = true;
+
+      input.addEventListener("change", () => {
+        const f = input.files && input.files[0] ? input.files[0] : null;
         if (!f) return;
-        setChosenFilenameUI(f);
+        showBanner(`FILE: ${f.name}`, 1800);
+        log("File change:", f.name, f.type, f.size);
         onFile(f);
       });
-      log("Bound #photoInput change listener");
-    }
 
-    // Also delegate (covers cases where element is re-rendered)
-    document.addEventListener("change", (e) => {
-      const t = e.target;
-      if (t && t.id === "photoInput") {
-        const f = t.files?.[0] || null;
-        if (!f) return;
-        setChosenFilenameUI(f);
-        onFile(f);
-      }
+      log("Bound file input:", input.id ? `#${input.id}` : "(no id)");
+    };
+
+    // bind existing inputs now
+    document.querySelectorAll('input[type="file"]').forEach(bindOne);
+
+    // and keep binding if DOM changes
+    const mo = new MutationObserver(() => {
+      document.querySelectorAll('input[type="file"]').forEach(bindOne);
     });
+    mo.observe(document.documentElement, { childList: true, subtree: true });
   }
 
   // ---------- INIT ----------
   function init() {
-    showBanner("INDEX.JS LOADED ✅ vBANNER+LOAD-PROOF-1");
-    log("INDEX.JS LOADED");
+    showBanner("INDEX.JS LOADED ✅ vBANNER+LOAD-PROOF-2", 2500);
+    log("INDEX.JS LOADED v2");
 
     const wrap = ensureTargetWrap();
     const img = ensureTargetImg(wrap);
@@ -372,7 +362,10 @@
     const tapCountEl = ensureTapCount();
     const instructionEl = ensureInstruction();
 
-    // make sure overlay sizing follows layout changes
+    tapCountEl.textContent = "Taps: 0";
+    instructionEl.textContent = "Choose a photo to begin";
+
+    // keep overlay synced
     const resync = () => {
       syncCanvasToWrap(canvas, wrap);
       renderDots(dotsLayer, wrap, tapCountEl, instructionEl);
@@ -381,7 +374,7 @@
 
     bindTap(canvas, wrap, dotsLayer, tapCountEl, instructionEl);
 
-    wireFileInput(async (file) => {
+    bindAllFileInputs(async (file) => {
       try {
         await loadSelectedFile(file, img, canvas, wrap, dotsLayer, tapCountEl, instructionEl);
       } catch (err) {
@@ -391,8 +384,12 @@
       }
     });
 
-    instructionEl.textContent = "Choose a photo to begin";
-    tapCountEl.textContent = "Taps: 0";
+    // Helpful: if there is NO file input found at all, call it out
+    const fi = getAnyFileInput();
+    if (!fi) {
+      showBanner("NO <input type='file'> FOUND ON PAGE ❌", 4000);
+      log("No file input found.");
+    }
   }
 
   if (document.readyState === "loading") {
