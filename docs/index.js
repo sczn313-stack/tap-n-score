@@ -1,14 +1,15 @@
 /* ============================================================
    index.js (FULL REPLACEMENT) — Frontend-only, Grid-Calibrated
-   C-mode (Best): Grid-based calibration so clicks are real & stable.
+   Upgrade: Calibration uses HORIZONTAL distance only (dx),
+            so vertical mis-tap cannot distort pixels-per-inch.
 
    Flow:
    1) Select photo -> Tap screen
    2) Tap bull (center)
-   3) Calibrate once: tap a grid point 10 squares RIGHT of bull
+   3) Calibrate once: tap a grid point ~10 squares RIGHT of bull
       - cellSizeIn = 1.00"
       - squaresRight = 10
-      - pixelsPerInch computed from bull->cal point distance
+      - pixelsPerInch computed from |dx| only
    4) Tap hits
    5) Show Results -> POIB -> inches -> MOA -> clicks (locked directions)
 ============================================================ */
@@ -73,8 +74,7 @@
 
   // Calibration constants (C-mode)
   const cellSizeIn = 1.0;
-  const squaresRight = 10; // user taps a point 10 squares to the RIGHT of bull
-
+  const squaresRight = 10; // known horizontal inches = 10
   let pxPerIn = null;    // computed after cal tap
 
   // Simple view reset (keeping your button alive)
@@ -218,37 +218,32 @@
     if (tapCountEl) tapCountEl.textContent = String(taps.length);
   }
 
-  function computePxPerInch() {
+  // --- HORIZONTAL-ONLY calibration (dx only)
+  function computePxPerInchHorizontal() {
     if (!bull || !cal) return null;
     const b = pctToPx(bull);
     const c = pctToPx(cal);
-    const dx = c.x - b.x;
-    const dy = c.y - b.y;
-    const distPx = Math.sqrt(dx * dx + dy * dy);
 
+    const dx = Math.abs(c.x - b.x); // horizontal pixels only
     const knownIn = squaresRight * cellSizeIn;
-    if (knownIn <= 0 || distPx <= 0) return null;
 
-    return distPx / knownIn;
+    if (knownIn <= 0 || dx <= 0) return null;
+    return dx / knownIn;
   }
 
-  // Inches per MOA at distance
+  // Inches per MOA at a given distance
   function inchesPerMOA(distanceYds) {
-    // 1 MOA ≈ 1.047" at 100 yards
     return (distanceYds * 1.047) / 100.0;
   }
 
-  // Locked direction truth:
-  // - Vector = bull - POIB (in inches)
-  // - dxIn > 0 => RIGHT, dxIn < 0 => LEFT
-  // - dyIn > 0 => DOWN,  dyIn < 0 => UP   (screen y grows downward)
+  // Locked direction truth in SCREEN SPACE:
+  // Vector = bull - POIB (bull minus group)
+  // dxIn > 0 => RIGHT, dxIn < 0 => LEFT
+  // dyIn > 0 => DOWN,  dyIn < 0 => UP  (screen y grows downward)
   function splitClicks(dxIn, dyIn, distYds, moaPerClick) {
     const ipm = inchesPerMOA(distYds);
-    const windMoa = Math.abs(dxIn) / ipm;
-    const elevMoa = Math.abs(dyIn) / ipm;
-
-    const windClicks = windMoa / moaPerClick;
-    const elevClicks = elevMoa / moaPerClick;
+    const windClicks = (Math.abs(dxIn) / ipm) / moaPerClick;
+    const elevClicks = (Math.abs(dyIn) / ipm) / moaPerClick;
 
     const out = { up: 0, down: 0, left: 0, right: 0 };
 
@@ -261,12 +256,29 @@
     return out;
   }
 
-  // Simple score (placeholder, but real): based on POIB distance from bull (inches)
+  // Simple score (placeholder): based on distance from bull in inches
   function scoreFromOffset(dxIn, dyIn) {
-    const d = Math.sqrt(dxIn * dxIn + dyIn * dyIn); // inches
-    // 100 at dead center; loses 10 points per inch; floor at 0
-    const s = Math.max(0, Math.round(100 - d * 10));
-    return s;
+    const d = Math.sqrt(dxIn * dxIn + dyIn * dyIn);
+    return Math.max(0, Math.round(100 - d * 10));
+  }
+
+  function setSecClicks(c) {
+    const up = safeNum(c.up, 0).toFixed(2);
+    const down = safeNum(c.down, 0).toFixed(2);
+    const left = safeNum(c.left, 0).toFixed(2);
+    const right = safeNum(c.right, 0).toFixed(2);
+
+    if (clickUp) clickUp.textContent = up;
+    if (clickDown) clickDown.textContent = down;
+    if (clickLeft) clickLeft.textContent = left;
+    if (clickRight) clickRight.textContent = right;
+  }
+
+  function setSecScore(big, cur, prev, cum) {
+    if (scoreBig) scoreBig.textContent = big ?? "—";
+    if (scoreCurrent) scoreCurrent.textContent = cur ?? "—";
+    if (scorePrev) scorePrev.textContent = prev ?? "—";
+    if (scoreCum) scoreCum.textContent = cum ?? "—";
   }
 
   // ----------------------------
@@ -292,10 +304,10 @@
     // 1) bull
     if (!bull) {
       bull = p;
-      setHidden(ctaRow, true); // still hidden until calibration completed
+      setHidden(ctaRow, true); // stays hidden until calibration done
       if (instructionLine) {
         instructionLine.textContent =
-          `Calibration: tap a grid point ${squaresRight} squares RIGHT of the bull`;
+          `Calibration: tap a grid point ~${squaresRight} squares RIGHT of the bull`;
       }
       redrawDots();
       return;
@@ -303,16 +315,24 @@
 
     // 2) calibration
     if (!cal) {
+      // Must be to the RIGHT of bull (prevents accidental left tap)
+      if (p.xPct <= bull.xPct) {
+        if (instructionLine) {
+          instructionLine.textContent =
+            `Calibration: tap a grid point ~${squaresRight} squares RIGHT of the bull (must be to the right)`;
+        }
+        return;
+      }
+
       cal = p;
-      pxPerIn = computePxPerInch();
+      pxPerIn = computePxPerInchHorizontal();
 
       if (!pxPerIn || !Number.isFinite(pxPerIn) || pxPerIn <= 0) {
-        // fail safe: reset cal only
         cal = null;
         pxPerIn = null;
         if (instructionLine) {
           instructionLine.textContent =
-            `Calibration failed. Tap a grid point ${squaresRight} squares RIGHT of the bull`;
+            `Calibration failed. Tap a grid point ~${squaresRight} squares RIGHT of the bull`;
         }
         redrawDots();
         return;
@@ -334,7 +354,6 @@
   function onUndo() {
     if (!bull) return;
 
-    // Undo hits first
     if (taps.length > 0) {
       taps.pop();
       updateTapCount();
@@ -342,20 +361,18 @@
       return;
     }
 
-    // Undo calibration next
     if (cal) {
       cal = null;
       pxPerIn = null;
       setHidden(ctaRow, true);
       if (instructionLine) {
         instructionLine.textContent =
-          `Calibration: tap a grid point ${squaresRight} squares RIGHT of the bull`;
+          `Calibration: tap a grid point ~${squaresRight} squares RIGHT of the bull`;
       }
       redrawDots();
       return;
     }
 
-    // Undo bull last
     resetTapState();
     redrawDots();
   }
@@ -369,16 +386,13 @@
     const sid = nowId();
     if (secSessionId) secSessionId.textContent = sid;
 
-    // Guardrails
     if (!bull || !cal || !pxPerIn || taps.length === 0) {
-      // Show something honest
       setSecClicks({ up: 0, down: 0, left: 0, right: 0 });
       setSecScore("—", "—", "—", "—");
       gotoSec();
       return;
     }
 
-    // Convert taps to px
     const b = pctToPx(bull);
     const hitPx = taps.map((t) => pctToPx(t));
 
@@ -402,27 +416,8 @@
     gotoSec();
   }
 
-  function setSecClicks(c) {
-    const up = safeNum(c.up, 0).toFixed(2);
-    const down = safeNum(c.down, 0).toFixed(2);
-    const left = safeNum(c.left, 0).toFixed(2);
-    const right = safeNum(c.right, 0).toFixed(2);
-
-    if (clickUp) clickUp.textContent = up;
-    if (clickDown) clickDown.textContent = down;
-    if (clickLeft) clickLeft.textContent = left;
-    if (clickRight) clickRight.textContent = right;
-  }
-
-  function setSecScore(big, cur, prev, cum) {
-    if (scoreBig) scoreBig.textContent = big ?? "—";
-    if (scoreCurrent) scoreCurrent.textContent = cur ?? "—";
-    if (scorePrev) scorePrev.textContent = prev ?? "—";
-    if (scoreCum) scoreCum.textContent = cum ?? "—";
-  }
-
   function onDownloadSec() {
-    alert("Download SEC is wired. Next: connect to SEC image generator.");
+    alert("Download SEC is wired. Next: generate a real SEC image.");
   }
 
   function onSurvey() {
