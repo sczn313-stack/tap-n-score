@@ -1,35 +1,37 @@
 /* ============================================================
-   index.js (FULL REPLACEMENT) — Tap-n-Score™
-   Fixes in this build:
-   - Photo selection ALWAYS shows a controlled mini-thumbnail
-   - iOS Safari “selected but didn’t stick” mitigation (store File immediately)
-   - Landing -> Tap screen transition on successful selection
-   - Tap dots render correctly on top of the image
-   - Undo / Clear / Reset View wiring (safe defaults)
-   - Show Results moves to SEC (optional backend calc if available)
+   index.js (FULL REPLACEMENT) — Frontend-only, Grid-Calibrated
+   C-mode (Best): Grid-based calibration so clicks are real & stable.
+
+   Flow:
+   1) Select photo -> Tap screen
+   2) Tap bull (center)
+   3) Calibrate once: tap a grid point 10 squares RIGHT of bull
+      - cellSizeIn = 1.00"
+      - squaresRight = 10
+      - pixelsPerInch computed from bull->cal point distance
+   4) Tap hits
+   5) Show Results -> POIB -> inches -> MOA -> clicks (locked directions)
 ============================================================ */
 
 (() => {
   const $ = (id) => document.getElementById(id);
 
-  // ----------------------------
-  // Elements (Landing)
-  // ----------------------------
+  // Pages
   const pageLanding = $("pageLanding");
   const pageTap = $("pageTap");
   const pageSec = $("pageSec");
 
+  // Landing
   const photoInput = $("photoInput");
-  const tipLine = $("tipLine");
+  const distanceYdsEl = $("distanceYds");
+  const moaPerClickEl = $("moaPerClick");
 
   const photoConfirm = $("photoConfirm");
   const photoThumb = $("photoThumb");
   const photoStatus = $("photoStatus");
   const promoSlot = $("promoSlot");
 
-  // ----------------------------
-  // Elements (Tap Screen)
-  // ----------------------------
+  // Tap screen
   const instructionLine = $("instructionLine");
   const targetWrap = $("targetWrap");
   const targetImg = $("targetImg");
@@ -43,16 +45,12 @@
   const clearBtn = $("clearBtn");
   const showResultsBtn = $("showResultsBtn");
 
-  // ----------------------------
-  // Elements (SEC)
-  // ----------------------------
+  // SEC
   const secSessionId = $("secSessionId");
-
   const clickUp = $("clickUp");
   const clickDown = $("clickDown");
   const clickLeft = $("clickLeft");
   const clickRight = $("clickRight");
-
   const scoreBig = $("scoreBig");
   const scoreCurrent = $("scoreCurrent");
   const scorePrev = $("scorePrev");
@@ -68,12 +66,18 @@
   let selectedFile = null;
   let objectUrl = null;
 
-  // Tap state
-  let bull = null;          // { xPct, yPct }
-  let taps = [];            // [{ xPct, yPct }]
-  let dots = [];            // DOM nodes
+  // Tap points in percent space (0..1 relative to targetWrap)
+  let bull = null;       // {xPct,yPct}
+  let cal = null;        // {xPct,yPct}
+  let taps = [];         // hit taps [{xPct,yPct}]
 
-  // View state (simple transform)
+  // Calibration constants (C-mode)
+  const cellSizeIn = 1.0;
+  const squaresRight = 10; // user taps a point 10 squares to the RIGHT of bull
+
+  let pxPerIn = null;    // computed after cal tap
+
+  // Simple view reset (keeping your button alive)
   let view = { scale: 1, tx: 0, ty: 0 };
 
   // ----------------------------
@@ -102,6 +106,21 @@
     setHidden(pageSec, false);
   }
 
+  function clamp(n, lo, hi) {
+    return Math.max(lo, Math.min(hi, n));
+  }
+
+  function safeNum(n, fallback = 0) {
+    const x = Number(n);
+    return Number.isFinite(x) ? x : fallback;
+  }
+
+  function nowId() {
+    const t = Date.now().toString(36).toUpperCase();
+    const r = Math.random().toString(36).slice(2, 8).toUpperCase();
+    return `SEC-${t}-${r}`;
+  }
+
   function revokeObjectUrl() {
     if (objectUrl) {
       URL.revokeObjectURL(objectUrl);
@@ -114,7 +133,10 @@
 
     if (!file) {
       if (photoConfirm) photoConfirm.classList.remove("hasPhoto");
-      if (photoThumb) photoThumb.removeAttribute("src");
+      if (photoThumb) {
+        photoThumb.removeAttribute("src");
+        photoThumb.style.visibility = "hidden";
+      }
       if (photoStatus) photoStatus.textContent = "No photo selected yet.";
       if (promoSlot) promoSlot.hidden = true;
       return;
@@ -122,28 +144,15 @@
 
     objectUrl = URL.createObjectURL(file);
 
-    // Controlled mini-thumbnail (Landing)
-    if (photoThumb) photoThumb.src = objectUrl;
+    if (photoThumb) {
+      photoThumb.src = objectUrl;
+      photoThumb.style.visibility = "visible";
+    }
     if (photoStatus) photoStatus.textContent = "Photo locked ✅";
     if (photoConfirm) photoConfirm.classList.add("hasPhoto");
     if (promoSlot) promoSlot.hidden = false;
 
-    // Main image for Tap page
     if (targetImg) targetImg.src = objectUrl;
-  }
-
-  function resetTapState() {
-    bull = null;
-    taps = [];
-    tapCountEl && (tapCountEl.textContent = "0");
-    if (instructionLine) instructionLine.textContent = "Tap bull’s-eye to center";
-
-    // Hide CTAs until bull is set
-    setHidden(ctaRow, true);
-
-    // Clear dots
-    if (dotsLayer) dotsLayer.innerHTML = "";
-    dots = [];
   }
 
   function resetView() {
@@ -152,19 +161,26 @@
   }
 
   function applyView() {
-    // Keep it simple & safe: apply transform to the WRAP so dots+img stay aligned
     if (!targetWrap) return;
     const t = `translate(${view.tx}px, ${view.ty}px) scale(${view.scale})`;
     targetWrap.style.transformOrigin = "center center";
     targetWrap.style.transform = t;
   }
 
-  function clamp(n, lo, hi) {
-    return Math.max(lo, Math.min(hi, n));
+  function resetTapState() {
+    bull = null;
+    cal = null;
+    taps = [];
+    pxPerIn = null;
+
+    if (tapCountEl) tapCountEl.textContent = "0";
+    setHidden(ctaRow, true);
+    if (instructionLine) instructionLine.textContent = "Tap bull’s-eye to center";
+
+    if (dotsLayer) dotsLayer.innerHTML = "";
   }
 
   function getWrapPointPct(evt) {
-    // Return point in % (0..1) inside the displayed wrap bounds
     if (!targetWrap) return null;
     const r = targetWrap.getBoundingClientRect();
     const x = (evt.clientX - r.left) / r.width;
@@ -172,184 +188,145 @@
     return { xPct: clamp(x, 0, 1), yPct: clamp(y, 0, 1) };
   }
 
-  function addDot(xPct, yPct, kind) {
-    if (!dotsLayer) return;
+  function pctToPx(p) {
+    const r = targetWrap.getBoundingClientRect();
+    return { x: p.xPct * r.width, y: p.yPct * r.height };
+  }
 
+  function addDot(p, kind) {
+    if (!dotsLayer || !targetWrap) return;
+    const r = targetWrap.getBoundingClientRect();
     const dot = document.createElement("div");
     dot.className = "tapDot";
-    dot.dataset.kind = kind || "hit";
+    dot.dataset.kind = kind;
 
-    // position in px relative to wrap
-    const r = targetWrap.getBoundingClientRect();
-    const x = xPct * r.width;
-    const y = yPct * r.height;
-
-    dot.style.left = `${x}px`;
-    dot.style.top = `${y}px`;
+    dot.style.left = `${p.xPct * r.width}px`;
+    dot.style.top = `${p.yPct * r.height}px`;
 
     dotsLayer.appendChild(dot);
-    dots.push(dot);
   }
 
   function redrawDots() {
-    if (!dotsLayer || !targetWrap) return;
+    if (!dotsLayer) return;
     dotsLayer.innerHTML = "";
-    dots = [];
-
-    if (bull) addDot(bull.xPct, bull.yPct, "bull");
-    for (const t of taps) addDot(t.xPct, t.yPct, "hit");
+    if (bull) addDot(bull, "bull");
+    if (cal) addDot(cal, "cal");
+    for (const t of taps) addDot(t, "hit");
   }
 
   function updateTapCount() {
     if (tapCountEl) tapCountEl.textContent = String(taps.length);
   }
 
-  function ensureDotCss() {
-    // If your CSS already styles .tapDot, this is harmless.
-    // If not, it ensures dots are visible.
-    const id = "tapdot-css-fallback";
-    if (document.getElementById(id)) return;
+  function computePxPerInch() {
+    if (!bull || !cal) return null;
+    const b = pctToPx(bull);
+    const c = pctToPx(cal);
+    const dx = c.x - b.x;
+    const dy = c.y - b.y;
+    const distPx = Math.sqrt(dx * dx + dy * dy);
 
-    const s = document.createElement("style");
-    s.id = id;
-    s.textContent = `
-      .dotsLayer{ position:absolute; inset:0; pointer-events:none; }
-      .tapDot{
-        position:absolute;
-        width:14px; height:14px;
-        border-radius:50%;
-        transform: translate(-50%, -50%);
-        box-shadow: 0 6px 18px rgba(0,0,0,0.45);
-        border: 1px solid rgba(255,255,255,0.55);
-        background: rgba(255,255,255,0.85);
-      }
-      .tapDot[data-kind="bull"]{
-        width:18px; height:18px;
-        border-radius: 6px;
-        background: rgba(0,140,255,0.9);
-      }
-      .tapDot[data-kind="hit"]{
-        background: rgba(255,255,255,0.90);
-      }
-      .targetWrap{ position:relative; }
-      .targetImg{ display:block; width:100%; height:auto; }
-    `;
-    document.head.appendChild(s);
+    const knownIn = squaresRight * cellSizeIn;
+    if (knownIn <= 0 || distPx <= 0) return null;
+
+    return distPx / knownIn;
   }
 
-  function genSessionId() {
-    // Not crypto — just a readable short session id.
-    const t = Date.now().toString(36).toUpperCase();
-    const r = Math.random().toString(36).slice(2, 8).toUpperCase();
-    return `SEC-${t}-${r}`;
+  // Inches per MOA at distance
+  function inchesPerMOA(distanceYds) {
+    // 1 MOA ≈ 1.047" at 100 yards
+    return (distanceYds * 1.047) / 100.0;
   }
 
-  function safeNum(n, fallback = 0) {
-    const x = Number(n);
-    return Number.isFinite(x) ? x : fallback;
+  // Locked direction truth:
+  // - Vector = bull - POIB (in inches)
+  // - dxIn > 0 => RIGHT, dxIn < 0 => LEFT
+  // - dyIn > 0 => DOWN,  dyIn < 0 => UP   (screen y grows downward)
+  function splitClicks(dxIn, dyIn, distYds, moaPerClick) {
+    const ipm = inchesPerMOA(distYds);
+    const windMoa = Math.abs(dxIn) / ipm;
+    const elevMoa = Math.abs(dyIn) / ipm;
+
+    const windClicks = windMoa / moaPerClick;
+    const elevClicks = elevMoa / moaPerClick;
+
+    const out = { up: 0, down: 0, left: 0, right: 0 };
+
+    if (dxIn > 0) out.right = windClicks;
+    else if (dxIn < 0) out.left = windClicks;
+
+    if (dyIn > 0) out.down = elevClicks;
+    else if (dyIn < 0) out.up = elevClicks;
+
+    return out;
   }
 
-  // ----------------------------
-  // Optional backend calc
-  // ----------------------------
-  async function tryBackendCalc(payload) {
-    // If backend exists, great. If not, we fall back safely.
-    // You can change this endpoint later.
-    const url = "/api/calc";
-    try {
-      const res = await fetch(url, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      if (!res.ok) return null;
-      return await res.json();
-    } catch {
-      return null;
-    }
-  }
-
-  function fallbackCalc() {
-    // Minimal safe fallback: compute POIB as average of hit taps (in % space),
-    // then just show zero clicks (since inches/MOA depend on target calibration).
-    if (!bull || taps.length === 0) {
-      return {
-        clicks: { up: 0, down: 0, left: 0, right: 0 },
-        score: { big: "—", current: "—", prev: "—", cum: "—" },
-      };
-    }
-    const avg = taps.reduce(
-      (a, t) => ({ x: a.x + t.xPct, y: a.y + t.yPct }),
-      { x: 0, y: 0 }
-    );
-    avg.x /= taps.length;
-    avg.y /= taps.length;
-
-    // direction ONLY (not magnitude)
-    const dx = bull.xPct - avg.x; // + => need RIGHT (POIB left of bull)
-    const dy = bull.yPct - avg.y; // + => need DOWN? careful: y grows downward on screen
-    // We will not output directional clicks here — keep it neutral.
-    return {
-      clicks: { up: 0, down: 0, left: 0, right: 0 },
-      score: { big: "—", current: "—", prev: "—", cum: "—" },
-    };
-  }
-
-  function setSecValues(out) {
-    const c = out?.clicks || {};
-    const s = out?.score || {};
-
-    if (clickUp) clickUp.textContent = (safeNum(c.up)).toFixed(2);
-    if (clickDown) clickDown.textContent = (safeNum(c.down)).toFixed(2);
-    if (clickLeft) clickLeft.textContent = (safeNum(c.left)).toFixed(2);
-    if (clickRight) clickRight.textContent = (safeNum(c.right)).toFixed(2);
-
-    if (scoreBig) scoreBig.textContent = s.big ?? "—";
-    if (scoreCurrent) scoreCurrent.textContent = s.current ?? "—";
-    if (scorePrev) scorePrev.textContent = s.prev ?? "—";
-    if (scoreCum) scoreCum.textContent = s.cum ?? "—";
+  // Simple score (placeholder, but real): based on POIB distance from bull (inches)
+  function scoreFromOffset(dxIn, dyIn) {
+    const d = Math.sqrt(dxIn * dxIn + dyIn * dyIn); // inches
+    // 100 at dead center; loses 10 points per inch; floor at 0
+    const s = Math.max(0, Math.round(100 - d * 10));
+    return s;
   }
 
   // ----------------------------
   // Events
   // ----------------------------
   function onPhotoSelected(e) {
-    // iOS Safari reliability: store immediately from change event
     const f = e?.target?.files?.[0] || null;
     selectedFile = f;
-
     setPhotoSelectedUI(selectedFile);
-
     if (!selectedFile) return;
 
-    ensureDotCss();
     resetTapState();
     resetView();
-
-    // Advance to Tap screen
     gotoTap();
 
-    // Helpful instruction
     if (instructionLine) instructionLine.textContent = "Tap bull’s-eye to center";
   }
 
   function onTargetTap(evt) {
-    // Only respond to taps inside the stage
-    // Important: dotsLayer has pointer-events:none, so tap hits wrap/image.
     const p = getWrapPointPct(evt);
     if (!p) return;
 
-    // First tap is bull
+    // 1) bull
     if (!bull) {
-      bull = { xPct: p.xPct, yPct: p.yPct };
-      if (instructionLine) instructionLine.textContent = "Now tap each confirmed hit";
-      setHidden(ctaRow, false);
+      bull = p;
+      setHidden(ctaRow, true); // still hidden until calibration completed
+      if (instructionLine) {
+        instructionLine.textContent =
+          `Calibration: tap a grid point ${squaresRight} squares RIGHT of the bull`;
+      }
       redrawDots();
       return;
     }
 
-    // Additional taps are hits
-    taps.push({ xPct: p.xPct, yPct: p.yPct });
+    // 2) calibration
+    if (!cal) {
+      cal = p;
+      pxPerIn = computePxPerInch();
+
+      if (!pxPerIn || !Number.isFinite(pxPerIn) || pxPerIn <= 0) {
+        // fail safe: reset cal only
+        cal = null;
+        pxPerIn = null;
+        if (instructionLine) {
+          instructionLine.textContent =
+            `Calibration failed. Tap a grid point ${squaresRight} squares RIGHT of the bull`;
+        }
+        redrawDots();
+        return;
+      }
+
+      // Calibration OK: enable CTAs and proceed to hits
+      setHidden(ctaRow, false);
+      if (instructionLine) instructionLine.textContent = "Now tap each confirmed hit";
+      redrawDots();
+      return;
+    }
+
+    // 3) hits
+    taps.push(p);
     updateTapCount();
     redrawDots();
   }
@@ -357,6 +334,7 @@
   function onUndo() {
     if (!bull) return;
 
+    // Undo hits first
     if (taps.length > 0) {
       taps.pop();
       updateTapCount();
@@ -364,8 +342,20 @@
       return;
     }
 
-    // If no taps left, undo bull
-    bull = null;
+    // Undo calibration next
+    if (cal) {
+      cal = null;
+      pxPerIn = null;
+      setHidden(ctaRow, true);
+      if (instructionLine) {
+        instructionLine.textContent =
+          `Calibration: tap a grid point ${squaresRight} squares RIGHT of the bull`;
+      }
+      redrawDots();
+      return;
+    }
+
+    // Undo bull last
     resetTapState();
     redrawDots();
   }
@@ -375,85 +365,102 @@
     redrawDots();
   }
 
-  async function onShowResults() {
-    // Move to SEC regardless; fill values from backend if available
-    const sid = genSessionId();
+  function onShowResults() {
+    const sid = nowId();
     if (secSessionId) secSessionId.textContent = sid;
 
-    // Prepare payload (percent coords + image size)
-    const payload = {
-      sessionId: sid,
-      bull,
-      taps,
-      image: {
-        naturalWidth: targetImg?.naturalWidth || null,
-        naturalHeight: targetImg?.naturalHeight || null,
-      },
-      // add more fields later (distance, moaPerClick, targetType, etc.)
-    };
+    // Guardrails
+    if (!bull || !cal || !pxPerIn || taps.length === 0) {
+      // Show something honest
+      setSecClicks({ up: 0, down: 0, left: 0, right: 0 });
+      setSecScore("—", "—", "—", "—");
+      gotoSec();
+      return;
+    }
 
-    let out = await tryBackendCalc(payload);
-    if (!out) out = fallbackCalc();
+    // Convert taps to px
+    const b = pctToPx(bull);
+    const hitPx = taps.map((t) => pctToPx(t));
 
-    setSecValues(out);
+    // POIB in px (average)
+    const sum = hitPx.reduce((a, p) => ({ x: a.x + p.x, y: a.y + p.y }), { x: 0, y: 0 });
+    const poibPx = { x: sum.x / hitPx.length, y: sum.y / hitPx.length };
+
+    // Vector from POIB to bull (bull - poib), in inches
+    const dxIn = (b.x - poibPx.x) / pxPerIn;
+    const dyIn = (b.y - poibPx.y) / pxPerIn;
+
+    const distYds = safeNum(distanceYdsEl?.value, 100);
+    const moaPerClick = safeNum(moaPerClickEl?.value, 0.25);
+
+    const clicks = splitClicks(dxIn, dyIn, distYds, moaPerClick);
+    setSecClicks(clicks);
+
+    const s = scoreFromOffset(dxIn, dyIn);
+    setSecScore(String(s), String(s), "—", "—");
+
     gotoSec();
   }
 
+  function setSecClicks(c) {
+    const up = safeNum(c.up, 0).toFixed(2);
+    const down = safeNum(c.down, 0).toFixed(2);
+    const left = safeNum(c.left, 0).toFixed(2);
+    const right = safeNum(c.right, 0).toFixed(2);
+
+    if (clickUp) clickUp.textContent = up;
+    if (clickDown) clickDown.textContent = down;
+    if (clickLeft) clickLeft.textContent = left;
+    if (clickRight) clickRight.textContent = right;
+  }
+
+  function setSecScore(big, cur, prev, cum) {
+    if (scoreBig) scoreBig.textContent = big ?? "—";
+    if (scoreCurrent) scoreCurrent.textContent = cur ?? "—";
+    if (scorePrev) scorePrev.textContent = prev ?? "—";
+    if (scoreCum) scoreCum.textContent = cum ?? "—";
+  }
+
   function onDownloadSec() {
-    // Placeholder: you likely generate SEC image elsewhere.
-    // For now: download the current screen as a simple fallback? (Not implemented.)
-    alert("Download SEC is wired. Next: connect to your SEC image generator.");
+    alert("Download SEC is wired. Next: connect to SEC image generator.");
   }
 
   function onSurvey() {
-    // Placeholder: replace with your survey link/modal
     alert("Survey is wired. Next: open your 10-second survey link.");
   }
 
   function onBuyMore() {
-    // Placeholder: replace with vendor link
     alert("Buy More is wired. Next: route to printer store / landing page.");
   }
 
-  // Reset View (simple)
+  // ----------------------------
+  // Wire events
+  // ----------------------------
+  photoInput?.addEventListener("change", onPhotoSelected);
+  targetWrap?.addEventListener("click", onTargetTap);
+
   resetViewBtn?.addEventListener("click", resetView);
 
-  // Undo/Clear/Results
   undoBtn?.addEventListener("click", onUndo);
   clearBtn?.addEventListener("click", onClear);
   showResultsBtn?.addEventListener("click", onShowResults);
 
-  // SEC actions
   downloadSecImageBtn?.addEventListener("click", onDownloadSec);
   surveyBtn?.addEventListener("click", onSurvey);
   buyMoreBtn?.addEventListener("click", onBuyMore);
-
-  // Tap handler
-  // We attach to targetWrap so it works even if image hasn’t fully loaded yet.
-  targetWrap?.addEventListener("click", onTargetTap);
-
-  // File select
-  photoInput?.addEventListener("change", onPhotoSelected);
 
   // ----------------------------
   // Boot
   // ----------------------------
   function boot() {
-    // Start on landing
     gotoLanding();
     resetTapState();
     resetView();
 
-    // Landing UI defaults
     if (promoSlot) promoSlot.hidden = true;
     if (photoStatus) photoStatus.textContent = "No photo selected yet.";
     if (photoConfirm) photoConfirm.classList.remove("hasPhoto");
-
-    // NOTE: thumbnail stays hidden until a photo is selected (CSS does that)
   }
-
-  // Ensure dots are visible even if CSS misses it
-  ensureDotCss();
 
   boot();
 })();
