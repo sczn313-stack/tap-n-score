@@ -1,4 +1,3 @@
-<!-- frontend/index.html (FULL REPLACEMENT) — Tap-n-Score™ Shooter (vSEC-EXPORT-1) -->
 <!doctype html>
 <html lang="en">
 <head>
@@ -14,126 +13,102 @@
 <body>
   <main class="page">
 
-    <!-- Header -->
-    <header class="top">
-      <div class="brandTitle">
-        <div class="brandLine">
-          <span class="brandRed">TAP</span><span class="brandWhite">-N-</span><span class="brandBlue">SCORE</span><span class="brandTm">™</span>
-        </div>
-        <div class="brandSub">After-Shot Intelligence</div>
+    <header class="topBrand">
+      <div class="brandLine">
+        <span class="brandTap">TAP</span><span class="brandDash">-</span><span class="brandN">N</span><span class="brandDash">-</span><span class="brandScore">SCORE</span><span class="brandTm">™</span>
       </div>
+      <div class="brandSub">After-Shot Intelligence</div>
     </header>
 
-    <!-- Controls -->
-    <section class="controls">
-      <!-- One big button -->
-      <button id="takeChooseBtn" class="ctaBig" type="button">
-        Take or Choose Target Photo
-      </button>
+    <!-- Big photo pick button -->
+    <section class="hero">
+      <label class="photoPickBtn" for="photoInput">Take or Choose Target Photo</label>
+      <input id="photoInput" type="file" accept="image/*" />
+      <div class="tipLine">Tip: Straight-on photos give the most accurate results.</div>
+    </section>
 
-      <!-- Hidden input -->
-      <input id="photoInput" type="file" accept="image/*" capture="environment" style="display:none;" />
-
-      <div class="tip">
-        Tip: Straight-on photos give the most accurate results.
+    <!-- Target image area (optional for your current flow) -->
+    <section class="targetStage" aria-label="Target photo stage">
+      <div id="targetWrap" class="targetWrap">
+        <img id="targetImg" class="targetImg" alt="Target preview" />
+        <div id="dotsLayer" class="dotsLayer"></div>
       </div>
 
-      <div id="instructionLine" class="instruction">
-        Tap the bull to anchor. Then tap your hits. Then press “Show Results”.
-      </div>
-
-      <div class="row">
-        <button id="showResultsBtn" class="cta" type="button" disabled>Show Results</button>
-        <button id="clearTapsBtn" class="ghost" type="button" disabled>Clear Taps</button>
-        <div class="tapCount">
+      <div class="miniRow">
+        <div class="miniPill">
           Taps: <span id="tapCount">0</span>
         </div>
+        <button id="clearTapsBtn" class="miniBtn" type="button">Clear</button>
       </div>
 
-      <!-- Simple settings (you can hide later) -->
-      <div class="settings">
-        <label>Distance (yds)
-          <input id="distanceYds" type="number" inputmode="numeric" value="100" />
-        </label>
-        <label>MOA / Click
-          <input id="moaPerClick" type="number" inputmode="decimal" step="0.01" value="0.25" />
-        </label>
-        <label>Target Width (in)
-          <input id="widthIn" type="number" inputmode="decimal" step="0.1" value="8.5" />
-        </label>
-        <label>Target Height (in)
-          <input id="heightIn" type="number" inputmode="decimal" step="0.1" value="11" />
-        </label>
+      <div id="instructionLine" class="instructionLine">
+        Tap bull, then tap holes.
       </div>
+
+      <button id="seeResultsBtn" class="seeResultsBtn" type="button">
+        Show Results
+      </button>
     </section>
 
-    <!-- Image + tap layers -->
-    <section class="stage">
-      <div id="targetWrap" class="targetWrap">
-        <img id="targetImg" alt="Target" />
-        <div id="tapLayer" class="tapLayer" aria-label="Tap layer"></div>
-        <div id="dotsLayer" class="dotsLayer" aria-label="Dots layer"></div>
-      </div>
-    </section>
-
-    <!-- SEC Card (export this section as image) -->
-    <section id="secCard" class="secCard" aria-label="SEC Card">
-
-      <div class="secHeader">
+    <!-- SEC Card -->
+    <section id="secCard" class="secCard" aria-label="SEC Card" hidden>
+      <div class="secTopRow">
         <div class="secTitle">
-          <span class="secRed">SEC</span> <span class="secWhite">Card</span>
-          <div class="secSession">Session: <span id="sessionId">—</span></div>
+          <span class="secRed">SEC</span> Card
+          <div class="secSession">Session: <span id="secSessionId">SEC-00000000-0000</span></div>
         </div>
 
-        <button id="buyMoreBtn" class="pill" type="button">
-          <span class="pillBlue">BUY</span> MORE<br/>Targets Like This
+        <button id="buyMoreBtn" class="buyMoreBtn" type="button">
+          <span class="buyMoreBlue">BUY MORE</span><br/>
+          Targets Like This
         </button>
       </div>
 
-      <div class="panel">
-        <div class="panelTitle">Target Clicks</div>
-        <div class="grid2">
-          <div class="metric">
-            <div class="metricLabel">Up</div>
-            <div id="clickUp" class="metricValue">0.00</div>
+      <div class="secBox">
+        <div class="secBoxTitle">Target Clicks</div>
+        <div class="clickGrid">
+          <div class="clickCell">
+            <div class="clickLabel">Up</div>
+            <div id="clickUp" class="clickValue">0.00</div>
           </div>
-          <div class="metric">
-            <div class="metricLabel">Down</div>
-            <div id="clickDown" class="metricValue">0.00</div>
+          <div class="clickCell">
+            <div class="clickLabel">Down</div>
+            <div id="clickDown" class="clickValue">0.00</div>
           </div>
-          <div class="metric">
-            <div class="metricLabel">Left</div>
-            <div id="clickLeft" class="metricValue">0.00</div>
+          <div class="clickCell">
+            <div class="clickLabel">Left</div>
+            <div id="clickLeft" class="clickValue">0.00</div>
           </div>
-          <div class="metric">
-            <div class="metricLabel">Right</div>
-            <div id="clickRight" class="metricValue">0.00</div>
+          <div class="clickCell">
+            <div class="clickLabel">Right</div>
+            <div id="clickRight" class="clickValue">0.00</div>
           </div>
         </div>
       </div>
 
-      <div class="panel">
-        <div class="panelTitle">Score</div>
-        <div id="scoreBig" class="scoreBig">—</div>
-        <div class="scoreMeta">
+      <div class="secBox">
+        <div class="secBoxTitle">Score</div>
+        <div class="scoreBig" id="scoreBig">—</div>
+        <div class="scoreLines">
           <div>Current <span id="scoreCurrent">—</span></div>
-          <div>Previous <span id="scorePrev">3</span> —</div>
+          <div>Previous <span id="scorePrev">—</span></div>
           <div>Cumulative <span id="scoreCum">—</span></div>
         </div>
       </div>
 
-    </section>
+      <!-- ✅ Two buttons, side-by-side -->
+      <div class="secActions">
+        <button id="downloadSecImageBtn" class="ctaBtn" type="button">
+          Download SEC (Image)
+        </button>
 
-    <!-- Download buttons (NOT inside secCard so they don’t appear in the export image) -->
-    <section class="downloads">
-      <button id="downloadSecImageBtn" class="ctaBig" type="button" disabled>Download SEC (Image)</button>
-      <button id="downloadSecTextBtn" class="ctaBig" type="button" disabled>Download SEC (Text)</button>
+        <button id="surveyBtn" class="ctaBtn" type="button">
+          Take 10-Second Survey
+        </button>
+      </div>
     </section>
 
   </main>
-
-  <!-- html2canvas for SEC image export -->
-  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 
   <script src="./index.js"></script>
 </body>
