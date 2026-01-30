@@ -1,238 +1,328 @@
+/* ============================================================
+   styles.css (FULL REPLACEMENT) — Tap-n-Score™
+   Goals:
+   - iPad Safari friendly tap handling (touch-action, pointer-events)
+   - Reliable overlay layer for dots/taps
+   - Clean dark UI, responsive, centered card
+============================================================ */
+
 :root{
-  --bg1:#06110b;
-  --bg2:#020403;
-  --card:#0a1510cc;
-  --card2:#0a151099;
-  --text:#f2f2f2;
-  --muted:#b7c2bc;
-  --line:#1a2a22;
-  --green:#00d07a;
-  --green2:#008c55;
-  --shadow: 0 18px 50px rgba(0,0,0,.55);
-  --radius: 18px;
-  --radius2: 14px;
+  --bg0:#050607;
+  --bg1:#0b0e10;
+  --card:#0f1417;
+  --line:rgba(255,255,255,.08);
+  --line2:rgba(255,255,255,.12);
+  --text:rgba(255,255,255,.92);
+  --muted:rgba(255,255,255,.68);
+  --muted2:rgba(255,255,255,.52);
+  --green:#2ee6a6;
+  --green2:rgba(46,230,166,.18);
+  --shadow:0 18px 60px rgba(0,0,0,.55);
+  --radius:22px;
+  --radius2:16px;
 }
 
 *{ box-sizing:border-box; }
-
-html,body{
+html,body{ height:100%; }
+body{
   margin:0;
-  padding:0;
-  width:100%;
-  height:100%;
-  background: radial-gradient(1200px 800px at 20% 10%, #103327 0%, var(--bg1) 40%, var(--bg2) 100%);
+  background:
+    radial-gradient(1200px 800px at 50% -10%, rgba(46,230,166,.10), transparent 60%),
+    radial-gradient(900px 650px at 10% 110%, rgba(46,230,166,.08), transparent 55%),
+    linear-gradient(180deg, var(--bg0), var(--bg1));
   color:var(--text);
-  font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
+  -webkit-font-smoothing:antialiased;
+  -moz-osx-font-smoothing:grayscale;
+  overflow-x:hidden;
 }
 
+/* page frame */
 .page{
+  width:100%;
   min-height:100%;
-  padding: 22px 14px 40px;
+  padding:28px 16px 44px;
+  display:flex;
+  justify-content:center;
+  align-items:flex-start;
 }
 
+/* main card */
 .card{
-  max-width: 980px;
-  margin: 0 auto;
-  padding: 22px 18px 18px;
-  background: linear-gradient(180deg, var(--card) 0%, var(--card2) 100%);
-  border: 1px solid rgba(255,255,255,.06);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow);
+  width:min(860px, 100%);
+  background:linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.02));
+  border:1px solid var(--line);
+  border-radius:var(--radius);
+  box-shadow:var(--shadow);
+  padding:24px 22px 26px;
+  backdrop-filter: blur(10px);
 }
 
-.hero{
-  text-align:center;
-  margin-bottom: 14px;
-}
-
+/* headings / brand */
 .brand{
-  font-weight: 900;
-  letter-spacing: 3px;
-  font-size: clamp(26px, 4.4vw, 40px);
+  display:flex;
+  justify-content:center;
+  align-items:baseline;
+  gap:10px;
+  margin:6px 0 10px;
+  letter-spacing:.12em;
+  text-transform:uppercase;
+}
+.brand .name{
+  font-weight:900;
+  font-size:clamp(26px, 4.5vw, 42px);
+}
+.brand .tm{
+  font-weight:900;
+  color:var(--green);
+  letter-spacing:0;
+  margin-left:2px;
+}
+.subhead{
+  text-align:center;
+  color:var(--muted);
+  margin:0 0 18px;
+  font-size:clamp(14px, 2.1vw, 18px);
 }
 
-.tm{
-  color: var(--green);
-  letter-spacing: 0;
-  margin-left: 4px;
+/* rows */
+.row{
+  display:flex;
+  gap:14px;
+  flex-wrap:wrap;
+  align-items:center;
+  margin:12px 0;
 }
-
-.sub{
-  margin-top: 6px;
-  color: rgba(255,255,255,.78);
-  font-weight: 650;
-  letter-spacing: 0.4px;
-}
-
-.field{ margin: 14px 0; }
+.row.tight{ margin:8px 0; }
 
 .label{
-  font-weight: 800;
-  font-size: 18px;
-  margin-bottom: 8px;
-  color: rgba(255,255,255,.9);
+  color:var(--muted);
+  font-weight:700;
+  letter-spacing:.02em;
 }
 
-.hint{
-  margin-top: 8px;
-  color: rgba(255,255,255,.70);
-  font-weight: 600;
+.help{
+  color:var(--muted2);
+  margin:8px 0 2px;
+  line-height:1.35;
 }
 
-.hintStrong{
-  margin-top: 10px;
-  color: rgba(255,255,255,.85);
-  font-weight: 900;
+/* inputs */
+input, select, button{
+  font:inherit;
 }
 
-.row{
-  display:grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 14px;
+.selectWrap{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  flex-wrap:wrap;
 }
 
-@media (max-width: 720px){
-  .row{ grid-template-columns: 1fr; }
+select{
+  background:rgba(0,0,0,.35);
+  color:var(--text);
+  border:1px solid var(--line2);
+  border-radius:999px;
+  padding:10px 14px;
+  min-width:160px;
+  outline:none;
+}
+select:focus{
+  border-color:rgba(46,230,166,.55);
+  box-shadow:0 0 0 6px rgba(46,230,166,.10);
 }
 
-.select{
+/* file input zone */
+.fileRow{
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+  margin-top:10px;
+}
+
+.fileShell{
   width:100%;
-  padding: 14px 14px;
-  border-radius: 999px;
-  border: 1px solid rgba(255,255,255,.10);
-  background: rgba(0,0,0,.35);
-  color: var(--text);
-  font-size: 18px;
-  font-weight: 800;
-  outline: none;
+  background:rgba(0,0,0,.28);
+  border:1px solid var(--line2);
+  border-radius:999px;
+  padding:10px 12px;
+  display:flex;
+  align-items:center;
+  gap:12px;
 }
 
-.hiddenFile{
-  position:absolute !important;
-  left:-9999px !important;
-  width:1px !important;
-  height:1px !important;
-  opacity:0 !important;
+.fileShell input[type="file"]{
+  width:100%;
+  color:var(--muted);
+}
+
+.fileShell input[type="file"]::-webkit-file-upload-button{
+  appearance:none;
+  border:none;
+  background:rgba(255,255,255,.08);
+  color:var(--text);
+  padding:10px 14px;
+  border-radius:999px;
+  cursor:pointer;
+  margin-right:12px;
+}
+.fileShell input[type="file"]::-webkit-file-upload-button:hover{
+  background:rgba(255,255,255,.12);
+}
+
+/* section titles */
+.sectionTitle{
+  margin:18px 0 10px;
+  font-weight:900;
+  font-size:clamp(22px, 4vw, 44px);
+  letter-spacing:-.02em;
+}
+.bullets{
+  margin:10px 0 16px 22px;
+  color:var(--text);
+}
+.bullets li{
+  margin:8px 0;
+  color:var(--text);
+  opacity:.92;
+  font-weight:650;
+}
+
+/* primary CTA */
+button{
+  border:none;
+  cursor:pointer;
+  user-select:none;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .btnPrimary{
   width:100%;
-  border: 1px solid rgba(255,255,255,.12);
-  background: rgba(0,0,0,.35);
-  color: var(--text);
-  padding: 14px 16px;
-  border-radius: 999px;
-  font-size: 18px;
-  font-weight: 900;
-  letter-spacing: 0.2px;
+  padding:16px 18px;
+  border-radius:999px;
+  background:linear-gradient(180deg, rgba(46,230,166,.28), rgba(46,230,166,.10));
+  border:1px solid rgba(46,230,166,.35);
+  color:rgba(255,255,255,.90);
+  font-weight:900;
+  letter-spacing:.02em;
 }
-
 .btnPrimary:active{
-  transform: translateY(1px);
+  transform:translateY(1px);
 }
 
-.thumbBox{
-  width:100%;
-  min-height: 120px;
-  border-radius: var(--radius2);
-  border: 1px solid rgba(255,255,255,.10);
-  background: rgba(0,0,0,.28);
-  overflow:hidden;
-  display:flex;
-  align-items:center;
-  justify-content:center;
+/* preview box */
+.previewWrap{
+  margin-top:10px;
+  border:1px solid var(--line);
+  background:rgba(0,0,0,.25);
+  border-radius:var(--radius2);
+  padding:12px;
 }
 
-.thumbBox img{
-  width:100%;
-  height:auto;
-  display:block;
+.previewLabel{
+  font-weight:900;
+  color:var(--text);
+  margin:0 0 10px;
+  opacity:.92;
 }
 
-.thumbEmpty{
-  padding: 22px;
-  color: rgba(255,255,255,.65);
-  font-weight: 800;
+.previewHint{
+  margin:0 0 10px;
+  color:var(--muted);
 }
 
-.bigTitle{
-  font-size: 34px;
-  font-weight: 950;
-  margin: 10px 0 8px;
-  letter-spacing: 0.2px;
-}
-
-.bullets{
-  margin: 10px 0 0 20px;
-  padding:0;
-  color: rgba(255,255,255,.82);
-  font-weight: 800;
-  font-size: 18px;
-  line-height: 1.55;
-}
-
-.btnStart{
-  width:100%;
-  margin-top: 16px;
-  padding: 18px 16px;
-  border-radius: 999px;
-  border: 1px solid rgba(0,208,122,.45);
-  background: linear-gradient(180deg, rgba(0,208,122,.25), rgba(0,120,70,.18));
-  color: rgba(255,255,255,.92);
-  font-size: 20px;
-  font-weight: 950;
-  letter-spacing: 0.6px;
-  box-shadow: 0 18px 40px rgba(0,0,0,.45);
-}
+/* ============================================================
+   THE IMPORTANT PART: target + tap layers
+============================================================ */
 
 .targetWrap{
-  max-width: 980px;
-  margin: 16px auto 0;
-  position: relative;
-  border-radius: var(--radius);
-  overflow: hidden;
-  box-shadow: var(--shadow);
-  border: 1px solid rgba(255,255,255,.06);
-  background: rgba(0,0,0,.25);
+  position:relative;
+  width:100%;
+  border-radius:14px;
+  overflow:hidden;
+  background:rgba(0,0,0,.18);
+  border:1px solid var(--line);
 }
 
+/* The image */
 #targetImg{
-  display:none;
+  display:block;
   width:100%;
   height:auto;
-  pointer-events:none;
+  max-height:72vh;
+  object-fit:contain;
+  background:rgba(0,0,0,.12);
+  /* iOS: reduce weird highlight / longpress behaviors */
+  -webkit-user-drag:none;
+  user-select:none;
+  -webkit-touch-callout:none;
 }
 
-#tapCanvas{
-  position:absolute;
-  inset:0;
-  width:100%;
-  height:100%;
-  z-index: 30;
-  pointer-events:auto;
-  touch-action:none;
-  background: transparent;
-}
-
+/* The overlay that receives taps & shows dots */
 #dotsLayer{
   position:absolute;
   inset:0;
-  z-index: 40;
-  pointer-events:none;
+  /* CRITICAL: overlay must receive taps */
+  pointer-events:auto;
+  /* CRITICAL: iOS tap responsiveness */
+  touch-action: manipulation;
+  /* prevents browser gestures stealing your tap */
+  -webkit-user-select:none;
+  user-select:none;
 }
 
-.hudLeft, .hudRight{
-  position: fixed;
-  top: 12px;
-  z-index: 999999;
-  padding: 10px 12px;
-  border-radius: 12px;
-  background: rgba(0,0,0,.62);
-  border: 1px solid rgba(255,255,255,.08);
-  color: #fff;
-  font-weight: 950;
-  font-size: 14px;
+/* individual dots if you render them as divs */
+.tapDot{
+  position:absolute;
+  width:14px;
+  height:14px;
+  border-radius:999px;
+  background:rgba(46,230,166,.95);
+  box-shadow:0 0 0 4px rgba(46,230,166,.18);
+  transform:translate(-50%, -50%);
 }
 
-.hudLeft{ left: 12px; }
-.hudRight{ right: 12px; }
+/* top instruction pill + tap counter */
+.hud{
+  position:sticky;
+  top:10px;
+  z-index:9999;
+  display:flex;
+  justify-content:space-between;
+  gap:12px;
+  margin:0 0 10px;
+}
+
+.pill{
+  display:inline-flex;
+  align-items:center;
+  padding:10px 12px;
+  border-radius:999px;
+  background:rgba(0,0,0,.40);
+  border:1px solid rgba(255,255,255,.10);
+  color:rgba(255,255,255,.92);
+  font-weight:800;
+  letter-spacing:.01em;
+}
+
+/* banner you used */
+.banner{
+  position:fixed;
+  left:12px;
+  right:12px;
+  bottom:12px;
+  z-index:999999;
+  padding:12px 14px;
+  border-radius:14px;
+  background:rgba(0,140,0,.85);
+  color:white;
+  font-weight:800;
+  box-shadow:0 10px 30px rgba(0,0,0,.35);
+}
+
+/* small screens */
+@media (max-width:520px){
+  .card{ padding:18px 16px 20px; }
+  select{ min-width:140px; }
+}
