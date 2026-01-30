@@ -1,328 +1,470 @@
 /* ============================================================
-   styles.css (FULL REPLACEMENT) — Tap-n-Score™
+   frontend_new/styles.css (FULL REPLACEMENT) — PILOT UI + iOS TAP FIX
    Goals:
-   - iPad Safari friendly tap handling (touch-action, pointer-events)
-   - Reliable overlay layer for dots/taps
-   - Clean dark UI, responsive, centered card
+   - Dark "glass" panel look like your screenshots
+   - Green brand accent + strong CTA
+   - Bulletproof target/tap layering on iOS Safari
+   - Clean responsive layout (phone/tablet/desktop)
 ============================================================ */
 
+/* -------------------------------
+   Base / Reset
+-------------------------------- */
 :root{
-  --bg0:#050607;
-  --bg1:#0b0e10;
-  --card:#0f1417;
-  --line:rgba(255,255,255,.08);
-  --line2:rgba(255,255,255,.12);
-  --text:rgba(255,255,255,.92);
-  --muted:rgba(255,255,255,.68);
-  --muted2:rgba(255,255,255,.52);
-  --green:#2ee6a6;
-  --green2:rgba(46,230,166,.18);
-  --shadow:0 18px 60px rgba(0,0,0,.55);
-  --radius:22px;
-  --radius2:16px;
+  --bg0:#070909;
+  --bg1:#0b0f10;
+  --panel: rgba(18,22,23,0.78);
+  --panel2: rgba(10,12,13,0.55);
+  --stroke: rgba(255,255,255,0.10);
+  --stroke2: rgba(0,0,0,0.55);
+  --text:#e9f0ef;
+  --muted: rgba(233,240,239,0.72);
+  --dim: rgba(233,240,239,0.55);
+  --green:#19e38d;
+  --green2:#00a046;
+  --amber:#ffb400;
+  --shadow: 0 18px 48px rgba(0,0,0,0.55);
+  --shadow2: 0 10px 28px rgba(0,0,0,0.40);
+  --radius: 22px;
+  --radius2: 14px;
+  --pad: 22px;
 }
 
 *{ box-sizing:border-box; }
-html,body{ height:100%; }
-body{
+html,body{
+  height:100%;
   margin:0;
-  background:
-    radial-gradient(1200px 800px at 50% -10%, rgba(46,230,166,.10), transparent 60%),
-    radial-gradient(900px 650px at 10% 110%, rgba(46,230,166,.08), transparent 55%),
-    linear-gradient(180deg, var(--bg0), var(--bg1));
+  padding:0;
+  background: radial-gradient(1200px 700px at 50% -10%, #102422 0%, #0b1011 35%, #070909 70%, #060707 100%);
   color:var(--text);
-  font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
-  -webkit-font-smoothing:antialiased;
-  -moz-osx-font-smoothing:grayscale;
-  overflow-x:hidden;
+  font-family: system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-/* page frame */
+img{ max-width:100%; height:auto; display:block; }
+
+a{ color: var(--green); text-decoration:none; }
+a:active{ opacity:0.8; }
+
+button, input, select{
+  font-family: inherit;
+}
+
+/* Stop iOS tap delay & weird zoom on inputs */
+html{
+  -webkit-text-size-adjust: 100%;
+}
+
+/* -------------------------------
+   Page Layout
+-------------------------------- */
 .page{
-  width:100%;
   min-height:100%;
-  padding:28px 16px 44px;
+  padding: 28px 18px 40px;
   display:flex;
   justify-content:center;
-  align-items:flex-start;
 }
 
-/* main card */
-.card{
-  width:min(860px, 100%);
-  background:linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.02));
-  border:1px solid var(--line);
-  border-radius:var(--radius);
-  box-shadow:var(--shadow);
-  padding:24px 22px 26px;
-  backdrop-filter: blur(10px);
+.shell{
+  width:100%;
+  max-width: 980px;
+  display:flex;
+  flex-direction:column;
+  gap: 16px;
 }
 
-/* headings / brand */
-.brand{
+.panel{
+  width:100%;
+  background: linear-gradient(180deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.03) 50%, rgba(0,0,0,0.18) 100%), var(--panel);
+  border: 1px solid var(--stroke);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: var(--pad);
+  position:relative;
+  overflow:hidden;
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+
+.panel::before{
+  content:"";
+  position:absolute;
+  inset:-2px;
+  border-radius: var(--radius);
+  pointer-events:none;
+  background: radial-gradient(700px 260px at 50% -10%, rgba(25,227,141,0.18) 0%, rgba(25,227,141,0.0) 60%);
+}
+
+@media (max-width: 520px){
+  .page{ padding: 18px 12px 28px; }
+  .panel{ padding: 18px; border-radius: 18px; }
+}
+
+/* -------------------------------
+   Brand Header
+-------------------------------- */
+.brandRow{
   display:flex;
   justify-content:center;
-  align-items:baseline;
-  gap:10px;
-  margin:6px 0 10px;
-  letter-spacing:.12em;
-  text-transform:uppercase;
-}
-.brand .name{
-  font-weight:900;
-  font-size:clamp(26px, 4.5vw, 42px);
-}
-.brand .tm{
-  font-weight:900;
-  color:var(--green);
-  letter-spacing:0;
-  margin-left:2px;
-}
-.subhead{
-  text-align:center;
-  color:var(--muted);
-  margin:0 0 18px;
-  font-size:clamp(14px, 2.1vw, 18px);
-}
-
-/* rows */
-.row{
-  display:flex;
-  gap:14px;
-  flex-wrap:wrap;
   align-items:center;
-  margin:12px 0;
+  margin-top: 4px;
+  margin-bottom: 10px;
+  position:relative;
+  z-index:2;
 }
-.row.tight{ margin:8px 0; }
+
+.brand{
+  text-align:center;
+  line-height:1.08;
+}
+
+.brandTitle{
+  font-weight: 950;
+  letter-spacing: 2.2px;
+  font-size: 34px;
+}
+
+.brandTitle .tm{
+  color: var(--green);
+  font-weight: 950;
+  letter-spacing: 0px;
+  margin-left: 6px;
+  font-size: 0.72em;
+  vertical-align: top;
+}
+
+.brandSub{
+  margin-top: 8px;
+  font-size: 18px;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+/* -------------------------------
+   Labels / Text blocks
+-------------------------------- */
+.h1{
+  font-size: 26px;
+  font-weight: 900;
+  margin: 0 0 8px;
+}
 
 .label{
-  color:var(--muted);
-  font-weight:700;
-  letter-spacing:.02em;
+  font-size: 18px;
+  font-weight: 850;
+  letter-spacing: 0.2px;
+  margin: 14px 0 8px;
 }
 
-.help{
-  color:var(--muted2);
-  margin:8px 0 2px;
-  line-height:1.35;
+.tip{
+  color: var(--muted);
+  font-weight: 600;
+  margin: 8px 0 14px;
 }
 
-/* inputs */
-input, select, button{
-  font:inherit;
+.small{
+  color: var(--dim);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+/* -------------------------------
+   Controls
+-------------------------------- */
+.row{
+  display:flex;
+  gap: 14px;
+  align-items:center;
+  flex-wrap:wrap;
+}
+
+.field{
+  display:flex;
+  flex-direction:column;
+  gap: 8px;
+  flex: 1 1 220px;
+  min-width: 220px;
+}
+
+.field .fieldLabel{
+  color: var(--muted);
+  font-weight: 850;
+  letter-spacing: 0.3px;
+}
+
+.select, select{
+  width:100%;
+  appearance: none;
+  -webkit-appearance: none;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(0,0,0,0.36);
+  color: var(--text);
+  padding: 14px 44px 14px 16px;
+  font-weight: 800;
+  font-size: 16px;
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,0.35);
+  outline:none;
+}
+
+select:focus{
+  border-color: rgba(25,227,141,0.45);
+  box-shadow: inset 0 0 0 1px rgba(25,227,141,0.25), 0 0 0 3px rgba(25,227,141,0.10);
 }
 
 .selectWrap{
-  display:flex;
-  align-items:center;
-  gap:10px;
-  flex-wrap:wrap;
+  position:relative;
 }
 
-select{
-  background:rgba(0,0,0,.35);
-  color:var(--text);
-  border:1px solid var(--line2);
-  border-radius:999px;
-  padding:10px 14px;
-  min-width:160px;
-  outline:none;
-}
-select:focus{
-  border-color:rgba(46,230,166,.55);
-  box-shadow:0 0 0 6px rgba(46,230,166,.10);
-}
-
-/* file input zone */
-.fileRow{
-  display:flex;
-  flex-direction:column;
-  gap:10px;
-  margin-top:10px;
+.selectWrap::after{
+  content:"";
+  position:absolute;
+  right: 16px;
+  top: 50%;
+  width: 10px;
+  height: 10px;
+  transform: translateY(-60%) rotate(45deg);
+  border-right: 2px solid rgba(233,240,239,0.65);
+  border-bottom: 2px solid rgba(233,240,239,0.65);
+  pointer-events:none;
 }
 
-.fileShell{
+/* Hidden file input (JS triggers it) */
+#photoInput{
+  position:absolute !important;
+  left:-9999px !important;
+  width:1px !important;
+  height:1px !important;
+  opacity:0 !important;
+  pointer-events:none !important;
+}
+
+/* Primary CTA (Choose Photo) */
+.btnPrimary{
   width:100%;
-  background:rgba(0,0,0,.28);
-  border:1px solid var(--line2);
-  border-radius:999px;
-  padding:10px 12px;
-  display:flex;
-  align-items:center;
-  gap:12px;
-}
-
-.fileShell input[type="file"]{
-  width:100%;
-  color:var(--muted);
-}
-
-.fileShell input[type="file"]::-webkit-file-upload-button{
-  appearance:none;
-  border:none;
-  background:rgba(255,255,255,.08);
-  color:var(--text);
-  padding:10px 14px;
-  border-radius:999px;
-  cursor:pointer;
-  margin-right:12px;
-}
-.fileShell input[type="file"]::-webkit-file-upload-button:hover{
-  background:rgba(255,255,255,.12);
-}
-
-/* section titles */
-.sectionTitle{
-  margin:18px 0 10px;
-  font-weight:900;
-  font-size:clamp(22px, 4vw, 44px);
-  letter-spacing:-.02em;
-}
-.bullets{
-  margin:10px 0 16px 22px;
-  color:var(--text);
-}
-.bullets li{
-  margin:8px 0;
-  color:var(--text);
-  opacity:.92;
-  font-weight:650;
-}
-
-/* primary CTA */
-button{
-  border:none;
+  border: none;
+  border-radius: 999px;
+  padding: 16px 18px;
+  font-weight: 950;
+  font-size: 18px;
+  letter-spacing: 0.3px;
+  color: rgba(255,255,255,0.94);
+  background: linear-gradient(180deg, rgba(25,227,141,0.22) 0%, rgba(0,160,70,0.20) 60%, rgba(0,0,0,0.18) 100%);
+  box-shadow: 0 10px 28px rgba(0,0,0,0.45), inset 0 0 0 1px rgba(25,227,141,0.22);
   cursor:pointer;
   user-select:none;
   -webkit-tap-highlight-color: transparent;
 }
 
-.btnPrimary{
-  width:100%;
-  padding:16px 18px;
-  border-radius:999px;
-  background:linear-gradient(180deg, rgba(46,230,166,.28), rgba(46,230,166,.10));
-  border:1px solid rgba(46,230,166,.35);
-  color:rgba(255,255,255,.90);
-  font-weight:900;
-  letter-spacing:.02em;
-}
 .btnPrimary:active{
-  transform:translateY(1px);
+  transform: translateY(1px);
+  opacity:0.95;
 }
 
-/* preview box */
-.previewWrap{
-  margin-top:10px;
-  border:1px solid var(--line);
-  background:rgba(0,0,0,.25);
-  border-radius:var(--radius2);
-  padding:12px;
+.btnPrimary:disabled{
+  opacity:0.55;
+  cursor:not-allowed;
 }
 
-.previewLabel{
-  font-weight:900;
-  color:var(--text);
-  margin:0 0 10px;
-  opacity:.92;
+.btnGhost{
+  border: 1px solid rgba(255,255,255,0.14);
+  background: rgba(0,0,0,0.22);
+  color: rgba(233,240,239,0.85);
+  border-radius: 999px;
+  padding: 12px 14px;
+  font-weight: 850;
+  cursor:pointer;
 }
 
-.previewHint{
-  margin:0 0 10px;
-  color:var(--muted);
+.btnGhost:active{
+  transform: translateY(1px);
 }
 
-/* ============================================================
-   THE IMPORTANT PART: target + tap layers
-============================================================ */
+/* Start button */
+.btnStart{
+  width: 100%;
+  margin-top: 16px;
+  border: none;
+  border-radius: 999px;
+  padding: 18px 18px;
+  font-weight: 950;
+  font-size: 20px;
+  letter-spacing: 0.4px;
+  color: rgba(255,255,255,0.92);
+  background: linear-gradient(180deg, rgba(25,227,141,0.18) 0%, rgba(0,160,70,0.18) 70%, rgba(0,0,0,0.22) 100%);
+  box-shadow: 0 14px 34px rgba(0,0,0,0.55), inset 0 0 0 1px rgba(25,227,141,0.22);
+  cursor:pointer;
+}
 
-.targetWrap{
-  position:relative;
+/* -------------------------------
+   Thumbnail / Preview
+-------------------------------- */
+.thumbLabel{
+  display:inline-block;
+  padding: 10px 14px;
+  border-radius: 999px;
+  background: rgba(0,0,0,0.32);
+  border: 1px solid rgba(255,255,255,0.10);
+  font-weight: 900;
+  letter-spacing: 0.2px;
+  color: rgba(233,240,239,0.88);
+  margin-top: 14px;
+  margin-bottom: 10px;
+}
+
+#thumbBox{
   width:100%;
-  border-radius:14px;
+  min-height: 84px;
+  border-radius: 16px;
+  border: 1px solid rgba(255,255,255,0.10);
+  background: rgba(0,0,0,0.28);
   overflow:hidden;
-  background:rgba(0,0,0,.18);
-  border:1px solid var(--line);
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,0.35);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding: 10px;
 }
 
-/* The image */
-#targetImg{
-  display:block;
+#thumbBox img{
   width:100%;
   height:auto;
-  max-height:72vh;
-  object-fit:contain;
-  background:rgba(0,0,0,.12);
-  /* iOS: reduce weird highlight / longpress behaviors */
-  -webkit-user-drag:none;
-  user-select:none;
-  -webkit-touch-callout:none;
+  border-radius: 10px;
 }
 
-/* The overlay that receives taps & shows dots */
+/* -------------------------------
+   Instruction line + tap counter
+-------------------------------- */
+.hudRow{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap: 12px;
+  margin: 12px 0 10px;
+}
+
+#instructionLine{
+  display:inline-block;
+  padding: 10px 12px;
+  border-radius: 999px;
+  background: rgba(0,0,0,0.34);
+  border: 1px solid rgba(255,255,255,0.12);
+  font-weight: 900;
+  color: rgba(233,240,239,0.90);
+  max-width: 72%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+#tapCount{
+  display:inline-block;
+  padding: 10px 12px;
+  border-radius: 999px;
+  background: rgba(0,0,0,0.34);
+  border: 1px solid rgba(255,255,255,0.12);
+  font-weight: 950;
+  color: rgba(233,240,239,0.90);
+}
+
+/* -------------------------------
+   TARGET INTERACTION (CRITICAL)
+   This is the iOS tap/overlay fix.
+-------------------------------- */
+
+/* The wrap MUST exist and have size */
+#targetWrap{
+  position: relative;
+  width: 100%;
+  margin-top: 14px;
+  display: block !important;
+  visibility: visible !important;
+  pointer-events: auto !important;
+}
+
+/* Image */
+#targetImg{
+  width: 100%;
+  height: auto;
+  display: none; /* JS flips to block on load */
+  border-radius: 16px;
+  border: 1px solid rgba(255,255,255,0.10);
+  background: rgba(0,0,0,0.35);
+  box-shadow: 0 14px 34px rgba(0,0,0,0.45);
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-user-drag: none;
+}
+
+/* Canvas (if you use it) — sits ABOVE image */
+#tapCanvas{
+  position:absolute;
+  inset: 0;
+  z-index: 40;
+  width:100%;
+  height:100%;
+  pointer-events: auto;
+  touch-action: none;              /* IMPORTANT for iOS */
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  background: transparent;
+}
+
+/* Dot layer (if you use div dots) — sits above canvas */
 #dotsLayer{
   position:absolute;
-  inset:0;
-  /* CRITICAL: overlay must receive taps */
-  pointer-events:auto;
-  /* CRITICAL: iOS tap responsiveness */
-  touch-action: manipulation;
-  /* prevents browser gestures stealing your tap */
-  -webkit-user-select:none;
-  user-select:none;
+  inset: 0;
+  z-index: 50;
+  pointer-events: none; /* dots shouldn't block taps */
+  touch-action: none;
 }
 
-/* individual dots if you render them as divs */
-.tapDot{
-  position:absolute;
-  width:14px;
-  height:14px;
-  border-radius:999px;
-  background:rgba(46,230,166,.95);
-  box-shadow:0 0 0 4px rgba(46,230,166,.18);
-  transform:translate(-50%, -50%);
+/* If you ever create dots with a class */
+.tapDot{ pointer-events:none; }
+
+/* -------------------------------
+   “What happens next” list
+-------------------------------- */
+.sectionTitle{
+  margin: 14px 0 8px;
+  font-size: 44px;
+  font-weight: 950;
+  letter-spacing: -0.8px;
 }
 
-/* top instruction pill + tap counter */
-.hud{
-  position:sticky;
-  top:10px;
-  z-index:9999;
-  display:flex;
-  justify-content:space-between;
-  gap:12px;
-  margin:0 0 10px;
+@media (max-width: 520px){
+  .sectionTitle{ font-size: 40px; }
 }
 
-.pill{
-  display:inline-flex;
-  align-items:center;
-  padding:10px 12px;
-  border-radius:999px;
-  background:rgba(0,0,0,.40);
-  border:1px solid rgba(255,255,255,.10);
-  color:rgba(255,255,255,.92);
-  font-weight:800;
-  letter-spacing:.01em;
+.bullets{
+  margin: 8px 0 0 0;
+  padding-left: 20px;
+  color: rgba(233,240,239,0.88);
+  font-weight: 800;
+  font-size: 20px;
+  line-height: 1.45;
 }
 
-/* banner you used */
-.banner{
-  position:fixed;
-  left:12px;
-  right:12px;
-  bottom:12px;
-  z-index:999999;
-  padding:12px 14px;
-  border-radius:14px;
-  background:rgba(0,140,0,.85);
-  color:white;
-  font-weight:800;
-  box-shadow:0 10px 30px rgba(0,0,0,.35);
+.bullets li{ margin: 8px 0; }
+
+/* -------------------------------
+   “Start” link/button spacing
+-------------------------------- */
+.actions{
+  margin-top: 14px;
 }
 
-/* small screens */
-@media (max-width:520px){
-  .card{ padding:18px 16px 20px; }
-  select{ min-width:140px; }
+/* -------------------------------
+   Utility
+-------------------------------- */
+.hr{
+  height:1px;
+  background: rgba(255,255,255,0.10);
+  margin: 14px 0;
+}
+
+/* If you have a right-side debug panel, force it off on mobile */
+.debugPanel{
+  display:none !important;
 }
