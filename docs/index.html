@@ -1,105 +1,95 @@
-<!-- frontend_new/index.html (FULL REPLACEMENT) — Tap-n-Score™ vHTML-START-1
-     Goal:
-     - Clean landing layout (matches your screenshots)
-     - Thumbnail area NEVER shows as an empty “mystery box”
-     - Preview image stays hidden until a file is actually selected
-     - START is the primary CTA
--->
 <!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="color-scheme" content="dark" />
-  <meta name="theme-color" content="#000000" />
+  <meta name="theme-color" content="#07110c" />
   <title>Tap-n-Score™</title>
 
-  <!-- IMPORTANT: keep the same filename your repo uses -->
   <link rel="stylesheet" href="./styles.css?v=20260130a" />
 </head>
 
 <body>
   <main class="page">
-    <section class="card" aria-label="Tap-n-Score landing">
+    <section class="card">
+      <header class="hero">
+        <div class="brandLine">
+          <div class="brand">TAP-N-SCORE<span class="tm">™</span></div>
+          <div class="sub">After-Shot Intelligence</div>
+        </div>
+      </header>
 
-      <!-- Brand -->
-      <div class="brandWrap">
-        <h1 class="brandTitle">
-          TAP-N-SCORE<span class="tm">™</span>
-        </h1>
-        <p class="brandSub">After-Shot Intelligence</p>
+      <!-- We will NOT rely on Safari’s default file control.
+           We use a real hidden input + our own button. -->
+      <div class="field">
+        <div class="label">Take or Choose Target Photo</div>
+
+        <input id="photoInput" class="hiddenFile"
+               type="file" accept="image/*" />
+
+        <button id="chooseBtn" class="btnPrimary" type="button">
+          Choose Photo
+        </button>
+
+        <div id="fileName" class="hint">No file selected.</div>
+        <div class="hint">Tip: Straight-on photos give the most accurate results.</div>
       </div>
 
-      <div class="sectionTitle">Take or Choose Target Photo</div>
+      <div class="row">
+        <div class="field">
+          <div class="label">Distance</div>
+          <select id="distanceYds" class="select">
+            <option value="25">25 yd</option>
+            <option value="50">50 yd</option>
+            <option value="100" selected>100 yd</option>
+            <option value="200">200 yd</option>
+          </select>
+        </div>
 
-      <!-- File picker pill -->
-      <div class="fileLine">
-        <div class="filePill" role="group" aria-label="Photo chooser">
-          <label for="photoInput" aria-label="Choose target photo">Choose File</label>
-          <div class="fileName" id="fileName">no file selected</div>
-          <input id="photoInput" type="file" accept="image/*" />
+        <div class="field">
+          <div class="label">Click</div>
+          <select id="clickValue" class="select">
+            <option value="0.25" selected>¼ MOA</option>
+            <option value="0.5">½ MOA</option>
+            <option value="1">1 MOA</option>
+          </select>
         </div>
       </div>
 
-      <p class="tip">Tip: Straight-on photos give the most accurate results.</p>
-
-      <!-- Distance + Click -->
-      <div class="controlsRow" aria-label="Settings">
-        <div class="controlGroup">
-          <div class="label">Distance:</div>
-          <div class="selectWrap">
-            <select id="distanceYds" aria-label="Distance in yards">
-              <option value="25">25 yd</option>
-              <option value="50">50 yd</option>
-              <option value="100" selected>100 yd</option>
-              <option value="200">200 yd</option>
-            </select>
-          </div>
+      <div class="field">
+        <div class="label">Selected target photo thumbnail</div>
+        <div id="thumbBox" class="thumbBox">
+          <div class="thumbEmpty">No photo selected yet.</div>
         </div>
-
-        <div class="controlGroup">
-          <div class="label">Click:</div>
-          <div class="selectWrap">
-            <select id="clickValue" aria-label="Scope click value">
-              <option value="0.25" selected>¼ MOA</option>
-              <option value="0.5">½ MOA</option>
-              <option value="0.1">0.1 MIL</option>
-            </select>
-          </div>
-        </div>
+        <div class="hintStrong">Next: tap your confirmed hits.</div>
       </div>
 
-      <!-- Thumbnail label pill -->
-      <div class="thumbPill" aria-label="Selected target photo thumbnail">
-        Selected target photo thumbnail
+      <div class="field">
+        <div class="bigTitle">What happens next</div>
+        <ul class="bullets">
+          <li>Tap bull’s-eye to center</li>
+          <li>Calibrate once (grid)</li>
+          <li>Tap each confirmed hit</li>
+          <li>Get measured clicks</li>
+        </ul>
       </div>
 
-      <!-- Preview box (will hide unless img has real src; see CSS) -->
-      <div class="thumbBox" aria-label="Selected target preview">
-        <img id="targetPreview" alt="Selected target preview" />
-      </div>
-
-      <!-- Empty state line (this is the only thing user sees until a photo is selected) -->
-      <div class="emptyLine" id="emptyState">No photo selected yet.</div>
-
-      <div class="nextLine">Next: tap your confirmed hits.</div>
-
-      <div class="h2Big">What happens next</div>
-      <ul class="steps" aria-label="Steps">
-        <li>Tap bull’s-eye to center</li>
-        <li>Calibrate once (grid)</li>
-        <li>Tap each confirmed hit</li>
-        <li>Get measured clicks</li>
-      </ul>
-
-      <button id="startBtn" class="btnPrimary" type="button" aria-label="Start">
-        Start
-      </button>
-
+      <button id="startBtn" class="btnStart" type="button">Start</button>
     </section>
-  </main>
 
-  <!-- IMPORTANT: keep the same filename your repo uses -->
-  <script src="./index.js?v=20260130a"></script>
+    <!-- Tap canvas + dots sit on top of the image inside this wrap -->
+    <section id="targetWrap" class="targetWrap">
+      <img id="targetImg" alt="Selected target" />
+      <canvas id="tapCanvas"></canvas>
+      <div id="dotsLayer"></div>
+    </section>
+
+    <!-- These are created by JS too, but leaving hooks is fine -->
+    <div id="instructionLine" class="hudLeft">Choose a photo to begin</div>
+    <div id="tapCount" class="hudRight">Taps: 0</div>
+
+    <script src="./index.js?v=20260130a"></script>
+  </main>
 </body>
 </html>
