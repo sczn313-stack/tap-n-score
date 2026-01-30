@@ -1,287 +1,280 @@
 /* ============================================================
-   frontend_new/styles.css (FULL REPLACEMENT) — vCSS-TAPFIX-5
-   Goals:
-   - Clean dark UI
-   - #targetWrap is ALWAYS real/visible (never display:none)
-   - dotsLayer is the tap surface (pointer events ON)
-   - tapCanvas exists but is disabled (won’t steal taps)
+   Tap-n-Score™ — styles.css (FULL REPLACEMENT)
+   Purpose:
+   - Stable iOS Safari tap behavior
+   - Correct overlay stacking (image + dots)
+   - Clean, glassy dark UI
+   - No pointer-event blocking
 ============================================================ */
 
-:root{
-  --bg0:#050806;
-  --bg1:#07110c;
-  --card:rgba(255,255,255,0.06);
-  --card2:rgba(255,255,255,0.04);
-  --stroke:rgba(255,255,255,0.10);
-  --stroke2:rgba(255,255,255,0.16);
-  --text:#eaf2ec;
-  --muted:rgba(234,242,236,0.70);
-  --muted2:rgba(234,242,236,0.55);
-  --green:#00d88a;
-  --green2:#0ea86f;
-  --shadow:0 18px 50px rgba(0,0,0,0.55);
+/* ---------- Reset & Base ---------- */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
 }
 
-*{ box-sizing:border-box; }
-html,body{ height:100%; }
-body{
-  margin:0;
-  font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-  color:var(--text);
-  background:
-    radial-gradient(1200px 700px at 15% 10%, rgba(0,216,138,0.10), transparent 55%),
-    radial-gradient(900px 600px at 90% 20%, rgba(0,216,138,0.06), transparent 60%),
-    linear-gradient(180deg, var(--bg1), var(--bg0));
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background: radial-gradient(
+    1200px 800px at 20% -10%,
+    #0f2b22,
+    #060b09 60%
+  );
+  color: #e9f3ee;
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+  overscroll-behavior: none;
 }
 
-/* Layout */
-.page{
-  width:100%;
-  min-height:100%;
-  display:flex;
-  flex-direction:column;
-  align-items:center;
-  gap:14px;
-  padding:18px 14px 90px;
+/* ---------- Layout ---------- */
+.page {
+  max-width: 980px;
+  margin: 0 auto;
+  padding: 18px 16px 80px;
 }
 
-.card{
-  width:min(980px, 100%);
-  background: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.03));
-  border:1px solid var(--stroke);
-  border-radius:22px;
-  box-shadow: var(--shadow);
-  padding:18px 18px 16px;
-  position:relative;
-  overflow:hidden;
+.card {
+  background: linear-gradient(
+    180deg,
+    rgba(20, 48, 38, 0.85),
+    rgba(7, 14, 12, 0.92)
+  );
+  border-radius: 20px;
+  padding: 18px 18px 22px;
+  box-shadow:
+    0 25px 60px rgba(0,0,0,.55),
+    inset 0 1px 0 rgba(255,255,255,.05);
 }
 
-.hero{
-  padding:6px 6px 12px;
+/* ---------- Header ---------- */
+.hero {
+  margin-bottom: 14px;
 }
 
-.brandLine{
-  display:flex;
-  flex-direction:column;
-  gap:6px;
+.brandLine {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
-.brand{
-  letter-spacing:0.08em;
-  font-weight:900;
-  font-size:28px;
-  line-height:1.05;
+.brand {
+  font-size: 26px;
+  font-weight: 900;
+  letter-spacing: 0.6px;
 }
 
-.tm{
-  color:var(--green);
-  font-weight:900;
-  margin-left:2px;
+.brand .tm {
+  color: #35e58c;
+  font-size: 18px;
+  margin-left: 4px;
 }
 
-.sub{
-  color:var(--muted);
-  font-weight:650;
-  font-size:16px;
+.sub {
+  color: #a8c9bb;
+  font-size: 13px;
 }
 
-/* Form blocks */
-.field{
-  margin-top:12px;
-  padding:12px;
-  border:1px solid var(--stroke);
-  background: rgba(0,0,0,0.18);
-  border-radius:16px;
+/* ---------- Fields ---------- */
+.field {
+  margin-top: 16px;
 }
 
-.label{
-  font-size:14px;
-  color:var(--muted);
-  font-weight:800;
-  margin-bottom:10px;
+.label {
+  font-size: 13px;
+  font-weight: 700;
+  margin-bottom: 6px;
+  color: #d6efe4;
 }
 
-.hint{
-  margin-top:8px;
-  font-size:14px;
-  color:var(--muted2);
-  font-weight:650;
+.hint {
+  font-size: 12px;
+  color: #9fbfb3;
+  margin-top: 6px;
 }
 
-.hintStrong{
-  margin-top:10px;
-  font-size:15px;
-  color:var(--muted);
-  font-weight:900;
+.hintStrong {
+  margin-top: 8px;
+  font-weight: 700;
+  font-size: 13px;
+  color: #c9f5de;
 }
 
-.row{
-  display:grid;
+.hiddenFile {
+  display: none;
+}
+
+/* ---------- Buttons ---------- */
+.btnPrimary,
+.btnStart {
+  width: 100%;
+  height: 56px;
+  border-radius: 999px;
+  border: none;
+  cursor: pointer;
+  font-weight: 900;
+  font-size: 16px;
+  letter-spacing: 0.4px;
+}
+
+.btnPrimary {
+  background: linear-gradient(180deg, #1fa56b, #0b5a3a);
+  color: #eafff4;
+  box-shadow:
+    0 10px 28px rgba(0,0,0,.45),
+    inset 0 1px 0 rgba(255,255,255,.25);
+}
+
+.btnPrimary:active {
+  transform: translateY(1px);
+}
+
+.btnStart {
+  margin-top: 18px;
+  background: linear-gradient(180deg, #2ccf88, #0f7a4f);
+  color: #001a10;
+}
+
+/* ---------- Selects ---------- */
+.row {
+  display: grid;
   grid-template-columns: 1fr 1fr;
-  gap:12px;
+  gap: 12px;
 }
 
-@media (max-width: 520px){
-  .row{ grid-template-columns: 1fr; }
-  .brand{ font-size:24px; }
+.select {
+  width: 100%;
+  height: 44px;
+  border-radius: 12px;
+  background: rgba(0,0,0,.45);
+  border: 1px solid rgba(255,255,255,.12);
+  color: #e9f3ee;
+  padding: 0 12px;
+  font-size: 14px;
 }
 
-/* Controls */
-.hiddenFile{
-  position:absolute !important;
-  width:1px !important;
-  height:1px !important;
-  padding:0 !important;
-  margin:-1px !important;
-  overflow:hidden !important;
-  clip:rect(0,0,0,0) !important;
-  white-space:nowrap !important;
-  border:0 !important;
+/* ---------- Thumbnail ---------- */
+.thumbBox {
+  margin-top: 8px;
+  border-radius: 14px;
+  background: rgba(0,0,0,.35);
+  padding: 8px;
+  overflow: hidden;
 }
 
-.select{
-  width:100%;
-  height:46px;
-  border-radius:999px;
-  padding:0 14px;
-  border:1px solid var(--stroke2);
-  background: rgba(0,0,0,0.25);
-  color:var(--text);
-  font-size:16px;
-  font-weight:800;
-  outline:none;
+.thumbBox img {
+  width: 100%;
+  height: auto;
+  border-radius: 10px;
+  display: block;
 }
 
-.select:focus{
-  border-color: rgba(0,216,138,0.45);
-  box-shadow: 0 0 0 3px rgba(0,216,138,0.12);
+.thumbEmpty {
+  font-size: 13px;
+  color: #8fb2a4;
+  padding: 10px;
 }
 
-.btnPrimary{
-  width:100%;
-  height:52px;
-  border-radius:999px;
-  border:1px solid rgba(255,255,255,0.14);
-  background: linear-gradient(180deg, rgba(0,216,138,0.22), rgba(0,216,138,0.10));
-  color:var(--text);
-  font-weight:900;
-  font-size:18px;
-  letter-spacing:0.02em;
-  box-shadow: 0 10px 26px rgba(0,0,0,0.35);
+/* ---------- Instruction List ---------- */
+.bigTitle {
+  font-size: 22px;
+  font-weight: 900;
+  margin-bottom: 8px;
 }
 
-.btnPrimary:active{
-  transform: translateY(1px);
+.bullets {
+  padding-left: 18px;
+  margin: 6px 0 0;
 }
 
-.btnStart{
-  width:100%;
-  height:56px;
-  border-radius:999px;
-  border:1px solid rgba(0,216,138,0.35);
-  background: linear-gradient(180deg, rgba(0,216,138,0.26), rgba(0,216,138,0.12));
-  color:var(--text);
-  font-weight:1000;
-  font-size:18px;
-  letter-spacing:0.03em;
-  margin-top:12px;
-  box-shadow: 0 14px 34px rgba(0,0,0,0.45);
-}
-
-.btnStart:active{
-  transform: translateY(1px);
-}
-
-/* Thumbnail */
-.thumbBox{
-  width:100%;
-  border-radius:16px;
-  border:1px solid var(--stroke);
-  background: rgba(0,0,0,0.22);
-  padding:10px;
-  overflow:hidden;
-}
-
-.thumbEmpty{
-  color:var(--muted2);
-  font-weight:800;
-  font-size:14px;
-  padding:8px;
-}
-
-/* Copy block */
-.bigTitle{
-  font-size:34px;
-  font-weight:1000;
-  margin-top:2px;
-}
-
-.bullets{
-  margin:10px 0 0 0;
-  padding-left:18px;
-  color:var(--text);
-  font-weight:850;
-  font-size:16px;
-}
-
-.bullets li{
-  margin:10px 0;
+.bullets li {
+  margin: 6px 0;
+  font-weight: 600;
 }
 
 /* ============================================================
-   Target / Tap Surface
+   TARGET + TAP OVERLAY (CRITICAL SECTION)
 ============================================================ */
 
-/* ✅ IMPORTANT: NEVER hide the wrap (no display:none) */
-.targetWrap{
-  width:min(980px, 100%);
-  position:relative;
-  display:block;
-  border-radius:22px;
-  border:1px solid var(--stroke);
-  background: rgba(0,0,0,0.18);
-  overflow:hidden;
-  box-shadow: var(--shadow);
+.targetWrap {
+  position: relative;
+  margin-top: 18px;
+  border-radius: 18px;
+  overflow: hidden;
+  background: #ffffff;
+  box-shadow:
+    0 22px 50px rgba(0,0,0,.55);
 }
 
-/* Image fills wrap */
-#targetImg{
-  width:100%;
-  height:auto;
-  display:none; /* JS turns on when loaded */
+/* The target image */
+#targetImg {
+  display: block;
+  width: 100%;
+  height: auto;
+  user-select: none;
+  pointer-events: none; /* IMPORTANT */
 }
 
-/* Tap surface */
-#dotsLayer{
-  position:absolute;
-  inset:0;
-  z-index:5;
-  pointer-events:auto;   /* ✅ tap capture layer */
-  touch-action:none;     /* ✅ stop safari scroll/zoom stealing taps */
+/* Tap layer — this is where taps happen */
+#dotsLayer {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  pointer-events: auto;
+  touch-action: none; /* iOS SAFARI FIX */
 }
 
-/* Canvas exists but is disabled */
-#tapCanvas{
-  position:absolute;
-  inset:0;
-  z-index:4;
-  pointer-events:none;   /* ✅ cannot steal taps */
-  display:none;          /* not needed for current approach */
+/* Canvas kept but non-interactive */
+#tapCanvas {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  pointer-events: none;
 }
 
-/* HUD */
-.hudLeft, .hudRight{
-  position:fixed;
-  top:12px;
-  z-index:99998;
-  padding:10px 12px;
-  border-radius:999px;
-  border:1px solid rgba(255,255,255,0.14);
-  background: rgba(0,0,0,0.35);
-  backdrop-filter: blur(8px);
-  font-weight:950;
-  font-size:14px;
+/* ---------- Tap Dots ---------- */
+.tapDot {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  border-radius: 999px;
 }
 
-.hudLeft{ left:12px; }
-.hudRight{ right:12px; }
+/* ---------- HUD ---------- */
+.hudLeft,
+.hudRight {
+  position: fixed;
+  top: 10px;
+  z-index: 1000;
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: rgba(0,0,0,.55);
+  font-weight: 800;
+  font-size: 13px;
+  backdrop-filter: blur(6px);
+}
+
+.hudLeft {
+  left: 10px;
+}
+
+.hudRight {
+  right: 10px;
+}
+
+/* ---------- Banner injected by JS ---------- */
+#scznBanner {
+  pointer-events: none;
+}
+
+/* ---------- Mobile ---------- */
+@media (max-width: 600px) {
+  .page {
+    padding: 14px 12px 90px;
+  }
+
+  .bigTitle {
+    font-size: 20px;
+  }
+}
