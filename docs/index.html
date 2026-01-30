@@ -25,24 +25,17 @@
          SCREEN 1 — LANDING
     ======================================================== -->
     <section id="pageLanding">
-
       <section class="hero">
         <label class="photoPickBtn" for="photoInput">Take or Choose Target Photo</label>
-
-        <!-- Real input (label opens picker reliably on iOS) -->
         <input id="photoInput" type="file" accept="image/*" />
-
         <div class="tipLine" id="tipLine">
           Tip: Straight-on photos give the most accurate results.
         </div>
       </section>
-
     </section>
 
     <!-- =======================================================
          SCREEN 2 — TAP TARGET
-         - Instruction line sits above target
-         - CTAs show ONLY after bull is tapped
     ======================================================== -->
     <section id="pageTap" hidden>
 
@@ -61,6 +54,9 @@
           <div class="miniPill">
             Taps: <span id="tapCount">0</span>
           </div>
+
+          <!-- NEW: micro (not CTA color) -->
+          <button id="resetViewBtn" class="miniBtn" type="button">Reset View</button>
         </div>
 
         <!-- CTAs (same color) — hidden until bull tapped -->
@@ -75,9 +71,6 @@
 
     <!-- =======================================================
          SCREEN 3 — SEC
-         - Two half-width buttons side-by-side
-         - Download Image is a hook for now
-         - Survey is loose for now
     ======================================================== -->
     <section id="pageSec" hidden>
 
