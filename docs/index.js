@@ -1,10 +1,10 @@
 /* ============================================================
-   index.js (FULL REPLACEMENT) — BRICK: Pinch Zoom + Pan (B)
-   Scope:
-   - 3-screen flow stays
-   - Tap screen: pinch-to-zoom + drag-to-pan
-   - Tap coordinates stay correct under transform
-   - CTA row still appears only after bull tap
+   index.js (FULL REPLACEMENT) — BRICK: Pinch Zoom + Pan (B) FIXED
+   Fixes:
+   - iOS pinch now reliable (no browser fight)
+   - 1-finger: tap works (tap is committed on touchend)
+   - 1-finger: pan engages ONLY after movement threshold OR scale>1
+   - Tap mapping remains correct under transform
    - NO backend wiring, NO export wiring (hooks only)
 ============================================================ */
 
@@ -56,8 +56,7 @@
 
   // ----------------------------
   // Zoom/Pan state
-  // We transform BOTH image + dotsLayer identically.
-  // Origin top-left makes math simple.
+  // Transform BOTH image + dotsLayer identically.
   // ----------------------------
   const Z = {
     scale: 1,
@@ -67,13 +66,9 @@
     ty: 0,
 
     // gestures
-    isPanning: false,
-    panStartX: 0,
-    panStartY: 0,
-    panStartTx: 0,
-    panStartTy: 0,
-
     isPinching: false,
+    isPanning: false,
+
     pinchStartDist: 0,
     pinchStartScale: 1,
     pinchStartTx: 0,
@@ -81,10 +76,17 @@
     pinchCenterX: 0,
     pinchCenterY: 0,
 
-    // tap suppression
-    movedEnough: false,
-    lastDownTime: 0
+    // 1-finger tracking (tap vs pan)
+    touchStartX: 0,
+    touchStartY: 0,
+    touchStartClientX: 0,
+    touchStartClientY: 0,
+    touchStartTx: 0,
+    touchStartTy: 0,
+    moved: false
   };
+
+  const PAN_THRESHOLD = 7; // px
 
   // ----------------------------
   // Screen control
@@ -110,7 +112,7 @@
     d.style.left = `${p.x * 100}%`;
     d.style.top = `${p.y * 100}%`;
 
-    // Visual difference (bull vs holes)
+    // visual difference (bull vs holes) without relying on CSS
     d.style.position = "absolute";
     d.style.transform = "translate(-50%, -50%)";
     d.style.width = kind === "bull" ? "18px" : "14px";
@@ -176,7 +178,6 @@
   function setTransform() {
     if (!elImg || !elDots) return;
 
-    // origin top-left so inverse mapping is easy
     elImg.style.transformOrigin = "0 0";
     elDots.style.transformOrigin = "0 0";
 
@@ -186,8 +187,6 @@
   }
 
   function boundsClampTranslate() {
-    // keep content from drifting away
-    // We treat wrap as the content space; scaling enlarges it.
     if (!elWrap) return;
 
     const w = elWrap.clientWidth;
@@ -196,35 +195,24 @@
     const scaledW = w * Z.scale;
     const scaledH = h * Z.scale;
 
-    // If scale=1, lock centered at 0,0
     if (Z.scale <= 1.0001) {
       Z.tx = 0;
       Z.ty = 0;
       return;
     }
 
-    // allowed translate range so scaled content covers the frame
-    const minTx = w - scaledW; // negative
+    const minTx = w - scaledW;
     const minTy = h - scaledH;
-    const maxTx = 0;
-    const maxTy = 0;
 
-    Z.tx = clamp(Z.tx, minTx, maxTx);
-    Z.ty = clamp(Z.ty, minTy, maxTy);
+    Z.tx = clamp(Z.tx, minTx, 0);
+    Z.ty = clamp(Z.ty, minTy, 0);
   }
 
   function setScaleAtPoint(newScale, cx, cy) {
-    // Keep point (cx,cy) stationary while scaling
     const oldScale = Z.scale;
     newScale = clamp(newScale, Z.minScale, Z.maxScale);
-
     if (Math.abs(newScale - oldScale) < 0.0001) return;
 
-    // For origin (0,0), mapping:
-    // screen = translate + content * scale
-    // content at point: (screen - translate)/scale
-    // When scale changes, adjust translate:
-    // newTranslate = screen - content * newScale
     const contentX = (cx - Z.tx) / oldScale;
     const contentY = (cy - Z.ty) / oldScale;
 
@@ -243,7 +231,7 @@
     setTransform();
   }
 
-  // Distance between two touches
+  // distance / center for pinch
   function touchDist(t0, t1) {
     const dx = t1.clientX - t0.clientX;
     const dy = t1.clientY - t0.clientY;
@@ -251,10 +239,7 @@
   }
 
   function touchCenter(t0, t1) {
-    return {
-      x: (t0.clientX + t1.clientX) / 2,
-      y: (t0.clientY + t1.clientY) / 2
-    };
+    return { x: (t0.clientX + t1.clientX) / 2, y: (t0.clientY + t1.clientY) / 2 };
   }
 
   function wrapPointFromClient(clientX, clientY) {
@@ -264,7 +249,6 @@
 
   // ----------------------------
   // Tap mapping under transform
-  // We normalize taps in "content space" (wrap space) before transform.
   // norm = content / wrapSize
   // content = (screen - translate) / scale
   // ----------------------------
@@ -272,57 +256,23 @@
     return Math.max(0, Math.min(1, v));
   }
 
-  function getNormPointFromClient(clientX, clientY) {
+  function normFromClient(clientX, clientY) {
     const r = elWrap.getBoundingClientRect();
-
-    // Screen point in wrap space
     const sx = clientX - r.left;
     const sy = clientY - r.top;
 
-    // Invert transform => content space
     const cx = (sx - Z.tx) / Z.scale;
     const cy = (sy - Z.ty) / Z.scale;
 
-    // Normalize to wrap dimensions
-    const nx = clamp01(cx / r.width);
-    const ny = clamp01(cy / r.height);
-
-    return { x: nx, y: ny };
-  }
-
-  // ----------------------------
-  // File load
-  // ----------------------------
-  function onFilePicked() {
-    const f = elFile.files && elFile.files[0] ? elFile.files[0] : null;
-    if (!f) return;
-
-    revokeUrl();
-    objectUrl = URL.createObjectURL(f);
-
-    elImg.onload = () => {
-      showScreen("tap");
-      resetZoom();     // important: start clean each time
-      setPhaseBull();
+    return {
+      x: clamp01(cx / r.width),
+      y: clamp01(cy / r.height)
     };
-
-    elImg.src = objectUrl;
   }
 
   // ----------------------------
-  // Tap/gesture handling
-  // We separate "gesture" vs "tap":
-  // - If finger moves enough, we treat as pan/pinch and suppress tap.
+  // Tap logic
   // ----------------------------
-  function beginPointer() {
-    Z.movedEnough = false;
-    Z.lastDownTime = Date.now();
-  }
-
-  function markMoved(dx, dy) {
-    if (Math.hypot(dx, dy) > 6) Z.movedEnough = true;
-  }
-
   function onTapAt(normPoint) {
     if (phase !== "bull" && phase !== "holes") return;
     if (!elImg || !elImg.src) return;
@@ -340,16 +290,37 @@
     redrawDots();
   }
 
-  // Touch gestures
+  // ----------------------------
+  // File load
+  // ----------------------------
+  function onFilePicked() {
+    const f = elFile.files && elFile.files[0] ? elFile.files[0] : null;
+    if (!f) return;
+
+    revokeUrl();
+    objectUrl = URL.createObjectURL(f);
+
+    elImg.onload = () => {
+      showScreen("tap");
+      resetZoom();
+      setPhaseBull();
+    };
+
+    elImg.src = objectUrl;
+  }
+
+  // ----------------------------
+  // Touch gestures (FIXED)
+  // ----------------------------
   function onTouchStart(e) {
     if (!elImg || !elImg.src) return;
 
-    beginPointer();
-
     if (e.touches.length === 2) {
+      // Pinch start
       e.preventDefault();
       Z.isPinching = true;
       Z.isPanning = false;
+      Z.moved = true; // pinch counts as movement
 
       const t0 = e.touches[0];
       const t1 = e.touches[1];
@@ -367,18 +338,21 @@
     }
 
     if (e.touches.length === 1) {
-      // start pan
-      e.preventDefault();
-      Z.isPanning = true;
-      Z.isPinching = false;
-
+      // Potential tap OR pan (do NOT preventDefault yet)
       const t = e.touches[0];
       const wp = wrapPointFromClient(t.clientX, t.clientY);
 
-      Z.panStartX = wp.x;
-      Z.panStartY = wp.y;
-      Z.panStartTx = Z.tx;
-      Z.panStartTy = Z.ty;
+      Z.isPinching = false;
+      Z.isPanning = false;
+      Z.moved = false;
+
+      Z.touchStartX = wp.x;
+      Z.touchStartY = wp.y;
+      Z.touchStartClientX = t.clientX;
+      Z.touchStartClientY = t.clientY;
+
+      Z.touchStartTx = Z.tx;
+      Z.touchStartTy = Z.ty;
     }
   }
 
@@ -395,136 +369,89 @@
       const ratio = dist / Math.max(1, Z.pinchStartDist);
       const newScale = clamp(Z.pinchStartScale * ratio, Z.minScale, Z.maxScale);
 
-      // keep pinch center fixed
-      Z.scale = newScale;
-      // Recompute translate based on stored start and center
-      // Using setScaleAtPoint style math but from stored start:
-      // content at center in start state:
+      // keep pinch center fixed based on pinch START state
       const contentX = (Z.pinchCenterX - Z.pinchStartTx) / Z.pinchStartScale;
       const contentY = (Z.pinchCenterY - Z.pinchStartTy) / Z.pinchStartScale;
 
+      Z.scale = newScale;
       Z.tx = Z.pinchCenterX - contentX * newScale;
       Z.ty = Z.pinchCenterY - contentY * newScale;
 
       boundsClampTranslate();
       setTransform();
-
-      markMoved(10, 10);
       return;
     }
 
-    if (Z.isPanning && e.touches.length === 1) {
-      e.preventDefault();
-
-      // allow pan even at scale=1, but it will clamp to 0
+    if (e.touches.length === 1) {
       const t = e.touches[0];
       const wp = wrapPointFromClient(t.clientX, t.clientY);
 
-      const dx = wp.x - Z.panStartX;
-      const dy = wp.y - Z.panStartY;
+      const dx = wp.x - Z.touchStartX;
+      const dy = wp.y - Z.touchStartY;
 
-      Z.tx = Z.panStartTx + dx;
-      Z.ty = Z.panStartTy + dy;
+      const movedNow = Math.hypot(dx, dy) > PAN_THRESHOLD;
 
-      boundsClampTranslate();
-      setTransform();
+      // Engage pan if user moved enough OR already zoomed in
+      if (!Z.isPanning && (movedNow || Z.scale > 1.0001)) {
+        Z.isPanning = true;
+      }
 
-      markMoved(dx, dy);
+      if (Z.isPanning) {
+        e.preventDefault(); // only now we stop scroll
+        Z.moved = true;
+
+        Z.tx = Z.touchStartTx + dx;
+        Z.ty = Z.touchStartTy + dy;
+
+        boundsClampTranslate();
+        setTransform();
+      }
     }
   }
 
   function onTouchEnd(e) {
     if (!elImg || !elImg.src) return;
 
-    // If pinch ended and one finger remains, switch to pan baseline
+    // If pinch ended and one finger remains, restart single-finger baseline
     if (Z.isPinching && e.touches.length === 1) {
       Z.isPinching = false;
-      Z.isPanning = true;
-
       const t = e.touches[0];
       const wp = wrapPointFromClient(t.clientX, t.clientY);
 
-      Z.panStartX = wp.x;
-      Z.panStartY = wp.y;
-      Z.panStartTx = Z.tx;
-      Z.panStartTy = Z.ty;
+      Z.isPanning = false;
+      Z.moved = false;
+
+      Z.touchStartX = wp.x;
+      Z.touchStartY = wp.y;
+      Z.touchStartClientX = t.clientX;
+      Z.touchStartClientY = t.clientY;
+
+      Z.touchStartTx = Z.tx;
+      Z.touchStartTy = Z.ty;
       return;
     }
 
-    // If all touches ended: decide if it was a tap
+    // All touches ended: if it was NOT a pan/pinch, treat as TAP
     if (e.touches.length === 0) {
-      const wasGesture = Z.movedEnough;
+      const wasTap = !Z.moved && !Z.isPinching && !Z.isPanning;
 
-      Z.isPanning = false;
       Z.isPinching = false;
+      Z.isPanning = false;
 
-      if (!wasGesture) {
-        // Treat as tap at last known changed touch? iOS doesn't give coords on touchend reliably.
-        // We'll rely on click for single taps on iOS as well; BUT we prevent click sometimes.
-        // So we also capture lastTouchStart position in touchstart (simple).
+      if (wasTap) {
+        const p = normFromClient(Z.touchStartClientX, Z.touchStartClientY);
+        onTapAt(p);
       }
     }
   }
 
-  // Click fallback for taps (also works on desktop)
-  function onClick(e) {
-    if (!elImg || !elImg.src) return;
-
-    // If a touch gesture just happened, ignore this click.
-    // (prevents accidental tap after pan/pinch)
-    if (Date.now() - Z.lastDownTime < 250 && Z.movedEnough) return;
-
-    const p = getNormPointFromClient(e.clientX, e.clientY);
-    onTapAt(p);
-  }
-
-  // Mouse pan (desktop friendly)
-  let mouseDown = false;
-  let mouseStartX = 0, mouseStartY = 0, mouseStartTx = 0, mouseStartTy = 0;
-
-  function onMouseDown(e) {
-    if (!elImg || !elImg.src) return;
-    mouseDown = true;
-    beginPointer();
-
-    const wp = wrapPointFromClient(e.clientX, e.clientY);
-    mouseStartX = wp.x;
-    mouseStartY = wp.y;
-    mouseStartTx = Z.tx;
-    mouseStartTy = Z.ty;
-  }
-
-  function onMouseMove(e) {
-    if (!mouseDown) return;
-
-    const wp = wrapPointFromClient(e.clientX, e.clientY);
-    const dx = wp.x - mouseStartX;
-    const dy = wp.y - mouseStartY;
-
-    if (Math.hypot(dx, dy) > 6) Z.movedEnough = true;
-
-    Z.tx = mouseStartTx + dx;
-    Z.ty = mouseStartTy + dy;
-
-    boundsClampTranslate();
-    setTransform();
-  }
-
-  function onMouseUp() {
-    mouseDown = false;
-  }
-
-  // Optional wheel zoom (desktop)
+  // Desktop (optional)
   function onWheel(e) {
     if (!elImg || !elImg.src) return;
     e.preventDefault();
-
     const wp = wrapPointFromClient(e.clientX, e.clientY);
-    const delta = -e.deltaY; // up = zoom in
-
-    const step = delta > 0 ? 0.12 : -0.12;
-    const newScale = clamp(Z.scale + step, Z.minScale, Z.maxScale);
-    setScaleAtPoint(newScale, wp.x, wp.y);
+    const step = (-e.deltaY) > 0 ? 0.12 : -0.12;
+    setScaleAtPoint(Z.scale + step, wp.x, wp.y);
   }
 
   // ----------------------------
@@ -540,9 +467,7 @@
       return;
     }
 
-    if (bull) {
-      setPhaseBull();
-    }
+    if (bull) setPhaseBull();
   }
 
   function onClear() {
@@ -556,20 +481,13 @@
   }
 
   function onShowResults() {
-    if (!bull) {
-      alert("Tap bull’s-eye first.");
-      return;
-    }
-    if (holes.length === 0) {
-      alert("Tap at least one bullet hole.");
-      return;
-    }
+    if (!bull) return alert("Tap bull’s-eye first.");
+    if (holes.length === 0) return alert("Tap at least one bullet hole.");
 
-    // Placeholder outputs (NO backend yet)
     const sid = makeSessionId();
-
     if (elSessionId) elSessionId.textContent = sid;
 
+    // Placeholder outputs (NO backend yet)
     if (elUp) elUp.textContent = "0.00";
     if (elDown) elDown.textContent = "1.25";
     if (elLeft) elLeft.textContent = "0.00";
@@ -602,20 +520,15 @@
   if (elFile) elFile.addEventListener("change", onFilePicked);
 
   if (elWrap) {
+    // Important: keep interactions inside the frame
+    elWrap.style.overflow = "hidden";
+
     // Touch gestures
     elWrap.addEventListener("touchstart", onTouchStart, { passive: false });
     elWrap.addEventListener("touchmove", onTouchMove, { passive: false });
     elWrap.addEventListener("touchend", onTouchEnd, { passive: false });
 
-    // Click taps
-    elWrap.addEventListener("click", onClick);
-
-    // Mouse pan
-    elWrap.addEventListener("mousedown", onMouseDown);
-    window.addEventListener("mousemove", onMouseMove);
-    window.addEventListener("mouseup", onMouseUp);
-
-    // Wheel zoom (desktop only; harmless on mobile)
+    // Desktop wheel zoom
     elWrap.addEventListener("wheel", onWheel, { passive: false });
   }
 
@@ -632,7 +545,6 @@
   showScreen("landing");
   if (elTipLine) elTipLine.style.opacity = "0.92";
 
-  // Ensure transforms start clean
   resetZoom();
   setTapCount();
 })();
