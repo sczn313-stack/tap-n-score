@@ -1,4 +1,10 @@
-<!-- index.html (FULL REPLACEMENT) -->
+<!-- frontend_new/index.html (FULL REPLACEMENT) — Tap-n-Score™ vHTML-START-1
+     Goal:
+     - Clean landing layout (matches your screenshots)
+     - Thumbnail area NEVER shows as an empty “mystery box”
+     - Preview image stays hidden until a file is actually selected
+     - START is the primary CTA
+-->
 <!doctype html>
 <html lang="en">
 <head>
@@ -8,85 +14,92 @@
   <meta name="theme-color" content="#000000" />
   <title>Tap-n-Score™</title>
 
-  <!-- ✅ Make sure this matches your real CSS filename -->
+  <!-- IMPORTANT: keep the same filename your repo uses -->
   <link rel="stylesheet" href="./styles.css?v=20260130a" />
 </head>
 
 <body>
   <main class="page">
-    <section class="panel">
+    <section class="card" aria-label="Tap-n-Score landing">
 
-      <header class="brandHeader">
-        <div class="brandTitle">
-          <span class="brandTap">TAP</span><span class="brandDash">-</span><span class="brandN">N</span><span class="brandDash">-</span><span class="brandScore">SCORE</span><span class="brandTm">™</span>
-        </div>
-        <div class="brandSub">After-Shot Intelligence</div>
-      </header>
-
-      <div class="row">
-        <label class="labelRow" for="photoInput">
-          <span class="labelText">Take or Choose Target Photo</span>
-        </label>
-        <input id="photoInput" class="fileInput" type="file" accept="image/*" capture="environment" />
+      <!-- Brand -->
+      <div class="brandWrap">
+        <h1 class="brandTitle">
+          TAP-N-SCORE<span class="tm">™</span>
+        </h1>
+        <p class="brandSub">After-Shot Intelligence</p>
       </div>
 
-      <div class="tip">
-        Tip: Straight-on photos give the most accurate results.
-      </div>
+      <div class="sectionTitle">Take or Choose Target Photo</div>
 
-      <div class="controls">
-        <div class="control">
-          <label class="controlLabel" for="distanceYds">Distance:</label>
-          <select id="distanceYds" class="controlSelect">
-            <option value="25">25 yd</option>
-            <option value="50">50 yd</option>
-            <option value="100" selected>100 yd</option>
-            <option value="200">200 yd</option>
-          </select>
-        </div>
-
-        <div class="control">
-          <label class="controlLabel" for="clickValue">Click:</label>
-          <select id="clickValue" class="controlSelect">
-            <option value="0.25" selected>¼ MOA</option>
-            <option value="0.5">½ MOA</option>
-            <option value="0.1">0.1 MRAD</option>
-          </select>
+      <!-- File picker pill -->
+      <div class="fileLine">
+        <div class="filePill" role="group" aria-label="Photo chooser">
+          <label for="photoInput" aria-label="Choose target photo">Choose File</label>
+          <div class="fileName" id="fileName">no file selected</div>
+          <input id="photoInput" type="file" accept="image/*" />
         </div>
       </div>
 
-      <div class="thumbBlock">
-        <div class="thumbLabel">Selected target photo thumbnail</div>
-        <div class="thumbFrame" aria-label="Selected target image preview">
-          <!-- JS can swap src + display once a file is chosen -->
-          <img id="targetThumb" alt="Selected target preview" />
-          <div id="noPhotoText" class="thumbEmpty">No photo selected yet.</div>
+      <p class="tip">Tip: Straight-on photos give the most accurate results.</p>
+
+      <!-- Distance + Click -->
+      <div class="controlsRow" aria-label="Settings">
+        <div class="controlGroup">
+          <div class="label">Distance:</div>
+          <div class="selectWrap">
+            <select id="distanceYds" aria-label="Distance in yards">
+              <option value="25">25 yd</option>
+              <option value="50">50 yd</option>
+              <option value="100" selected>100 yd</option>
+              <option value="200">200 yd</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="controlGroup">
+          <div class="label">Click:</div>
+          <div class="selectWrap">
+            <select id="clickValue" aria-label="Scope click value">
+              <option value="0.25" selected>¼ MOA</option>
+              <option value="0.5">½ MOA</option>
+              <option value="0.1">0.1 MIL</option>
+            </select>
+          </div>
         </div>
       </div>
+
+      <!-- Thumbnail label pill -->
+      <div class="thumbPill" aria-label="Selected target photo thumbnail">
+        Selected target photo thumbnail
+      </div>
+
+      <!-- Preview box (will hide unless img has real src; see CSS) -->
+      <div class="thumbBox" aria-label="Selected target preview">
+        <img id="targetPreview" alt="Selected target preview" />
+      </div>
+
+      <!-- Empty state line (this is the only thing user sees until a photo is selected) -->
+      <div class="emptyLine" id="emptyState">No photo selected yet.</div>
 
       <div class="nextLine">Next: tap your confirmed hits.</div>
 
-      <h2 class="sectionTitle">What happens next</h2>
-      <ul class="steps">
+      <div class="h2Big">What happens next</div>
+      <ul class="steps" aria-label="Steps">
         <li>Tap bull’s-eye to center</li>
         <li>Calibrate once (grid)</li>
         <li>Tap each confirmed hit</li>
         <li>Get measured clicks</li>
       </ul>
 
-      <div class="ctaRow">
-        <button id="startBtn" class="primaryBtn" type="button">Start</button>
-      </div>
-
-      <!-- Optional: link to vendor -->
-      <div class="footerRow">
-        <a id="vendorLink" class="vendorLink" href="#" target="_blank" rel="noopener"> </a>
-      </div>
+      <button id="startBtn" class="btnPrimary" type="button" aria-label="Start">
+        Start
+      </button>
 
     </section>
   </main>
 
-  <!-- ✅ Make sure this matches your real JS filename -->
+  <!-- IMPORTANT: keep the same filename your repo uses -->
   <script src="./index.js?v=20260130a"></script>
 </body>
 </html>
