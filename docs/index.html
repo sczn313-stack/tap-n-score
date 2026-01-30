@@ -1,3 +1,4 @@
+<!-- index.html (FULL REPLACEMENT) -->
 <!doctype html>
 <html lang="en">
 <head>
@@ -26,11 +27,41 @@
     ======================================================== -->
     <section id="pageLanding">
       <section class="hero">
+
         <label class="photoPickBtn" for="photoInput">Take or Choose Target Photo</label>
         <input id="photoInput" type="file" accept="image/*" />
+
         <div class="tipLine" id="tipLine">
           Tip: Straight-on photos give the most accurate results.
         </div>
+
+        <!-- NEW: Always-controlled thumbnail + explainer (never full-size) -->
+        <section class="photoConfirm" id="photoConfirm" aria-label="Photo selected confirmation">
+          <div class="photoThumbWrap" aria-label="Selected photo thumbnail">
+            <img id="photoThumb" class="photoThumb" alt="Selected target photo thumbnail" />
+          </div>
+
+          <div class="photoConfirmText">
+            <div id="photoStatus" class="photoStatus">No photo selected yet.</div>
+            <div class="photoNextLine">Next: tap your confirmed hits.</div>
+          </div>
+
+          <div class="photoExplainer" aria-label="What happens next">
+            <div class="explainerTitle">What happens next</div>
+            <ul class="explainerList">
+              <li>Tap bull’s-eye to center</li>
+              <li>Tap each confirmed hit</li>
+              <li>Get measured results</li>
+            </ul>
+          </div>
+
+          <!-- Optional reserved slot (quiet) -->
+          <div class="promoSlot" id="promoSlot" hidden>
+            <div class="promoTitle">Powered by Tap-n-Score™</div>
+            <div class="promoBody">Want more targets like this? Visit your printer’s store.</div>
+          </div>
+        </section>
+
       </section>
     </section>
 
@@ -55,11 +86,9 @@
             Taps: <span id="tapCount">0</span>
           </div>
 
-          <!-- NEW: micro (not CTA color) -->
           <button id="resetViewBtn" class="miniBtn" type="button">Reset View</button>
         </div>
 
-        <!-- CTAs (same color) — hidden until bull tapped -->
         <div id="ctaRow" class="secActions" hidden>
           <button id="undoBtn" class="ctaBtn" type="button">Undo</button>
           <button id="clearBtn" class="ctaBtn" type="button">Clear</button>
