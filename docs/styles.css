@@ -1,439 +1,287 @@
 /* ============================================================
-   frontend_new/styles.css (FULL REPLACEMENT) — HTML-MATCH + iOS TAP FIX
-   Matches your current index.html classes/IDs exactly.
+   frontend_new/styles.css (FULL REPLACEMENT) — vCSS-TAPFIX-5
+   Goals:
+   - Clean dark UI
+   - #targetWrap is ALWAYS real/visible (never display:none)
+   - dotsLayer is the tap surface (pointer events ON)
+   - tapCanvas exists but is disabled (won’t steal taps)
 ============================================================ */
 
-/* -------------------------------
-   Theme variables
--------------------------------- */
 :root{
-  --bg0:#070909;
+  --bg0:#050806;
   --bg1:#07110c;
-
-  --panel: rgba(18,22,23,0.78);
-  --panel2: rgba(0,0,0,0.28);
-
-  --stroke: rgba(255,255,255,0.10);
-  --stroke2: rgba(0,0,0,0.55);
-
-  --text:#e9f0ef;
-  --muted: rgba(233,240,239,0.72);
-  --dim: rgba(233,240,239,0.55);
-
-  --green:#19e38d;
-  --green2:#00a046;
-
-  --amber:#ffb400;
-
-  --shadow: 0 18px 48px rgba(0,0,0,0.55);
-  --shadow2: 0 10px 28px rgba(0,0,0,0.40);
-
-  --radius: 22px;
-  --radius2: 14px;
-
-  --pad: 22px;
+  --card:rgba(255,255,255,0.06);
+  --card2:rgba(255,255,255,0.04);
+  --stroke:rgba(255,255,255,0.10);
+  --stroke2:rgba(255,255,255,0.16);
+  --text:#eaf2ec;
+  --muted:rgba(234,242,236,0.70);
+  --muted2:rgba(234,242,236,0.55);
+  --green:#00d88a;
+  --green2:#0ea86f;
+  --shadow:0 18px 50px rgba(0,0,0,0.55);
 }
 
-/* -------------------------------
-   Base / Reset
--------------------------------- */
 *{ box-sizing:border-box; }
-
-html,body{
-  height:100%;
+html,body{ height:100%; }
+body{
   margin:0;
-  padding:0;
-  background:
-    radial-gradient(1100px 650px at 50% -10%,
-      rgba(25,227,141,0.12) 0%,
-      rgba(7,17,12,0.0) 55%),
-    radial-gradient(1200px 700px at 50% -10%,
-      #0e2320 0%,
-      #0b1011 35%,
-      #070909 70%,
-      #060707 100%);
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
   color:var(--text);
-  font-family: system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  -webkit-text-size-adjust: 100%;
+  background:
+    radial-gradient(1200px 700px at 15% 10%, rgba(0,216,138,0.10), transparent 55%),
+    radial-gradient(900px 600px at 90% 20%, rgba(0,216,138,0.06), transparent 60%),
+    linear-gradient(180deg, var(--bg1), var(--bg0));
 }
 
-img{ max-width:100%; height:auto; display:block; }
-
-button, input, select{ font-family:inherit; }
-
-a{ color: var(--green); text-decoration:none; }
-a:active{ opacity:0.85; }
-
-/* -------------------------------
-   Page layout
--------------------------------- */
+/* Layout */
 .page{
+  width:100%;
   min-height:100%;
-  padding: 26px 16px 46px;
   display:flex;
   flex-direction:column;
   align-items:center;
-  gap: 16px;
+  gap:14px;
+  padding:18px 14px 90px;
 }
 
-/* Main glass card */
 .card{
-  width:100%;
-  max-width: 980px;
-  background:
-    linear-gradient(180deg,
-      rgba(255,255,255,0.06) 0%,
-      rgba(255,255,255,0.03) 50%,
-      rgba(0,0,0,0.18) 100%),
-    var(--panel);
-  border: 1px solid var(--stroke);
-  border-radius: var(--radius);
+  width:min(980px, 100%);
+  background: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.03));
+  border:1px solid var(--stroke);
+  border-radius:22px;
   box-shadow: var(--shadow);
-  padding: var(--pad);
+  padding:18px 18px 16px;
   position:relative;
   overflow:hidden;
-  backdrop-filter: blur(18px);
-  -webkit-backdrop-filter: blur(18px);
 }
 
-/* Soft green glow top */
-.card::before{
-  content:"";
-  position:absolute;
-  inset:-2px;
-  border-radius: var(--radius);
-  pointer-events:none;
-  background: radial-gradient(720px 280px at 50% -10%,
-    rgba(25,227,141,0.18) 0%,
-    rgba(25,227,141,0.0) 60%);
-}
-
-/* mobile spacing */
-@media (max-width: 520px){
-  .page{ padding: 18px 12px 28px; }
-  .card{ padding: 18px; border-radius: 18px; }
-}
-
-/* -------------------------------
-   Hero / Brand
--------------------------------- */
 .hero{
-  position:relative;
-  z-index: 2;
-  margin-bottom: 10px;
+  padding:6px 6px 12px;
 }
 
 .brandLine{
-  text-align:center;
-  line-height:1.1;
+  display:flex;
+  flex-direction:column;
+  gap:6px;
 }
 
 .brand{
-  font-weight: 950;
-  letter-spacing: 2.2px;
-  font-size: 34px;
+  letter-spacing:0.08em;
+  font-weight:900;
+  font-size:28px;
+  line-height:1.05;
 }
 
-.brand .tm{
-  color: var(--green);
-  font-weight: 950;
-  margin-left: 6px;
-  font-size: 0.72em;
-  vertical-align: top;
-  letter-spacing: 0;
+.tm{
+  color:var(--green);
+  font-weight:900;
+  margin-left:2px;
 }
 
 .sub{
-  margin-top: 8px;
-  font-size: 18px;
-  color: var(--muted);
-  font-weight: 650;
+  color:var(--muted);
+  font-weight:650;
+  font-size:16px;
 }
 
-/* -------------------------------
-   Field blocks
--------------------------------- */
+/* Form blocks */
 .field{
-  position:relative;
-  z-index:2;
-  margin-top: 14px;
+  margin-top:12px;
+  padding:12px;
+  border:1px solid var(--stroke);
+  background: rgba(0,0,0,0.18);
+  border-radius:16px;
 }
 
 .label{
-  font-size: 18px;
-  font-weight: 900;
-  letter-spacing: 0.2px;
-  margin-bottom: 10px;
+  font-size:14px;
+  color:var(--muted);
+  font-weight:800;
+  margin-bottom:10px;
 }
 
 .hint{
-  color: var(--muted);
-  font-weight: 650;
-  margin-top: 8px;
-  line-height:1.35;
+  margin-top:8px;
+  font-size:14px;
+  color:var(--muted2);
+  font-weight:650;
 }
 
 .hintStrong{
-  color: rgba(233,240,239,0.88);
-  font-weight: 900;
-  margin-top: 10px;
+  margin-top:10px;
+  font-size:15px;
+  color:var(--muted);
+  font-weight:900;
 }
 
-/* -------------------------------
-   Hidden input (JS triggers it)
--------------------------------- */
+.row{
+  display:grid;
+  grid-template-columns: 1fr 1fr;
+  gap:12px;
+}
+
+@media (max-width: 520px){
+  .row{ grid-template-columns: 1fr; }
+  .brand{ font-size:24px; }
+}
+
+/* Controls */
 .hiddenFile{
   position:absolute !important;
-  left:-9999px !important;
   width:1px !important;
   height:1px !important;
-  opacity:0 !important;
-  pointer-events:none !important;
+  padding:0 !important;
+  margin:-1px !important;
+  overflow:hidden !important;
+  clip:rect(0,0,0,0) !important;
+  white-space:nowrap !important;
+  border:0 !important;
 }
 
-/* -------------------------------
-   Row of selects
--------------------------------- */
-.row{
-  display:flex;
-  gap: 14px;
-  align-items:flex-start;
-  flex-wrap:wrap;
-}
-
-.row .field{
-  flex: 1 1 240px;
-  min-width: 240px;
-}
-
-/* Select styling */
 .select{
   width:100%;
-  appearance: none;
-  -webkit-appearance: none;
-  border-radius: 999px;
-  border: 1px solid rgba(255,255,255,0.12);
-  background: rgba(0,0,0,0.36);
-  color: var(--text);
-  padding: 14px 44px 14px 16px;
-  font-weight: 850;
-  font-size: 16px;
-  box-shadow: inset 0 0 0 1px rgba(0,0,0,0.35);
+  height:46px;
+  border-radius:999px;
+  padding:0 14px;
+  border:1px solid var(--stroke2);
+  background: rgba(0,0,0,0.25);
+  color:var(--text);
+  font-size:16px;
+  font-weight:800;
   outline:none;
 }
 
 .select:focus{
-  border-color: rgba(25,227,141,0.45);
-  box-shadow: inset 0 0 0 1px rgba(25,227,141,0.25), 0 0 0 3px rgba(25,227,141,0.10);
+  border-color: rgba(0,216,138,0.45);
+  box-shadow: 0 0 0 3px rgba(0,216,138,0.12);
 }
 
-/* Faux dropdown chevron */
-.select{
-  background-image:
-    linear-gradient(45deg, transparent 50%, rgba(233,240,239,0.7) 50%),
-    linear-gradient(135deg, rgba(233,240,239,0.7) 50%, transparent 50%);
-  background-position:
-    calc(100% - 18px) 50%,
-    calc(100% - 12px) 50%;
-  background-size: 7px 7px, 7px 7px;
-  background-repeat: no-repeat;
-}
-
-/* -------------------------------
-   Buttons
--------------------------------- */
 .btnPrimary{
   width:100%;
-  border: none;
-  border-radius: 999px;
-  padding: 16px 18px;
-  font-weight: 950;
-  font-size: 18px;
-  letter-spacing: 0.3px;
-  color: rgba(255,255,255,0.94);
-  background: linear-gradient(180deg,
-    rgba(25,227,141,0.22) 0%,
-    rgba(0,160,70,0.20) 60%,
-    rgba(0,0,0,0.18) 100%);
-  box-shadow:
-    0 10px 28px rgba(0,0,0,0.45),
-    inset 0 0 0 1px rgba(25,227,141,0.22);
-  cursor:pointer;
-  user-select:none;
-  -webkit-tap-highlight-color: transparent;
+  height:52px;
+  border-radius:999px;
+  border:1px solid rgba(255,255,255,0.14);
+  background: linear-gradient(180deg, rgba(0,216,138,0.22), rgba(0,216,138,0.10));
+  color:var(--text);
+  font-weight:900;
+  font-size:18px;
+  letter-spacing:0.02em;
+  box-shadow: 0 10px 26px rgba(0,0,0,0.35);
 }
 
 .btnPrimary:active{
   transform: translateY(1px);
-  opacity:0.96;
 }
 
 .btnStart{
-  width: 100%;
-  margin-top: 18px;
-  border: none;
-  border-radius: 999px;
-  padding: 18px 18px;
-  font-weight: 950;
-  font-size: 20px;
-  letter-spacing: 0.4px;
-  color: rgba(255,255,255,0.92);
-  background: linear-gradient(180deg,
-    rgba(25,227,141,0.18) 0%,
-    rgba(0,160,70,0.18) 70%,
-    rgba(0,0,0,0.22) 100%);
-  box-shadow:
-    0 14px 34px rgba(0,0,0,0.55),
-    inset 0 0 0 1px rgba(25,227,141,0.22);
-  cursor:pointer;
+  width:100%;
+  height:56px;
+  border-radius:999px;
+  border:1px solid rgba(0,216,138,0.35);
+  background: linear-gradient(180deg, rgba(0,216,138,0.26), rgba(0,216,138,0.12));
+  color:var(--text);
+  font-weight:1000;
+  font-size:18px;
+  letter-spacing:0.03em;
+  margin-top:12px;
+  box-shadow: 0 14px 34px rgba(0,0,0,0.45);
 }
 
 .btnStart:active{
   transform: translateY(1px);
-  opacity:0.96;
 }
 
-/* -------------------------------
-   Thumbnail box
--------------------------------- */
+/* Thumbnail */
 .thumbBox{
   width:100%;
-  min-height: 92px;
-  border-radius: 16px;
-  border: 1px solid rgba(255,255,255,0.10);
-  background: rgba(0,0,0,0.28);
+  border-radius:16px;
+  border:1px solid var(--stroke);
+  background: rgba(0,0,0,0.22);
+  padding:10px;
   overflow:hidden;
-  box-shadow: inset 0 0 0 1px rgba(0,0,0,0.35);
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  padding: 10px;
-}
-
-.thumbBox img{
-  width:100%;
-  height:auto;
-  border-radius: 10px;
 }
 
 .thumbEmpty{
-  color: var(--dim);
-  font-weight: 750;
+  color:var(--muted2);
+  font-weight:800;
+  font-size:14px;
+  padding:8px;
 }
 
-/* -------------------------------
-   What happens next
--------------------------------- */
+/* Copy block */
 .bigTitle{
-  margin-top: 10px;
-  font-size: 44px;
-  font-weight: 950;
-  letter-spacing: -0.8px;
-  line-height:1.04;
-}
-
-@media (max-width: 520px){
-  .bigTitle{ font-size: 40px; }
+  font-size:34px;
+  font-weight:1000;
+  margin-top:2px;
 }
 
 .bullets{
-  margin: 10px 0 0 0;
-  padding-left: 20px;
-  color: rgba(233,240,239,0.88);
-  font-weight: 850;
-  font-size: 20px;
-  line-height: 1.5;
+  margin:10px 0 0 0;
+  padding-left:18px;
+  color:var(--text);
+  font-weight:850;
+  font-size:16px;
 }
 
-.bullets li{ margin: 8px 0; }
+.bullets li{
+  margin:10px 0;
+}
 
 /* ============================================================
-   TARGET INTERACTION (CRITICAL)
-   This is the iOS tap/overlay fix.
+   Target / Tap Surface
 ============================================================ */
 
-/* Wrap sits below the card. Hidden until image loads. */
+/* ✅ IMPORTANT: NEVER hide the wrap (no display:none) */
 .targetWrap{
-  width:100%;
-  max-width: 980px;
-  position: relative;
-  display:none; /* JS should show when ready to tap */
-  margin-top: 4px;
+  width:min(980px, 100%);
+  position:relative;
+  display:block;
+  border-radius:22px;
+  border:1px solid var(--stroke);
+  background: rgba(0,0,0,0.18);
+  overflow:hidden;
+  box-shadow: var(--shadow);
 }
 
-/* Ensure image is visible when set */
+/* Image fills wrap */
 #targetImg{
-  width: 100%;
-  height: auto;
-  display: none; /* JS sets to block when loaded */
-  border-radius: 16px;
-  border: 1px solid rgba(255,255,255,0.10);
-  background: rgba(0,0,0,0.35);
-  box-shadow: 0 14px 34px rgba(0,0,0,0.45);
-  user-select: none;
-  -webkit-user-select: none;
-  -webkit-user-drag: none;
-}
-
-/* Canvas sits ABOVE image and captures taps */
-#tapCanvas{
-  position:absolute;
-  inset:0;
-  z-index: 40;
   width:100%;
-  height:100%;
-  pointer-events: auto;
-  touch-action: none;              /* IMPORTANT iOS */
-  -webkit-touch-callout: none;
-  -webkit-user-select: none;
-  background: transparent;
+  height:auto;
+  display:none; /* JS turns on when loaded */
 }
 
-/* Dots layer sits above canvas BUT cannot block taps */
+/* Tap surface */
 #dotsLayer{
   position:absolute;
   inset:0;
-  z-index: 50;
-  pointer-events: none;
-  touch-action: none;
+  z-index:5;
+  pointer-events:auto;   /* ✅ tap capture layer */
+  touch-action:none;     /* ✅ stop safari scroll/zoom stealing taps */
 }
 
-/* ============================================================
-   HUD (Instruction + Tap count)
-============================================================ */
-.hudLeft,
-.hudRight{
-  position: fixed;
-  top: 12px;
-  z-index: 99990;
-  padding: 10px 12px;
-  border-radius: 999px;
-  background: rgba(0,0,0,0.42);
-  border: 1px solid rgba(255,255,255,0.12);
-  box-shadow: 0 10px 24px rgba(0,0,0,0.35);
-  font-weight: 950;
-  color: rgba(233,240,239,0.92);
-  max-width: calc(50vw - 18px);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+/* Canvas exists but is disabled */
+#tapCanvas{
+  position:absolute;
+  inset:0;
+  z-index:4;
+  pointer-events:none;   /* ✅ cannot steal taps */
+  display:none;          /* not needed for current approach */
 }
 
-.hudLeft{ left: 12px; }
-.hudRight{ right: 12px; }
-
-/* Give extra room on super small screens */
-@media (max-width: 420px){
-  .hudLeft,.hudRight{
-    max-width: calc(50vw - 12px);
-    font-size: 13px;
-    padding: 9px 10px;
-  }
+/* HUD */
+.hudLeft, .hudRight{
+  position:fixed;
+  top:12px;
+  z-index:99998;
+  padding:10px 12px;
+  border-radius:999px;
+  border:1px solid rgba(255,255,255,0.14);
+  background: rgba(0,0,0,0.35);
+  backdrop-filter: blur(8px);
+  font-weight:950;
+  font-size:14px;
 }
 
-/* If you ever need the HUD to only show during tap mode,
-   JS can toggle a class on body and you can switch display. */
+.hudLeft{ left:12px; }
+.hudRight{ right:12px; }
