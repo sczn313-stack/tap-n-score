@@ -1,5 +1,5 @@
 /* ============================================================
-   server.js (FULL REPLACEMENT) — Tap-n-Score Backend (v1)
+   server.js (FULL REPLACEMENT) — Tap-n-Score Backend (v1.0.1)
    Purpose:
    - Backend is the ONLY authority for click math + directions.
    - True MOA: 1.047" at 100 yards (scaled by distance).
@@ -8,12 +8,18 @@
        dx > 0 => RIGHT, dx < 0 => LEFT
        dy > 0 => DOWN  (screen-space +y), dy < 0 => UP
    - Output precision: ALWAYS two decimals (strings)
+   Render hardening:
+   - trust proxy enabled (Render sits behind a proxy)
+   - bind to 0.0.0.0
 ============================================================ */
 
 const express = require("express");
 const cors = require("cors");
 
 const app = express();
+
+// Render / proxy hygiene
+app.set("trust proxy", 1);
 
 // ---- Middleware
 app.use(cors({ origin: true }));
@@ -149,12 +155,21 @@ app.post("/api/score", (req, res) => {
       }
     });
   } catch (e) {
-    return res.status(500).json({ ok: false, error: "Server error", detail: String(e?.message || e) });
+    return res.status(500).json({
+      ok: false,
+      error: "Server error",
+      detail: String(e?.message || e)
+    });
   }
 });
 
 // ---- Health check
 app.get("/health", (_req, res) => res.json({ ok: true }));
 
+// Optional: root ping (handy for quick browser check)
+app.get("/", (_req, res) => res.send("Tap-n-Score backend OK"));
+
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Tap-n-Score backend running on :${PORT}`));
+app.listen(PORT, "0.0.0.0", () =>
+  console.log(`Tap-n-Score backend running on :${PORT}`)
+);
