@@ -1,4 +1,83 @@
-/* ============================================================
+/// index.js (ADD THIS BLOCK near the top after your element lookups)
+// This locks the preview to a consistent mini-thumbnail,
+// and fixes iOS “selected but didn’t stick” by storing the File immediately.
+
+(() => {
+  const $ = (id) => document.getElementById(id);
+
+  // --- Existing IDs (you already have these)
+  const elFile = $("photoInput");
+  const elImg = $("targetImg");
+
+  // --- New IDs from the landing page
+  const elPhotoConfirm = $("photoConfirm");
+  const elPhotoThumb = $("photoThumb");
+  const elPhotoStatus = $("photoStatus");
+  const elPromoSlot = $("promoSlot");
+
+  // --- Existing pages (you likely already have)
+  const pageLanding = $("pageLanding");
+  const pageTap = $("pageTap");
+
+  // --- State (if you already have these variables, KEEP YOURS and remove duplicates)
+  let selectedFile = null;
+  let objectUrl = null;
+
+  function setPhotoSelectedUI(file) {
+    // cleanup old object URL
+    if (objectUrl) {
+      URL.revokeObjectURL(objectUrl);
+      objectUrl = null;
+    }
+
+    if (!file) {
+      elPhotoConfirm?.classList.remove("hasPhoto");
+      if (elPhotoThumb) elPhotoThumb.removeAttribute("src");
+      if (elPhotoStatus) elPhotoStatus.textContent = "No photo selected yet.";
+      if (elPromoSlot) elPromoSlot.hidden = true;
+      return;
+    }
+
+    objectUrl = URL.createObjectURL(file);
+
+    // Controlled mini-thumbnail (landing)
+    if (elPhotoThumb) elPhotoThumb.src = objectUrl;
+    if (elPhotoStatus) elPhotoStatus.textContent = "Photo locked ✅";
+    elPhotoConfirm?.classList.add("hasPhoto");
+
+    // OPTIONAL: show promo slot only after a photo is locked
+    if (elPromoSlot) elPromoSlot.hidden = false;
+
+    // If you show the main image on Tap screen, set it here too:
+    if (elImg) elImg.src = objectUrl;
+  }
+
+  // iOS Safari reliability: store the File immediately on change
+  elFile?.addEventListener("change", (e) => {
+    const f = e.target?.files?.[0] || null;
+    selectedFile = f;
+    setPhotoSelectedUI(selectedFile);
+
+    // If your existing flow auto-advances to Tap screen, do it here:
+    // (If you already have a function to navigate, call that instead.)
+    if (selectedFile && pageLanding && pageTap) {
+      pageLanding.hidden = true;
+      pageTap.hidden = false;
+    }
+  });
+
+  // If you have a "Clear / Start Over" action elsewhere, call this:
+  window.__clearSelectedPhoto = function () {
+    selectedFile = null;
+    if (elFile) elFile.value = "";
+    setPhotoSelectedUI(null);
+
+    if (pageLanding && pageTap) {
+      pageTap.hidden = true;
+      pageLanding.hidden = false;
+    }
+  };
+})();* ============================================================
    index.js (FULL REPLACEMENT) — Brick: Reset View + Double-Tap Reset
    Adds:
    - Reset View micro button (not CTA color)
