@@ -1,267 +1,429 @@
 /* ============================================================
-   index.js (FULL REPLACEMENT) — ASSEMBLY BUILD
-   - iOS/iPad picker: label(for=file) => Camera + Library options
-   - Flow:
-       Landing -> Tap (bull then holes) -> SEC page (final)
-   - CTA row + BUY MORE appear ONLY after bull is set
-   - SEC page shows:
-       Session ID + Target Clicks (2 decimals) + Score (big)
+   frontend/index.js (FULL REPLACEMENT) — Tap-n-Score™ Shooter
+   Includes:
+   - Photo pick (iOS-safe)
+   - Tap bull anchor + holes
+   - Call backend /api/score
+   - Render clicks + score
+   - REAL exports:
+       Download SEC (Image) via html2canvas + iOS Share Sheet
+       Download SEC (Text) via blob
 ============================================================ */
 
 (() => {
   const $ = (id) => document.getElementById(id);
 
-  // --- Landing / picker
+  // ---- Elements
+  const elTakeChoose = $("takeChooseBtn");
   const elFile = $("photoInput");
-  const elLanding = $("landingArea");
-
-  // --- Tap page
-  const elWork = $("workArea");
   const elImg = $("targetImg");
   const elWrap = $("targetWrap");
+  const elTapLayer = $("tapLayer");
   const elDots = $("dotsLayer");
+
   const elInstruction = $("instructionLine");
   const elTapCount = $("tapCount");
-  const elCtaRow = $("ctaRow");
-  const elUndo = $("undoBtn");
-  const elClear = $("clearBtn");
+  const elClear = $("clearTapsBtn");
   const elShow = $("showResultsBtn");
-  const elBuyPill = $("buyMorePill");
 
-  // --- SEC page
-  const elSecPage = $("secPage");
-  const elSecUp = $("secUp");
-  const elSecDown = $("secDown");
-  const elSecLeft = $("secLeft");
-  const elSecRight = $("secRight");
-  const elSecScore = $("secScore");
-  const elSecSession = $("secSession");
+  const elDistance = $("distanceYds");
+  const elMoaPerClick = $("moaPerClick");
+  const elW = $("widthIn");
+  const elH = $("heightIn");
 
-  const elSecCurrent = $("secCurrent");
-  const elSecPrev3 = $("secPrev3");
-  const elSecCum = $("secCum");
+  const elSession = $("sessionId");
+  const elUp = $("clickUp");
+  const elDown = $("clickDown");
+  const elLeft = $("clickLeft");
+  const elRight = $("clickRight");
 
-  const elDlImg = $("downloadImgBtn");
-  const elDlTxt = $("downloadTxtBtn");
+  const elScoreBig = $("scoreBig");
+  const elScoreCurrent = $("scoreCurrent");
+  const elScoreCum = $("scoreCum");
 
-  // --- State
+  const elDownloadImg = $("downloadSecImageBtn");
+  const elDownloadText = $("downloadSecTextBtn");
+
+  // ---- State
   let selectedFile = null;
   let objectUrl = null;
 
-  let bull = null;     // {x,y} in wrap pixels
-  let holes = [];      // [{x,y}...]
-  let phase = "idle";  // idle | bull | holes
+  let bull = null;        // {x,y} normalized
+  let holes = [];         // [{x,y} normalized]
+  let lastResult = null;  // backend payload
+  let sessionId = "";
 
-  // Simple score history placeholders
-  let prevScores = [];
-
-  // --- Helpers
-  const clamp01 = (v) => Math.max(0, Math.min(1, v));
-
-  function safeUUID() {
-    if (crypto?.randomUUID) return crypto.randomUUID();
-    // fallback
-    return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
-      const r = (Math.random() * 16) | 0;
-      const v = c === "x" ? r : (r & 0x3) | 0x8;
-      return v.toString(16);
-    });
+  // ---- Backend URL resolution
+  // Priority:
+  // 1) ?api=https://your-backend.onrender.com
+  // 2) localStorage "TNS_API_BASE"
+  // 3) window.API_BASE
+  // 4) same origin (works if frontend+backend are on same host)
+  function getApiBase() {
+    const u = new URL(window.location.href);
+    const qp = u.searchParams.get("api");
+    if (qp && qp.startsWith("http")) {
+      localStorage.setItem("TNS_API_BASE", qp.replace(/\/+$/, ""));
+      return qp.replace(/\/+$/, "");
+    }
+    const ls = localStorage.getItem("TNS_API_BASE");
+    if (ls && ls.startsWith("http")) return ls.replace(/\/+$/, "");
+    if (window.API_BASE && String(window.API_BASE).startsWith("http")) {
+      return String(window.API_BASE).replace(/\/+$/, "");
+    }
+    return ""; // same-origin
   }
 
-  function genSessionId() {
-    return "SEC-" + safeUUID().split("-")[0].toUpperCase() + "-" + safeUUID().split("-")[1].toUpperCase();
+  const API_BASE = getApiBase();
+
+  // ---- Utilities
+  function clampNum(n, fallback = 0) {
+    const x = Number(n);
+    return Number.isFinite(x) ? x : fallback;
   }
 
-  function getLocalPoint(evt, el) {
-    const r = el.getBoundingClientRect();
-    return {
-      x: evt.clientX - r.left,
-      y: evt.clientY - r.top,
-      w: r.width,
-      h: r.height,
-    };
+  function toFixed2(n) {
+    const x = Number(n);
+    return (Number.isFinite(x) ? x : 0).toFixed(2);
   }
 
-  function clearDots() {
-    elDots.innerHTML = "";
+  function setEnabled(el, on) {
+    if (!el) return;
+    el.disabled = !on;
+    el.setAttribute("aria-disabled", (!on).toString());
   }
 
-  function drawDot(x, y, kind = "hole", n = null) {
-    const d = document.createElement("div");
-    d.className = kind === "bull" ? "dot dotBull" : "dot";
-    d.style.left = `${x}px`;
-    d.style.top = `${y}px`;
-    if (n != null) d.textContent = String(n);
-    elDots.appendChild(d);
-  }
-
-  function redrawAll() {
-    clearDots();
-    if (bull) drawDot(bull.x, bull.y, "bull");
-    holes.forEach((p, i) => drawDot(p.x, p.y, "hole", i + 1));
-
-    const tapsTotal = (bull ? 1 : 0) + holes.length;
-    elTapCount.textContent = `Taps: ${tapsTotal}`;
-  }
-
-  function setPhaseBull() {
-    phase = "bull";
+  function resetAll() {
     bull = null;
     holes = [];
-    elInstruction.textContent = "Tap bull’s-eye to center";
-    elCtaRow.hidden = true;      // CTAs appear AFTER bull tap
-    elBuyPill.hidden = true;     // BUY MORE appears AFTER bull tap
-    redrawAll();
+    lastResult = null;
+    sessionId = "";
+
+    elSession.textContent = "—";
+    elUp.textContent = "0.00";
+    elDown.textContent = "0.00";
+    elLeft.textContent = "0.00";
+    elRight.textContent = "0.00";
+    elScoreBig.textContent = "—";
+    elScoreCurrent.textContent = "—";
+    elScoreCum.textContent = "—";
+
+    elTapCount.textContent = "0";
+    elDots.innerHTML = "";
+    setEnabled(elClear, false);
+    setEnabled(elShow, false);
+    setEnabled(elDownloadImg, false);
+    setEnabled(elDownloadText, false);
+    elInstruction.textContent = "Tap the bull to anchor. Then tap your hits. Then press “Show Results”.";
   }
 
-  function setPhaseHoles() {
-    phase = "holes";
-    elInstruction.textContent = "Tap bullet holes to be scored";
-    elCtaRow.hidden = false;
-    elBuyPill.hidden = false;
-  }
-
-  function releaseObjectUrl() {
+  function revokeUrl() {
     if (objectUrl) {
       URL.revokeObjectURL(objectUrl);
       objectUrl = null;
     }
   }
 
-  function avg(arr) {
-    return arr.reduce((a, b) => a + b, 0) / arr.length;
+  function ensureImgLoaded() {
+    return new Promise((resolve, reject) => {
+      if (!elImg.src) return reject(new Error("No image src"));
+      if (elImg.complete && elImg.naturalWidth > 0) return resolve();
+      elImg.onload = () => resolve();
+      elImg.onerror = (e) => reject(e);
+    });
   }
 
-  // --- Picker: DO NOT .click() the input. Label handles it.
-  elFile.removeAttribute("capture");
+  function getLayerRect() {
+    return elTapLayer.getBoundingClientRect();
+  }
 
-  elFile.addEventListener("change", () => {
-    selectedFile = elFile.files?.[0] || null;
-    if (!selectedFile) return;
-
-    releaseObjectUrl();
-    objectUrl = URL.createObjectURL(selectedFile);
-
-    elImg.onload = () => {
-      // Hide landing, show tap page
-      elLanding.hidden = true;
-      elWork.hidden = false;
-      elSecPage.hidden = true;
-
-      setPhaseBull();
-      window.scrollTo(0, 0);
+  function pointToNormalized(clientX, clientY) {
+    const r = getLayerRect();
+    const x = (clientX - r.left) / r.width;
+    const y = (clientY - r.top) / r.height;
+    return {
+      x: Math.max(0, Math.min(1, x)),
+      y: Math.max(0, Math.min(1, y)),
     };
+  }
 
+  function drawDot(norm, kind) {
+    // kind: "bull" | "hole"
+    const r = getLayerRect();
+    const xPx = norm.x * r.width;
+    const yPx = norm.y * r.height;
+
+    const d = document.createElement("div");
+    d.className = `dot ${kind}`;
+    d.style.left = `${xPx}px`;
+    d.style.top = `${yPx}px`;
+    elDots.appendChild(d);
+  }
+
+  function redrawAllDots() {
+    elDots.innerHTML = "";
+    if (bull) drawDot(bull, "bull");
+    holes.forEach((h) => drawDot(h, "hole"));
+  }
+
+  function updateTapUi() {
+    elTapCount.textContent = String(holes.length + (bull ? 1 : 0));
+    setEnabled(elClear, bull !== null || holes.length > 0);
+    setEnabled(elShow, bull !== null && holes.length > 0);
+    if (!bull) {
+      elInstruction.textContent = "Tap the bull to anchor.";
+    } else if (holes.length === 0) {
+      elInstruction.textContent = "Now tap your bullet holes.";
+    } else {
+      elInstruction.textContent = "Press “Show Results” when ready.";
+    }
+  }
+
+  // ---- File picking (iOS-safe)
+  elTakeChoose.addEventListener("click", () => elFile.click());
+
+  elFile.addEventListener("change", async () => {
+    const f = elFile.files && elFile.files[0];
+    if (!f) return;
+
+    resetAll();
+
+    selectedFile = f;
+    revokeUrl();
+    objectUrl = URL.createObjectURL(f);
     elImg.src = objectUrl;
+
+    try {
+      await ensureImgLoaded();
+      // ensure overlay layers match image area
+      setEnabled(elClear, true);
+      elInstruction.textContent = "Tap the bull to anchor.";
+    } catch {
+      alert("Could not load image.");
+    }
   });
 
-  // --- Tap handler
-  elWrap.addEventListener("click", (evt) => {
-    if (phase !== "bull" && phase !== "holes") return;
+  // ---- Tap handling
+  function onTap(ev) {
+    if (!elImg.src) return;
 
-    const pt = getLocalPoint(evt, elWrap);
+    const touch = ev.touches && ev.touches[0];
+    const clientX = touch ? touch.clientX : ev.clientX;
+    const clientY = touch ? touch.clientY : ev.clientY;
 
-    // guard
-    const x = clamp01(pt.x / pt.w) * pt.w;
-    const y = clamp01(pt.y / pt.h) * pt.h;
+    const p = pointToNormalized(clientX, clientY);
 
-    if (phase === "bull") {
-      bull = { x, y };
-      redrawAll();
-      setPhaseHoles();
-      return;
+    if (!bull) {
+      bull = p;
+    } else {
+      holes.push(p);
     }
 
-    holes.push({ x, y });
-    redrawAll();
-  });
+    redrawAllDots();
+    updateTapUi();
+  }
 
-  // --- Undo / Clear
-  elUndo.addEventListener("click", () => {
-    if (phase !== "holes") return;
+  // prevent scroll/zoom on tap layer
+  elTapLayer.addEventListener("touchstart", (e) => {
+    e.preventDefault();
+    onTap(e);
+  }, { passive: false });
 
-    if (holes.length > 0) {
-      holes.pop();
-      redrawAll();
-      return;
-    }
-
-    // If no holes, undo bull puts you back to bull phase
-    if (bull) setPhaseBull();
-  });
+  elTapLayer.addEventListener("click", (e) => onTap(e));
 
   elClear.addEventListener("click", () => {
-    if (phase !== "holes" && phase !== "bull") return;
-    setPhaseBull();
+    bull = null;
+    holes = [];
+    lastResult = null;
+    sessionId = "";
+    redrawAllDots();
+    updateTapUi();
+    setEnabled(elDownloadImg, false);
+    setEnabled(elDownloadText, false);
+    elSession.textContent = "—";
+    elUp.textContent = "0.00";
+    elDown.textContent = "0.00";
+    elLeft.textContent = "0.00";
+    elRight.textContent = "0.00";
+    elScoreBig.textContent = "—";
+    elScoreCurrent.textContent = "—";
+    elScoreCum.textContent = "—";
   });
 
-  // --- Show Results => SEC Page (final)
-  elShow.addEventListener("click", () => {
-    if (!bull || holes.length === 0) return;
+  // ---- API call
+  async function postScore() {
+    const distanceYds = clampNum(elDistance.value, 100);
+    const moaPerClick = clampNum(elMoaPerClick.value, 0.25);
+    const widthIn = clampNum(elW.value, 8.5);
+    const heightIn = clampNum(elH.value, 11);
 
-    // Placeholder until backend: Use bull vs hole-average in wrap pixels
-    const hx = avg(holes.map(h => h.x));
-    const hy = avg(holes.map(h => h.y));
+    const payload = {
+      bull,
+      holes,
+      target: { widthIn, heightIn },
+      distanceYds,
+      moaPerClick
+    };
 
-    const dx = bull.x - hx; // + means holes are LEFT of bull => need LEFT? (placeholder)
-    const dy = bull.y - hy; // screen-space down is +y (placeholder)
+    const url = `${API_BASE}/api/score`;
 
-    // Convert pixels to "click-ish" placeholder so layout works
-    // (Backend will replace this with true inches->MOA->click)
-    const scale = 120; // bigger => smaller numbers
-    const rawX = dx / scale;
-    const rawY = dy / scale;
+    const resp = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
 
-    const up = rawY < 0 ? Math.abs(rawY) : 0;
-    const down = rawY > 0 ? rawY : 0;
-    const left = rawX > 0 ? rawX : 0;
-    const right = rawX < 0 ? Math.abs(rawX) : 0;
+    const data = await resp.json().catch(() => ({}));
+    if (!resp.ok || !data?.ok) {
+      const msg = data?.error || `Request failed (${resp.status})`;
+      throw new Error(msg);
+    }
+    return data;
+  }
 
-    // Score placeholder
-    const miss = Math.abs(rawX) + Math.abs(rawY);
-    const score = Math.max(0, Math.min(100, Math.round(100 - miss * 12)));
+  elShow.addEventListener("click", async () => {
+    try {
+      elShow.textContent = "Working…";
+      setEnabled(elShow, false);
 
-    const sessionId = genSessionId();
+      const data = await postScore();
+      lastResult = data;
+      sessionId = data.sessionId || "";
+      window.__SEC_SESSION_ID__ = sessionId;
 
-    // Track simple history
-    prevScores.unshift(score);
-    prevScores = prevScores.slice(0, 4);
+      // Render
+      elSession.textContent = sessionId || "—";
+      elUp.textContent = data.clicks?.up ?? "0.00";
+      elDown.textContent = data.clicks?.down ?? "0.00";
+      elLeft.textContent = data.clicks?.left ?? "0.00";
+      elRight.textContent = data.clicks?.right ?? "0.00";
 
-    const prev3 = prevScores.slice(1, 4);
-    const cum = Math.round(avg(prevScores));
+      const sc = data.score?.current;
+      elScoreBig.textContent = (sc ?? "—");
+      elScoreCurrent.textContent = (sc ?? "—");
+      elScoreCum.textContent = (sc ?? "—");
 
-    // Inject SEC values (2 decimals ALWAYS)
-    elSecUp.textContent = up.toFixed(2);
-    elSecDown.textContent = down.toFixed(2);
-    elSecLeft.textContent = left.toFixed(2);
-    elSecRight.textContent = right.toFixed(2);
+      setEnabled(elDownloadImg, true);
+      setEnabled(elDownloadText, true);
 
-    elSecScore.textContent = String(score);
-    elSecSession.textContent = sessionId;
-
-    elSecCurrent.textContent = String(score);
-    elSecPrev3.textContent = prev3.length ? prev3.join(", ") : "—";
-    elSecCum.textContent = String(cum);
-
-    // Color-code score
-    elSecScore.classList.remove("scoreGood", "scoreMid", "scoreBad");
-    if (score >= 90) elSecScore.classList.add("scoreGood");
-    else if (score >= 70) elSecScore.classList.add("scoreMid");
-    else elSecScore.classList.add("scoreBad");
-
-    // Switch pages
-    elWork.hidden = true;
-    elSecPage.hidden = false;
-    window.scrollTo(0, 0);
+      elInstruction.textContent = "Results ready. Download your SEC or run another session.";
+    } catch (e) {
+      alert(`Score failed: ${String(e?.message || e)}`);
+      setEnabled(elShow, true);
+    } finally {
+      elShow.textContent = "Show Results";
+      // only re-enable if still valid
+      setEnabled(elShow, bull !== null && holes.length > 0);
+    }
   });
 
-  // --- Download hooks (placeholders for now)
-  elDlImg?.addEventListener("click", () => {
-    alert("Download SEC (Image) — hook ready. Next we wire the actual export.");
+  /* ============================================================
+     REAL EXPORT: SEC Image (PNG)
+     - Captures #secCard only (not the download buttons)
+     - Uses iOS Share Sheet when available
+  ============================================================ */
+  async function exportSecPng() {
+    const card = $("secCard");
+    if (!card) return alert("SEC card container not found (#secCard).");
+    if (!lastResult) return alert("Run “Show Results” first.");
+
+    // Wait for paint (helps iOS)
+    await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+
+    const canvas = await html2canvas(card, {
+      backgroundColor: null,
+      scale: 2,
+      useCORS: true
+    });
+
+    const safe = (window.__SEC_SESSION_ID__ || "SEC").replace(/[^A-Z0-9_-]/gi, "");
+    const filename = `${safe}.png`;
+
+    canvas.toBlob(async (blob) => {
+      if (!blob) return alert("Could not create image blob.");
+
+      const file = new File([blob], filename, { type: "image/png" });
+
+      // Best path on iOS: share sheet
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        try {
+          await navigator.share({ files: [file], title: filename });
+          return;
+        } catch (_) {
+          // user canceled → fall through
+        }
+      }
+
+      // Fallback: download/open
+      const url = URL.createObjectURL(blob);
+
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+
+      // If iOS ignores download attr, user can still open it:
+      // window.open(url, "_blank"); // uncomment if you prefer open instead of download
+
+      setTimeout(() => URL.revokeObjectURL(url), 1500);
+    }, "image/png");
+  }
+
+  elDownloadImg.addEventListener("click", () => {
+    exportSecPng().catch((e) => alert(`Export failed: ${String(e?.message || e)}`));
   });
 
-  elDlTxt?.addEventListener("click", () => {
-    alert("Download SEC (Text) — hook ready. Next we wire the actual export.");
-  });
+  /* ============================================================
+     REAL EXPORT: SEC Text
+  ============================================================ */
+  function exportSecText() {
+    if (!lastResult) return alert("Run “Show Results” first.");
 
+    const s = window.__SEC_SESSION_ID__ || "SEC";
+    const lines = [
+      `Tap-n-Score™ — Shooter Experience Card`,
+      `Session: ${s}`,
+      ``,
+      `Target Clicks`,
+      `Up: ${lastResult.clicks?.up ?? "0.00"}`,
+      `Down: ${lastResult.clicks?.down ?? "0.00"}`,
+      `Left: ${lastResult.clicks?.left ?? "0.00"}`,
+      `Right: ${lastResult.clicks?.right ?? "0.00"}`,
+      ``,
+      `Score: ${lastResult.score?.current ?? "—"}`,
+      ``,
+      `Distance (yds): ${clampNum(elDistance.value, 100)}`,
+      `MOA/Click: ${clampNum(elMoaPerClick.value, 0.25)}`,
+      `Target (in): ${clampNum(elW.value, 8.5)} x ${clampNum(elH.value, 11)}`
+    ];
+
+    const text = lines.join("\n");
+    const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
+
+    const safe = String(s).replace(/[^A-Z0-9_-]/gi, "");
+    const filename = `${safe}.txt`;
+
+    // share if possible
+    const file = new File([blob], filename, { type: "text/plain" });
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      navigator.share({ files: [file], title: filename }).catch(() => {});
+      return;
+    }
+
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1500);
+  }
+
+  elDownloadText.addEventListener("click", exportSecText);
+
+  // ---- Boot
+  resetAll();
 })();
