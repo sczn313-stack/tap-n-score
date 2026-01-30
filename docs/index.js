@@ -1,11 +1,14 @@
 /* ============================================================
-   index.js (FULL REPLACEMENT) — BRICK: Pinch Zoom + Pan (B) FIXED
-   Fixes:
-   - iOS pinch now reliable (no browser fight)
-   - 1-finger: tap works (tap is committed on touchend)
-   - 1-finger: pan engages ONLY after movement threshold OR scale>1
-   - Tap mapping remains correct under transform
-   - NO backend wiring, NO export wiring (hooks only)
+   index.js (FULL REPLACEMENT) — Brick: Reset View + Double-Tap Reset
+   Adds:
+   - Reset View micro button (not CTA color)
+   - Double-tap anywhere on target to reset zoom/pan
+   - Strong tap-guardrails: no accidental dots during pan/pinch
+   Still:
+   - 3-screen flow
+   - bull first → then holes
+   - CTA row appears only after bull tapped
+   - NO backend wiring, NO export wiring
 ============================================================ */
 
 (() => {
@@ -26,6 +29,8 @@
   const elWrap = $("targetWrap");
   const elDots = $("dotsLayer");
   const elTapCount = $("tapCount");
+
+  const btnResetView = $("resetViewBtn");
 
   const elCtaRow = $("ctaRow");
   const btnUndo = $("undoBtn");
@@ -55,8 +60,7 @@
   let phase = "idle";   // idle | bull | holes
 
   // ----------------------------
-  // Zoom/Pan state
-  // Transform BOTH image + dotsLayer identically.
+  // Zoom/Pan state (transform image + dots identically)
   // ----------------------------
   const Z = {
     scale: 1,
@@ -65,7 +69,6 @@
     tx: 0,
     ty: 0,
 
-    // gestures
     isPinching: false,
     isPanning: false,
 
@@ -83,10 +86,18 @@
     touchStartClientY: 0,
     touchStartTx: 0,
     touchStartTy: 0,
-    moved: false
+
+    moved: false,
+
+    // double tap
+    lastTapTime: 0,
+    lastTapX: 0,
+    lastTapY: 0
   };
 
-  const PAN_THRESHOLD = 7; // px
+  const PAN_THRESHOLD = 7;     // px to engage pan
+  const DOUBLE_TAP_MS = 320;   // ms
+  const DOUBLE_TAP_PX = 22;    // px
 
   // ----------------------------
   // Screen control
@@ -112,7 +123,6 @@
     d.style.left = `${p.x * 100}%`;
     d.style.top = `${p.y * 100}%`;
 
-    // visual difference (bull vs holes) without relying on CSS
     d.style.position = "absolute";
     d.style.transform = "translate(-50%, -50%)";
     d.style.width = kind === "bull" ? "18px" : "14px";
@@ -147,7 +157,7 @@
     bull = null;
     holes = [];
     if (elInstruction) elInstruction.textContent = "Tap bull’s-eye to center";
-    if (elCtaRow) elCtaRow.hidden = true; // CTAs hidden until bull tapped
+    if (elCtaRow) elCtaRow.hidden = true;
     setTapCount();
     redrawDots();
   }
@@ -155,7 +165,7 @@
   function setPhaseHoles() {
     phase = "holes";
     if (elInstruction) elInstruction.textContent = "Tap bullet holes to be scored";
-    if (elCtaRow) elCtaRow.hidden = false; // CTAs appear after bull
+    if (elCtaRow) elCtaRow.hidden = false;
   }
 
   // ----------------------------
@@ -169,7 +179,7 @@
   }
 
   // ----------------------------
-  // Zoom/Pan mechanics
+  // Zoom/Pan helpers
   // ----------------------------
   function clamp(v, a, b) {
     return Math.max(a, Math.min(b, v));
@@ -191,7 +201,6 @@
 
     const w = elWrap.clientWidth;
     const h = elWrap.clientHeight;
-
     const scaledW = w * Z.scale;
     const scaledH = h * Z.scale;
 
@@ -208,30 +217,14 @@
     Z.ty = clamp(Z.ty, minTy, 0);
   }
 
-  function setScaleAtPoint(newScale, cx, cy) {
-    const oldScale = Z.scale;
-    newScale = clamp(newScale, Z.minScale, Z.maxScale);
-    if (Math.abs(newScale - oldScale) < 0.0001) return;
-
-    const contentX = (cx - Z.tx) / oldScale;
-    const contentY = (cy - Z.ty) / oldScale;
-
-    Z.scale = newScale;
-    Z.tx = cx - contentX * newScale;
-    Z.ty = cy - contentY * newScale;
-
-    boundsClampTranslate();
-    setTransform();
-  }
-
-  function resetZoom() {
+  function resetView() {
     Z.scale = 1;
     Z.tx = 0;
     Z.ty = 0;
     setTransform();
   }
 
-  // distance / center for pinch
+  // pinch math
   function touchDist(t0, t1) {
     const dx = t1.clientX - t0.clientX;
     const dy = t1.clientY - t0.clientY;
@@ -249,8 +242,8 @@
 
   // ----------------------------
   // Tap mapping under transform
-  // norm = content / wrapSize
   // content = (screen - translate) / scale
+  // norm = content / wrapSize
   // ----------------------------
   function clamp01(v) {
     return Math.max(0, Math.min(1, v));
@@ -271,9 +264,9 @@
   }
 
   // ----------------------------
-  // Tap logic
+  // Dot placement
   // ----------------------------
-  function onTapAt(normPoint) {
+  function placeTap(normPoint) {
     if (phase !== "bull" && phase !== "holes") return;
     if (!elImg || !elImg.src) return;
 
@@ -291,6 +284,23 @@
   }
 
   // ----------------------------
+  // Double tap detection
+  // ----------------------------
+  function isDoubleTap(now, x, y) {
+    const dt = now - Z.lastTapTime;
+    const dx = x - Z.lastTapX;
+    const dy = y - Z.lastTapY;
+    const d = Math.hypot(dx, dy);
+    return dt > 0 && dt <= DOUBLE_TAP_MS && d <= DOUBLE_TAP_PX;
+  }
+
+  function recordTap(now, x, y) {
+    Z.lastTapTime = now;
+    Z.lastTapX = x;
+    Z.lastTapY = y;
+  }
+
+  // ----------------------------
   // File load
   // ----------------------------
   function onFilePicked() {
@@ -302,7 +312,7 @@
 
     elImg.onload = () => {
       showScreen("tap");
-      resetZoom();
+      resetView();
       setPhaseBull();
     };
 
@@ -310,13 +320,12 @@
   }
 
   // ----------------------------
-  // Touch gestures (FIXED)
+  // Touch gestures (tap-guardrails + double tap reset)
   // ----------------------------
   function onTouchStart(e) {
     if (!elImg || !elImg.src) return;
 
     if (e.touches.length === 2) {
-      // Pinch start
       e.preventDefault();
       Z.isPinching = true;
       Z.isPanning = false;
@@ -338,7 +347,6 @@
     }
 
     if (e.touches.length === 1) {
-      // Potential tap OR pan (do NOT preventDefault yet)
       const t = e.touches[0];
       const wp = wrapPointFromClient(t.clientX, t.clientY);
 
@@ -369,7 +377,6 @@
       const ratio = dist / Math.max(1, Z.pinchStartDist);
       const newScale = clamp(Z.pinchStartScale * ratio, Z.minScale, Z.maxScale);
 
-      // keep pinch center fixed based on pinch START state
       const contentX = (Z.pinchCenterX - Z.pinchStartTx) / Z.pinchStartScale;
       const contentY = (Z.pinchCenterY - Z.pinchStartTy) / Z.pinchStartScale;
 
@@ -388,16 +395,15 @@
 
       const dx = wp.x - Z.touchStartX;
       const dy = wp.y - Z.touchStartY;
-
       const movedNow = Math.hypot(dx, dy) > PAN_THRESHOLD;
 
-      // Engage pan if user moved enough OR already zoomed in
+      // Engage pan if moved enough OR already zoomed
       if (!Z.isPanning && (movedNow || Z.scale > 1.0001)) {
         Z.isPanning = true;
       }
 
       if (Z.isPanning) {
-        e.preventDefault(); // only now we stop scroll
+        e.preventDefault();
         Z.moved = true;
 
         Z.tx = Z.touchStartTx + dx;
@@ -412,9 +418,10 @@
   function onTouchEnd(e) {
     if (!elImg || !elImg.src) return;
 
-    // If pinch ended and one finger remains, restart single-finger baseline
+    // If pinch ended and one finger remains, restart baseline
     if (Z.isPinching && e.touches.length === 1) {
       Z.isPinching = false;
+
       const t = e.touches[0];
       const wp = wrapPointFromClient(t.clientX, t.clientY);
 
@@ -431,27 +438,56 @@
       return;
     }
 
-    // All touches ended: if it was NOT a pan/pinch, treat as TAP
+    // All touches ended: if NOT moved and NOT pinching/panning => TAP
     if (e.touches.length === 0) {
       const wasTap = !Z.moved && !Z.isPinching && !Z.isPanning;
 
       Z.isPinching = false;
       Z.isPanning = false;
 
-      if (wasTap) {
-        const p = normFromClient(Z.touchStartClientX, Z.touchStartClientY);
-        onTapAt(p);
+      if (!wasTap) return;
+
+      const now = Date.now();
+      const wp = wrapPointFromClient(Z.touchStartClientX, Z.touchStartClientY);
+
+      // Double tap => reset view (no dot)
+      if (isDoubleTap(now, wp.x, wp.y)) {
+        resetView();
+        // clear history so triple-tap doesn't chain
+        Z.lastTapTime = 0;
+        return;
       }
+
+      recordTap(now, wp.x, wp.y);
+
+      // Single tap => place dot
+      const p = normFromClient(Z.touchStartClientX, Z.touchStartClientY);
+      placeTap(p);
     }
   }
 
-  // Desktop (optional)
+  // Desktop wheel zoom (optional)
   function onWheel(e) {
     if (!elImg || !elImg.src) return;
     e.preventDefault();
+
     const wp = wrapPointFromClient(e.clientX, e.clientY);
     const step = (-e.deltaY) > 0 ? 0.12 : -0.12;
-    setScaleAtPoint(Z.scale + step, wp.x, wp.y);
+
+    // simple zoom around mouse point
+    const oldScale = Z.scale;
+    const newScale = clamp(Z.scale + step, Z.minScale, Z.maxScale);
+    if (Math.abs(newScale - oldScale) < 0.0001) return;
+
+    const contentX = (wp.x - Z.tx) / oldScale;
+    const contentY = (wp.y - Z.ty) / oldScale;
+
+    Z.scale = newScale;
+    Z.tx = wp.x - contentX * newScale;
+    Z.ty = wp.y - contentY * newScale;
+
+    boundsClampTranslate();
+    setTransform();
   }
 
   // ----------------------------
@@ -466,7 +502,6 @@
       redrawDots();
       return;
     }
-
     if (bull) setPhaseBull();
   }
 
@@ -520,17 +555,16 @@
   if (elFile) elFile.addEventListener("change", onFilePicked);
 
   if (elWrap) {
-    // Important: keep interactions inside the frame
     elWrap.style.overflow = "hidden";
 
-    // Touch gestures
     elWrap.addEventListener("touchstart", onTouchStart, { passive: false });
     elWrap.addEventListener("touchmove", onTouchMove, { passive: false });
     elWrap.addEventListener("touchend", onTouchEnd, { passive: false });
 
-    // Desktop wheel zoom
     elWrap.addEventListener("wheel", onWheel, { passive: false });
   }
+
+  if (btnResetView) btnResetView.addEventListener("click", resetView);
 
   if (btnUndo) btnUndo.addEventListener("click", onUndo);
   if (btnClear) btnClear.addEventListener("click", onClear);
@@ -545,6 +579,7 @@
   showScreen("landing");
   if (elTipLine) elTipLine.style.opacity = "0.92";
 
-  resetZoom();
+  resetView();
   setTapCount();
+  redrawDots();
 })();
