@@ -1,316 +1,277 @@
 /* ============================================================
-   frontend_new/styles.css  (FULL REPLACEMENT) — vNATSPACE-LOCK-1
-   Goals:
-   - Clean dark UI
-   - Stable tap surface + dots overlay
-   - iOS-safe tapping (no double-fire)
-   - Responsive layout for phone/tablet
+   frontend_new/styles.css  (FULL REPLACEMENT) — vID-FIRST-1
+   Works even when HTML has minimal classes.
+   Styles:
+   - body / headings / lists
+   - file input, selects
+   - “instruction / steps” block
+   - makes it look like your Tap-n-Score dark UI again
    ============================================================ */
 
-/* ---------- Reset / Base ---------- */
-* { box-sizing: border-box; }
-html, body { height: 100%; }
-body {
-  margin: 0;
-  background: #000;
-  color: #eaeaea;
+:root{
+  --bg: #000;
+  --panel: rgba(18,18,18,0.92);
+  --panel2: rgba(24,24,24,0.92);
+  --border: rgba(255,255,255,0.12);
+  --border2: rgba(255,255,255,0.18);
+  --text: rgba(255,255,255,0.92);
+  --muted: rgba(255,255,255,0.65);
+  --muted2: rgba(255,255,255,0.50);
+  --green: #16d07a;
+  --shadow: 0 18px 50px rgba(0,0,0,0.55);
+  --radius: 18px;
+}
+
+*{ box-sizing:border-box; }
+html,body{ height:100%; }
+body{
+  margin:0;
+  background: var(--bg);
+  color: var(--text);
   font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-img { max-width: 100%; height: auto; display: block; }
+a{ color: var(--green); text-decoration:none; }
+a:hover{ text-decoration:underline; }
 
-button, input, select {
-  font: inherit;
-}
-
-/* ---------- Page shell ---------- */
-.page {
-  min-height: 100vh;
-  padding: 22px 16px 28px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 14px;
-}
-
-.card {
-  width: min(980px, 100%);
-  background: rgba(18, 18, 18, 0.92);
-  border: 1px solid rgba(255,255,255,0.10);
-  border-radius: 18px;
-  box-shadow: 0 18px 50px rgba(0,0,0,0.55);
-  overflow: hidden;
-}
-
-/* ---------- Brand ---------- */
-.brandRow {
-  width: min(980px, 100%);
-  display: flex;
-  justify-content: center;
-  padding: 6px 0 2px;
-}
-
-.brand {
-  letter-spacing: 2px;
-  font-weight: 800;
-  font-size: 34px;
-  line-height: 1.1;
-  color: #fff;
-  text-align: center;
-}
-.brandTap, .brandScore { color: #fff; }
-.brandN { color: #9a9a9a; font-weight: 700; }
-.brandTm { color: #16d07a; font-weight: 900; margin-left: 4px; }
-
-.subBrand {
-  width: min(980px, 100%);
-  text-align: center;
-  color: rgba(255,255,255,0.62);
-  margin-top: -6px;
-  font-weight: 500;
-}
-
-/* ---------- Instruction line ---------- */
-#instructionLine {
-  width: min(980px, 100%);
-  text-align: center;
-  font-size: 18px;
-  font-weight: 700;
-  color: rgba(255,255,255,0.9);
-  padding: 10px 12px;
-}
-
-/* ---------- Target area ---------- */
-.targetCard {
-  padding: 14px;
-}
-
-#targetWrap {
-  position: relative;
-  width: 100%;
-  border-radius: 18px;
-  background: #0b0b0b;
-  border: 1px solid rgba(255,255,255,0.10);
-  overflow: hidden;
-  touch-action: none;            /* CRITICAL for iOS: prevents zoom/scroll stealing taps */
-  -webkit-user-select: none;
-  user-select: none;
-}
-
-/* The actual image */
-#targetImg {
-  width: 100%;
-  height: auto;
-  display: block;
-}
-
-/* Overlay for dots */
-#dotsLayer {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;          /* CRITICAL: overlay never steals taps */
-}
-
-/* Tap dots */
-.tapDot {
-  position: absolute;
-  width: 16px;
-  height: 16px;
-  border-radius: 999px;
-  transform: translate(-50%, -50%);
-  box-shadow:
-    0 0 0 3px rgba(0,0,0,0.35),
-    0 10px 24px rgba(0,0,0,0.45);
-  opacity: 0.98;
-}
-
-/* Anchor dot */
-.dotAnchor {
-  width: 18px;
-  height: 18px;
-  background: rgba(55, 170, 255, 0.95);
-  box-shadow:
-    0 0 0 4px rgba(0,0,0,0.35),
-    0 0 0 2px rgba(255,255,255,0.18) inset,
-    0 12px 26px rgba(0,0,0,0.55);
-}
-
-/* Hit dot */
-.dotHit {
-  background: rgba(255,255,255,0.92);
-  box-shadow:
-    0 0 0 4px rgba(0,0,0,0.35),
-    0 0 0 2px rgba(255,255,255,0.12) inset,
-    0 12px 26px rgba(0,0,0,0.55);
-}
-
-/* Optional: make newest hit pop a little (if you ever add a class) */
-.dotNew {
-  animation: pop 120ms ease-out;
-}
-@keyframes pop {
-  from { transform: translate(-50%, -50%) scale(0.85); }
-  to   { transform: translate(-50%, -50%) scale(1); }
-}
-
-/* ---------- Controls bar ---------- */
-.controlsRow {
-  width: min(980px, 100%);
-  display: flex;
-  gap: 12px;
-  flex-wrap: wrap;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.pill {
-  background: rgba(20,20,20,0.92);
-  border: 1px solid rgba(255,255,255,0.12);
-  border-radius: 18px;
-  padding: 12px 16px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.45);
-}
-
-#tapCountLabel {
-  color: rgba(255,255,255,0.68);
-  font-weight: 700;
-}
-#tapCount {
-  color: #fff;
+h1,h2,h3{
+  margin: 0 0 10px;
   font-weight: 900;
-  font-size: 20px;
+  letter-spacing: 0.6px;
 }
 
-/* ---------- Buttons ---------- */
-.btnRow {
+p{ margin: 8px 0; color: var(--muted); }
+
+/* ---------- Centered app container (works without classes) ---------- */
+main, .page, .container, #app, body > div{
+  width: 100%;
+}
+
+body{
+  padding: 26px 16px 32px;
+}
+
+/* If your HTML has a main wrapper, this catches it */
+main{
   width: min(980px, 100%);
-  display: flex;
-  gap: 12px;
-  flex-wrap: wrap;
-  justify-content: center;
-  padding: 8px 0 2px;
+  margin: 0 auto;
 }
 
-.btn {
-  appearance: none;
-  border: 1px solid rgba(255,255,255,0.14);
-  background: rgba(25,25,25,0.92);
-  color: #fff;
-  padding: 16px 18px;
-  border-radius: 20px;
-  min-width: 140px;
+/* ---------- Brand header text (works with plain text) ---------- */
+.brand, .logo, .title, .headerTitle{
+  text-align:center;
+}
+
+.brandRow, header{
+  width: min(980px, 100%);
+  margin: 0 auto;
+  text-align:center;
+}
+
+/* Generic “Tap-n-Score” look if you’re using plain text lines */
+header h1, header .h1, .tapTitle, .siteTitle{
+  font-size: 34px;
+  font-weight: 950;
+  letter-spacing: 2px;
+}
+
+header h2, header .sub, .tagline{
+  font-size: 16px;
+  color: var(--muted2);
+  margin-top: 4px;
+}
+
+/* ---------- Make the main content look like a card ---------- */
+section, .card, .panel, .box, .content{
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 18px 16px;
+}
+
+/* If your landing page is just text + inputs without a section,
+   we still add spacing and structure */
+main > *{
+  width: 100%;
+  max-width: 980px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* ---------- Inputs (file + selects) ---------- */
+label{
+  display: inline-block;
+  color: var(--muted);
   font-weight: 800;
+  margin: 10px 10px 6px 0;
+}
+
+input[type="file"]{
+  display: inline-block;
+  width: min(520px, 100%);
+  padding: 12px 12px;
+  border-radius: 14px;
+  border: 1px solid var(--border2);
+  background: rgba(14,14,14,0.85);
+  color: var(--muted);
+  box-shadow: 0 12px 28px rgba(0,0,0,0.45);
+  outline: none;
+}
+
+select, input[type="text"], input[type="number"]{
+  padding: 10px 12px;
+  border-radius: 14px;
+  border: 1px solid var(--border2);
+  background: rgba(14,14,14,0.85);
+  color: var(--text);
+  box-shadow: 0 12px 28px rgba(0,0,0,0.45);
+  outline: none;
+}
+
+select:focus, input:focus{
+  border-color: rgba(22,208,122,0.6);
+  box-shadow: 0 0 0 3px rgba(22,208,122,0.18);
+}
+
+/* Help your “Distance / Click” lines look aligned */
+.formRow, .row, .controls, .inputs{
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 12px;
+  align-items: center;
+}
+
+/* In case your IDs exist, we style them directly */
+#photoInput, #imageInput, #fileInput{
+  width: min(520px, 100%);
+}
+
+#distanceYds, #clickValue, #clickUnit, #distanceSelect{
+  min-width: 120px;
+}
+
+/* ---------- “Selected target photo thumbnail” + status text ---------- */
+#thumbLabel, .thumbLabel, .statusTitle{
+  display:inline-block;
+  padding: 6px 10px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: rgba(0,0,0,0.35);
+  color: rgba(255,255,255,0.85);
+  font-weight: 900;
+  margin-top: 12px;
+}
+
+#thumbStatus, .statusLine, .noteLine{
+  color: var(--muted);
+  margin-top: 8px;
+}
+
+/* ---------- Steps list ---------- */
+ul{
+  margin: 10px 0 0;
+  padding-left: 22px;
+  color: rgba(255,255,255,0.85);
+}
+li{
+  margin: 6px 0;
+  color: rgba(255,255,255,0.80);
+  font-weight: 650;
+}
+
+/* ---------- Buttons (generic + common IDs) ---------- */
+button{
+  appearance:none;
+  border: 1px solid var(--border2);
+  background: var(--panel2);
+  color: #fff;
+  padding: 14px 16px;
+  border-radius: 18px;
+  font-weight: 900;
   letter-spacing: 0.3px;
   box-shadow: 0 14px 36px rgba(0,0,0,0.55);
   transition: transform 120ms ease, background 120ms ease, border-color 120ms ease;
 }
 
-.btn:active {
-  transform: translateY(1px) scale(0.99);
-}
-
-.btn:hover {
-  border-color: rgba(255,255,255,0.22);
+button:hover{
+  border-color: rgba(255,255,255,0.26);
   background: rgba(32,32,32,0.95);
 }
-
-.btn:disabled {
+button:active{
+  transform: translateY(1px) scale(0.99);
+}
+button:disabled{
   opacity: 0.45;
   cursor: not-allowed;
   transform: none;
 }
 
-.btnPrimary {
-  border-color: rgba(22, 208, 122, 0.35);
-  background: rgba(22, 208, 122, 0.14);
+/* Primary action (Show Results) if it exists by ID */
+#showResultsBtn, #btnShowResults, #analyzeBtn{
+  border-color: rgba(22,208,122,0.45);
+  background: rgba(22,208,122,0.16);
 }
-.btnPrimary:hover {
-  border-color: rgba(22, 208, 122, 0.55);
-  background: rgba(22, 208, 122, 0.18);
-}
-
-.btnGhost {
-  background: rgba(25,25,25,0.65);
+#showResultsBtn:hover, #btnShowResults:hover, #analyzeBtn:hover{
+  border-color: rgba(22,208,122,0.70);
+  background: rgba(22,208,122,0.20);
 }
 
-/* ---------- Inputs ---------- */
-.inputRow {
-  width: min(980px, 100%);
-  display: flex;
-  gap: 12px;
-  flex-wrap: wrap;
-  justify-content: center;
-  align-items: center;
+/* Secondary/ghost */
+#clearTapsBtn, #btnClear, #undoBtn, #resetBtn{
+  background: rgba(25,25,25,0.70);
 }
 
-.fileInput {
-  width: min(520px, 100%);
-  padding: 14px 14px;
-  border-radius: 16px;
-  background: rgba(18,18,18,0.92);
-  border: 1px solid rgba(255,255,255,0.14);
-  color: rgba(255,255,255,0.88);
+/* ---------- Target tap surface (if you’re on the tap screen) ---------- */
+#targetWrap{
+  position: relative;
+  width: 100%;
+  border-radius: var(--radius);
+  background: #0b0b0b;
+  border: 1px solid var(--border);
+  overflow: hidden;
+  touch-action: none;  /* iOS tap stability */
+  user-select: none;
+  -webkit-user-select: none;
 }
 
-.selectInput, .textInput {
-  padding: 12px 14px;
-  border-radius: 14px;
-  background: rgba(18,18,18,0.92);
-  border: 1px solid rgba(255,255,255,0.14);
-  color: rgba(255,255,255,0.92);
+#targetImg{
+  width: 100%;
+  height: auto;
+  display:block;
 }
 
-/* ---------- SEC (results) area (if you render it here) ---------- */
-.secCard {
-  padding: 14px;
+#dotsLayer{
+  position:absolute;
+  inset:0;
+  pointer-events:none;
 }
 
-.secTitle {
-  font-size: 22px;
-  font-weight: 900;
-  margin: 0 0 10px;
+.tapDot{
+  position:absolute;
+  width:16px;
+  height:16px;
+  border-radius:999px;
+  transform: translate(-50%,-50%);
+  box-shadow: 0 0 0 3px rgba(0,0,0,0.35), 0 10px 24px rgba(0,0,0,0.45);
+  opacity:0.98;
+}
+.dotAnchor{
+  width:18px;
+  height:18px;
+  background: rgba(55,170,255,0.95);
+  box-shadow: 0 0 0 4px rgba(0,0,0,0.35), 0 0 0 2px rgba(255,255,255,0.18) inset, 0 12px 26px rgba(0,0,0,0.55);
+}
+.dotHit{
+  background: rgba(255,255,255,0.92);
+  box-shadow: 0 0 0 4px rgba(0,0,0,0.35), 0 0 0 2px rgba(255,255,255,0.12) inset, 0 12px 26px rgba(0,0,0,0.55);
 }
 
-.grid2 {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
-}
-
-.tile {
-  background: rgba(20,20,20,0.92);
-  border: 1px solid rgba(255,255,255,0.12);
-  border-radius: 16px;
-  padding: 14px;
-}
-
-.tileLabel {
-  color: rgba(255,255,255,0.65);
-  font-weight: 800;
-  margin-bottom: 6px;
-}
-.tileValue {
-  font-size: 34px;
-  font-weight: 900;
-  color: #fff;
-}
-
-/* ---------- Mobile tweaks ---------- */
-@media (max-width: 520px) {
-  .brand { font-size: 28px; }
-  #instructionLine { font-size: 16px; }
-  .btn { width: 100%; min-width: 0; }
-  .grid2 { grid-template-columns: 1fr; }
-}
-
-/* ---------- Accessibility ---------- */
-:focus-visible {
-  outline: 2px solid rgba(22, 208, 122, 0.75);
-  outline-offset: 2px;
-  border-radius: 12px;
+/* ---------- Mobile ---------- */
+@media (max-width: 520px){
+  header h1, header .h1, .tapTitle, .siteTitle{ font-size: 28px; }
+  button{ width: 100%; }
+  input[type="file"]{ width: 100%; }
 }
