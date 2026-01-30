@@ -1,300 +1,340 @@
 :root{
-  --bg0:#05070b;
-  --bg1:#071022;
-  --panel: rgba(255,255,255,0.06);
-  --panel2: rgba(255,255,255,0.05);
-  --line: rgba(255,255,255,0.10);
-  --text:#e9eef8;
-  --muted: rgba(233,238,248,0.72);
-  --red:#d31722;
-  --red2:#b30f19;
-  --blue:#2d7dff;
-  --gold:#f5c248;
-  --radius: 26px;
+  --bg0:#000;
+  --bg1:#05070b;
+
+  --card:rgba(255,255,255,0.06);
+  --stroke:rgba(255,255,255,0.14);
+
+  --text:rgba(255,255,255,0.92);
+  --muted:rgba(255,255,255,0.70);
+
+  --cta:#d61f2c;          /* ONE CTA COLOR */
+  --ctaText:#fff;
+
+  --shadow:0 14px 40px rgba(0,0,0,0.45);
+  --radius:18px;
+  --radius2:22px;
+
+  --maxw:980px;
+  --pad:18px;
 }
 
-*{ box-sizing: border-box; }
-html,body{ height:100%; }
-body{
+*{ box-sizing:border-box; }
+html,body{
+  height:100%;
   margin:0;
-  font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-  color: var(--text);
-  background: radial-gradient(1200px 800px at 50% -10%, #11336b 0%, #071022 40%, #05070b 100%);
+  background:radial-gradient(1200px 900px at 40% 30%, #0b1830 0%, #000 60%);
+  color:var(--text);
+  font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;
 }
+button,input,label{ font-family:inherit; }
+button{ -webkit-tap-highlight-color:transparent; }
+a{ color:inherit; }
 
+/* Page wrapper */
 .page{
-  width: min(860px, 94vw);
-  margin: 0 auto;
-  padding: 22px 0 40px;
+  width:100%;
+  max-width:var(--maxw);
+  margin:0 auto;
+  padding:calc(var(--pad) + env(safe-area-inset-top)) var(--pad) calc(var(--pad) + env(safe-area-inset-bottom));
 }
 
-.topBrand{
-  padding: 6px 4px 10px;
-}
+/* -------------------------------------------------------
+   BRAND (top)
+-------------------------------------------------------- */
+.topBrand{ padding-top:10px; }
 
 .brandLine{
-  font-size: 44px;
-  font-weight: 900;
-  letter-spacing: 0.5px;
-  line-height: 1.0;
+  font-weight:950;
+  letter-spacing:1px;
+  font-size:42px;
+  line-height:1.0;
 }
-.brandTap{ color: var(--red); }
-.brandScore{ color: var(--blue); }
-.brandN, .brandDash{ color: rgba(233,238,248,0.9); }
-.brandTm{ font-size: 20px; vertical-align: super; margin-left: 2px; opacity: 0.85; }
-
+.brandTap{ color:#ff2a2a; }
+.brandScore{ color:#2f7bff; }
+.brandDash, .brandN{ color:#fff; opacity:0.95; }
+.brandTm{
+  font-size:18px;
+  vertical-align:top;
+  margin-left:4px;
+  opacity:0.9;
+}
 .brandSub{
-  margin-top: 6px;
-  font-size: 20px;
-  opacity: 0.75;
-  font-weight: 600;
+  margin-top:6px;
+  font-size:20px;
+  color:var(--muted);
+  font-weight:750;
 }
 
+/* -------------------------------------------------------
+   SCREEN 1 — LANDING
+-------------------------------------------------------- */
 .hero{
-  margin-top: 10px;
+  margin-top:62px;
   display:flex;
-  flex-direction: column;
-  gap: 12px;
+  flex-direction:column;
+  align-items:center;
+  gap:18px;
 }
 
+/* Big picker button (label) */
 .photoPickBtn{
-  display:block;
-  width: 100%;
+  display:inline-flex;
+  justify-content:center;
+  align-items:center;
   text-align:center;
-  padding: 18px 16px;
-  border-radius: 40px;
-  background: linear-gradient(180deg, var(--red) 0%, var(--red2) 100%);
-  color: #fff;
-  font-size: 26px;
-  font-weight: 900;
-  border: none;
-  box-shadow: 0 18px 50px rgba(0,0,0,0.45);
-  cursor: pointer;
+
+  border:none;
+  border-radius:24px;
+  padding:18px 22px;
+  font-size:22px;
+  font-weight:900;
+
+  background:var(--cta);
+  color:var(--ctaText);
+  cursor:pointer;
+  box-shadow:var(--shadow);
+
+  min-width:min(520px, 90vw);
   user-select:none;
 }
 
 #photoInput{
-  position: absolute;
-  left: -9999px;
-  width: 1px;
-  height: 1px;
+  /* keep it present but visually clean */
+  width:min(520px, 90vw);
+  max-width:520px;
+  opacity:0;
+  height:1px;
+  margin:0;
+  pointer-events:none;
 }
 
 .tipLine{
+  font-size:24px;
+  font-weight:850;
+  color:rgba(255,255,255,0.88);
   text-align:center;
-  font-size: 32px;
-  font-weight: 800;
-  color: rgba(233,238,248,0.92);
-  text-shadow: 0 10px 40px rgba(0,0,0,0.6);
+  max-width:680px;
+  line-height:1.25;
+}
+
+/* -------------------------------------------------------
+   SCREEN 2 — TAP
+-------------------------------------------------------- */
+.instructionLine{
+  margin-top:10px;
+  font-size:20px;
+  font-weight:900;
+  color:rgba(255,255,255,0.92);
 }
 
 .targetStage{
-  margin-top: 18px;
-  padding: 0 4px;
+  margin-top:10px;
 }
 
 .targetWrap{
-  position: relative;
-  width: 100%;
-  border-radius: var(--radius);
-  overflow: hidden;
-  background: rgba(0,0,0,0.25);
-  border: 1px solid var(--line);
-  min-height: 180px;
+  position:relative;
+  border-radius:var(--radius2);
+  border:1px solid var(--stroke);
+  background:rgba(0,0,0,0.35);
+  overflow:hidden;
+  box-shadow:var(--shadow);
+
+  height:min(62vh, 620px);
 }
 
 .targetImg{
-  width: 100%;
-  display: block;
-  max-height: 520px;
-  object-fit: contain;
-  background: rgba(0,0,0,0.2);
+  position:absolute;
+  inset:0;
+  width:100%;
+  height:100%;
+  object-fit:contain;
+
+  transform-origin:0 0;
+  touch-action:none; /* we handle pinch/pan */
 }
 
 .dotsLayer{
   position:absolute;
   inset:0;
-  pointer-events: none;
+  pointer-events:none;
+
+  transform-origin:0 0;
 }
 
-.dot{
-  position:absolute;
-  width: 14px;
-  height: 14px;
-  border-radius: 999px;
-  border: 2px solid rgba(255,255,255,0.85);
-  background: rgba(255,255,255,0.15);
-  transform: translate(-50%, -50%);
-  box-shadow: 0 10px 25px rgba(0,0,0,0.45);
-}
-
+/* Mini row under the target */
 .miniRow{
   display:flex;
+  justify-content:space-between;
   align-items:center;
-  justify-content: space-between;
-  gap: 10px;
-  margin-top: 10px;
+  gap:12px;
+  margin-top:12px;
 }
 
 .miniPill{
-  padding: 10px 14px;
-  border-radius: 999px;
-  background: var(--panel);
-  border: 1px solid var(--line);
-  font-weight: 800;
-  color: rgba(233,238,248,0.9);
+  border:1px solid var(--stroke);
+  background:rgba(255,255,255,0.06);
+  color:rgba(255,255,255,0.92);
+  border-radius:999px;
+  padding:10px 14px;
+  font-weight:900;
+  letter-spacing:0.4px;
 }
 
+/* Micro button (NOT CTA color) */
 .miniBtn{
-  padding: 10px 14px;
-  border-radius: 999px;
-  background: rgba(255,255,255,0.08);
-  border: 1px solid var(--line);
-  color: rgba(233,238,248,0.9);
-  font-weight: 800;
+  border:1px solid rgba(255,255,255,0.18);
+  background:rgba(255,255,255,0.06);
+  color:rgba(255,255,255,0.92);
+  border-radius:999px;
+  padding:10px 14px;
+  font-weight:900;
+  letter-spacing:0.3px;
+  cursor:pointer;
+}
+.miniBtn:active{ transform:translateY(1px); }
+
+/* -------------------------------------------------------
+   CTA BUTTONS (ONE COLOR, SAME SIZE)
+   Used on Tap (Undo/Clear/Show Results) and SEC actions.
+-------------------------------------------------------- */
+.secActions{
+  display:flex;
+  justify-content:center;
+  gap:14px;
+  margin-top:16px;
+  flex-wrap:wrap;
 }
 
-.instructionLine{
-  margin: 12px 2px 10px;
-  font-size: 16px;
-  color: rgba(233,238,248,0.75);
-  font-weight: 700;
+.ctaBtn{
+  border:none;
+  border-radius:18px;
+  padding:14px 18px;
+  font-size:20px;
+  font-weight:950;
+  cursor:pointer;
+  box-shadow:var(--shadow);
+
+  background:var(--cta);
+  color:var(--ctaText);
+
+  min-width:min(360px, 90vw);
+  text-align:center;
+}
+.ctaBtn:active{ transform:translateY(1px); }
+.ctaBtn:disabled{ opacity:0.55; cursor:not-allowed; }
+
+/* On Tap screen, we want 3 CTAs to fit comfortably */
+#ctaRow .ctaBtn{
+  min-width:min(260px, 44vw);
 }
 
-.seeResultsBtn{
-  width: 100%;
-  padding: 16px 14px;
-  border-radius: 20px;
-  background: rgba(255,255,255,0.10);
-  border: 1px solid var(--line);
-  color: rgba(233,238,248,0.95);
-  font-size: 18px;
-  font-weight: 900;
-}
-
+/* -------------------------------------------------------
+   SCREEN 3 — SEC
+-------------------------------------------------------- */
 .secCard{
-  margin-top: 22px;
-  padding: 18px 16px 18px;
-  border-radius: 28px;
-  background: rgba(0,0,0,0.22);
-  border: 1px solid rgba(255,255,255,0.10);
-  box-shadow: 0 18px 70px rgba(0,0,0,0.55);
+  margin-top:14px;
 }
 
 .secTopRow{
   display:flex;
+  justify-content:space-between;
   align-items:flex-start;
-  justify-content: space-between;
-  gap: 14px;
-  margin-bottom: 12px;
+  gap:14px;
+  margin-bottom:14px;
 }
 
 .secTitle{
-  font-size: 34px;
-  font-weight: 900;
-  line-height: 1.05;
+  font-size:28px;
+  font-weight:1000;
+  letter-spacing:0.4px;
+  line-height:1.0;
 }
-
-.secRed{ color: var(--red); }
-
+.secRed{ color:#ff2a2a; }
 .secSession{
-  margin-top: 6px;
-  font-size: 16px;
-  font-weight: 700;
-  color: rgba(233,238,248,0.7);
+  margin-top:8px;
+  font-size:14px;
+  font-weight:850;
+  opacity:0.9;
 }
 
 .buyMoreBtn{
-  padding: 12px 14px;
-  border-radius: 999px;
-  background: rgba(255,255,255,0.06);
-  border: 1px solid var(--line);
-  color: rgba(233,238,248,0.9);
-  font-weight: 900;
-  line-height: 1.05;
-  min-width: 190px;
+  border:1px solid var(--stroke);
+  background:rgba(255,255,255,0.06);
+  color:rgba(255,255,255,0.95);
+  border-radius:18px;
+  padding:12px 14px;
+  font-weight:950;
+  cursor:pointer;
+  box-shadow:var(--shadow);
+  text-align:center;
+  min-width:170px;
 }
-
-.buyMoreBlue{ color: var(--blue); }
+.buyMoreBlue{ color:#2f7bff; }
+.buyMoreBtn:active{ transform:translateY(1px); }
 
 .secBox{
-  margin-top: 14px;
-  padding: 16px 16px;
-  border-radius: 22px;
-  background: rgba(255,255,255,0.05);
-  border: 1px solid rgba(255,255,255,0.09);
+  border:1px solid var(--stroke);
+  background:var(--card);
+  border-radius:var(--radius2);
+  padding:16px;
+  box-shadow:var(--shadow);
+  margin-top:14px;
 }
 
 .secBoxTitle{
-  font-size: 20px;
-  font-weight: 900;
-  margin-bottom: 12px;
-  color: rgba(233,238,248,0.9);
+  font-weight:950;
+  opacity:0.92;
+  margin-bottom:12px;
+  letter-spacing:0.3px;
 }
 
+/* Clicks grid */
 .clickGrid{
   display:grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 16px 18px;
+  grid-template-columns:1fr 1fr;
+  gap:12px;
+}
+
+.clickCell{
+  border:1px solid rgba(255,255,255,0.10);
+  background:rgba(0,0,0,0.18);
+  border-radius:16px;
+  padding:12px 12px;
 }
 
 .clickLabel{
-  font-size: 16px;
-  color: rgba(233,238,248,0.65);
-  font-weight: 800;
+  font-size:14px;
+  opacity:0.85;
+  font-weight:900;
 }
-
 .clickValue{
-  font-size: 44px;
-  font-weight: 950;
-  letter-spacing: 0.5px;
-  color: rgba(233,238,248,0.92);
+  font-size:26px;
+  font-weight:1000;
+  margin-top:4px;
 }
 
+/* Score */
 .scoreBig{
-  font-size: 110px;
-  font-weight: 950;
-  color: var(--gold);
-  line-height: 0.9;
-  margin-top: 6px;
+  font-size:86px;
+  line-height:0.95;
+  font-weight:1100;
+  margin:4px 0 10px;
 }
 
 .scoreLines{
-  margin-top: 14px;
-  font-size: 20px;
-  color: rgba(233,238,248,0.70);
-  font-weight: 800;
+  font-size:16px;
+  opacity:0.92;
   display:flex;
-  flex-direction: column;
-  gap: 6px;
+  flex-direction:column;
+  gap:6px;
 }
 
-/* ✅ Two big CTA buttons side-by-side */
-.secActions{
-  margin-top: 18px;
-  display:flex;
-  gap: 14px;
-  width: 100%;
-  align-items: stretch;
-}
-
-.ctaBtn{
-  flex: 1;
-  width: 50%;
-  padding: 18px 14px;
-  border-radius: 26px;
-  background: linear-gradient(180deg, var(--red) 0%, var(--red2) 100%);
-  color:#fff;
-  font-size: 22px;
-  font-weight: 950;
-  border: none;
-  box-shadow: 0 18px 55px rgba(0,0,0,0.45);
-}
-
-/* If phone gets too narrow, stack them */
-@media (max-width: 420px){
-  .brandLine{ font-size: 38px; }
-  .tipLine{ font-size: 26px; }
-  .secActions{ flex-direction: column; }
-  .ctaBtn{ width: 100%; }
+/* -------------------------------------------------------
+   RESPONSIVE
+-------------------------------------------------------- */
+@media (max-width: 860px){
+  .brandLine{ font-size:40px; }
+  .tipLine{ font-size:22px; }
+  .scoreBig{ font-size:78px; }
 }
