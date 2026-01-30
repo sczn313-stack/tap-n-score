@@ -1,493 +1,375 @@
 /* ============================================================
-   styles.css (FULL REPLACEMENT) — Tap-n-Score™ / SCZN3
+   styles.css (FULL REPLACEMENT) — Tap-n-Score™
    Goals:
-   - Clean dark UI
-   - Mobile-first, iPad-friendly
-   - Predictable spacing + no “fighting” layout
-   - Safe tap overlay stacking (targetWrap / dotsLayer)
+   - Clean dark “glass” UI
+   - iPad/iPhone friendly sizing
+   - Bulletproof tap layer stacking (no dead taps)
+   - Works with IDs/classes we’ve been using:
+     #targetWrap #targetImg #tapCanvas #dotsLayer
+     .card .btn .btnPrimary .btnGhost etc.
 ============================================================ */
 
-/* ---------- Theme ---------- */
-:root{
-  --bg: #000;
-  --panel: rgba(255,255,255,0.06);
-  --panel2: rgba(255,255,255,0.08);
-  --stroke: rgba(255,255,255,0.10);
-  --stroke2: rgba(255,255,255,0.16);
-
-  --text: rgba(255,255,255,0.92);
-  --muted: rgba(255,255,255,0.70);
-  --muted2: rgba(255,255,255,0.55);
-
-  --good: #20d07a;   /* green accent */
-  --blue: #4aa3ff;
-  --warn: #ffcc66;
-  --bad: #ff4d4d;
-
-  --radius: 22px;
-  --radiusSm: 14px;
-
-  --shadow: 0 18px 50px rgba(0,0,0,0.55);
-  --shadow2: 0 10px 30px rgba(0,0,0,0.45);
-
-  --pad: 16px;
-  --padLg: 22px;
-
-  --max: 980px;
-  --maxTap: 920px;
-
-  --font: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-}
-
-/* ---------- Base ---------- */
-*{ box-sizing: border-box; }
-html, body{ height: 100%; }
-body{
+/* ---------- Reset / Base ---------- */
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body {
   margin: 0;
-  background: radial-gradient(1200px 800px at 50% -20%, rgba(32,208,122,0.15), transparent 55%),
-              radial-gradient(900px 700px at 15% 0%, rgba(74,163,255,0.12), transparent 55%),
-              #000;
-  color: var(--text);
-  font-family: var(--font);
+  background: radial-gradient(1200px 800px at 30% 20%, #0e1a18 0%, #070b0b 45%, #000 100%);
+  color: #e9eef0;
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
 }
 
-a{ color: var(--blue); text-decoration: none; }
-a:hover{ text-decoration: underline; }
+a { color: #7fe0c6; text-decoration: none; }
+a:hover { text-decoration: underline; }
 
-img{
-  max-width: 100%;
-  height: auto;
-  display: block;
+/* Prevent iOS “double tap zoom” headaches */
+.page, #targetWrap, #tapCanvas, #dotsLayer {
+  touch-action: manipulation;
 }
 
-button, input, select{
-  font-family: var(--font);
-}
-
-/* ---------- Page Layout ---------- */
-.page{
-  min-height: 100vh;
-  padding: 22px 14px 40px;
+/* ---------- Layout ---------- */
+.page {
+  min-height: 100%;
   display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 14px;
+  justify-content: center;
+  padding: 28px 16px 48px;
+}
+
+.container {
+  width: min(980px, 100%);
 }
 
 /* ---------- Brand ---------- */
-.brandRow{
-  width: 100%;
-  max-width: var(--max);
-  display: flex;
-  justify-content: center;
-  padding-top: 4px;
-}
-
-.brand{
-  display: inline-flex;
-  align-items: baseline;
-  gap: 6px;
-  letter-spacing: 0.5px;
-  user-select: none;
-}
-
-.brandTap, .brandN, .brandScore{
-  font-weight: 900;
-  font-size: 30px;
-  line-height: 1;
-}
-.brandTap{ color: rgba(255,255,255,0.95); }
-.brandN{ color: rgba(255,255,255,0.72); }
-.brandScore{ color: rgba(255,255,255,0.95); }
-.brandTm{
-  font-weight: 900;
-  font-size: 20px;
-  color: var(--good);
-  margin-left: 2px;
-  transform: translateY(-2px);
-}
-
-.subtitle{
-  margin-top: 6px;
+.brandHeader {
   text-align: center;
-  color: var(--muted);
-  font-size: 16px;
+  margin: 8px 0 18px;
 }
 
-/* ---------- Card / Panel ---------- */
-.card{
-  width: 100%;
-  max-width: var(--max);
-  background: linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.05));
-  border: 1px solid var(--stroke);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow);
-  padding: var(--padLg);
+.brandTitle {
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  font-size: clamp(28px, 3.6vw, 44px);
+  margin: 0;
 }
 
-.cardTitle{
-  font-size: 22px;
-  font-weight: 800;
+.brandTitle .tm {
+  color: #2fe6a6;
+  font-weight: 900;
+  letter-spacing: 0;
+  margin-left: 2px;
+}
+
+.brandSub {
+  margin: 6px 0 0;
+  opacity: 0.85;
+  font-size: clamp(16px, 2vw, 20px);
+}
+
+/* ---------- Cards / Surfaces ---------- */
+.card {
+  background: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.03));
+  border: 1px solid rgba(255,255,255,0.10);
+  border-radius: 28px;
+  padding: 22px 22px;
+  box-shadow:
+    0 18px 50px rgba(0,0,0,0.55),
+    inset 0 1px 0 rgba(255,255,255,0.05);
+  backdrop-filter: blur(10px);
+}
+
+.card + .card { margin-top: 18px; }
+
+.sectionTitle {
+  font-size: clamp(20px, 2.4vw, 28px);
   margin: 0 0 10px;
+  letter-spacing: 0.02em;
 }
 
-.hr{
-  height: 1px;
-  background: var(--stroke);
-  margin: 16px 0;
-  border-radius: 1px;
-}
+.muted { opacity: 0.78; }
+.small { font-size: 0.95rem; opacity: 0.85; }
 
-/* ---------- Form (Landing) ---------- */
-.formGrid{
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 12px;
-}
-
-.label{
-  color: var(--muted);
-  font-size: 14px;
-  margin-bottom: 6px;
-}
-
-.help{
-  color: var(--muted2);
-  font-size: 14px;
-  line-height: 1.35;
-}
-
-.row{
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 12px;
-}
-
-/* Wrap file input so it behaves like a “pill” and doesn’t overflow on iPad */
-.fileWrap{
-  width: 100%;
+/* ---------- Inputs ---------- */
+.row {
   display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 10px;
-  background: rgba(255,255,255,0.06);
-  border: 1px solid var(--stroke);
+}
+
+.field {
+  display: grid;
+  gap: 6px;
+  min-width: 220px;
+  flex: 1;
+}
+
+label {
+  font-weight: 700;
+  opacity: 0.85;
+}
+
+select, input[type="text"], input[type="number"] {
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(0,0,0,0.35);
+  color: #e9eef0;
+  outline: none;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
+}
+
+select:focus, input:focus {
+  border-color: rgba(47,230,166,0.55);
+  box-shadow: 0 0 0 3px rgba(47,230,166,0.18);
+}
+
+/* File input “pill” */
+.fileRow {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+  width: 100%;
+}
+
+input[type="file"] {
+  color: rgba(233,238,240,0.85);
+  background: rgba(0,0,0,0.35);
+  border: 1px solid rgba(255,255,255,0.12);
   border-radius: 999px;
   padding: 10px 12px;
-  overflow: hidden;               /* stops “fighting”/spill */
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
 }
 
-.fileWrap input[type="file"]{
-  width: 100%;
-  max-width: 100%;
-  color: var(--muted);
-  font-size: 14px;
-}
-
-/* iOS file control can look tiny—give it space */
-input[type="file"]::-webkit-file-upload-button{
-  appearance: none;
-  border: 1px solid var(--stroke2);
+/* iOS Safari “Choose File” spacing */
+input[type="file"]::-webkit-file-upload-button {
+  border: 1px solid rgba(255,255,255,0.16);
   background: rgba(255,255,255,0.08);
-  color: rgba(255,255,255,0.92);
+  color: #e9eef0;
   border-radius: 999px;
   padding: 8px 12px;
   margin-right: 10px;
-  font-weight: 700;
+  cursor: pointer;
 }
-
-select, .pillInput{
-  width: 100%;
-  background: rgba(255,255,255,0.06);
-  border: 1px solid var(--stroke);
-  color: rgba(255,255,255,0.92);
-  border-radius: 999px;
-  padding: 12px 14px;
-  font-size: 16px;
-  outline: none;
+input[type="file"]::-webkit-file-upload-button:hover {
+  background: rgba(255,255,255,0.12);
 }
-
-select:focus, .pillInput:focus, .fileWrap:focus-within{
-  border-color: rgba(32,208,122,0.40);
-  box-shadow: 0 0 0 3px rgba(32,208,122,0.18);
-}
-
-.previewBox{
-  width: 100%;
-  border-radius: var(--radiusSm);
-  border: 1px solid var(--stroke);
-  background: rgba(0,0,0,0.22);
-  padding: 12px;
-  color: var(--muted);
-  min-height: 64px;
-}
-
-.previewImg{
-  width: 100%;
-  max-height: 280px;
-  object-fit: contain;
-  border-radius: 16px;
-  border: 1px solid var(--stroke);
-  background: rgba(0,0,0,0.35);
-}
-
-.bullets{
-  margin: 10px 0 0;
-  padding-left: 18px;
-  color: var(--muted);
-  line-height: 1.55;
-}
-
-.bullets li{ margin: 6px 0; }
 
 /* ---------- Buttons ---------- */
-.btn{
-  border: 1px solid var(--stroke2);
-  background: rgba(255,255,255,0.08);
-  color: rgba(255,255,255,0.92);
+.btn {
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.06);
+  color: #e9eef0;
   border-radius: 999px;
   padding: 14px 18px;
   font-weight: 800;
-  font-size: 16px;
+  letter-spacing: 0.02em;
   cursor: pointer;
-  box-shadow: var(--shadow2);
-  transition: transform 120ms ease, background 120ms ease, border-color 120ms ease;
+  box-shadow:
+    0 10px 24px rgba(0,0,0,0.35),
+    inset 0 1px 0 rgba(255,255,255,0.05);
+  transition: transform 0.06s ease, background 0.15s ease, border-color 0.15s ease;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
 }
 
-.btn:hover{
-  background: rgba(255,255,255,0.10);
-  border-color: rgba(255,255,255,0.22);
-  transform: translateY(-1px);
+.btn:active { transform: translateY(1px) scale(0.99); }
+.btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  transform: none;
 }
 
-.btn:active{ transform: translateY(0px); }
-
-.btnPrimary{
-  border-color: rgba(32,208,122,0.35);
-  background: linear-gradient(180deg, rgba(32,208,122,0.22), rgba(32,208,122,0.12));
+.btnPrimary {
+  background: linear-gradient(180deg, rgba(47,230,166,0.22), rgba(16,120,85,0.22));
+  border-color: rgba(47,230,166,0.35);
 }
+.btnPrimary:hover { border-color: rgba(47,230,166,0.55); }
 
-.btnPrimary:hover{
-  background: linear-gradient(180deg, rgba(32,208,122,0.28), rgba(32,208,122,0.14));
-}
-
-.btnWide{
+.btnWide {
   width: 100%;
-  max-width: 520px;
+  padding: 16px 18px;
+  font-size: 1.02rem;
 }
 
-.btnRow{
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 12px;
+.btnGhost {
+  background: rgba(0,0,0,0.30);
+  border-color: rgba(255,255,255,0.10);
+}
+.btnGhost:hover { background: rgba(255,255,255,0.08); }
+
+/* ---------- Thumbnail / Preview ---------- */
+.thumbBox {
   margin-top: 14px;
-}
-
-/* ---------- Tap Screen (Target) ---------- */
-.tapCard{
-  width: 100%;
-  max-width: var(--maxTap);
-  background: linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.05));
-  border: 1px solid var(--stroke);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow);
+  border-radius: 18px;
+  border: 1px solid rgba(255,255,255,0.10);
+  background: rgba(0,0,0,0.25);
   padding: 12px;
+  overflow: hidden;
 }
 
-.targetWrap{
+.thumbTitle {
+  font-weight: 900;
+  opacity: 0.9;
+  margin: 0 0 10px;
+}
+
+/* ---------- Target / Tap Layer ---------- */
+#targetWrap {
   position: relative;
   width: 100%;
-  border-radius: 22px;
-  overflow: hidden;               /* IMPORTANT for dots staying “on” the image */
-  border: 1px solid var(--stroke);
+  max-width: 860px;
+  margin: 12px auto 0;
+  border-radius: 28px;
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,0.10);
   background: rgba(0,0,0,0.35);
+  box-shadow:
+    0 18px 50px rgba(0,0,0,0.55),
+    inset 0 1px 0 rgba(255,255,255,0.04);
 }
 
-/* The target image itself */
-#targetImg{
+/* The image itself */
+#targetImg {
+  display: block;
   width: 100%;
   height: auto;
-  display: block;
   user-select: none;
   -webkit-user-drag: none;
 }
 
-/* Layer for tap dots */
-#dotsLayer{
+/* IMPORTANT:
+   - Tap canvas must be ABOVE image
+   - Must have pointer-events ON
+   - Must match wrap size (JS sets width/height)
+*/
+#tapCanvas {
   position: absolute;
   inset: 0;
-  pointer-events: none;           /* taps go to the image/wrap, not the layer */
-  z-index: 20;
+  width: 100%;
+  height: 100%;
+  z-index: 30;
+  pointer-events: auto;
+  background: transparent;
 }
 
-/* Individual dot */
-.tapDot{
+/* Dots layer above canvas so dots are always visible */
+#dotsLayer {
   position: absolute;
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  background: rgba(255,255,255,0.85);
-  border: 2px solid rgba(0,0,0,0.55);
-  box-shadow: 0 6px 18px rgba(0,0,0,0.55);
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 40;
+  pointer-events: none;
+}
+
+/* Tap dot style (if you render dots as divs) */
+.tapDot {
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  border-radius: 999px;
+  background: rgba(47,230,166,0.95);
+  box-shadow: 0 8px 18px rgba(0,0,0,0.45);
   transform: translate(-50%, -50%);
 }
 
-.tapDot.poib{
-  background: rgba(32,208,122,0.95);
-  border-color: rgba(0,0,0,0.60);
+/* POIB / Bull anchor dot (optional) */
+.anchorDot {
+  width: 18px;
+  height: 18px;
+  background: rgba(0,170,255,0.95);
 }
 
-.tapHud{
+/* ---------- Tap Controls Row ---------- */
+.controlsRow {
+  display: grid;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.controlsGrid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 10px;
-  margin-top: 10px;
+  gap: 14px;
 }
 
-.pill{
-  background: rgba(255,255,255,0.07);
-  border: 1px solid var(--stroke);
-  border-radius: 18px;
-  padding: 12px 14px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
+@media (max-width: 560px) {
+  .controlsGrid { grid-template-columns: 1fr; }
 }
 
-.pill b{
-  font-size: 18px;
-  letter-spacing: 0.2px;
+.bigPill {
+  border-radius: 999px;
+  padding: 16px 18px;
+  font-weight: 900;
+  font-size: 1.05rem;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.10);
+  box-shadow:
+    0 14px 32px rgba(0,0,0,0.38),
+    inset 0 1px 0 rgba(255,255,255,0.05);
 }
 
-.pill span{
-  color: var(--muted);
-  font-weight: 700;
+.bigPill strong { letter-spacing: 0.02em; }
+
+/* ---------- Results / SEC Card ---------- */
+.secCard {
+  max-width: 860px;
+  margin: 18px auto 0;
 }
 
-/* Tap buttons row */
-.tapBtns{
+.secLabel {
+  font-weight: 1000;
+  letter-spacing: 0.02em;
+  margin: 0 0 8px;
+}
+.secLabel .secRed { color: #ff3b3b; }
+
+.kvGrid {
   display: grid;
-  grid-template-columns: 1fr;
-  gap: 12px;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
   margin-top: 12px;
 }
-
-/* ---------- SEC Screen (Result Cards) ---------- */
-.secTop{
-  width: 100%;
-  max-width: var(--maxTap);
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
+@media (max-width: 720px) {
+  .kvGrid { grid-template-columns: 1fr; }
 }
 
-.secHeader{
-  background: linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.05));
-  border: 1px solid var(--stroke);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow);
-  padding: 16px;
+.kvBox {
+  border-radius: 22px;
+  padding: 16px 18px;
+  background: rgba(0,0,0,0.25);
+  border: 1px solid rgba(255,255,255,0.10);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
+}
+.kvKey { opacity: 0.7; font-weight: 800; letter-spacing: 0.02em; }
+.kvVal { font-size: clamp(28px, 4vw, 46px); font-weight: 1000; margin-top: 4px; }
+
+/* ---------- “Start” primary CTA style ---------- */
+.startBar {
+  max-width: 860px;
+  margin: 16px auto 0;
+}
+.startBar .btnPrimary {
+  padding: 18px 18px;
+  font-size: 1.1rem;
 }
 
-.secHeader .secTitle{
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-  margin: 0;
+/* ---------- Utility spacing ---------- */
+.mt8 { margin-top: 8px; }
+.mt12 { margin-top: 12px; }
+.mt16 { margin-top: 16px; }
+.mt22 { margin-top: 22px; }
+.center { text-align: center; }
+
+/* ---------- Safety: prevent random overlays from blocking taps ---------- */
+.overlayBlocker {
+  pointer-events: none !important;
 }
 
-.secHeader .secTitle .secRed{
-  color: #ff3b30;
-  font-weight: 900;
-}
-
-.secHeader .secTitle .secWord{
-  font-weight: 900;
-  font-size: 22px;
-}
-
-.secMeta{
-  margin-top: 6px;
-  color: var(--muted);
-  font-weight: 700;
-  font-size: 14px;
-  word-break: break-word;
-}
-
-.grid2{
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 12px;
-}
-
-.tile{
-  background: rgba(255,255,255,0.06);
-  border: 1px solid var(--stroke);
-  border-radius: var(--radiusSm);
-  padding: 14px;
-}
-
-.tile h3{
-  margin: 0 0 10px;
-  font-size: 18px;
-  font-weight: 900;
-}
-
-.clickGrid{
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
-}
-
-.clickBox{
-  background: rgba(0,0,0,0.22);
-  border: 1px solid var(--stroke);
-  border-radius: 16px;
-  padding: 12px;
-}
-
-.clickBox .k{
-  color: var(--muted);
-  font-weight: 900;
-  letter-spacing: 0.4px;
-  font-size: 14px;
-}
-
-.clickBox .v{
-  margin-top: 6px;
-  font-size: 34px;
-  font-weight: 1000;
-  letter-spacing: 0.6px;
-}
-
-/* ---------- Utility ---------- */
-.center{ text-align: center; }
-.m0{ margin: 0; }
-.mt8{ margin-top: 8px; }
-.mt12{ margin-top: 12px; }
-.mt16{ margin-top: 16px; }
-.hidden{ display: none !important; }
-
-/* ---------- Responsive ---------- */
-@media (min-width: 720px){
-  .row{
-    grid-template-columns: 1fr 1fr;
-    align-items: end;
-  }
-  .btnRow{
-    grid-template-columns: 1fr 1fr;
-  }
-  .tapBtns{
-    grid-template-columns: 1fr 1fr 1fr;
-  }
-  .grid2{
-    grid-template-columns: 1fr 1fr;
-  }
-}
-
-@media (min-width: 980px){
-  .brandTap, .brandN, .brandScore{ font-size: 36px; }
-  .subtitle{ font-size: 17px; }
-}
+/* ---------- Optional DEBUG (leave OFF unless needed) ----------
+#tapCanvas { outline: 3px solid hotpink; background: rgba(255,0,255,0.06); }
+-------------------------------------------------------------- */
