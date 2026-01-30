@@ -1,10 +1,9 @@
-
 /* ============================================================
-   styles.css (FULL REPLACEMENT) — Tap-n-Score™ UI (vCSS-SEC-1)
-   Goals:
-   - Premium dark card layout (centered, responsive)
-   - Clean “Selected target photo thumbnail” pill
-   - HIDE thumbnail preview box until a photo is selected (CSS-only)
+   styles.css (FULL REPLACEMENT) — Tap-n-Score™ UI (vCSS-SEC-2)
+   Step 2:
+   - Make START a true primary CTA (bigger, clearer)
+   - Tighten vertical spacing / alignment
+   - Keep thumbnail preview hidden until a photo is selected
    ============================================================ */
 
 /* ---------- Base / Reset ---------- */
@@ -29,15 +28,15 @@ a { color: inherit; text-decoration: none; }
   display: flex;
   align-items: flex-start;
   justify-content: center;
-  padding: 28px 16px 60px;
+  padding: 22px 16px 54px;
 }
 
 .card {
   width: min(980px, 100%);
-  background: radial-gradient(1200px 400px at 50% 0%, rgba(255,255,255,0.10), rgba(255,255,255,0.02) 55%, rgba(255,255,255,0.01) 100%);
+  background: radial-gradient(1200px 420px at 50% 0%, rgba(255,255,255,0.11), rgba(255,255,255,0.03) 55%, rgba(255,255,255,0.012) 100%);
   border: 1px solid rgba(255,255,255,0.10);
   border-radius: 26px;
-  padding: 26px 26px 22px;
+  padding: 22px 22px 18px;
   box-shadow:
     0 20px 70px rgba(0,0,0,0.65),
     inset 0 1px 0 rgba(255,255,255,0.06);
@@ -46,61 +45,52 @@ a { color: inherit; text-decoration: none; }
 /* ---------- Brand ---------- */
 .brandWrap {
   text-align: center;
-  margin-bottom: 18px;
+  margin-bottom: 14px;
 }
 .brandTitle {
   font-weight: 900;
   letter-spacing: 1px;
   font-size: clamp(22px, 3vw, 34px);
   line-height: 1.1;
+  margin: 0;
 }
 .brandTitle .tm { color: #00d26a; font-weight: 900; }
 .brandSub {
-  margin-top: 6px;
+  margin: 6px 0 0;
   opacity: 0.78;
   font-size: clamp(14px, 2vw, 18px);
 }
 
 /* ---------- Layout Blocks ---------- */
 .sectionTitle {
-  font-weight: 850;
+  font-weight: 900;
   font-size: clamp(18px, 2.4vw, 26px);
-  margin: 8px 0 14px;
+  margin: 6px 0 12px;
 }
 
-.row {
-  display: flex;
-  gap: 18px;
-  flex-wrap: wrap;
-  align-items: center;
-}
-
-.stack {
-  display: grid;
-  gap: 12px;
-}
+.stack { display: grid; gap: 10px; }
 
 .hrSoft {
   height: 1px;
   background: rgba(255,255,255,0.08);
   border: 0;
-  margin: 16px 0;
+  margin: 14px 0;
 }
 
 /* ---------- File Picker Pill ---------- */
 .fileLine {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
   flex-wrap: wrap;
 }
 
 .filePill {
-  width: min(720px, 100%);
+  width: min(760px, 100%);
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 14px 16px;
+  padding: 12px 14px;
   border-radius: 999px;
   background: rgba(255,255,255,0.04);
   border: 1px solid rgba(255,255,255,0.10);
@@ -113,9 +103,9 @@ a { color: inherit; text-decoration: none; }
   justify-content: center;
   padding: 10px 14px;
   border-radius: 999px;
-  background: rgba(255,255,255,0.06);
-  border: 1px solid rgba(255,255,255,0.10);
-  font-weight: 750;
+  background: rgba(255,255,255,0.07);
+  border: 1px solid rgba(255,255,255,0.12);
+  font-weight: 850;
   cursor: pointer;
   user-select: none;
 }
@@ -123,8 +113,8 @@ a { color: inherit; text-decoration: none; }
 .filePill label:active { transform: translateY(1px); }
 
 .filePill .fileName {
-  opacity: 0.70;
-  font-weight: 650;
+  opacity: 0.72;
+  font-weight: 700;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -132,7 +122,7 @@ a { color: inherit; text-decoration: none; }
   min-width: 160px;
 }
 
-/* Hide the raw input but keep it accessible via label[for=...] */
+/* Hide raw input */
 input[type="file"] {
   position: absolute;
   left: -9999px;
@@ -144,8 +134,8 @@ input[type="file"] {
 /* ---------- Tip / Controls ---------- */
 .tip {
   opacity: 0.78;
-  font-weight: 650;
-  margin-top: 10px;
+  font-weight: 700;
+  margin: 6px 0 0;
 }
 
 .controlsRow {
@@ -153,7 +143,7 @@ input[type="file"] {
   gap: 14px;
   flex-wrap: wrap;
   align-items: center;
-  margin-top: 12px;
+  margin-top: 8px;
 }
 
 .controlGroup {
@@ -164,8 +154,13 @@ input[type="file"] {
 
 .controlGroup .label {
   opacity: 0.70;
-  font-weight: 800;
+  font-weight: 900;
   font-size: 18px;
+}
+
+.selectWrap {
+  position: relative;
+  display: inline-block;
 }
 
 select {
@@ -176,16 +171,10 @@ select {
   background: rgba(255,255,255,0.04);
   border: 1px solid rgba(255,255,255,0.12);
   box-shadow: inset 0 1px 0 rgba(255,255,255,0.05);
-  font-weight: 800;
+  font-weight: 900;
   min-width: 160px;
-  position: relative;
 }
 
-/* simple chevron */
-.selectWrap {
-  position: relative;
-  display: inline-block;
-}
 .selectWrap::after {
   content: "";
   position: absolute;
@@ -209,27 +198,23 @@ select {
   border-radius: 999px;
   background: rgba(255,255,255,0.06);
   border: 1px solid rgba(255,255,255,0.10);
-  font-weight: 850;
+  font-weight: 900;
   width: fit-content;
   margin-top: 10px;
 }
 
-/* The preview container (box) */
 .thumbBox {
   margin-top: 10px;
-  width: min(760px, 100%);
+  width: min(780px, 100%);
   border-radius: 18px;
   border: 1px solid rgba(255,255,255,0.10);
   background: rgba(255,255,255,0.03);
   box-shadow: inset 0 1px 0 rgba(255,255,255,0.05);
   overflow: hidden;
-  padding: 14px;
+  padding: 12px;
 }
 
-/* --- KEY REQUIREMENT ---
-   Hide the preview box UNTIL an image src exists.
-   Works if your preview image element sets src when selected.
-*/
+/* Hide preview img(s) until src exists */
 #thumbPreview,
 #selectedPreview,
 #targetPreview,
@@ -239,7 +224,6 @@ select {
   display: none;
 }
 
-/* If any of these ids exist AND they have a non-empty src, show them */
 #thumbPreview[src]:not([src=""]),
 #selectedPreview[src]:not([src=""]),
 #targetPreview[src]:not([src=""]),
@@ -251,7 +235,7 @@ select {
   width: 100%;
 }
 
-/* If the image is visible, show the box; otherwise hide it */
+/* Hide the box unless it HAS a visible img with a real src */
 .thumbBox { display: none; }
 .thumbBox:has(#thumbPreview[src]:not([src=""])),
 .thumbBox:has(#selectedPreview[src]:not([src=""])),
@@ -262,33 +246,30 @@ select {
   display: block;
 }
 
-/* Fallback for browsers without :has()
-   (Still hides the IMAGE until src exists; box may remain visible if present.)
-*/
+/* Fallback if :has() unsupported */
 @supports not selector(:has(*)) {
   .thumbBox { display: block; }
 }
 
-/* Empty-state line */
 .emptyLine {
   opacity: 0.65;
-  font-weight: 650;
-  margin-top: 12px;
+  font-weight: 700;
+  margin-top: 10px;
 }
 
 /* ---------- “Next” + Steps ---------- */
 .nextLine {
   margin-top: 10px;
-  opacity: 0.82;
-  font-weight: 750;
+  opacity: 0.86;
+  font-weight: 850;
   font-size: 18px;
 }
 
 .h2Big {
-  margin: 14px 0 10px;
-  font-size: clamp(32px, 4.3vw, 54px);
+  margin: 10px 0 10px;
+  font-size: clamp(30px, 4.2vw, 52px);
   font-weight: 950;
-  letter-spacing: -0.5px;
+  letter-spacing: -0.6px;
 }
 
 ul.steps {
@@ -297,16 +278,14 @@ ul.steps {
   display: grid;
   gap: 8px;
   font-size: 20px;
-  font-weight: 750;
+  font-weight: 850;
   opacity: 0.92;
 }
 
 ul.steps li { margin-left: 6px; }
 
-/* ---------- Primary Button ---------- */
-.btnPrimary {
-  margin-top: 16px;
-  padding: 12px 22px;
+/* ---------- Buttons (START is primary) ---------- */
+.btn {
   border-radius: 999px;
   border: 1px solid rgba(255,255,255,0.16);
   background: rgba(255,255,255,0.06);
@@ -315,20 +294,69 @@ ul.steps li { margin-left: 6px; }
     0 10px 30px rgba(0,0,0,0.45);
   font-weight: 900;
   cursor: pointer;
-  width: fit-content;
+  user-select: none;
 }
 
-.btnPrimary:active { transform: translateY(1px); }
+.btn:active { transform: translateY(1px); }
+
+/* Primary CTA */
+.btnPrimary {
+  margin-top: 14px;
+  padding: 14px 22px;
+  min-height: 52px;
+  font-size: 18px;
+  letter-spacing: 0.2px;
+  width: fit-content;
+  background: linear-gradient(180deg, rgba(0,210,106,0.18), rgba(255,255,255,0.06));
+  border: 1px solid rgba(0,210,106,0.35);
+  box-shadow:
+    0 18px 60px rgba(0,0,0,0.55),
+    inset 0 1px 0 rgba(255,255,255,0.06);
+}
+
+.btnPrimary:hover {
+  border-color: rgba(0,210,106,0.55);
+}
+
+.btnPrimary:focus {
+  outline: 2px solid rgba(0,210,106,0.50);
+  outline-offset: 2px;
+}
+
+/* If your Start button has id="startBtn", force primary styling */
+#startBtn { }
+#startBtn { }
+#startBtn.btnPrimary,
+#startBtn.btn,
+#startBtn {
+  /* only apply if it’s a button */
+}
+button#startBtn {
+  margin-top: 14px;
+  padding: 14px 22px;
+  min-height: 52px;
+  font-size: 18px;
+  letter-spacing: 0.2px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, rgba(0,210,106,0.18), rgba(255,255,255,0.06));
+  border: 1px solid rgba(0,210,106,0.35);
+  box-shadow:
+    0 18px 60px rgba(0,0,0,0.55),
+    inset 0 1px 0 rgba(255,255,255,0.06);
+  font-weight: 950;
+  cursor: pointer;
+}
 
 /* ---------- Mobile Tweaks ---------- */
 @media (max-width: 720px) {
-  .card { padding: 20px 16px 18px; border-radius: 22px; }
+  .card { padding: 18px 14px 16px; border-radius: 22px; }
   .controlGroup .label { font-size: 16px; }
   select { min-width: 150px; }
-  .btnPrimary { width: 100%; text-align: center; padding: 14px 18px; }
+  .btnPrimary { width: 100%; text-align: center; padding: 16px 18px; }
+  button#startBtn { width: 100%; text-align: center; padding: 16px 18px; }
 }
 
-/* ---------- Utility (optional) ---------- */
+/* ---------- Utility ---------- */
 .m0 { margin: 0 !important; }
 .mt8 { margin-top: 8px !important; }
 .mt12 { margin-top: 12px !important; }
