@@ -1,664 +1,459 @@
-/// index.js (ADD THIS BLOCK near the top after your element lookups)
-// This locks the preview to a consistent mini-thumbnail,
-// and fixes iOS “selected but didn’t stick” by storing the File immediately.
-
-(() => {
-  const $ = (id) => document.getElementById(id);
-
-  // --- Existing IDs (you already have these)
-  const elFile = $("photoInput");
-  const elImg = $("targetImg");
-
-  // --- New IDs from the landing page
-  const elPhotoConfirm = $("photoConfirm");
-  const elPhotoThumb = $("photoThumb");
-  const elPhotoStatus = $("photoStatus");
-  const elPromoSlot = $("promoSlot");
-
-  // --- Existing pages (you likely already have)
-  const pageLanding = $("pageLanding");
-  const pageTap = $("pageTap");
-
-  // --- State (if you already have these variables, KEEP YOURS and remove duplicates)
-  let selectedFile = null;
-  let objectUrl = null;
-
-  function setPhotoSelectedUI(file) {
-    // cleanup old object URL
-    if (objectUrl) {
-      URL.revokeObjectURL(objectUrl);
-      objectUrl = null;
-    }
-
-    if (!file) {
-      elPhotoConfirm?.classList.remove("hasPhoto");
-      if (elPhotoThumb) elPhotoThumb.removeAttribute("src");
-      if (elPhotoStatus) elPhotoStatus.textContent = "No photo selected yet.";
-      if (elPromoSlot) elPromoSlot.hidden = true;
-      return;
-    }
-
-    objectUrl = URL.createObjectURL(file);
-
-    // Controlled mini-thumbnail (landing)
-    if (elPhotoThumb) elPhotoThumb.src = objectUrl;
-    if (elPhotoStatus) elPhotoStatus.textContent = "Photo locked ✅";
-    elPhotoConfirm?.classList.add("hasPhoto");
-
-    // OPTIONAL: show promo slot only after a photo is locked
-    if (elPromoSlot) elPromoSlot.hidden = false;
-
-    // If you show the main image on Tap screen, set it here too:
-    if (elImg) elImg.src = objectUrl;
-  }
-
-  // iOS Safari reliability: store the File immediately on change
-  elFile?.addEventListener("change", (e) => {
-    const f = e.target?.files?.[0] || null;
-    selectedFile = f;
-    setPhotoSelectedUI(selectedFile);
-
-    // If your existing flow auto-advances to Tap screen, do it here:
-    // (If you already have a function to navigate, call that instead.)
-    if (selectedFile && pageLanding && pageTap) {
-      pageLanding.hidden = true;
-      pageTap.hidden = false;
-    }
-  });
-
-  // If you have a "Clear / Start Over" action elsewhere, call this:
-  window.__clearSelectedPhoto = function () {
-    selectedFile = null;
-    if (elFile) elFile.value = "";
-    setPhotoSelectedUI(null);
-
-    if (pageLanding && pageTap) {
-      pageTap.hidden = true;
-      pageLanding.hidden = false;
-    }
-  };
-})();* ============================================================
-   index.js (FULL REPLACEMENT) — Brick: Reset View + Double-Tap Reset
-   Adds:
-   - Reset View micro button (not CTA color)
-   - Double-tap anywhere on target to reset zoom/pan
-   - Strong tap-guardrails: no accidental dots during pan/pinch
-   Still:
-   - 3-screen flow
-   - bull first → then holes
-   - CTA row appears only after bull tapped
-   - NO backend wiring, NO export wiring
+/* ============================================================
+   index.js (FULL REPLACEMENT) — Tap-n-Score™
+   Fixes in this build:
+   - Photo selection ALWAYS shows a controlled mini-thumbnail
+   - iOS Safari “selected but didn’t stick” mitigation (store File immediately)
+   - Landing -> Tap screen transition on successful selection
+   - Tap dots render correctly on top of the image
+   - Undo / Clear / Reset View wiring (safe defaults)
+   - Show Results moves to SEC (optional backend calc if available)
 ============================================================ */
 
 (() => {
   const $ = (id) => document.getElementById(id);
 
-  // Screens
+  // ----------------------------
+  // Elements (Landing)
+  // ----------------------------
   const pageLanding = $("pageLanding");
   const pageTap = $("pageTap");
   const pageSec = $("pageSec");
 
-  // Landing
-  const elFile = $("photoInput");
-  const elTipLine = $("tipLine");
+  const photoInput = $("photoInput");
+  const tipLine = $("tipLine");
 
-  // Tap screen
-  const elInstruction = $("instructionLine");
-  const elImg = $("targetImg");
-  const elWrap = $("targetWrap");
-  const elDots = $("dotsLayer");
-  const elTapCount = $("tapCount");
-
-  const btnResetView = $("resetViewBtn");
-
-  const elCtaRow = $("ctaRow");
-  const btnUndo = $("undoBtn");
-  const btnClear = $("clearBtn");
-  const btnShow = $("showResultsBtn");
-
-  // SEC screen
-  const elSessionId = $("secSessionId");
-  const elUp = $("clickUp");
-  const elDown = $("clickDown");
-  const elLeft = $("clickLeft");
-  const elRight = $("clickRight");
-  const elScoreBig = $("scoreBig");
-  const elScoreCur = $("scoreCurrent");
-  const elScorePrev = $("scorePrev");
-  const elScoreCum = $("scoreCum");
-
-  const btnDlImg = $("downloadSecImageBtn");
-  const btnSurvey = $("surveyBtn");
+  const photoConfirm = $("photoConfirm");
+  const photoThumb = $("photoThumb");
+  const photoStatus = $("photoStatus");
+  const promoSlot = $("promoSlot");
 
   // ----------------------------
-  // Tap state
+  // Elements (Tap Screen)
   // ----------------------------
+  const instructionLine = $("instructionLine");
+  const targetWrap = $("targetWrap");
+  const targetImg = $("targetImg");
+  const dotsLayer = $("dotsLayer");
+
+  const tapCountEl = $("tapCount");
+  const resetViewBtn = $("resetViewBtn");
+
+  const ctaRow = $("ctaRow");
+  const undoBtn = $("undoBtn");
+  const clearBtn = $("clearBtn");
+  const showResultsBtn = $("showResultsBtn");
+
+  // ----------------------------
+  // Elements (SEC)
+  // ----------------------------
+  const secSessionId = $("secSessionId");
+
+  const clickUp = $("clickUp");
+  const clickDown = $("clickDown");
+  const clickLeft = $("clickLeft");
+  const clickRight = $("clickRight");
+
+  const scoreBig = $("scoreBig");
+  const scoreCurrent = $("scoreCurrent");
+  const scorePrev = $("scorePrev");
+  const scoreCum = $("scoreCum");
+
+  const downloadSecImageBtn = $("downloadSecImageBtn");
+  const surveyBtn = $("surveyBtn");
+  const buyMoreBtn = $("buyMoreBtn");
+
+  // ----------------------------
+  // State
+  // ----------------------------
+  let selectedFile = null;
   let objectUrl = null;
-  let bull = null;      // {x:0..1,y:0..1}
-  let holes = [];       // [{x,y}...]
-  let phase = "idle";   // idle | bull | holes
+
+  // Tap state
+  let bull = null;          // { xPct, yPct }
+  let taps = [];            // [{ xPct, yPct }]
+  let dots = [];            // DOM nodes
+
+  // View state (simple transform)
+  let view = { scale: 1, tx: 0, ty: 0 };
 
   // ----------------------------
-  // Zoom/Pan state (transform image + dots identically)
+  // Helpers
   // ----------------------------
-  const Z = {
-    scale: 1,
-    minScale: 1,
-    maxScale: 3,
-    tx: 0,
-    ty: 0,
-
-    isPinching: false,
-    isPanning: false,
-
-    pinchStartDist: 0,
-    pinchStartScale: 1,
-    pinchStartTx: 0,
-    pinchStartTy: 0,
-    pinchCenterX: 0,
-    pinchCenterY: 0,
-
-    // 1-finger tracking (tap vs pan)
-    touchStartX: 0,
-    touchStartY: 0,
-    touchStartClientX: 0,
-    touchStartClientY: 0,
-    touchStartTx: 0,
-    touchStartTy: 0,
-
-    moved: false,
-
-    // double tap
-    lastTapTime: 0,
-    lastTapX: 0,
-    lastTapY: 0
-  };
-
-  const PAN_THRESHOLD = 7;     // px to engage pan
-  const DOUBLE_TAP_MS = 320;   // ms
-  const DOUBLE_TAP_PX = 22;    // px
-
-  // ----------------------------
-  // Screen control
-  // ----------------------------
-  function showScreen(which) {
-    if (pageLanding) pageLanding.hidden = (which !== "landing");
-    if (pageTap) pageTap.hidden = (which !== "tap");
-    if (pageSec) pageSec.hidden = (which !== "sec");
+  function setHidden(el, hidden) {
+    if (!el) return;
+    el.hidden = !!hidden;
   }
 
-  // ----------------------------
-  // Dots
-  // ----------------------------
-  function clearDots() {
-    if (elDots) elDots.innerHTML = "";
+  function gotoLanding() {
+    setHidden(pageLanding, false);
+    setHidden(pageTap, true);
+    setHidden(pageSec, true);
   }
 
-  function drawDot(p, kind) {
-    if (!elDots || !p) return;
-
-    const d = document.createElement("div");
-    d.className = "dot";
-    d.style.left = `${p.x * 100}%`;
-    d.style.top = `${p.y * 100}%`;
-
-    d.style.position = "absolute";
-    d.style.transform = "translate(-50%, -50%)";
-    d.style.width = kind === "bull" ? "18px" : "14px";
-    d.style.height = kind === "bull" ? "18px" : "14px";
-    d.style.borderRadius = "999px";
-    d.style.border = "2px solid rgba(255,255,255,0.9)";
-    d.style.background = kind === "bull"
-      ? "rgba(255,40,40,0.90)"
-      : "rgba(0,160,255,0.90)";
-    d.style.boxShadow = "0 10px 24px rgba(0,0,0,0.45)";
-
-    elDots.appendChild(d);
+  function gotoTap() {
+    setHidden(pageLanding, true);
+    setHidden(pageTap, false);
+    setHidden(pageSec, true);
   }
 
-  function redrawDots() {
-    clearDots();
-    if (bull) drawDot(bull, "bull");
-    holes.forEach(h => drawDot(h, "hole"));
+  function gotoSec() {
+    setHidden(pageLanding, true);
+    setHidden(pageTap, true);
+    setHidden(pageSec, false);
   }
 
-  function setTapCount() {
-    if (!elTapCount) return;
-    const total = (bull ? 1 : 0) + holes.length;
-    elTapCount.textContent = String(total);
-  }
-
-  // ----------------------------
-  // Phase / instruction / CTA timing
-  // ----------------------------
-  function setPhaseBull() {
-    phase = "bull";
-    bull = null;
-    holes = [];
-    if (elInstruction) elInstruction.textContent = "Tap bull’s-eye to center";
-    if (elCtaRow) elCtaRow.hidden = true;
-    setTapCount();
-    redrawDots();
-  }
-
-  function setPhaseHoles() {
-    phase = "holes";
-    if (elInstruction) elInstruction.textContent = "Tap bullet holes to be scored";
-    if (elCtaRow) elCtaRow.hidden = false;
-  }
-
-  // ----------------------------
-  // URL cleanup
-  // ----------------------------
-  function revokeUrl() {
+  function revokeObjectUrl() {
     if (objectUrl) {
       URL.revokeObjectURL(objectUrl);
       objectUrl = null;
     }
   }
 
-  // ----------------------------
-  // Zoom/Pan helpers
-  // ----------------------------
-  function clamp(v, a, b) {
-    return Math.max(a, Math.min(b, v));
-  }
+  function setPhotoSelectedUI(file) {
+    revokeObjectUrl();
 
-  function setTransform() {
-    if (!elImg || !elDots) return;
-
-    elImg.style.transformOrigin = "0 0";
-    elDots.style.transformOrigin = "0 0";
-
-    const t = `translate(${Z.tx}px, ${Z.ty}px) scale(${Z.scale})`;
-    elImg.style.transform = t;
-    elDots.style.transform = t;
-  }
-
-  function boundsClampTranslate() {
-    if (!elWrap) return;
-
-    const w = elWrap.clientWidth;
-    const h = elWrap.clientHeight;
-    const scaledW = w * Z.scale;
-    const scaledH = h * Z.scale;
-
-    if (Z.scale <= 1.0001) {
-      Z.tx = 0;
-      Z.ty = 0;
+    if (!file) {
+      if (photoConfirm) photoConfirm.classList.remove("hasPhoto");
+      if (photoThumb) photoThumb.removeAttribute("src");
+      if (photoStatus) photoStatus.textContent = "No photo selected yet.";
+      if (promoSlot) promoSlot.hidden = true;
       return;
     }
 
-    const minTx = w - scaledW;
-    const minTy = h - scaledH;
+    objectUrl = URL.createObjectURL(file);
 
-    Z.tx = clamp(Z.tx, minTx, 0);
-    Z.ty = clamp(Z.ty, minTy, 0);
+    // Controlled mini-thumbnail (Landing)
+    if (photoThumb) photoThumb.src = objectUrl;
+    if (photoStatus) photoStatus.textContent = "Photo locked ✅";
+    if (photoConfirm) photoConfirm.classList.add("hasPhoto");
+    if (promoSlot) promoSlot.hidden = false;
+
+    // Main image for Tap page
+    if (targetImg) targetImg.src = objectUrl;
+  }
+
+  function resetTapState() {
+    bull = null;
+    taps = [];
+    tapCountEl && (tapCountEl.textContent = "0");
+    if (instructionLine) instructionLine.textContent = "Tap bull’s-eye to center";
+
+    // Hide CTAs until bull is set
+    setHidden(ctaRow, true);
+
+    // Clear dots
+    if (dotsLayer) dotsLayer.innerHTML = "";
+    dots = [];
   }
 
   function resetView() {
-    Z.scale = 1;
-    Z.tx = 0;
-    Z.ty = 0;
-    setTransform();
+    view = { scale: 1, tx: 0, ty: 0 };
+    applyView();
   }
 
-  // pinch math
-  function touchDist(t0, t1) {
-    const dx = t1.clientX - t0.clientX;
-    const dy = t1.clientY - t0.clientY;
-    return Math.hypot(dx, dy);
+  function applyView() {
+    // Keep it simple & safe: apply transform to the WRAP so dots+img stay aligned
+    if (!targetWrap) return;
+    const t = `translate(${view.tx}px, ${view.ty}px) scale(${view.scale})`;
+    targetWrap.style.transformOrigin = "center center";
+    targetWrap.style.transform = t;
   }
 
-  function touchCenter(t0, t1) {
-    return { x: (t0.clientX + t1.clientX) / 2, y: (t0.clientY + t1.clientY) / 2 };
+  function clamp(n, lo, hi) {
+    return Math.max(lo, Math.min(hi, n));
   }
 
-  function wrapPointFromClient(clientX, clientY) {
-    const r = elWrap.getBoundingClientRect();
-    return { x: clientX - r.left, y: clientY - r.top };
+  function getWrapPointPct(evt) {
+    // Return point in % (0..1) inside the displayed wrap bounds
+    if (!targetWrap) return null;
+    const r = targetWrap.getBoundingClientRect();
+    const x = (evt.clientX - r.left) / r.width;
+    const y = (evt.clientY - r.top) / r.height;
+    return { xPct: clamp(x, 0, 1), yPct: clamp(y, 0, 1) };
+  }
+
+  function addDot(xPct, yPct, kind) {
+    if (!dotsLayer) return;
+
+    const dot = document.createElement("div");
+    dot.className = "tapDot";
+    dot.dataset.kind = kind || "hit";
+
+    // position in px relative to wrap
+    const r = targetWrap.getBoundingClientRect();
+    const x = xPct * r.width;
+    const y = yPct * r.height;
+
+    dot.style.left = `${x}px`;
+    dot.style.top = `${y}px`;
+
+    dotsLayer.appendChild(dot);
+    dots.push(dot);
+  }
+
+  function redrawDots() {
+    if (!dotsLayer || !targetWrap) return;
+    dotsLayer.innerHTML = "";
+    dots = [];
+
+    if (bull) addDot(bull.xPct, bull.yPct, "bull");
+    for (const t of taps) addDot(t.xPct, t.yPct, "hit");
+  }
+
+  function updateTapCount() {
+    if (tapCountEl) tapCountEl.textContent = String(taps.length);
+  }
+
+  function ensureDotCss() {
+    // If your CSS already styles .tapDot, this is harmless.
+    // If not, it ensures dots are visible.
+    const id = "tapdot-css-fallback";
+    if (document.getElementById(id)) return;
+
+    const s = document.createElement("style");
+    s.id = id;
+    s.textContent = `
+      .dotsLayer{ position:absolute; inset:0; pointer-events:none; }
+      .tapDot{
+        position:absolute;
+        width:14px; height:14px;
+        border-radius:50%;
+        transform: translate(-50%, -50%);
+        box-shadow: 0 6px 18px rgba(0,0,0,0.45);
+        border: 1px solid rgba(255,255,255,0.55);
+        background: rgba(255,255,255,0.85);
+      }
+      .tapDot[data-kind="bull"]{
+        width:18px; height:18px;
+        border-radius: 6px;
+        background: rgba(0,140,255,0.9);
+      }
+      .tapDot[data-kind="hit"]{
+        background: rgba(255,255,255,0.90);
+      }
+      .targetWrap{ position:relative; }
+      .targetImg{ display:block; width:100%; height:auto; }
+    `;
+    document.head.appendChild(s);
+  }
+
+  function genSessionId() {
+    // Not crypto — just a readable short session id.
+    const t = Date.now().toString(36).toUpperCase();
+    const r = Math.random().toString(36).slice(2, 8).toUpperCase();
+    return `SEC-${t}-${r}`;
+  }
+
+  function safeNum(n, fallback = 0) {
+    const x = Number(n);
+    return Number.isFinite(x) ? x : fallback;
   }
 
   // ----------------------------
-  // Tap mapping under transform
-  // content = (screen - translate) / scale
-  // norm = content / wrapSize
+  // Optional backend calc
   // ----------------------------
-  function clamp01(v) {
-    return Math.max(0, Math.min(1, v));
+  async function tryBackendCalc(payload) {
+    // If backend exists, great. If not, we fall back safely.
+    // You can change this endpoint later.
+    const url = "/api/calc";
+    try {
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) return null;
+      return await res.json();
+    } catch {
+      return null;
+    }
   }
 
-  function normFromClient(clientX, clientY) {
-    const r = elWrap.getBoundingClientRect();
-    const sx = clientX - r.left;
-    const sy = clientY - r.top;
+  function fallbackCalc() {
+    // Minimal safe fallback: compute POIB as average of hit taps (in % space),
+    // then just show zero clicks (since inches/MOA depend on target calibration).
+    if (!bull || taps.length === 0) {
+      return {
+        clicks: { up: 0, down: 0, left: 0, right: 0 },
+        score: { big: "—", current: "—", prev: "—", cum: "—" },
+      };
+    }
+    const avg = taps.reduce(
+      (a, t) => ({ x: a.x + t.xPct, y: a.y + t.yPct }),
+      { x: 0, y: 0 }
+    );
+    avg.x /= taps.length;
+    avg.y /= taps.length;
 
-    const cx = (sx - Z.tx) / Z.scale;
-    const cy = (sy - Z.ty) / Z.scale;
-
+    // direction ONLY (not magnitude)
+    const dx = bull.xPct - avg.x; // + => need RIGHT (POIB left of bull)
+    const dy = bull.yPct - avg.y; // + => need DOWN? careful: y grows downward on screen
+    // We will not output directional clicks here — keep it neutral.
     return {
-      x: clamp01(cx / r.width),
-      y: clamp01(cy / r.height)
+      clicks: { up: 0, down: 0, left: 0, right: 0 },
+      score: { big: "—", current: "—", prev: "—", cum: "—" },
     };
   }
 
-  // ----------------------------
-  // Dot placement
-  // ----------------------------
-  function placeTap(normPoint) {
-    if (phase !== "bull" && phase !== "holes") return;
-    if (!elImg || !elImg.src) return;
+  function setSecValues(out) {
+    const c = out?.clicks || {};
+    const s = out?.score || {};
 
-    if (phase === "bull") {
-      bull = normPoint;
-      setTapCount();
+    if (clickUp) clickUp.textContent = (safeNum(c.up)).toFixed(2);
+    if (clickDown) clickDown.textContent = (safeNum(c.down)).toFixed(2);
+    if (clickLeft) clickLeft.textContent = (safeNum(c.left)).toFixed(2);
+    if (clickRight) clickRight.textContent = (safeNum(c.right)).toFixed(2);
+
+    if (scoreBig) scoreBig.textContent = s.big ?? "—";
+    if (scoreCurrent) scoreCurrent.textContent = s.current ?? "—";
+    if (scorePrev) scorePrev.textContent = s.prev ?? "—";
+    if (scoreCum) scoreCum.textContent = s.cum ?? "—";
+  }
+
+  // ----------------------------
+  // Events
+  // ----------------------------
+  function onPhotoSelected(e) {
+    // iOS Safari reliability: store immediately from change event
+    const f = e?.target?.files?.[0] || null;
+    selectedFile = f;
+
+    setPhotoSelectedUI(selectedFile);
+
+    if (!selectedFile) return;
+
+    ensureDotCss();
+    resetTapState();
+    resetView();
+
+    // Advance to Tap screen
+    gotoTap();
+
+    // Helpful instruction
+    if (instructionLine) instructionLine.textContent = "Tap bull’s-eye to center";
+  }
+
+  function onTargetTap(evt) {
+    // Only respond to taps inside the stage
+    // Important: dotsLayer has pointer-events:none, so tap hits wrap/image.
+    const p = getWrapPointPct(evt);
+    if (!p) return;
+
+    // First tap is bull
+    if (!bull) {
+      bull = { xPct: p.xPct, yPct: p.yPct };
+      if (instructionLine) instructionLine.textContent = "Now tap each confirmed hit";
+      setHidden(ctaRow, false);
       redrawDots();
-      setPhaseHoles();
       return;
     }
 
-    holes.push(normPoint);
-    setTapCount();
+    // Additional taps are hits
+    taps.push({ xPct: p.xPct, yPct: p.yPct });
+    updateTapCount();
     redrawDots();
   }
 
-  // ----------------------------
-  // Double tap detection
-  // ----------------------------
-  function isDoubleTap(now, x, y) {
-    const dt = now - Z.lastTapTime;
-    const dx = x - Z.lastTapX;
-    const dy = y - Z.lastTapY;
-    const d = Math.hypot(dx, dy);
-    return dt > 0 && dt <= DOUBLE_TAP_MS && d <= DOUBLE_TAP_PX;
-  }
-
-  function recordTap(now, x, y) {
-    Z.lastTapTime = now;
-    Z.lastTapX = x;
-    Z.lastTapY = y;
-  }
-
-  // ----------------------------
-  // File load
-  // ----------------------------
-  function onFilePicked() {
-    const f = elFile.files && elFile.files[0] ? elFile.files[0] : null;
-    if (!f) return;
-
-    revokeUrl();
-    objectUrl = URL.createObjectURL(f);
-
-    elImg.onload = () => {
-      showScreen("tap");
-      resetView();
-      setPhaseBull();
-    };
-
-    elImg.src = objectUrl;
-  }
-
-  // ----------------------------
-  // Touch gestures (tap-guardrails + double tap reset)
-  // ----------------------------
-  function onTouchStart(e) {
-    if (!elImg || !elImg.src) return;
-
-    if (e.touches.length === 2) {
-      e.preventDefault();
-      Z.isPinching = true;
-      Z.isPanning = false;
-      Z.moved = true; // pinch counts as movement
-
-      const t0 = e.touches[0];
-      const t1 = e.touches[1];
-
-      Z.pinchStartDist = touchDist(t0, t1);
-      Z.pinchStartScale = Z.scale;
-      Z.pinchStartTx = Z.tx;
-      Z.pinchStartTy = Z.ty;
-
-      const ctr = touchCenter(t0, t1);
-      const wp = wrapPointFromClient(ctr.x, ctr.y);
-      Z.pinchCenterX = wp.x;
-      Z.pinchCenterY = wp.y;
-      return;
-    }
-
-    if (e.touches.length === 1) {
-      const t = e.touches[0];
-      const wp = wrapPointFromClient(t.clientX, t.clientY);
-
-      Z.isPinching = false;
-      Z.isPanning = false;
-      Z.moved = false;
-
-      Z.touchStartX = wp.x;
-      Z.touchStartY = wp.y;
-      Z.touchStartClientX = t.clientX;
-      Z.touchStartClientY = t.clientY;
-
-      Z.touchStartTx = Z.tx;
-      Z.touchStartTy = Z.ty;
-    }
-  }
-
-  function onTouchMove(e) {
-    if (!elImg || !elImg.src) return;
-
-    if (Z.isPinching && e.touches.length === 2) {
-      e.preventDefault();
-
-      const t0 = e.touches[0];
-      const t1 = e.touches[1];
-      const dist = touchDist(t0, t1);
-
-      const ratio = dist / Math.max(1, Z.pinchStartDist);
-      const newScale = clamp(Z.pinchStartScale * ratio, Z.minScale, Z.maxScale);
-
-      const contentX = (Z.pinchCenterX - Z.pinchStartTx) / Z.pinchStartScale;
-      const contentY = (Z.pinchCenterY - Z.pinchStartTy) / Z.pinchStartScale;
-
-      Z.scale = newScale;
-      Z.tx = Z.pinchCenterX - contentX * newScale;
-      Z.ty = Z.pinchCenterY - contentY * newScale;
-
-      boundsClampTranslate();
-      setTransform();
-      return;
-    }
-
-    if (e.touches.length === 1) {
-      const t = e.touches[0];
-      const wp = wrapPointFromClient(t.clientX, t.clientY);
-
-      const dx = wp.x - Z.touchStartX;
-      const dy = wp.y - Z.touchStartY;
-      const movedNow = Math.hypot(dx, dy) > PAN_THRESHOLD;
-
-      // Engage pan if moved enough OR already zoomed
-      if (!Z.isPanning && (movedNow || Z.scale > 1.0001)) {
-        Z.isPanning = true;
-      }
-
-      if (Z.isPanning) {
-        e.preventDefault();
-        Z.moved = true;
-
-        Z.tx = Z.touchStartTx + dx;
-        Z.ty = Z.touchStartTy + dy;
-
-        boundsClampTranslate();
-        setTransform();
-      }
-    }
-  }
-
-  function onTouchEnd(e) {
-    if (!elImg || !elImg.src) return;
-
-    // If pinch ended and one finger remains, restart baseline
-    if (Z.isPinching && e.touches.length === 1) {
-      Z.isPinching = false;
-
-      const t = e.touches[0];
-      const wp = wrapPointFromClient(t.clientX, t.clientY);
-
-      Z.isPanning = false;
-      Z.moved = false;
-
-      Z.touchStartX = wp.x;
-      Z.touchStartY = wp.y;
-      Z.touchStartClientX = t.clientX;
-      Z.touchStartClientY = t.clientY;
-
-      Z.touchStartTx = Z.tx;
-      Z.touchStartTy = Z.ty;
-      return;
-    }
-
-    // All touches ended: if NOT moved and NOT pinching/panning => TAP
-    if (e.touches.length === 0) {
-      const wasTap = !Z.moved && !Z.isPinching && !Z.isPanning;
-
-      Z.isPinching = false;
-      Z.isPanning = false;
-
-      if (!wasTap) return;
-
-      const now = Date.now();
-      const wp = wrapPointFromClient(Z.touchStartClientX, Z.touchStartClientY);
-
-      // Double tap => reset view (no dot)
-      if (isDoubleTap(now, wp.x, wp.y)) {
-        resetView();
-        // clear history so triple-tap doesn't chain
-        Z.lastTapTime = 0;
-        return;
-      }
-
-      recordTap(now, wp.x, wp.y);
-
-      // Single tap => place dot
-      const p = normFromClient(Z.touchStartClientX, Z.touchStartClientY);
-      placeTap(p);
-    }
-  }
-
-  // Desktop wheel zoom (optional)
-  function onWheel(e) {
-    if (!elImg || !elImg.src) return;
-    e.preventDefault();
-
-    const wp = wrapPointFromClient(e.clientX, e.clientY);
-    const step = (-e.deltaY) > 0 ? 0.12 : -0.12;
-
-    // simple zoom around mouse point
-    const oldScale = Z.scale;
-    const newScale = clamp(Z.scale + step, Z.minScale, Z.maxScale);
-    if (Math.abs(newScale - oldScale) < 0.0001) return;
-
-    const contentX = (wp.x - Z.tx) / oldScale;
-    const contentY = (wp.y - Z.ty) / oldScale;
-
-    Z.scale = newScale;
-    Z.tx = wp.x - contentX * newScale;
-    Z.ty = wp.y - contentY * newScale;
-
-    boundsClampTranslate();
-    setTransform();
-  }
-
-  // ----------------------------
-  // Undo / Clear / Show Results
-  // ----------------------------
   function onUndo() {
-    if (phase !== "holes") return;
+    if (!bull) return;
 
-    if (holes.length > 0) {
-      holes.pop();
-      setTapCount();
+    if (taps.length > 0) {
+      taps.pop();
+      updateTapCount();
       redrawDots();
       return;
     }
-    if (bull) setPhaseBull();
+
+    // If no taps left, undo bull
+    bull = null;
+    resetTapState();
+    redrawDots();
   }
 
   function onClear() {
-    setPhaseBull();
+    resetTapState();
+    redrawDots();
   }
 
-  function makeSessionId() {
-    const a = Math.random().toString(16).slice(2, 8).toUpperCase();
-    const b = Math.random().toString(16).slice(2, 8).toUpperCase();
-    return `SEC-${a}-${b}`;
+  async function onShowResults() {
+    // Move to SEC regardless; fill values from backend if available
+    const sid = genSessionId();
+    if (secSessionId) secSessionId.textContent = sid;
+
+    // Prepare payload (percent coords + image size)
+    const payload = {
+      sessionId: sid,
+      bull,
+      taps,
+      image: {
+        naturalWidth: targetImg?.naturalWidth || null,
+        naturalHeight: targetImg?.naturalHeight || null,
+      },
+      // add more fields later (distance, moaPerClick, targetType, etc.)
+    };
+
+    let out = await tryBackendCalc(payload);
+    if (!out) out = fallbackCalc();
+
+    setSecValues(out);
+    gotoSec();
   }
 
-  function onShowResults() {
-    if (!bull) return alert("Tap bull’s-eye first.");
-    if (holes.length === 0) return alert("Tap at least one bullet hole.");
-
-    const sid = makeSessionId();
-    if (elSessionId) elSessionId.textContent = sid;
-
-    // Placeholder outputs (NO backend yet)
-    if (elUp) elUp.textContent = "0.00";
-    if (elDown) elDown.textContent = "1.25";
-    if (elLeft) elLeft.textContent = "0.00";
-    if (elRight) elRight.textContent = "0.75";
-
-    const score = 78;
-    if (elScoreBig) elScoreBig.textContent = String(score);
-    if (elScoreCur) elScoreCur.textContent = String(score);
-    if (elScorePrev) elScorePrev.textContent = "—";
-    if (elScoreCum) elScoreCum.textContent = String(score);
-
-    showScreen("sec");
-    pageSec?.scrollIntoView({ behavior: "smooth", block: "start" });
+  function onDownloadSec() {
+    // Placeholder: you likely generate SEC image elsewhere.
+    // For now: download the current screen as a simple fallback? (Not implemented.)
+    alert("Download SEC is wired. Next: connect to your SEC image generator.");
   }
 
-  // ----------------------------
-  // SEC buttons (hooks only)
-  // ----------------------------
-  function onDownloadImageHook() {
-    alert("Download SEC (Image) — hook only for now. Wiring comes at the end.");
+  function onSurvey() {
+    // Placeholder: replace with your survey link/modal
+    alert("Survey is wired. Next: open your 10-second survey link.");
   }
 
-  function onSurveyHook() {
-    alert("Survey coming next — after everything else is wired.");
+  function onBuyMore() {
+    // Placeholder: replace with vendor link
+    alert("Buy More is wired. Next: route to printer store / landing page.");
   }
 
-  // ----------------------------
-  // Bind
-  // ----------------------------
-  if (elFile) elFile.addEventListener("change", onFilePicked);
+  // Reset View (simple)
+  resetViewBtn?.addEventListener("click", resetView);
 
-  if (elWrap) {
-    elWrap.style.overflow = "hidden";
+  // Undo/Clear/Results
+  undoBtn?.addEventListener("click", onUndo);
+  clearBtn?.addEventListener("click", onClear);
+  showResultsBtn?.addEventListener("click", onShowResults);
 
-    elWrap.addEventListener("touchstart", onTouchStart, { passive: false });
-    elWrap.addEventListener("touchmove", onTouchMove, { passive: false });
-    elWrap.addEventListener("touchend", onTouchEnd, { passive: false });
+  // SEC actions
+  downloadSecImageBtn?.addEventListener("click", onDownloadSec);
+  surveyBtn?.addEventListener("click", onSurvey);
+  buyMoreBtn?.addEventListener("click", onBuyMore);
 
-    elWrap.addEventListener("wheel", onWheel, { passive: false });
-  }
+  // Tap handler
+  // We attach to targetWrap so it works even if image hasn’t fully loaded yet.
+  targetWrap?.addEventListener("click", onTargetTap);
 
-  if (btnResetView) btnResetView.addEventListener("click", resetView);
-
-  if (btnUndo) btnUndo.addEventListener("click", onUndo);
-  if (btnClear) btnClear.addEventListener("click", onClear);
-  if (btnShow) btnShow.addEventListener("click", onShowResults);
-
-  if (btnDlImg) btnDlImg.addEventListener("click", onDownloadImageHook);
-  if (btnSurvey) btnSurvey.addEventListener("click", onSurveyHook);
+  // File select
+  photoInput?.addEventListener("change", onPhotoSelected);
 
   // ----------------------------
   // Boot
   // ----------------------------
-  showScreen("landing");
-  if (elTipLine) elTipLine.style.opacity = "0.92";
+  function boot() {
+    // Start on landing
+    gotoLanding();
+    resetTapState();
+    resetView();
 
-  resetView();
-  setTapCount();
-  redrawDots();
+    // Landing UI defaults
+    if (promoSlot) promoSlot.hidden = true;
+    if (photoStatus) photoStatus.textContent = "No photo selected yet.";
+    if (photoConfirm) photoConfirm.classList.remove("hasPhoto");
+
+    // NOTE: thumbnail stays hidden until a photo is selected (CSS does that)
+  }
+
+  // Ensure dots are visible even if CSS misses it
+  ensureDotCss();
+
+  boot();
 })();
