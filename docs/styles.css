@@ -1,6 +1,8 @@
-/* styles.css (FULL REPLACEMENT) — Tap-n-Score™
-   Goal: stop the “fighting” layout, keep everything centered, clean,
-   and consistent on iOS Safari + desktop.
+/* styles.css (FULL REPLACEMENT) — Tap-n-Score™ (v2)
+   Fixes:
+   - iOS/Safari default fieldset/legend outlines (the “Selected target preview” box)
+   - removes mystery borders/outlines on random text blocks
+   - keeps the centered clean card look
 */
 
 :root{
@@ -25,6 +27,7 @@
 
 *{ box-sizing:border-box; }
 html,body{ height:100%; }
+
 body{
   margin:0;
   background: radial-gradient(1200px 600px at 50% -10%, rgba(255,255,255,.07), rgba(0,0,0,0) 55%),
@@ -35,11 +38,31 @@ body{
   text-rendering:optimizeLegibility;
 }
 
-/* kill the random iOS highlight/outline look */
+/* --- KILL DEFAULT “FIGHTING” UI STYLES (Safari fieldset/legend/etc) --- */
+fieldset{
+  border:0 !important;
+  padding:0 !important;
+  margin:0 !important;
+  min-inline-size: 0;
+}
+legend{
+  border:0 !important;
+  padding:0 !important;
+  margin:0 !important;
+  max-width:100%;
+}
+input, select, button{
+  font-family:inherit;
+}
+p, h1, h2, h3, h4, h5, h6, li, label, span, div{
+  border:0;
+  outline:0;
+}
+
+/* iOS highlight / outlines */
 :focus{ outline:none; }
 :focus-visible{ outline:2px solid rgba(58,167,255,.45); outline-offset:2px; }
 
-/* Page wrapper */
 .page{
   min-height:100%;
   display:flex;
@@ -47,7 +70,6 @@ body{
   padding: 36px 16px 60px;
 }
 
-/* Main card */
 .panel{
   width:min(var(--max), 100%);
   background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.02));
@@ -86,11 +108,11 @@ body{
 }
 .labelText{
   font-size:18px;
-  font-weight:700;
+  font-weight:800;
   color: var(--text);
 }
 
-/* File input: keep native button, but make the whole thing look like a pill */
+/* File input pill */
 .fileInput{
   width:100%;
   padding: 14px 14px;
@@ -107,7 +129,7 @@ body{
   padding: 10px 14px;
   border-radius: 999px;
   margin-right: 12px;
-  font-weight:700;
+  font-weight:800;
 }
 .fileInput::file-selector-button{
   border: 1px solid rgba(255,255,255,.18);
@@ -116,17 +138,17 @@ body{
   padding: 10px 14px;
   border-radius: 999px;
   margin-right: 12px;
-  font-weight:700;
+  font-weight:800;
 }
 
-/* Tip line */
 .tip{
   margin-top: 10px;
   color: var(--muted);
   font-size: 16px;
+  font-weight:650;
 }
 
-/* Controls row (Distance / Click) */
+/* Controls row */
 .controls{
   display:flex;
   gap: 18px;
@@ -142,7 +164,7 @@ body{
 .controlLabel{
   color: var(--muted);
   font-size: 18px;
-  font-weight:700;
+  font-weight:800;
 }
 .controlSelect{
   appearance:none;
@@ -154,21 +176,17 @@ body{
     linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.03));
   color: var(--text);
   font-size: 15px;
-  font-weight:700;
+  font-weight:800;
   position:relative;
 }
-/* simple chevron */
 .controlSelect{
   background-image:
-    radial-gradient(circle at 50% 50%, rgba(0,0,0,0) 60%, rgba(0,0,0,0) 61%),
     linear-gradient(45deg, transparent 50%, rgba(255,255,255,.55) 50%),
     linear-gradient(135deg, rgba(255,255,255,.55) 50%, transparent 50%);
   background-position:
-    right 16px center,
     right 18px center,
     right 12px center;
   background-size:
-    0 0,
     8px 8px,
     8px 8px;
   background-repeat:no-repeat;
@@ -176,6 +194,8 @@ body{
 
 /* Thumbnail area */
 .thumbBlock{ margin-top: 16px; }
+
+/* This is your nice pill label */
 .thumbLabel{
   display:inline-block;
   padding: 10px 12px;
@@ -183,9 +203,17 @@ body{
   background: rgba(255,255,255,.04);
   border: 1px solid var(--stroke);
   color: var(--text);
-  font-weight:800;
+  font-weight:900;
   font-size: 18px;
 }
+
+/* Kill any stray “legend/fieldset preview” boxes under the label */
+.thumbBlock legend,
+.thumbBlock .thumbLegend,
+#thumbLegend{
+  display:none !important;
+}
+
 .thumbFrame{
   margin-top: 10px;
   border-radius: 18px;
@@ -196,27 +224,28 @@ body{
   min-height: 92px;
   overflow:hidden;
 }
+
 #targetThumb{
   width:100%;
   height:auto;
-  display:none; /* JS should set display:block when image is loaded */
+  display:none;
   border-radius: 12px;
 }
+
 .thumbEmpty{
   color: var(--muted2);
   font-size: 16px;
   padding: 10px 6px;
 }
 
-/* “Next” line */
 .nextLine{
   margin-top: 10px;
   color: var(--muted);
   font-size: 18px;
-  font-weight:700;
+  font-weight:800;
 }
 
-/* Section title + bullets */
+/* “What happens next” */
 .sectionTitle{
   margin: 14px 0 6px;
   font-size: 40px;
@@ -228,14 +257,13 @@ body{
   padding:0;
   color: var(--text);
   font-size: 20px;
-  font-weight:650;
+  font-weight:750;
 }
 .steps li{ margin: 10px 0; color: rgba(255,255,255,.86); }
 
 /* CTA button */
-.ctaRow{
-  margin-top: 14px;
-}
+.ctaRow{ margin-top: 14px; }
+
 .primaryBtn{
   display:inline-flex;
   align-items:center;
@@ -250,16 +278,14 @@ body{
   min-width: 120px;
   cursor:pointer;
 }
-.primaryBtn:active{
-  transform: translateY(1px);
-}
+.primaryBtn:active{ transform: translateY(1px); }
 
 /* Footer vendor link */
 .footerRow{ margin-top: 16px; text-align:center; }
 .vendorLink{
   color: rgba(58,167,255,.92);
   text-decoration:none;
-  font-weight:800;
+  font-weight:900;
 }
 .vendorLink:empty{ display:none; }
 
@@ -271,9 +297,10 @@ body{
   .labelText{ font-size: 16px; }
   .controlLabel{ font-size: 16px; }
   .steps{ font-size: 18px; }
+  .primaryBtn{ width: 100%; }
 }
 
-/* Optional: reduce motion for accessibility */
+/* Reduce motion */
 @media (prefers-reduced-motion: reduce){
   *{ scroll-behavior:auto !important; transition:none !important; animation:none !important; }
 }
