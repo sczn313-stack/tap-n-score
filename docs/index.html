@@ -13,6 +13,7 @@
 <body>
   <main class="page">
 
+    <!-- Brand stays persistent -->
     <header class="topBrand">
       <div class="brandLine">
         <span class="brandTap">TAP</span><span class="brandDash">-</span><span class="brandN">N</span><span class="brandDash">-</span><span class="brandScore">SCORE</span><span class="brandTm">™</span>
@@ -20,92 +21,122 @@
       <div class="brandSub">After-Shot Intelligence</div>
     </header>
 
-    <!-- Big photo pick button -->
-    <section class="hero">
-      <label class="photoPickBtn" for="photoInput">Take or Choose Target Photo</label>
-      <input id="photoInput" type="file" accept="image/*" />
-      <div class="tipLine">Tip: Straight-on photos give the most accurate results.</div>
+    <!-- =======================================================
+         SCREEN 1 — LANDING
+    ======================================================== -->
+    <section id="pageLanding">
+
+      <section class="hero">
+        <label class="photoPickBtn" for="photoInput">Take or Choose Target Photo</label>
+
+        <!-- Real input (label opens picker reliably on iOS) -->
+        <input id="photoInput" type="file" accept="image/*" />
+
+        <div class="tipLine" id="tipLine">
+          Tip: Straight-on photos give the most accurate results.
+        </div>
+      </section>
+
     </section>
 
-    <!-- Target image area (optional for your current flow) -->
-    <section class="targetStage" aria-label="Target photo stage">
-      <div id="targetWrap" class="targetWrap">
-        <img id="targetImg" class="targetImg" alt="Target preview" />
-        <div id="dotsLayer" class="dotsLayer"></div>
-      </div>
-
-      <div class="miniRow">
-        <div class="miniPill">
-          Taps: <span id="tapCount">0</span>
-        </div>
-        <button id="clearTapsBtn" class="miniBtn" type="button">Clear</button>
-      </div>
+    <!-- =======================================================
+         SCREEN 2 — TAP TARGET
+         - Instruction line sits above target
+         - CTAs show ONLY after bull is tapped
+    ======================================================== -->
+    <section id="pageTap" hidden>
 
       <div id="instructionLine" class="instructionLine">
-        Tap bull, then tap holes.
+        Tap bull’s-eye to center
       </div>
 
-      <button id="seeResultsBtn" class="seeResultsBtn" type="button">
-        Show Results
-      </button>
+      <div class="targetStage" aria-label="Target photo stage">
+
+        <div id="targetWrap" class="targetWrap">
+          <img id="targetImg" class="targetImg" alt="Target preview" />
+          <div id="dotsLayer" class="dotsLayer"></div>
+        </div>
+
+        <div class="miniRow">
+          <div class="miniPill">
+            Taps: <span id="tapCount">0</span>
+          </div>
+        </div>
+
+        <!-- CTAs (same color) — hidden until bull tapped -->
+        <div id="ctaRow" class="secActions" hidden>
+          <button id="undoBtn" class="ctaBtn" type="button">Undo</button>
+          <button id="clearBtn" class="ctaBtn" type="button">Clear</button>
+          <button id="showResultsBtn" class="ctaBtn" type="button">Show Results</button>
+        </div>
+
+      </div>
     </section>
 
-    <!-- SEC Card -->
-    <section id="secCard" class="secCard" aria-label="SEC Card" hidden>
-      <div class="secTopRow">
-        <div class="secTitle">
-          <span class="secRed">SEC</span> Card
-          <div class="secSession">Session: <span id="secSessionId">SEC-00000000-0000</span></div>
+    <!-- =======================================================
+         SCREEN 3 — SEC
+         - Two half-width buttons side-by-side
+         - Download Image is a hook for now
+         - Survey is loose for now
+    ======================================================== -->
+    <section id="pageSec" hidden>
+
+      <section id="secCard" class="secCard" aria-label="SEC Card">
+        <div class="secTopRow">
+          <div class="secTitle">
+            <span class="secRed">SEC</span> Card
+            <div class="secSession">Session: <span id="secSessionId">SEC-00000000-0000</span></div>
+          </div>
+
+          <button id="buyMoreBtn" class="buyMoreBtn" type="button">
+            <span class="buyMoreBlue">BUY MORE</span><br/>
+            Targets Like This
+          </button>
         </div>
 
-        <button id="buyMoreBtn" class="buyMoreBtn" type="button">
-          <span class="buyMoreBlue">BUY MORE</span><br/>
-          Targets Like This
-        </button>
-      </div>
-
-      <div class="secBox">
-        <div class="secBoxTitle">Target Clicks</div>
-        <div class="clickGrid">
-          <div class="clickCell">
-            <div class="clickLabel">Up</div>
-            <div id="clickUp" class="clickValue">0.00</div>
-          </div>
-          <div class="clickCell">
-            <div class="clickLabel">Down</div>
-            <div id="clickDown" class="clickValue">0.00</div>
-          </div>
-          <div class="clickCell">
-            <div class="clickLabel">Left</div>
-            <div id="clickLeft" class="clickValue">0.00</div>
-          </div>
-          <div class="clickCell">
-            <div class="clickLabel">Right</div>
-            <div id="clickRight" class="clickValue">0.00</div>
+        <div class="secBox">
+          <div class="secBoxTitle">Target Clicks</div>
+          <div class="clickGrid">
+            <div class="clickCell">
+              <div class="clickLabel">Up</div>
+              <div id="clickUp" class="clickValue">0.00</div>
+            </div>
+            <div class="clickCell">
+              <div class="clickLabel">Down</div>
+              <div id="clickDown" class="clickValue">0.00</div>
+            </div>
+            <div class="clickCell">
+              <div class="clickLabel">Left</div>
+              <div id="clickLeft" class="clickValue">0.00</div>
+            </div>
+            <div class="clickCell">
+              <div class="clickLabel">Right</div>
+              <div id="clickRight" class="clickValue">0.00</div>
+            </div>
           </div>
         </div>
-      </div>
 
-      <div class="secBox">
-        <div class="secBoxTitle">Score</div>
-        <div class="scoreBig" id="scoreBig">—</div>
-        <div class="scoreLines">
-          <div>Current <span id="scoreCurrent">—</span></div>
-          <div>Previous <span id="scorePrev">—</span></div>
-          <div>Cumulative <span id="scoreCum">—</span></div>
+        <div class="secBox">
+          <div class="secBoxTitle">Score</div>
+          <div class="scoreBig" id="scoreBig">—</div>
+          <div class="scoreLines">
+            <div>Current <span id="scoreCurrent">—</span></div>
+            <div>Previous <span id="scorePrev">—</span></div>
+            <div>Cumulative <span id="scoreCum">—</span></div>
+          </div>
         </div>
-      </div>
 
-      <!-- ✅ Two buttons, side-by-side -->
-      <div class="secActions">
-        <button id="downloadSecImageBtn" class="ctaBtn" type="button">
-          Download SEC (Image)
-        </button>
+        <div class="secActions">
+          <button id="downloadSecImageBtn" class="ctaBtn" type="button">
+            Download SEC (Image)
+          </button>
 
-        <button id="surveyBtn" class="ctaBtn" type="button">
-          Take 10-Second Survey
-        </button>
-      </div>
+          <button id="surveyBtn" class="ctaBtn" type="button">
+            Take 10-Second Survey
+          </button>
+        </div>
+      </section>
+
     </section>
 
   </main>
