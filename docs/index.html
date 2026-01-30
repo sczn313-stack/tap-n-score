@@ -35,7 +35,29 @@
           Tip: Straight-on photos give the most accurate results.
         </div>
 
-        <!-- NEW: Always-controlled thumbnail + explainer (never full-size) -->
+        <!-- Light calibration controls (fast, minimal) -->
+        <div class="calRow" aria-label="Distance and scope click value">
+          <div class="calPill">
+            Distance:
+            <select id="distanceYds" class="calSelect">
+              <option value="25">25 yd</option>
+              <option value="50">50 yd</option>
+              <option value="100" selected>100 yd</option>
+              <option value="200">200 yd</option>
+            </select>
+          </div>
+
+          <div class="calPill">
+            Click:
+            <select id="moaPerClick" class="calSelect">
+              <option value="0.25" selected>¼ MOA</option>
+              <option value="0.5">½ MOA</option>
+              <option value="0.125">⅛ MOA</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Controlled thumbnail + explainer (never full-size) -->
         <section class="photoConfirm" id="photoConfirm" aria-label="Photo selected confirmation">
           <div class="photoThumbWrap" aria-label="Selected photo thumbnail">
             <img id="photoThumb" class="photoThumb" alt="Selected target photo thumbnail" />
@@ -50,12 +72,12 @@
             <div class="explainerTitle">What happens next</div>
             <ul class="explainerList">
               <li>Tap bull’s-eye to center</li>
+              <li>Calibrate once (grid)</li>
               <li>Tap each confirmed hit</li>
-              <li>Get measured results</li>
+              <li>Get measured clicks</li>
             </ul>
           </div>
 
-          <!-- Optional reserved slot (quiet) -->
           <div class="promoSlot" id="promoSlot" hidden>
             <div class="promoTitle">Powered by Tap-n-Score™</div>
             <div class="promoBody">Want more targets like this? Visit your printer’s store.</div>
@@ -89,6 +111,7 @@
           <button id="resetViewBtn" class="miniBtn" type="button">Reset View</button>
         </div>
 
+        <!-- CTAs (same color) — hidden until bull tapped -->
         <div id="ctaRow" class="secActions" hidden>
           <button id="undoBtn" class="ctaBtn" type="button">Undo</button>
           <button id="clearBtn" class="ctaBtn" type="button">Clear</button>
