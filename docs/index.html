@@ -7,7 +7,8 @@
   <meta name="theme-color" content="#07110c" />
   <title>Tap-n-Score™</title>
 
-  <link rel="stylesheet" href="./styles.css?v=20260130a" />
+  <!-- BUST CACHE: bump this v when testing -->
+  <link rel="stylesheet" href="./styles.css?v=20260130c" />
 </head>
 
 <body>
@@ -20,17 +21,14 @@
         </div>
       </header>
 
-      <!-- We will NOT rely on Safari’s default file control.
-           We use a real hidden input + our own button. -->
       <div class="field">
         <div class="label">Take or Choose Target Photo</div>
 
-        <input id="photoInput" class="hiddenFile"
-               type="file" accept="image/*" />
+        <!-- hidden real input -->
+        <input id="photoInput" class="hiddenFile" type="file" accept="image/*" />
 
-        <button id="chooseBtn" class="btnPrimary" type="button">
-          Choose Photo
-        </button>
+        <!-- our button -->
+        <button id="chooseBtn" class="btnPrimary" type="button">Choose Photo</button>
 
         <div id="fileName" class="hint">No file selected.</div>
         <div class="hint">Tip: Straight-on photos give the most accurate results.</div>
@@ -68,7 +66,7 @@
       <div class="field">
         <div class="bigTitle">What happens next</div>
         <ul class="bullets">
-          <li>Tap bull’s-eye to center</li>
+          <li>Tap bull’s-eye (anchor)</li>
           <li>Calibrate once (grid)</li>
           <li>Tap each confirmed hit</li>
           <li>Get measured clicks</li>
@@ -78,18 +76,19 @@
       <button id="startBtn" class="btnStart" type="button">Start</button>
     </section>
 
-    <!-- Tap canvas + dots sit on top of the image inside this wrap -->
-    <section id="targetWrap" class="targetWrap">
+    <!-- Target + Tap Layer (HIDDEN until image loads) -->
+    <section id="targetWrap" class="targetWrap hidden">
       <img id="targetImg" alt="Selected target" />
-      <canvas id="tapCanvas"></canvas>
-      <div id="dotsLayer"></div>
+      <!-- THIS overlay is the ONLY tap receiver -->
+      <div id="tapLayer" aria-label="Tap layer"></div>
     </section>
 
-    <!-- These are created by JS too, but leaving hooks is fine -->
+    <!-- HUD -->
     <div id="instructionLine" class="hudLeft">Choose a photo to begin</div>
     <div id="tapCount" class="hudRight">Taps: 0</div>
 
-    <script src="./index.js?v=20260130a"></script>
+    <!-- BUST CACHE: bump this v when testing -->
+    <script src="./index.js?v=20260130c"></script>
   </main>
 </body>
 </html>
