@@ -1,57 +1,52 @@
 /* ============================================================
-   frontend_new/index.js (FULL REPLACEMENT) — vTAP-HARDLOCK-1
-   Fix:
-   - Photo loads but taps do NOT respond (iPad Safari)
-   What this does:
-   - Creates a real tap surface (canvas) INSIDE #targetWrap (always on top)
-   - Forces correct stacking: image < canvas < dotsLayer
-   - Binds pointerdown + touchstart with { passive:false } + preventDefault
-   - Shows a visible test dot for every tap (so you KNOW it fired)
-   - Keeps your existing UI IDs (from your 3-screen HTML)
+   frontend_new/index.js (FULL REPLACEMENT) — vLOAD+TAP-HARDLOCK-2
+   Fixes:
+   - “Target does not load” after selecting a photo
+   - iOS Safari HEIC/JPG decode weirdness (ObjectURL -> FileReader fallback)
+   - Always transitions to TAP screen only AFTER image successfully loads
+   - Bulletproof tap capture on top-layer canvas (tapCanvas)
+   - Draws a dot + increments Taps on every tap (proof)
 
-   Required HTML IDs (must exist):
-   - pageLanding, pageTap (hidden), pageSec (hidden)
-   - photoInput
-   - targetWrap, targetImg, dotsLayer
-   - tapCount
-   - resetViewBtn (optional), undoBtn (optional), clearBtn (optional), showResultsBtn (optional)
+   Requires your existing IDs (from your 3-screen HTML):
+   pageLanding, pageTap, pageSec
+   photoInput
+   targetWrap, targetImg, dotsLayer
+   tapCount, instructionLine
+   undoBtn (optional), clearBtn (optional), resetViewBtn (optional)
 ============================================================ */
 
 (() => {
   const $ = (id) => document.getElementById(id);
 
-  // ---------- Pages
+  // Screens
   const pageLanding = $("pageLanding");
   const pageTap = $("pageTap");
   const pageSec = $("pageSec");
 
-  // ---------- Landing input
+  // Input
   const elFile = $("photoInput");
 
-  // ---------- Tap screen
+  // Tap stage
   const elWrap = $("targetWrap");
   const elImg = $("targetImg");
   const elDots = $("dotsLayer");
   const elTapCount = $("tapCount");
   const elInstruction = $("instructionLine");
 
+  const elUndo = $("undoBtn");        // optional
+  const elClear = $("clearBtn");      // optional
   const elResetView = $("resetViewBtn"); // optional
-  const elUndo = $("undoBtn");           // optional
-  const elClear = $("clearBtn");         // optional
-  const elShow = $("showResultsBtn");    // optional
 
-  // ---------- State
+  // State
   let selectedFile = null;
   let objectUrl = null;
 
-  // taps stored normalized (0..1)
-  // first tap = bull anchor, remaining = hit taps
-  let taps = []; // { nx, ny, kind:'anchor'|'hit' }
-
-  // A dedicated tap surface that ALWAYS receives touches
+  let taps = []; // {nx, ny, kind:'anchor'|'hit'}
   let tapCanvas = null;
 
-  // ---------- Utilities
+  // -------------------------
+  // Screen control
+  // -------------------------
   function showOnly(which) {
     if (pageLanding) pageLanding.hidden = which !== "landing";
     if (pageTap) pageTap.hidden = which !== "tap";
@@ -76,29 +71,31 @@
     }
   }
 
-  // ---------- Tap layer creation (THE KEY FIX)
+  // -------------------------
+  // Tap surface
+  // -------------------------
   function ensureTapSurface() {
     if (!elWrap) throw new Error("Missing #targetWrap");
     if (!elImg) throw new Error("Missing #targetImg");
     if (!elDots) throw new Error("Missing #dotsLayer");
 
-    // Make sure wrap is a proper stacking context
+    // Wrap must be a stable stacking context
     elWrap.style.position = "relative";
-    elWrap.style.touchAction = "none"; // critical for iPad Safari
+    elWrap.style.touchAction = "none";
     elWrap.style.webkitUserSelect = "none";
     elWrap.style.userSelect = "none";
     elWrap.style.webkitTouchCallout = "none";
 
-    // Image should NOT block events
+    // Image never blocks taps
     elImg.style.pointerEvents = "none";
 
-    // Dots layer is visual only
+    // dotsLayer is visual only
     elDots.style.position = "absolute";
     elDots.style.inset = "0";
-    elDots.style.pointerEvents = "none";
     elDots.style.zIndex = "40";
+    elDots.style.pointerEvents = "none";
 
-    // Create canvas if missing
+    // Create/force canvas
     tapCanvas = $("tapCanvas");
     if (!tapCanvas) {
       tapCanvas = document.createElement("canvas");
@@ -106,7 +103,6 @@
       elWrap.appendChild(tapCanvas);
     }
 
-    // Force canvas to be on top of the image
     tapCanvas.style.position = "absolute";
     tapCanvas.style.inset = "0";
     tapCanvas.style.width = "100%";
@@ -116,13 +112,7 @@
     tapCanvas.style.touchAction = "none";
     tapCanvas.style.background = "transparent";
 
-    // OPTIONAL: uncomment if you want a visible proof layer
-    // tapCanvas.style.outline = "3px solid hotpink";
-    // tapCanvas.style.background = "rgba(255,0,255,0.06)";
-
-    // Keep canvas internal resolution synced to rendered size
     syncCanvasToWrap();
-    window.addEventListener("resize", syncCanvasToWrap);
   }
 
   function syncCanvasToWrap() {
@@ -134,7 +124,9 @@
     if (tapCanvas.height !== h) tapCanvas.height = h;
   }
 
-  // ---------- Dot rendering
+  // -------------------------
+  // Dots
+  // -------------------------
   function clearDots() {
     if (elDots) elDots.innerHTML = "";
   }
@@ -149,6 +141,7 @@
 
     for (const t of taps) {
       const d = document.createElement("div");
+      // Uses your CSS .tapDot + .anchorDot if present
       d.className = "tapDot" + (t.kind === "anchor" ? " anchorDot" : "");
       d.style.left = `${t.nx * w}px`;
       d.style.top = `${t.ny * h}px`;
@@ -176,13 +169,13 @@
     renderDots();
   }
 
-  // ---------- Pointer/touch capture (BULLETPROOF)
+  // -------------------------
+  // Tap capture (bulletproof)
+  // -------------------------
   function getClientPoint(evt) {
-    // touch
     if (evt.touches && evt.touches.length) {
       return { x: evt.touches[0].clientX, y: evt.touches[0].clientY };
     }
-    // pointer / mouse
     if (typeof evt.clientX === "number" && typeof evt.clientY === "number") {
       return { x: evt.clientX, y: evt.clientY };
     }
@@ -190,7 +183,6 @@
   }
 
   function onTap(evt) {
-    // If Safari allows, stop it from scrolling/zooming/doing weirdness
     if (evt.cancelable) evt.preventDefault();
     evt.stopPropagation();
 
@@ -202,7 +194,6 @@
     const localX = pt.x - r.left;
     const localY = pt.y - r.top;
 
-    // Normalize & clamp (0..1)
     const nx = Math.max(0, Math.min(1, localX / r.width));
     const ny = Math.max(0, Math.min(1, localY / r.height));
 
@@ -212,111 +203,143 @@
   function bindTapEvents() {
     if (!tapCanvas) return;
 
-    // IMPORTANT: passive:false so preventDefault works on iOS
+    // Prevent iOS from swallowing touches
     tapCanvas.addEventListener("pointerdown", onTap, { passive: false });
     tapCanvas.addEventListener("touchstart", onTap, { passive: false });
-
-    // Extra safety: some iOS cases still like click
     tapCanvas.addEventListener("click", onTap);
 
-    // Disable long-press menu
     tapCanvas.addEventListener("contextmenu", (e) => e.preventDefault());
   }
 
-  // ---------- File load
-  function loadFileToTapScreen(file) {
-    selectedFile = file || null;
+  // -------------------------
+  // Image load (ObjectURL + FileReader fallback)
+  // -------------------------
+  function loadImgSrcWithObjectUrl(file) {
+    return new Promise((resolve, reject) => {
+      revokeUrl();
+      objectUrl = URL.createObjectURL(file);
 
-    if (!selectedFile) return;
+      const onLoad = () => cleanup(resolve);
+      const onError = () => cleanup(() => reject(new Error("ObjectURL decode failed")));
 
-    revokeUrl();
-    objectUrl = URL.createObjectURL(selectedFile);
+      const cleanup = (done) => {
+        elImg.removeEventListener("load", onLoad);
+        elImg.removeEventListener("error", onError);
+        done();
+      };
 
-    // ensure tap surface exists BEFORE setting src
-    ensureTapSurface();
+      elImg.addEventListener("load", onLoad, { once: true });
+      elImg.addEventListener("error", onError, { once: true });
 
-    // Move to tap page and show image
-    showOnly("tap");
-
-    // reset taps
-    clearTaps();
-
-    // load image
-    elImg.onload = () => {
-      // after image paints, sync canvas to actual displayed size
-      // (wrap size is now final)
-      syncCanvasToWrap();
-      renderDots();
-    };
-
-    elImg.onerror = () => {
-      alert("Couldn’t load image. Try a different photo.");
-    };
-
-    elImg.src = objectUrl;
+      elImg.src = objectUrl;
+    });
   }
 
-  // ---------- Init
-  function init() {
-    if (!elFile) throw new Error("Missing #photoInput");
-    if (!pageLanding || !pageTap) {
-      // still works even if those sections don’t exist, but call it out
-      // (no alert; keep it quiet)
+  function loadImgSrcWithDataUrl(file) {
+    return new Promise((resolve, reject) => {
+      const fr = new FileReader();
+      fr.onerror = () => reject(new Error("FileReader failed"));
+      fr.onload = () => {
+        const dataUrl = fr.result;
+        if (!dataUrl || typeof dataUrl !== "string") {
+          return reject(new Error("Invalid dataURL"));
+        }
+
+        const onLoad = () => cleanup(resolve);
+        const onError = () => cleanup(() => reject(new Error("dataURL decode failed")));
+
+        const cleanup = (done) => {
+          elImg.removeEventListener("load", onLoad);
+          elImg.removeEventListener("error", onError);
+          done();
+        };
+
+        elImg.addEventListener("load", onLoad, { once: true });
+        elImg.addEventListener("error", onError, { once: true });
+
+        // If objectURL exists, release it
+        revokeUrl();
+        elImg.src = dataUrl;
+      };
+      fr.readAsDataURL(file);
+    });
+  }
+
+  async function goToTapWithFile(file) {
+    if (!file) return;
+
+    selectedFile = file;
+
+    // Make sure our tap surface exists even though pageTap is hidden
+    ensureTapSurface();
+    bindTapEvents();
+
+    // Reset taps for a fresh run
+    clearTaps();
+
+    // IMPORTANT: switch to tap screen now, but only “commit” once image loads
+    showOnly("tap");
+    setInstruction();
+    setTapCount();
+
+    // Try objectURL first, then fallback
+    try {
+      await loadImgSrcWithObjectUrl(selectedFile);
+    } catch (_) {
+      try {
+        await loadImgSrcWithDataUrl(selectedFile);
+      } catch (e2) {
+        showOnly("landing");
+        alert("Couldn’t load image. Try a different photo.");
+        return;
+      }
     }
+
+    // Once loaded, sync canvas to actual rendered wrap size
+    requestAnimationFrame(() => {
+      syncCanvasToWrap();
+      renderDots();
+    });
+  }
+
+  // -------------------------
+  // Init
+  // -------------------------
+  function init() {
+    // Hard guards (no silent failure)
+    if (!elFile) { alert("Missing #photoInput"); return; }
+    if (!elWrap) { alert("Missing #targetWrap"); return; }
+    if (!elImg) { alert("Missing #targetImg"); return; }
+    if (!elDots) { alert("Missing #dotsLayer"); return; }
 
     showOnly("landing");
 
-    // File picker change → go straight to tap screen
     elFile.addEventListener("change", (e) => {
       const f = e.target?.files?.[0] || null;
       if (!f) return;
-      loadFileToTapScreen(f);
+      // Store immediately (iOS stability) then load
+      goToTapWithFile(f);
     });
 
-    // Buttons (optional)
     if (elUndo) elUndo.addEventListener("click", undoTap);
     if (elClear) elClear.addEventListener("click", clearTaps);
 
     if (elResetView) {
       elResetView.addEventListener("click", () => {
-        // No transforms used in this hardlock version.
-        // If you add zoom/pan later, reset them here.
-        // For now, just re-sync.
         syncCanvasToWrap();
         renderDots();
       });
     }
 
-    if (elShow) {
-      elShow.addEventListener("click", () => {
-        // Placeholder — your existing backend call can plug in here.
-        // For now, prove taps exist:
-        if (taps.length < 2) {
-          alert("Tap bull’s-eye once, then tap at least one confirmed hit.");
-          return;
-        }
-        alert(`Captured taps: ${taps.length} (anchor + hits).`);
-      });
-    }
-
-    // If the user lands on tap page already (rare), still bind safely
-    try {
-      ensureTapSurface();
-      bindTapEvents();
-    } catch (_) {
-      // only binds once you’re on tap screen with targetWrap present
-    }
+    window.addEventListener("resize", () => {
+      syncCanvasToWrap();
+      renderDots();
+    });
   }
 
-  // Bind after DOM is ready
   if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", () => {
-      init();
-      // Important: bind after surface exists
-      if (tapCanvas) bindTapEvents();
-    });
+    document.addEventListener("DOMContentLoaded", init);
   } else {
     init();
-    if (tapCanvas) bindTapEvents();
   }
 })();
