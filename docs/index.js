@@ -1,8 +1,9 @@
 /* ============================================================
-   index.js (FULL REPLACEMENT) — vSEC-1e
-   Adds SEC vendor hook + survey CTA:
-   - Two equal-size, equal-color buttons:
-     "Buy more targets like this" + "Survey"
+   index.js (FULL REPLACEMENT) — vSEC-1f
+   Changes:
+   - Adds top-level header: "SHOOTER EXPERIENCE CARD" (red/white/blue)
+   - Direction words (LEFT/RIGHT/UP/DOWN) are smaller + closer to number
+   - Two equal CTAs stay: "Buy more targets like this" + "Survey"
    Performance colors locked:
    - GREEN  <= 3.00 clicks
    - YELLOW <= 6.00 clicks
@@ -12,10 +13,8 @@
 (() => {
   const $ = (id) => document.getElementById(id);
 
-  // ===== Vendor Hooks (EDIT THESE if you want) =====
-  // Baker / vendor buy link
+  // ===== Vendor Hooks (EDIT THESE) =====
   const VENDOR_BUY_URL = "https://bakertargets.com/";
-  // Survey link (replace with your real survey URL)
   const SURVEY_URL = "https://example.com/survey";
 
   // Elements
@@ -99,13 +98,8 @@
     elThumbBox.appendChild(img);
   }
 
-  function hideThumb() {
-    elThumbBox.classList.add("thumbHidden");
-  }
-
-  function showThumb() {
-    elThumbBox.classList.remove("thumbHidden");
-  }
+  function hideThumb() { elThumbBox.classList.add("thumbHidden"); }
+  function showThumb() { elThumbBox.classList.remove("thumbHidden"); }
 
   function getNormFromEvent(evt) {
     const rect = elDots.getBoundingClientRect();
@@ -125,10 +119,7 @@
   function normDeltaToInches(dxNorm, dyNorm) {
     const PAPER_W_IN = 8.5;
     const PAPER_H_IN = 11.0;
-    return {
-      xIn: dxNorm * PAPER_W_IN,
-      yIn: dyNorm * PAPER_H_IN
-    };
+    return { xIn: dxNorm * PAPER_W_IN, yIn: dyNorm * PAPER_H_IN };
   }
 
   function moaAtDistanceInches(distYds) {
@@ -161,32 +152,26 @@
     const windArrow = dx >= 0 ? "→" : "←";
     const elevArrow = dy >= 0 ? "↓" : "↑";
 
-    return {
-      windDir, elevDir,
-      windArrow, elevArrow,
-      windClicks, elevClicks,
-      dist, clickVal
-    };
+    return { windDir, elevDir, windArrow, elevArrow, windClicks, elevClicks, dist, clickVal };
   }
 
   // ===== Performance color logic (LOCKED: 3 / 6) =====
-  const GREEN_MAX = 3.0;   // <= 3.00 clicks
-  const YELLOW_MAX = 6.0;  // <= 6.00 clicks
+  const GREEN_MAX = 3.0;
+  const YELLOW_MAX = 6.0;
 
   function perfColor(clicks) {
     const v = Number(clicks);
     if (!Number.isFinite(v)) return "rgba(255,255,255,0.94)";
-    if (v <= GREEN_MAX)  return "rgba(0, 235, 150, 0.96)";   // green
-    if (v <= YELLOW_MAX) return "rgba(255, 196, 0, 0.96)";   // yellow
-    return "rgba(255, 90, 90, 0.96)";                        // red
+    if (v <= GREEN_MAX)  return "rgba(0, 235, 150, 0.96)"; // green
+    if (v <= YELLOW_MAX) return "rgba(255, 196, 0, 0.96)"; // yellow
+    return "rgba(255, 90, 90, 0.96)";                      // red
   }
 
   function openUrl(url) {
     if (!url) return;
-    // safer for iOS + prevents opener access
     try {
       const w = window.open(url, "_blank", "noopener,noreferrer");
-      if (!w) window.location.href = url; // fallback if popup blocked
+      if (!w) window.location.href = url;
     } catch {
       window.location.href = url;
     }
@@ -210,8 +195,17 @@
     overlay.style.padding = "18px";
 
     const card = document.createElement("div");
-    card.className = "secCard"; // uses CSS sizing + look
+    card.className = "secCard";
     card.style.color = "rgba(255,255,255,0.94)";
+
+    // NEW top banner text
+    const topLabel = document.createElement("div");
+    topLabel.className = "secTopLabel";
+    topLabel.innerHTML = `
+      <span class="secTri red">SHOOTER</span>
+      <span class="secTri white">EXPERIENCE</span>
+      <span class="secTri blue">CARD</span>
+    `;
 
     const title = document.createElement("div");
     title.textContent = "SEC";
@@ -240,34 +234,29 @@
       right.className = "secRowRight";
 
       const big = document.createElement("div");
-      big.textContent = `${arrow} ${valueText}`;
       big.className = "secBig";
-      big.style.color = valueColor; // performance color
+      big.style.color = valueColor;
 
-      const small = document.createElement("div");
-      small.textContent = dirText;
-      small.className = "secDir";
+      // tighter layout: arrow + number + direction close
+      big.innerHTML = `
+        <span class="secArrow">${arrow}</span>
+        <span class="secNum">${valueText}</span>
+        <span class="secDirInline">${dirText}</span>
+      `;
 
       right.appendChild(big);
-      right.appendChild(small);
-
       row.appendChild(left);
       row.appendChild(right);
-
       return row;
     }
 
     const windVal = sec.windClicks.toFixed(2);
     const elevVal = sec.elevClicks.toFixed(2);
 
-    rowWrap.appendChild(
-      makeRow("Windage", sec.windArrow, windVal, sec.windDir, perfColor(sec.windClicks))
-    );
-    rowWrap.appendChild(
-      makeRow("Elevation", sec.elevArrow, elevVal, sec.elevDir, perfColor(sec.elevClicks))
-    );
+    rowWrap.appendChild(makeRow("Windage", sec.windArrow, windVal, sec.windDir, perfColor(sec.windClicks)));
+    rowWrap.appendChild(makeRow("Elevation", sec.elevArrow, elevVal, sec.elevDir, perfColor(sec.elevClicks)));
 
-    // ===== NEW: equal action buttons (vendor + survey) =====
+    // Actions
     const actions = document.createElement("div");
     actions.className = "secActions";
 
@@ -293,10 +282,9 @@
     btnClose.style.marginTop = "12px";
 
     btnClose.addEventListener("click", () => overlay.remove());
-    overlay.addEventListener("click", (e) => {
-      if (e.target === overlay) overlay.remove();
-    });
+    overlay.addEventListener("click", (e) => { if (e.target === overlay) overlay.remove(); });
 
+    card.appendChild(topLabel);
     card.appendChild(title);
     card.appendChild(sub);
     card.appendChild(meta);
