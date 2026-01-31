@@ -1,7 +1,6 @@
 {
-  "id": "baker",
-  "name": "Baker Targets",
-  "url": "",
-  "logo": "assets/vendor-baker-logo.png",
-  "theme": "baker"
+  "vendorName": "Baker Printing",
+  "buyUrl": "https://bakertargets.com",
+  "surveyUrl": "https://your-survey-link",
+  "apiBase": "https://YOUR-RENDER-BACKEND.onrender.com"
 }
