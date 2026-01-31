@@ -1,9 +1,8 @@
 /* ============================================================
-   index.js (FULL REPLACEMENT) — vTAP-MOBILE-SIZE-1
-   Fixes:
-   - Tap dots (hits/anchor) reduced ~50% for phones
-   - HUD and controls sizing handled by CSS (mobile rules)
-   - Everything else preserved
+   index.js (FULL REPLACEMENT) — vTAP-NO-HUD-1
+   Change:
+   - Removes the top HUD pills entirely (tapCount + instructionLine)
+   - Code is safe if those elements do not exist
 ============================================================ */
 
 (() => {
@@ -22,9 +21,6 @@
   const elDistance = $("distanceYds");
   const elClick = $("clickValue");
 
-  const elHUDLeft = $("instructionLine");
-  const elHUDRight = $("tapCount");
-
   const elControls = $("controlsBar");
   const elClear = $("clearBtn");
   const elUndo = $("undoBtn");
@@ -40,32 +36,15 @@
   // Helpers
   function clamp01(v) { return Math.max(0, Math.min(1, v)); }
 
-  function setHUD() {
-    elHUDRight.textContent = `Taps: ${(anchor ? 1 : 0) + hits.length} (hits: ${hits.length})`;
-  }
-
-  function setInstruction(msg) { elHUDLeft.textContent = msg; }
-
   function clearDots() {
     while (elDots.firstChild) elDots.removeChild(elDots.firstChild);
-  }
-
-  function isPhone() {
-    // Conservative: phones / narrow portrait
-    return Math.min(window.innerWidth, window.innerHeight) <= 480;
   }
 
   function drawDot(norm, kind) {
     const dot = document.createElement("div");
     dot.className = "tapDot";
 
-    // --- SIZE: cut ~50% on phones
-    // (was 18 / 16)
-    const phone = isPhone();
-    const size = kind === "anchor"
-      ? (phone ? 9 : 18)
-      : (phone ? 8 : 16);
-
+    const size = kind === "anchor" ? 18 : 16;
     dot.style.width = `${size}px`;
     dot.style.height = `${size}px`;
 
@@ -83,8 +62,6 @@
     clearDots();
     if (anchor) drawDot(anchor, "anchor");
     hits.forEach((h) => drawDot(h, "hit"));
-
-    setHUD();
 
     // Buttons
     elClear.disabled = (!anchor && hits.length === 0);
@@ -117,10 +94,10 @@
   function directionText(anchorPt, poibPt) {
     // POIB -> Anchor (bull - poib)
     const dx = anchorPt.x - poibPt.x;
-    const dy = anchorPt.y - poibPt.y;
+    const dy = anchorPt.y - poibPt.y; // screen truth: down is +
 
-    const horizDir = dx >= 0 ? "R" : "L";
-    const vertDir  = dy >= 0 ? "D" : "U";
+    const horizDir = dx >= 0 ? "RIGHT" : "LEFT";
+    const vertDir  = dy >= 0 ? "DOWN" : "UP";
 
     return {
       horizDir,
@@ -140,32 +117,56 @@
 
     const dir = directionText(anchor, poib);
 
-    // Overlay (use CSS classes so mobile sizing can be controlled)
     const overlay = document.createElement("div");
-    overlay.className = "secOverlay";
+    overlay.style.position = "fixed";
+    overlay.style.inset = "0";
+    overlay.style.zIndex = "999999";
+    overlay.style.background = "rgba(0,0,0,0.55)";
+    overlay.style.backdropFilter = "blur(8px)";
+    overlay.style.display = "flex";
+    overlay.style.alignItems = "center";
+    overlay.style.justifyContent = "center";
+    overlay.style.padding = "18px";
 
     const card = document.createElement("div");
-    card.className = "secCard";
+    card.style.width = "min(860px, 96vw)";
+    card.style.borderRadius = "22px";
+    card.style.border = "1px solid rgba(255,255,255,0.12)";
+    card.style.background = "rgba(12,14,13,0.72)";
+    card.style.boxShadow = "0 26px 80px rgba(0,0,0,0.65)";
+    card.style.padding = "18px 18px 16px";
+    card.style.color = "rgba(255,255,255,0.92)";
 
     const title = document.createElement("div");
-    title.className = "secTitle";
-    title.textContent = "SEC";
+    title.textContent = "Results";
+    title.style.fontSize = "28px";
+    title.style.fontWeight = "900";
+    title.style.marginBottom = "10px";
 
     const body = document.createElement("div");
-    body.className = "secBody";
+    body.style.fontSize = "18px";
+    body.style.fontWeight = "800";
+    body.style.opacity = "0.92";
+    body.style.whiteSpace = "pre-line";
 
     body.textContent =
 `Shots: ${hits.length}
 
+POIB vs Anchor (image-space):
 Horizontal: ${dir.horizPct.toFixed(2)}% ${dir.horizDir}
 Vertical:   ${dir.vertPct.toFixed(2)}% ${dir.vertDir}
 
-Distance: ${dist} yd   Click: ${clickVal} MOA
-1 MOA ≈ ${oneMOAin.toFixed(3)}"`;
+Distance: ${dist} yd
+Click: ${clickVal} MOA per click
+1 MOA ≈ ${oneMOAin.toFixed(3)}" at this distance
+
+Next step: add GRID calibration to convert % → inches → clicks.`;
 
     const btn = document.createElement("button");
     btn.textContent = "Close";
     btn.className = "btnResults";
+    btn.style.width = "100%";
+    btn.style.marginTop = "14px";
 
     btn.addEventListener("click", () => overlay.remove());
     overlay.addEventListener("click", (e) => {
@@ -191,24 +192,26 @@ Distance: ${dist} yd   Click: ${clickVal} MOA
 
     setThumb(f);
 
+    // main image
     if (objectUrl) URL.revokeObjectURL(objectUrl);
     objectUrl = URL.createObjectURL(f);
     elImg.src = objectUrl;
 
+    // reset
     anchor = null;
     hits = [];
     redrawAll();
 
+    // show image & controls immediately
     elImgBox.classList.remove("hidden");
     elControls.classList.remove("hidden");
-    setInstruction("Tap bull’s-eye (anchor)");
 
     elImgBox.scrollIntoView({ behavior: "smooth", block: "start" });
   });
 
   // Tap handling
   elDots.addEventListener("pointerdown", (evt) => {
-    if (!selectedFile) return;
+    if (!selectedFile) return; // only after photo chosen
     evt.preventDefault();
 
     const norm = getNormFromEvent(evt);
@@ -216,7 +219,6 @@ Distance: ${dist} yd   Click: ${clickVal} MOA
 
     if (!anchor) {
       anchor = norm;
-      setInstruction("Now tap each confirmed hit");
     } else {
       hits.push(norm);
     }
@@ -226,7 +228,6 @@ Distance: ${dist} yd   Click: ${clickVal} MOA
   elClear.addEventListener("click", () => {
     anchor = null;
     hits = [];
-    setInstruction("Tap bull’s-eye (anchor)");
     redrawAll();
   });
 
@@ -235,19 +236,12 @@ Distance: ${dist} yd   Click: ${clickVal} MOA
       hits.pop();
     } else if (anchor) {
       anchor = null;
-      setInstruction("Tap bull’s-eye (anchor)");
     }
     redrawAll();
   });
 
   elResults.addEventListener("click", () => showResultsModal());
 
-  // Recompute sizing on rotation (dots use % so they stay aligned)
-  window.addEventListener("resize", () => {
-    redrawAll();
-  });
-
   // Initial
-  setHUD();
   redrawAll();
 })();
