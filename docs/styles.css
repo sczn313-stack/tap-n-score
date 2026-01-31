@@ -1,9 +1,9 @@
 /* ============================================================
-   docs/styles.css (FULL REPLACEMENT) — vLOCK-SEC-DL-1
-   - Mobile sizing fixes: dots + controls smaller
-   - Controls hidden until first tap (JS toggles .hidden)
-   - SEC modal styles + score colors
-   - Removes/avoids any “HUD pill” styling (none in HTML)
+   styles.css (FULL REPLACEMENT) — vTAP-LOCK-SEC-1
+   Fixes:
+   - Removes top HUD pills (they’re gone from HTML)
+   - Phone sizing: smaller tap dots + smaller controls bar buttons
+   - Controls bar is compact and fits phone screens clean
 ============================================================ */
 
 * { box-sizing: border-box; }
@@ -62,9 +62,6 @@ body {
 
 .hiddenFile { display: none !important; }
 .hidden { display: none !important; }
-
-/* Hide landing card when shooting (index.js adds this class) */
-.secLandingHidden { display: none !important; }
 
 .select {
   width: 100%;
@@ -130,6 +127,7 @@ body {
   height: auto;
   max-width: 140px;
   max-height: 140px;
+
   border-radius: 10px;
   border: 1px solid rgba(255,255,255,0.10);
 }
@@ -137,7 +135,7 @@ body {
 .thumbEmpty { opacity: 0.72; font-weight: 800; padding: 10px 6px; }
 
 /* ============================================================
-   IMAGE BOX (tap surface)
+   IMAGE BOX
 ============================================================ */
 .imgBox {
   display: inline-block;
@@ -145,6 +143,7 @@ body {
   width: min(860px, 96vw);
   border-radius: 22px;
   overflow: hidden;
+
   border: 1px solid rgba(255,255,255,0.10);
   box-shadow: 0 20px 60px rgba(0,0,0,0.55);
   background: rgba(0,0,0,0.18);
@@ -159,7 +158,6 @@ body {
   user-select: none;
 }
 
-/* overlay matches image box exactly */
 #dotsLayer {
   position: absolute;
   inset: 0;
@@ -180,13 +178,20 @@ body {
   height: 16px;
 }
 
-.tapDotAnchor { background: rgba(255, 196, 0, 0.95); width: 18px; height: 18px; }
-.tapDotHit { background: rgba(0, 220, 130, 0.95); }
+.tapDotAnchor {
+  width: 18px;
+  height: 18px;
+  background: rgba(255, 196, 0, 0.95);
+}
 
-/* Mobile: bullet holes HALF size */
+.tapDotHit {
+  background: rgba(0, 220, 130, 0.95);
+}
+
+/* PHONE: make bullet holes HALF size */
 @media (max-width: 520px) {
-  .tapDot { width: 8px; height: 8px; border-width: 2px; }
-  .tapDotAnchor { width: 10px; height: 10px; }
+  .tapDot { width: 8px; height: 8px; border-width: 1px; }
+  .tapDotAnchor { width: 9px; height: 9px; }
 }
 
 /* ---------- Bottom controls bar ---------- */
@@ -202,10 +207,10 @@ body {
 
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;
-  gap: 12px;
+  gap: 10px;
 
-  padding: 12px;
-  border-radius: 20px;
+  padding: 10px;
+  border-radius: 18px;
   border: 1px solid rgba(255,255,255,0.10);
   background: rgba(10,12,11,0.55);
   backdrop-filter: blur(12px);
@@ -214,9 +219,9 @@ body {
 
 .btnCtl {
   border: none;
-  border-radius: 16px;
-  padding: 16px 12px;
-  font-size: 18px;
+  border-radius: 14px;
+  padding: 14px 10px;
+  font-size: 17px;
   font-weight: 900;
   cursor: pointer;
   user-select: none;
@@ -240,14 +245,14 @@ body {
   box-shadow: 0 16px 50px rgba(0,0,0,0.55);
 }
 
-/* Mobile: controls smaller to fit phone screen */
+/* PHONE: shrink controls buttons */
 @media (max-width: 520px) {
-  .controlsBar { padding: 10px; gap: 10px; border-radius: 18px; }
-  .btnCtl { padding: 12px 10px; font-size: 15px; border-radius: 14px; }
+  .controlsBar { gap: 8px; padding: 8px; border-radius: 16px; }
+  .btnCtl { padding: 10px 8px; font-size: 15px; border-radius: 12px; }
 }
 
 /* ============================================================
-   SEC Modal
+   SEC MODAL
 ============================================================ */
 .secOverlay {
   position: fixed;
@@ -258,143 +263,103 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 18px;
+  padding: 16px;
 }
 
 .secCard {
-  width: min(920px, 96vw);
-  border-radius: 26px;
+  width: min(860px, 96vw);
+  border-radius: 22px;
   border: 1px solid rgba(255,255,255,0.12);
-  background: rgba(12,14,13,0.76);
+  background: rgba(12,14,13,0.72);
   box-shadow: 0 26px 80px rgba(0,0,0,0.65);
-  padding: 18px 18px 16px;
+  padding: 18px;
   color: rgba(255,255,255,0.92);
 }
 
 .secTitle {
+  font-size: 28px;
   font-weight: 900;
-  font-size: clamp(28px, 3.6vw, 48px);
-  letter-spacing: 0.8px;
-  display: flex;
-  gap: 10px;
-  align-items: baseline;
   margin-bottom: 6px;
 }
 
-.tRed { color: #e53935; }
-.tWhite { color: rgba(255,255,255,0.92); }
-.tBlue { color: #1e5aa8; }
-
 .secShots {
-  font-weight: 900;
-  opacity: 0.85;
   font-size: 18px;
-  margin-bottom: 10px;
+  font-weight: 800;
+  opacity: 0.9;
+  margin-bottom: 12px;
 }
 
 .secRow {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 14px;
-  padding: 16px 18px;
-  border-radius: 18px;
+  background: rgba(255,255,255,0.06);
   border: 1px solid rgba(255,255,255,0.10);
-  background: rgba(0,0,0,0.22);
+  border-radius: 18px;
+  padding: 14px;
   margin: 10px 0;
 }
 
-.secScoreRow {
-  padding: 18px 18px;
-}
-
 .secLabel {
+  font-size: 18px;
   font-weight: 900;
-  font-size: 22px;
-  opacity: 0.92;
+  opacity: 0.9;
 }
 
-.secRight {
-  display: inline-flex;
+.secValue {
+  display: flex;
   align-items: baseline;
   gap: 10px;
   font-weight: 900;
 }
 
-.secArrow {
-  font-size: 30px;
-  opacity: 0.92;
-}
-
-.secValue {
-  font-size: 44px;
-  letter-spacing: 0.2px;
-}
-
-.secDir {
-  font-size: 18px;
-  opacity: 0.75;
-  margin-left: 2px;
-}
-
-.secScoreNum {
-  font-weight: 900;
-  font-size: clamp(64px, 7vw, 96px);
-  line-height: 1;
-}
-
-.scoreRed { color: #ff3b30; }
-.scoreYellow { color: #ffd60a; }
-.scoreGreen { color: #34c759; }
-
-.secHistory {
-  font-weight: 800;
-  opacity: 0.75;
-  margin: 6px 2px 10px;
-  font-size: 16px;
-}
+.secArrow { font-size: 24px; opacity: 0.95; }
+.secNum   { font-size: 38px; letter-spacing: 0.4px; }
+.secDir   { font-size: 18px; opacity: 0.85; }
 
 .secActions {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 12px;
-  margin-top: 10px;
+  margin-top: 14px;
 }
 
-.secBtn {
+.secActionBtn {
   border: none;
-  border-radius: 16px;
+  border-radius: 18px;
   padding: 14px 12px;
   font-size: 18px;
   font-weight: 900;
   cursor: pointer;
-  user-select: none;
-  -webkit-tap-highlight-color: transparent;
 
-  background: rgba(255,255,255,0.08);
-  color: rgba(255,255,255,0.92);
-  border: 1px solid rgba(255,255,255,0.10);
+  background: linear-gradient(180deg, rgba(0,170,110,0.95), rgba(0,105,70,0.95));
+  color: rgba(255,255,255,0.96);
+  border: 1px solid rgba(255,255,255,0.12);
+  box-shadow: 0 18px 60px rgba(0,0,0,0.35);
 }
 
-.secBtn:active { transform: translateY(1px); }
+.secActionBtn:active { transform: translateY(1px); }
 
-.secBtnPrimary {
+.secCloseBtn {
   width: 100%;
-  margin-top: 12px;
+  margin-top: 14px;
+  border: none;
   border-radius: 999px;
-  padding: 16px 14px;
+  padding: 16px 18px;
   font-size: 20px;
+  font-weight: 900;
+  cursor: pointer;
+
   background: linear-gradient(180deg, rgba(0,170,110,0.95), rgba(0,105,70,0.95));
+  color: rgba(255,255,255,0.96);
   border: 1px solid rgba(255,255,255,0.12);
   box-shadow: 0 18px 60px rgba(0,0,0,0.55);
 }
 
+.secCloseBtn:active { transform: translateY(1px); }
+
 @media (max-width: 520px) {
-  .secLabel { font-size: 18px; }
-  .secValue { font-size: 34px; }
-  .secArrow { font-size: 26px; }
-  .secDir { font-size: 16px; }
-  .secActions { grid-template-columns: 1fr 1fr; }
-  .secBtn { font-size: 16px; padding: 12px 10px; }
-  .secBtnPrimary { font-size: 18px; padding: 14px 12px; }
+  .secNum { font-size: 32px; }
+  .secArrow { font-size: 22px; }
+  .secActionBtn { font-size: 16px; padding: 12px 10px; }
 }
