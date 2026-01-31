@@ -7,7 +7,7 @@
   <meta name="theme-color" content="#07110c" />
   <title>Tap-n-Score™</title>
 
-  <link rel="stylesheet" href="./styles.css?v=FIX-LOCK-IMG-1" />
+  <link rel="stylesheet" href="./styles.css?v=UI-TOOLS-1" />
 </head>
 
 <body>
@@ -25,7 +25,6 @@
         <div class="label">Take or Choose Target Photo</div>
 
         <input id="photoInput" class="hiddenFile" type="file" accept="image/*" />
-
         <button id="chooseBtn" class="btnPrimary" type="button">Choose Photo</button>
 
         <div id="fileName" class="hintStrong">No file selected.</div>
@@ -55,17 +54,19 @@
 
       <div class="field">
         <div class="label">Selected target photo thumbnail</div>
-        <div id="thumbBox" class="thumbBox">
+        <div id="thumbBox" class="thumbBox thumbSmall">
           <div class="thumbEmpty">No photo selected yet.</div>
         </div>
       </div>
 
-      <button id="startBtn" class="btnStart" type="button" disabled>
-        Start
-      </button>
+      <div class="toolsRow">
+        <button id="undoBtn" class="btnTool" type="button" disabled>Undo</button>
+        <button id="clearBtn" class="btnTool" type="button" disabled>Clear</button>
+        <button id="resultsBtn" class="btnToolPrimary" type="button" disabled>Results</button>
+      </div>
     </section>
 
-    <!-- This box MUST contain ONLY the image + overlay -->
+    <!-- Image + overlay only -->
     <section id="imgBox" class="imgBox hidden" aria-label="Target image box">
       <img id="targetImg" alt="Selected target" />
       <div id="dotsLayer" aria-label="Tap overlay"></div>
@@ -74,7 +75,7 @@
     <div id="instructionLine" class="hudLeft">Choose a photo to begin</div>
     <div id="tapCount" class="hudRight">Taps: 0</div>
 
-    <script src="./index.js?v=FIX-LOCK-IMG-1"></script>
+    <script src="./index.js?v=UI-TOOLS-1"></script>
   </main>
 </body>
 </html>
