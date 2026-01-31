@@ -1,47 +1,26 @@
 /* ============================================================
-   index.js (FULL REPLACEMENT) — FIX-LOCK-IMG-1
-   Fixes:
-   - Image box contains ONLY image + overlay (CSS locks geometry)
-   - Taps bind ONLY to #dotsLayer using pointerdown (no doubles)
-   - Coordinates computed from IMG BOX rect (no page mismatch)
-   - Robust image load: ObjectURL + fallback to FileReader
-   - Start button only enables after image loaded
+   docs/index.js (FULL REPLACEMENT) — FIX-LOCK-IMG-1
+   Matches current docs/index.html IDs:
+   - photoInput, chooseBtn, fileName, thumbBox
+   - imgBox, targetImg, dotsLayer
+   - instructionLine, tapCount, startBtn
+   - distanceYds, clickValue
+
+   Goals:
+   - Always load image on iOS (ObjectURL -> FileReader fallback)
+   - Overlay locked to the exact image box (#imgBox)
+   - Taps only register inside image box
+   - No double counting (pointerdown only)
 ============================================================ */
 
 (() => {
   const $ = (id) => document.getElementById(id);
-
   const log = (...a) => console.log("[TAP-N-SCORE]", ...a);
 
-  function showBanner(msg, ms = 1800) {
-    let b = document.getElementById("scznBanner");
-    if (!b) {
-      b = document.createElement("div");
-      b.id = "scznBanner";
-      b.style.position = "fixed";
-      b.style.left = "12px";
-      b.style.right = "12px";
-      b.style.bottom = "12px";
-      b.style.zIndex = "999999";
-      b.style.padding = "12px 14px";
-      b.style.borderRadius = "12px";
-      b.style.fontFamily = "system-ui,-apple-system,Segoe UI,Roboto,Arial";
-      b.style.fontSize = "14px";
-      b.style.fontWeight = "900";
-      b.style.background = "rgba(0,160,70,0.92)";
-      b.style.color = "#fff";
-      b.style.boxShadow = "0 12px 32px rgba(0,0,0,0.45)";
-      document.body.appendChild(b);
-    }
-    b.textContent = msg;
-    b.style.display = "block";
-    clearTimeout(showBanner._t);
-    showBanner._t = setTimeout(() => (b.style.display = "none"), ms);
-  }
-
-  let taps = [];
+  // ---- State
+  let taps = []; // {nx, ny}
   let objectUrl = null;
-  let imageReady = false;
+  let hasImage = false;
 
   function clamp01(v) {
     return Math.max(0, Math.min(1, v));
@@ -54,14 +33,28 @@
     }
   }
 
-  function clearTaps(dotsLayer, tapCountEl) {
-    taps = [];
-    dotsLayer.innerHTML = "";
-    tapCountEl.textContent = "Taps: 0";
+  function setInstruction(text) {
+    const el = $("instructionLine");
+    if (el) el.textContent = text;
   }
 
-  function renderDots(dotsLayer, imgBox, tapCountEl) {
-    dotsLayer.innerHTML = "";
+  function setTapCount() {
+    const el = $("tapCount");
+    if (el) el.textContent = `Taps: ${taps.length}`;
+  }
+
+  function clearDots() {
+    const dots = $("dotsLayer");
+    if (dots) dots.innerHTML = "";
+  }
+
+  function renderDots() {
+    const imgBox = $("imgBox");
+    const dots = $("dotsLayer");
+    if (!imgBox || !dots) return;
+
+    // clear then redraw
+    dots.innerHTML = "";
 
     const r = imgBox.getBoundingClientRect();
     const w = r.width || 1;
@@ -70,25 +63,26 @@
     taps.forEach((t, i) => {
       const d = document.createElement("div");
       d.className = "tapDot";
-      d.style.width = i === 0 ? "18px" : "14px";
-      d.style.height = i === 0 ? "18px" : "14px";
       d.style.left = `${t.nx * w}px`;
       d.style.top  = `${t.ny * h}px`;
-      d.style.background = i === 0
-        ? "rgba(255,180,0,0.95)"
-        : "rgba(0,220,120,0.95)";
-      dotsLayer.appendChild(d);
+
+      // first tap (anchor) = gold
+      if (i === 0) d.classList.add("tapDotAnchor");
+      dots.appendChild(d);
     });
 
-    tapCountEl.textContent = `Taps: ${taps.length}`;
+    setTapCount();
   }
 
-  function setThumb(thumbBox, imgSrc) {
-    thumbBox.innerHTML = "";
+  function setThumb(src) {
+    const box = $("thumbBox");
+    if (!box) return;
+    box.innerHTML = "";
+
     const im = document.createElement("img");
-    im.src = imgSrc;
+    im.src = src;
     im.alt = "Selected target thumbnail";
-    thumbBox.appendChild(im);
+    box.appendChild(im);
   }
 
   async function loadImgSrc(imgEl, src) {
@@ -105,6 +99,7 @@
       imgEl.src = src;
     });
 
+    // iOS sometimes needs decode() to fully paint
     if (imgEl.decode) {
       try { await imgEl.decode(); } catch (_) {}
     }
@@ -113,17 +108,17 @@
   async function loadFileToImg(file, imgEl) {
     revokeUrl();
 
-    // 1) ObjectURL
+    // Try ObjectURL first
     try {
       objectUrl = URL.createObjectURL(file);
       await loadImgSrc(imgEl, objectUrl);
       return;
     } catch (e) {
-      log("ObjectURL failed -> FileReader fallback", e);
+      log("ObjectURL failed, fallback to FileReader:", e);
       revokeUrl();
     }
 
-    // 2) FileReader fallback
+    // Fallback: FileReader dataURL
     const dataUrl = await new Promise((resolve, reject) => {
       const r = new FileReader();
       r.onload = () => resolve(r.result);
@@ -134,125 +129,140 @@
     await loadImgSrc(imgEl, dataUrl);
   }
 
-  function bindTap(dotsLayer, imgBox, tapCountEl) {
-    // Make sure iOS actually delivers pointer events here
-    dotsLayer.style.pointerEvents = "auto";
-    dotsLayer.style.touchAction = "none";
+  function bindTaps() {
+    const imgBox = $("imgBox");
+    const dots = $("dotsLayer");
+    if (!imgBox || !dots) return;
 
-    const onDown = (evt) => {
-      // Block scroll/zoom stealing taps
+    // Ensure overlay is the ONLY interactive layer
+    dots.style.pointerEvents = "auto";
+    dots.style.touchAction = "none";
+
+    const handler = (evt) => {
+      // No scroll/zoom stealing taps
       if (evt.cancelable) evt.preventDefault();
 
-      // Don’t accept taps until image is loaded/shown
-      if (!imageReady) return;
+      // Must have an image loaded
+      if (!hasImage) return;
+
+      const pt = (typeof evt.clientX === "number")
+        ? { x: evt.clientX, y: evt.clientY }
+        : (evt.touches && evt.touches[0])
+          ? { x: evt.touches[0].clientX, y: evt.touches[0].clientY }
+          : null;
+
+      if (!pt) return;
 
       const r = imgBox.getBoundingClientRect();
       if (r.width < 10 || r.height < 10) return;
 
-      const x = evt.clientX;
-      const y = evt.clientY;
+      // If somehow tapped outside box, ignore
+      if (pt.x < r.left || pt.x > r.right || pt.y < r.top || pt.y > r.bottom) return;
 
-      const nx = clamp01((x - r.left) / r.width);
-      const ny = clamp01((y - r.top) / r.height);
+      const nx = clamp01((pt.x - r.left) / r.width);
+      const ny = clamp01((pt.y - r.top) / r.height);
 
       taps.push({ nx, ny });
-      renderDots(dotsLayer, imgBox, tapCountEl);
+      renderDots();
+
+      // Enable Start after anchor + at least 1 hit (or just after anchor if you want)
+      const startBtn = $("startBtn");
+      if (startBtn) startBtn.disabled = taps.length < 2;
+
+      // Instruction text progression
+      if (taps.length === 1) setInstruction("Tap your confirmed hits");
+      else setInstruction("Keep tapping confirmed hits, then press Start");
     };
 
-    // ONE listener. No click. No touchstart.
-    dotsLayer.addEventListener("pointerdown", onDown, { passive: false });
+    // IMPORTANT: pointerdown only = no double count
+    dots.addEventListener("pointerdown", handler, { passive: false });
+    dots.addEventListener("contextmenu", (e) => e.preventDefault());
+  }
 
-    // Block long-press menu
-    dotsLayer.addEventListener("contextmenu", (e) => e.preventDefault());
+  function showImgBox() {
+    const imgBox = $("imgBox");
+    if (!imgBox) return;
+    imgBox.classList.remove("hidden");
+  }
+
+  function resetForNewImage(fileNameText) {
+    taps = [];
+    hasImage = false;
+
+    clearDots();
+    setTapCount();
+
+    const startBtn = $("startBtn");
+    if (startBtn) startBtn.disabled = true;
+
+    const fileName = $("fileName");
+    if (fileName) fileName.textContent = fileNameText || "No file selected.";
+
+    setInstruction("Loading image…");
   }
 
   function init() {
-    showBanner("LOADED ✅ FIX-LOCK-IMG-1", 1600);
-
     const input = $("photoInput");
     const chooseBtn = $("chooseBtn");
-    const fileName = $("fileName");
-    const thumbBox = $("thumbBox");
-    const startBtn = $("startBtn");
-
-    const imgBox = $("imgBox");
     const img = $("targetImg");
-    const dots = $("dotsLayer");
 
-    const tapCountEl = $("tapCount");
-    const instructionEl = $("instructionLine");
-
-    if (!input || !chooseBtn || !fileName || !thumbBox || !startBtn ||
-        !imgBox || !img || !dots || !tapCountEl || !instructionEl) {
-      alert("Missing required element IDs. Re-check index.html.");
+    if (!input || !chooseBtn || !img) {
+      alert("Missing required IDs. Verify docs/index.html IDs match docs/index.js.");
       return;
     }
 
-    bindTap(dots, imgBox, tapCountEl);
+    // Always bind tap handler once
+    bindTaps();
 
-    // Resize safety: redraw dots if orientation/size changes
+    // Resize redraw
     window.addEventListener("resize", () => {
-      if (imageReady) renderDots(dots, imgBox, tapCountEl);
+      if (hasImage) renderDots();
     });
 
-    chooseBtn.addEventListener("click", () => {
-      showBanner("OPENING PHOTO PICKER…", 900);
-      input.click();
-    });
-
-    startBtn.addEventListener("click", () => {
-      if (!imageReady) return;
-      instructionEl.textContent = "Tap bull’s-eye (anchor)";
-      imgBox.scrollIntoView({ behavior: "smooth", block: "start" });
-    });
+    chooseBtn.addEventListener("click", () => input.click());
 
     input.addEventListener("change", async () => {
       const file = input.files && input.files[0] ? input.files[0] : null;
       if (!file) return;
 
-      showBanner(`FILE: ${file.name}`, 1400);
-      fileName.textContent = file.name;
-
-      // Reset state
-      imageReady = false;
-      startBtn.disabled = true;
-      instructionEl.textContent = "Loading image…";
-      clearTaps(dots, tapCountEl);
+      resetForNewImage(file.name);
+      showImgBox();
 
       try {
-        // Show image box now (but taps still locked until imageReady = true)
-        imgBox.classList.remove("hidden");
-
         await loadFileToImg(file, img);
 
-        // Thumb uses same src
-        setThumb(thumbBox, img.src);
+        // Thumb uses the same src that loaded successfully
+        setThumb(img.src);
 
-        // Now safe to accept taps
-        imageReady = true;
-        startBtn.disabled = false;
+        // Now taps are valid
+        hasImage = true;
 
-        // Redraw (in case)
+        // Let layout settle, then redraw dots (none yet) and update instruction
         requestAnimationFrame(() => {
-          renderDots(dots, imgBox, tapCountEl);
-          instructionEl.textContent = "Press Start to begin tapping";
+          renderDots();
+          setInstruction("Tap bull’s-eye (anchor)");
         });
-
-        // Nice UX: scroll to Start
-        // (keeps the card in view, then Start brings you to image)
       } catch (e) {
         log("Load failed:", e);
         alert("Couldn’t load image. Try a different photo.");
-        instructionEl.textContent = "Image load failed";
-        imgBox.classList.add("hidden");
+        setInstruction("Image load failed");
       } finally {
-        // Allow reselecting same file on iOS
+        // Allow picking same file again on iOS
         input.value = "";
       }
     });
 
-    tapCountEl.textContent = "Taps: 0";
-    instructionEl.textContent = "Choose a photo to begin";
+    // Start button (placeholder)
+    const startBtn = $("startBtn");
+    if (startBtn) {
+      startBtn.addEventListener("click", () => {
+        // For now just confirm it fires. Your next step is wiring the analysis.
+        alert(`Start pressed with ${taps.length} taps.`);
+      });
+    }
+
+    setTapCount();
+    setInstruction("Choose a photo to begin");
   }
 
   if (document.readyState === "loading") {
