@@ -1,24 +1,29 @@
 /* ============================================================
-   index.js (FULL REPLACEMENT) — vSEC-SCOREIMG-1
-   - Results modal IS the SEC
-   - Shooter Score is an IMAGE (SVG data URL)
-   - Previous 3 + Average remain (localStorage)
-   - SEC layout: LEFT content, RIGHT intentionally blank
-   - CTAs smaller and kept on LEFT only
+   index.js (FULL REPLACEMENT) — vSEC-LOCK-1
+
+   Changes:
+   - Thumbnail disappears when target shows
+   - SEC modal:
+       * Title "Shooter Experience Card" (RWB styling in CSS)
+       * Click rows smaller
+       * Directions: arrows + single-letter (R/L/U/D)
+       * Score bands 0-60 / 61-79 / 80-100
+       * Numbers only are colored (no color words displayed)
+       * Hide MOA + Distance in SEC
+   - Recenter after rotation IF pinched (visualViewport.scale !== 1)
 ============================================================ */
 
 (() => {
   const $ = (id) => document.getElementById(id);
 
-  // ---------- Vendor hook ----------
-  const VENDOR_NAME = "Baker Printing";
-  const VENDOR_URL = "https://example.com"; // <-- replace with Baker link
-
   // Elements
   const elFile = $("photoInput");
   const elChoose = $("chooseBtn");
   const elFileName = $("fileName");
+
+  const elThumbField = $("thumbField");
   const elThumbBox = $("thumbBox");
+  const elWhatNext = $("whatNext");
 
   const elImgBox = $("imgBox");
   const elImg = $("targetImg");
@@ -42,12 +47,13 @@
   let anchor = null; // {x,y} normalized
   let hits = [];     // [{x,y}...]
 
-  // ---------- Helpers ----------
+  // Helpers
   function clamp01(v) { return Math.max(0, Math.min(1, v)); }
 
   function setHUD() {
     elHUDRight.textContent = `Taps: ${(anchor ? 1 : 0) + hits.length} (hits: ${hits.length})`;
   }
+
   function setInstruction(msg) { elHUDLeft.textContent = msg; }
 
   function clearDots() {
@@ -57,14 +63,18 @@
   function drawDot(norm, kind) {
     const dot = document.createElement("div");
     dot.className = "tapDot";
+
     const size = kind === "anchor" ? 18 : 16;
     dot.style.width = `${size}px`;
     dot.style.height = `${size}px`;
+
     dot.style.left = `${(norm.x * 100).toFixed(4)}%`;
     dot.style.top  = `${(norm.y * 100).toFixed(4)}%`;
+
     dot.style.background = (kind === "anchor")
       ? "rgba(255, 196, 0, 0.95)"
       : "rgba(0, 220, 130, 0.95)";
+
     elDots.appendChild(dot);
   }
 
@@ -75,8 +85,9 @@
 
     setHUD();
 
+    // Buttons
     elClear.disabled = (!anchor && hits.length === 0);
-    elUndo.disabled  = (!anchor && hits.length === 0);
+    elUndo.disabled = (!anchor && hits.length === 0);
     elResults.disabled = (!anchor || hits.length === 0);
   }
 
@@ -102,424 +113,186 @@
     return { x: sum.x / hits.length, y: sum.y / hits.length };
   }
 
-  function directionText(anchorPt, poibPt) {
-    // POIB -> Anchor (bull - poib)
-    const dx = anchorPt.x - poibPt.x;
-    const dy = anchorPt.y - poibPt.y; // screen truth: down is +
-
-    const horizDir = dx >= 0 ? "RIGHT" : "LEFT";
-    const vertDir  = dy >= 0 ? "DOWN" : "UP";
-
-    return {
-      horizDir,
-      vertDir,
-      horizPct: Math.abs(dx) * 100,
-      vertPct:  Math.abs(dy) * 100
-    };
+  // Vector from POIB -> Anchor (bull - poib)
+  function correctionVector(anchorPt, poibPt) {
+    const dx = anchorPt.x - poibPt.x; // + means move right
+    const dy = anchorPt.y - poibPt.y; // + means move down (screen truth)
+    return { dx, dy };
   }
 
-  // ---------- Score logic (0..100) ----------
-  function computeShooterScore() {
-    if (hits.length < 1) return { score: 0, tier: "red" };
-
-    const poib = computePOIB();
-    if (!poib) return { score: 0, tier: "red" };
-
-    // avg distance from POIB (normalized)
-    const avgDist = hits.reduce((acc, h) => {
-      const dx = h.x - poib.x;
-      const dy = h.y - poib.y;
-      return acc + Math.sqrt(dx*dx + dy*dy);
-    }, 0) / hits.length;
-
-    // Map avgDist 0.00 => 100, avgDist 0.20 => ~0
-    const norm = Math.max(0, Math.min(1, avgDist / 0.20));
-    const score = Math.round((1 - norm) * 100);
-
-    // thresholds you gave: 33/66/100
-    let tier = "red";
-    if (score >= 67) tier = "green";
-    else if (score >= 34) tier = "yellow";
-
-    return { score, tier };
+  function dirForDx(dx) {
+    if (dx >= 0) return { letter: "R", arrow: "→" };
+    return { letter: "L", arrow: "←" };
   }
 
-  function loadScoreHistory() {
-    try {
-      const arr = JSON.parse(localStorage.getItem("sczn3_score_history") || "[]");
-      return Array.isArray(arr) ? arr : [];
-    } catch {
-      return [];
-    }
+  function dirForDy(dy) {
+    // screen truth: down is +, up is -
+    if (dy >= 0) return { letter: "D", arrow: "↓" };
+    return { letter: "U", arrow: "↑" };
   }
 
-  function saveScoreHistory(arr) {
-    localStorage.setItem("sczn3_score_history", JSON.stringify(arr.slice(0, 25)));
+  // ------------------------------------------------------------
+  // CLICK MATH NOTE:
+  // We do NOT show MOA/distance in SEC.
+  // We still compute clicks using a simple field-scale so the UI works now.
+  // Later you can swap this with your true grid calibration.
+  // ------------------------------------------------------------
+  const FIELD_INCHES_REF = 12.0; // placeholder scale for now
+
+  function clicksFromDelta(deltaNorm, distYds, clickValMOA) {
+    // Convert normalized delta -> inches using a constant field reference
+    const inches = Math.abs(deltaNorm) * FIELD_INCHES_REF;
+
+    // Convert inches -> MOA at distance
+    const oneMOAin = (distYds / 100) * 1.047;
+    const moa = oneMOAin > 0 ? (inches / oneMOAin) : 0;
+
+    // MOA -> clicks
+    const clicks = clickValMOA > 0 ? (moa / clickValMOA) : 0;
+    return clicks;
   }
 
-  function pushScore(score) {
-    const arr = loadScoreHistory();
-    arr.unshift({ score, ts: Date.now() });
-    saveScoreHistory(arr);
-    return arr;
+  // Score is a simple mapping for now (swap later if you have your real score)
+  function computeScoreFromGroup(poib, anchorPt) {
+    // smaller error => higher score
+    const v = correctionVector(anchorPt, poib);
+    const mag = Math.sqrt(v.dx*v.dx + v.dy*v.dy); // 0..~1.4
+    // map to 0..100
+    const s = Math.max(0, Math.min(100, Math.round(100 - (mag * 100))));
+    return s;
   }
 
-  function getPrevThree(arr) {
-    const prev = arr.slice(1, 4).map((x) => x.score);
-    while (prev.length < 3) prev.push(null);
-    return prev;
+  function scoreBandClass(score) {
+    // 0-60 / 61-79 / 80-100
+    if (score <= 60) return "bandA";
+    if (score <= 79) return "bandB";
+    return "bandC";
   }
 
-  function calcAverage(arr, count = 10) {
-    const sample = arr.slice(0, count).map((x) => x.score).filter((n) => Number.isFinite(n));
-    if (!sample.length) return null;
-    const avg = sample.reduce((a, b) => a + b, 0) / sample.length;
-    return Math.round(avg);
-  }
-
-  // ---------- Score IMAGE (SVG → data URL) ----------
-  function getTierColors(tier) {
-    if (tier === "green") {
-      return {
-        ring: "rgba(0,220,130,0.95)",
-        glow: "rgba(0,220,130,0.35)"
-      };
-    }
-    if (tier === "yellow") {
-      return {
-        ring: "rgba(255,208,60,0.95)",
-        glow: "rgba(255,208,60,0.35)"
-      };
-    }
-    return {
-      ring: "rgba(255,70,70,0.95)",
-      glow: "rgba(255,70,70,0.35)"
-    };
-  }
-
-  function scoreSvgDataUrl(score, tier) {
-    const { ring, glow } = getTierColors(tier);
-
-    // keep it crisp and consistent
-    const w = 340;
-    const h = 120;
-
-    const svg =
-`<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">
-  <defs>
-    <filter id="glow" x="-40%" y="-80%" width="180%" height="260%">
-      <feGaussianBlur stdDeviation="10" result="b"/>
-      <feMerge>
-        <feMergeNode in="b"/>
-        <feMergeNode in="SourceGraphic"/>
-      </feMerge>
-    </filter>
-    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="rgba(255,255,255,0.08)"/>
-      <stop offset="1" stop-color="rgba(0,0,0,0.22)"/>
-    </linearGradient>
-  </defs>
-
-  <rect x="0" y="0" width="${w}" height="${h}" rx="22" fill="url(#bg)" stroke="rgba(255,255,255,0.12)"/>
-
-  <rect x="14" y="14" width="${w-28}" height="${h-28}" rx="18"
-        fill="rgba(0,0,0,0.22)"
-        stroke="${ring}" stroke-width="3"
-        filter="url(#glow)"/>
-
-  <text x="24" y="44"
-        font-family="system-ui, -apple-system, Segoe UI, Roboto, Arial"
-        font-size="14" font-weight="900"
-        fill="rgba(255,255,255,0.82)" letter-spacing="1.2">
-    SHOOTER SCORE
-  </text>
-
-  <text x="${w/2}" y="92"
-        text-anchor="middle"
-        font-family="system-ui, -apple-system, Segoe UI, Roboto, Arial"
-        font-size="64" font-weight="1000"
-        fill="${ring}">
-    ${score}
-  </text>
-
-  <rect x="${w-96}" y="20" width="72" height="24" rx="12"
-        fill="${glow}" stroke="rgba(255,255,255,0.10)"/>
-  <text x="${w-60}" y="38" text-anchor="middle"
-        font-family="system-ui, -apple-system, Segoe UI, Roboto, Arial"
-        font-size="12" font-weight="900"
-        fill="rgba(0,0,0,0.75)">
-    ${tier.toUpperCase()}
-  </text>
-</svg>`;
-
-    return "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg);
-  }
-
-  // ---------- Survey ----------
-  function getSessionId() {
-    const k = "sczn3_session_id";
-    let v = localStorage.getItem(k);
-    if (!v) {
-      v = `SEC-${Math.random().toString(16).slice(2)}-${Date.now()}`;
-      localStorage.setItem(k, v);
-    }
-    return v;
-  }
-
-  function logSurvey(payload) {
-    const record = {
-      ts: new Date().toISOString(),
-      session: getSessionId(),
-      vendor: VENDOR_NAME,
-      distanceYds: Number(elDistance?.value || 100),
-      clickValue: Number(elClick?.value || 0.25),
-      hits: hits.length,
-      ...payload
-    };
-
-    console.log("[SURVEY]", record);
-
-    const key = "sczn3_survey_log";
-    const arr = JSON.parse(localStorage.getItem(key) || "[]");
-    arr.push(record);
-    localStorage.setItem(key, JSON.stringify(arr));
-  }
-
-  function openSurveyOverlay() {
-    const overlay = document.createElement("div");
-    overlay.className = "surveyOverlay";
-
-    const card = document.createElement("div");
-    card.className = "surveyCard";
-
-    const title = document.createElement("div");
-    title.className = "surveyTitle";
-    title.textContent = "10 seconds";
-
-    const helper = document.createElement("div");
-    helper.className = "surveyHelper";
-    helper.textContent = "This helps improve your shooter experience.";
-
-    const question = document.createElement("div");
-    question.className = "surveyQuestion";
-    question.textContent = "Did this help you understand your next adjustment?";
-
-    const btnRow = document.createElement("div");
-    btnRow.className = "surveyBtnRow";
-
-    const yesBtn = document.createElement("button");
-    yesBtn.className = "surveyBtn surveyBtnYes";
-    yesBtn.type = "button";
-    yesBtn.textContent = "✅ Yes";
-
-    const noBtn = document.createElement("button");
-    noBtn.className = "surveyBtn surveyBtnNo";
-    noBtn.type = "button";
-    noBtn.textContent = "❌ Not yet";
-
-    btnRow.appendChild(yesBtn);
-    btnRow.appendChild(noBtn);
-
-    const notNow = document.createElement("button");
-    notNow.className = "surveyNotNow";
-    notNow.type = "button";
-    notNow.textContent = "Not now";
-
-    const reasonsWrap = document.createElement("div");
-    reasonsWrap.className = "surveyReasons hidden";
-
-    const reasonsTitle = document.createElement("div");
-    reasonsTitle.className = "surveyReasonsTitle";
-    reasonsTitle.textContent = "What was missing? (tap one)";
-
-    const reasonsGrid = document.createElement("div");
-    reasonsGrid.className = "surveyReasonsGrid";
-
-    const reasons = [
-      "Direction felt wrong",
-      "Numbers didn’t make sense",
-      "Tapping was hard / clunky",
-      "The photo didn’t line up",
-      "Other"
-    ];
-
-    reasons.forEach((label) => {
-      const b = document.createElement("button");
-      b.type = "button";
-      b.className = "surveyReasonBtn";
-      b.textContent = label;
-
-      b.addEventListener("click", () => {
-        logSurvey({ q: "helped_next_adjustment", a: "not_yet", reason: label });
-        card.innerHTML = `
-          <div class="surveyTitle">Got it.</div>
-          <div class="surveyHelper">That helps us improve the shooter experience.</div>
-        `;
-        setTimeout(() => overlay.remove(), 900);
-      });
-
-      reasonsGrid.appendChild(b);
-    });
-
-    reasonsWrap.appendChild(reasonsTitle);
-    reasonsWrap.appendChild(reasonsGrid);
-
-    yesBtn.addEventListener("click", () => {
-      logSurvey({ q: "helped_next_adjustment", a: "yes" });
-      card.innerHTML = `
-        <div class="surveyTitle">Perfect.</div>
-        <div class="surveyHelper">Glad it helped. See you next range trip.</div>
-      `;
-      setTimeout(() => overlay.remove(), 900);
-    });
-
-    noBtn.addEventListener("click", () => {
-      reasonsWrap.classList.remove("hidden");
-      btnRow.classList.add("hidden");
-      notNow.classList.remove("hidden");
-    });
-
-    notNow.addEventListener("click", () => {
-      logSurvey({ q: "helped_next_adjustment", a: "skipped" });
-      overlay.remove();
-    });
-
-    overlay.addEventListener("click", (e) => {
-      if (e.target === overlay) overlay.remove();
-    });
-
-    card.appendChild(title);
-    card.appendChild(helper);
-    card.appendChild(question);
-    card.appendChild(btnRow);
-    card.appendChild(reasonsWrap);
-    card.appendChild(notNow);
-
-    overlay.appendChild(card);
-    document.body.appendChild(overlay);
-
-    notNow.classList.remove("hidden");
-  }
-
-  // ---------- SEC modal ----------
-  function showSecModal() {
+  function showSECModal() {
     const poib = computePOIB();
     if (!anchor || !poib) return;
 
     const dist = Number(elDistance.value) || 100;
     const clickVal = Number(elClick.value) || 0.25;
-    const oneMOAin = (dist / 100) * 1.047;
 
-    const dir = directionText(anchor, poib);
+    const v = correctionVector(anchor, poib);
 
-    // Score + history
-    const { score, tier } = computeShooterScore();
-    const hist = pushScore(score);
-    const prev3 = getPrevThree(hist);
-    const avg = calcAverage(hist, 10);
+    // clicks
+    const windClicks = clicksFromDelta(v.dx, dist, clickVal);
+    const elevClicks = clicksFromDelta(v.dy, dist, clickVal);
 
+    const wDir = dirForDx(v.dx);
+    const eDir = dirForDy(v.dy);
+
+    const shots = hits.length;
+
+    const score = computeScoreFromGroup(poib, anchor);
+    const band = scoreBandClass(score);
+
+    // Overlay
     const overlay = document.createElement("div");
-    overlay.className = "resultsOverlay";
+    overlay.className = "secOverlay";
 
+    // Card
     const card = document.createElement("div");
-    card.className = "resultsCard";
+    card.className = "secCard";
 
-    const grid = document.createElement("div");
-    grid.className = "secGrid";
-
-    const left = document.createElement("div");
-    left.className = "secLeft";
-
-    const right = document.createElement("div");
-    right.className = "secRight";
-
-    // Header: Shooter Experience Card (darker blue)
+    // Header
     const header = document.createElement("div");
     header.className = "secHeader";
-    header.innerHTML = `
-      <div class="secHeaderTop">
-        <span class="secWordRed">SHOOTER</span>
-        <span class="secWordWhite"> EXPERIENCE </span>
-        <span class="secWordBlue">CARD</span>
-      </div>
-      <div class="secHeaderSub">Tap-n-Score™</div>
-    `;
 
-    // Adjust block
-    const adjust = document.createElement("div");
-    adjust.className = "secAdjust";
-    adjust.innerHTML = `
-      <div class="secAdjustTitle">Adjust</div>
-      <div class="secAdjustRow">
-        <div class="secAdjustItem">
-          <div class="secAdjustNum">${dir.horizPct.toFixed(2)}</div>
-          <div class="secAdjustLbl">${dir.horizDir}</div>
-        </div>
-        <div class="secAdjustItem">
-          <div class="secAdjustNum">${dir.vertPct.toFixed(2)}</div>
-          <div class="secAdjustLbl">${dir.vertDir}</div>
-        </div>
-      </div>
-      <div class="secAdjustNote">(% until grid calibration converts to inches + clicks)</div>
-    `;
-
-    // Score block (IMAGE)
-    const scoreBox = document.createElement("div");
-    scoreBox.className = "secScoreBox";
-
-    const scoreImg = document.createElement("img");
-    scoreImg.className = "secScoreImg";
-    scoreImg.alt = `Shooter Score ${score}`;
-    scoreImg.src = scoreSvgDataUrl(score, tier);
-
-    scoreBox.innerHTML = `<div class="secScoreTitle">Shooter Score</div>`;
-    scoreBox.appendChild(scoreImg);
+    const title = document.createElement("div");
+    title.className = "secTitleRWB";
+    title.textContent = "SHOOTER EXPERIENCE CARD";
 
     const meta = document.createElement("div");
-    meta.className = "secScoreMeta";
-    meta.innerHTML = `
-      <div class="secScoreLine">
-        <span class="secScoreKey">Previous 3:</span>
-        <span class="secScoreVal">${prev3.map((n) => (n === null ? "—" : n)).join("  ·  ")}</span>
-      </div>
-      <div class="secScoreLine">
-        <span class="secScoreKey">Average:</span>
-        <span class="secScoreVal">${avg === null ? "—" : avg}</span>
-      </div>
-    `;
-    scoreBox.appendChild(meta);
+    meta.className = "secMeta";
+    meta.textContent = `Shots: ${shots}`;
 
-    // Details (small)
-    const details = document.createElement("div");
-    details.className = "secDetails";
-    details.textContent =
-`Hits: ${hits.length}
-Distance: ${dist} yd
-Click: ${clickVal} MOA
-1 MOA ≈ ${oneMOAin.toFixed(3)}"`;
+    header.appendChild(title);
+    header.appendChild(meta);
 
-    // Small CTAs (left only)
-    const ctaRow = document.createElement("div");
-    ctaRow.className = "resultsCtaRow";
+    // Score row (numbers only colored)
+    const scoreRow = document.createElement("div");
+    scoreRow.className = "secScoreRow";
+
+    const scoreLabel = document.createElement("div");
+    scoreLabel.className = "secScoreLabel";
+    scoreLabel.textContent = "Score";
+
+    const scoreValue = document.createElement("div");
+    scoreValue.className = `secScoreValue ${band}`;
+    scoreValue.textContent = String(score);
+
+    scoreRow.appendChild(scoreLabel);
+    scoreRow.appendChild(scoreValue);
+
+    // Click rows (small)
+    function makeClickRow(labelText, arrowChar, dirLetter, valueNum) {
+      const row = document.createElement("div");
+      row.className = "secClickRow";
+
+      const left = document.createElement("div");
+      left.className = "secClickLabel";
+      left.textContent = labelText;
+
+      const mid = document.createElement("div");
+      mid.className = "secClickMid";
+
+      const arrow = document.createElement("div");
+      arrow.className = "secArrow";
+      arrow.textContent = arrowChar;
+
+      const val = document.createElement("div");
+      val.className = `secValue ${band}`; // numbers only colored
+      val.textContent = valueNum.toFixed(2);
+
+      const dir = document.createElement("div");
+      dir.className = "secDir";
+      dir.textContent = dirLetter;
+
+      mid.appendChild(arrow);
+      mid.appendChild(val);
+      mid.appendChild(dir);
+
+      row.appendChild(left);
+      row.appendChild(mid);
+      return row;
+    }
+
+    const windRow = makeClickRow("Windage", wDir.arrow, wDir.letter, windClicks);
+    const elevRow = makeClickRow("Elevation", eDir.arrow, eDir.letter, elevClicks);
+
+    // Actions row (2 equal buttons)
+    const actions = document.createElement("div");
+    actions.className = "secActions";
 
     const buyBtn = document.createElement("button");
+    buyBtn.className = "secActionBtn";
     buyBtn.type = "button";
-    buyBtn.className = "resultsCtaBtn";
-    buyBtn.innerHTML = `<span class="ctaTop">BUY MORE</span><br/><span class="ctaBottom">Targets Like This</span>`;
-    buyBtn.addEventListener("click", () => window.open(VENDOR_URL, "_blank", "noopener,noreferrer"));
+    buyBtn.textContent = "Buy more targets";
+    buyBtn.addEventListener("click", () => {
+      // placeholder hook - swap to Baker link when ready
+      window.open("https://bakertargets.com", "_blank");
+    });
 
     const surveyBtn = document.createElement("button");
+    surveyBtn.className = "secActionBtn";
     surveyBtn.type = "button";
-    surveyBtn.className = "resultsCtaBtn";
-    surveyBtn.innerHTML = `<span class="ctaTop">SURVEY</span><br/><span class="ctaBottom">10 seconds</span>`;
-    surveyBtn.addEventListener("click", () => openSurveyOverlay());
+    surveyBtn.textContent = "Survey";
+    surveyBtn.addEventListener("click", () => {
+      // placeholder - swap to your survey URL
+      window.open("https://example.com", "_blank");
+    });
 
-    ctaRow.appendChild(buyBtn);
-    ctaRow.appendChild(surveyBtn);
+    actions.appendChild(buyBtn);
+    actions.appendChild(surveyBtn);
 
+    // Close
     const closeBtn = document.createElement("button");
-    closeBtn.type = "button";
     closeBtn.className = "btnResults";
+    closeBtn.type = "button";
     closeBtn.textContent = "Close";
     closeBtn.addEventListener("click", () => overlay.remove());
 
@@ -527,22 +300,58 @@ Click: ${clickVal} MOA
       if (e.target === overlay) overlay.remove();
     });
 
-    left.appendChild(header);
-    left.appendChild(adjust);
-    left.appendChild(scoreBox);
-    left.appendChild(details);
-    left.appendChild(ctaRow);
-    left.appendChild(closeBtn);
+    // Build card
+    card.appendChild(header);
+    card.appendChild(scoreRow);
+    card.appendChild(windRow);
+    card.appendChild(elevRow);
+    card.appendChild(actions);
+    card.appendChild(closeBtn);
 
-    grid.appendChild(left);
-    grid.appendChild(right);
-
-    card.appendChild(grid);
     overlay.appendChild(card);
     document.body.appendChild(overlay);
   }
 
-  // ---------- Events ----------
+  function showTargetUI() {
+    elImgBox.classList.remove("hidden");
+    elControls.classList.remove("hidden");
+
+    // Hide thumbnail + “what next” once target is up
+    if (elThumbField) elThumbField.classList.add("hidden");
+    if (elWhatNext) elWhatNext.classList.add("hidden");
+
+    setInstruction("Tap bull’s-eye (anchor)");
+    elImgBox.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  // Pinch + rotation recenter
+  function recenterIfPinched() {
+    const vv = window.visualViewport;
+    if (!vv) return;
+    if (vv.scale && vv.scale !== 1) {
+      // if user pinched, keep the image area centered after rotation/resize
+      if (!elImgBox.classList.contains("hidden")) {
+        elImgBox.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
+    }
+  }
+
+  window.addEventListener("orientationchange", () => {
+    setTimeout(recenterIfPinched, 350);
+  });
+
+  window.addEventListener("resize", () => {
+    // iOS fires resize on rotation AND sometimes zoom
+    setTimeout(recenterIfPinched, 150);
+  });
+
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener("resize", () => {
+      setTimeout(recenterIfPinched, 120);
+    });
+  }
+
+  // Events
   elChoose.addEventListener("click", () => elFile.click());
 
   elFile.addEventListener("change", () => {
@@ -554,26 +363,20 @@ Click: ${clickVal} MOA
 
     setThumb(f);
 
+    // main image
     if (objectUrl) URL.revokeObjectURL(objectUrl);
     objectUrl = URL.createObjectURL(f);
     elImg.src = objectUrl;
 
+    // reset taps
     anchor = null;
     hits = [];
     redrawAll();
 
-    elImgBox.classList.remove("hidden");
-    elControls.classList.remove("hidden");
-    setInstruction("Tap bull’s-eye (anchor)");
-
-    // Hide thumbnail when target is on screen
-    elThumbBox.classList.add("hidden");
-
-    elImgBox.scrollIntoView({ behavior: "smooth", block: "start" });
-
-    elFile.value = "";
+    showTargetUI();
   });
 
+  // Tap handling
   elDots.addEventListener("pointerdown", (evt) => {
     if (!selectedFile) return;
     evt.preventDefault();
@@ -603,12 +406,13 @@ Click: ${clickVal} MOA
     } else if (anchor) {
       anchor = null;
       setInstruction("Tap bull’s-eye (anchor)");
-    }
+    }s
     redrawAll();
   });
 
-  elResults.addEventListener("click", () => showSecModal());
+  elResults.addEventListener("click", () => showSECModal());
 
+  // Initial
   setHUD();
   redrawAll();
 })();
