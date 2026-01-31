@@ -1,10 +1,10 @@
 /* ============================================================
-   index.js (FULL REPLACEMENT) — vSEC-SCORES-1
+   index.js (FULL REPLACEMENT) — vSEC-SCOREIMG-1
    - Results modal IS the SEC
-   - Adds Shooter Score + previous 3 + average (localStorage)
+   - Shooter Score is an IMAGE (SVG data URL)
+   - Previous 3 + Average remain (localStorage)
    - SEC layout: LEFT content, RIGHT intentionally blank
    - CTAs smaller and kept on LEFT only
-   - Survey (Question A) remains
 ============================================================ */
 
 (() => {
@@ -119,32 +119,29 @@
   }
 
   // ---------- Score logic (0..100) ----------
-  // We score "tightness" based on average distance of hits to POIB in normalized image space.
-  // This is NOT "inches" yet — it’s consistent, fast, and stable for the SEC.
   function computeShooterScore() {
-    if (hits.length < 1) return { score: 0, colorClass: "scoreRed" };
+    if (hits.length < 1) return { score: 0, tier: "red" };
 
     const poib = computePOIB();
-    if (!poib) return { score: 0, colorClass: "scoreRed" };
+    if (!poib) return { score: 0, tier: "red" };
 
-    // avg distance from POIB (normalized 0..~0.7 typically)
+    // avg distance from POIB (normalized)
     const avgDist = hits.reduce((acc, h) => {
       const dx = h.x - poib.x;
       const dy = h.y - poib.y;
       return acc + Math.sqrt(dx*dx + dy*dy);
     }, 0) / hits.length;
 
-    // Map: avgDist 0.00 => 100, avgDist 0.20 => ~0
-    // clamp range so it behaves well.
+    // Map avgDist 0.00 => 100, avgDist 0.20 => ~0
     const norm = Math.max(0, Math.min(1, avgDist / 0.20));
     const score = Math.round((1 - norm) * 100);
 
     // thresholds you gave: 33/66/100
-    let colorClass = "scoreRed";
-    if (score >= 67) colorClass = "scoreGreen";
-    else if (score >= 34) colorClass = "scoreYellow";
+    let tier = "red";
+    if (score >= 67) tier = "green";
+    else if (score >= 34) tier = "yellow";
 
-    return { score, colorClass };
+    return { score, tier };
   }
 
   function loadScoreHistory() {
@@ -168,7 +165,6 @@
   }
 
   function getPrevThree(arr) {
-    // prev = before current (index 1..3)
     const prev = arr.slice(1, 4).map((x) => x.score);
     while (prev.length < 3) prev.push(null);
     return prev;
@@ -181,7 +177,85 @@
     return Math.round(avg);
   }
 
-  // ---------- Survey logging ----------
+  // ---------- Score IMAGE (SVG → data URL) ----------
+  function getTierColors(tier) {
+    if (tier === "green") {
+      return {
+        ring: "rgba(0,220,130,0.95)",
+        glow: "rgba(0,220,130,0.35)"
+      };
+    }
+    if (tier === "yellow") {
+      return {
+        ring: "rgba(255,208,60,0.95)",
+        glow: "rgba(255,208,60,0.35)"
+      };
+    }
+    return {
+      ring: "rgba(255,70,70,0.95)",
+      glow: "rgba(255,70,70,0.35)"
+    };
+  }
+
+  function scoreSvgDataUrl(score, tier) {
+    const { ring, glow } = getTierColors(tier);
+
+    // keep it crisp and consistent
+    const w = 340;
+    const h = 120;
+
+    const svg =
+`<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">
+  <defs>
+    <filter id="glow" x="-40%" y="-80%" width="180%" height="260%">
+      <feGaussianBlur stdDeviation="10" result="b"/>
+      <feMerge>
+        <feMergeNode in="b"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="rgba(255,255,255,0.08)"/>
+      <stop offset="1" stop-color="rgba(0,0,0,0.22)"/>
+    </linearGradient>
+  </defs>
+
+  <rect x="0" y="0" width="${w}" height="${h}" rx="22" fill="url(#bg)" stroke="rgba(255,255,255,0.12)"/>
+
+  <rect x="14" y="14" width="${w-28}" height="${h-28}" rx="18"
+        fill="rgba(0,0,0,0.22)"
+        stroke="${ring}" stroke-width="3"
+        filter="url(#glow)"/>
+
+  <text x="24" y="44"
+        font-family="system-ui, -apple-system, Segoe UI, Roboto, Arial"
+        font-size="14" font-weight="900"
+        fill="rgba(255,255,255,0.82)" letter-spacing="1.2">
+    SHOOTER SCORE
+  </text>
+
+  <text x="${w/2}" y="92"
+        text-anchor="middle"
+        font-family="system-ui, -apple-system, Segoe UI, Roboto, Arial"
+        font-size="64" font-weight="1000"
+        fill="${ring}">
+    ${score}
+  </text>
+
+  <rect x="${w-96}" y="20" width="72" height="24" rx="12"
+        fill="${glow}" stroke="rgba(255,255,255,0.10)"/>
+  <text x="${w-60}" y="38" text-anchor="middle"
+        font-family="system-ui, -apple-system, Segoe UI, Roboto, Arial"
+        font-size="12" font-weight="900"
+        fill="rgba(0,0,0,0.75)">
+    ${tier.toUpperCase()}
+  </text>
+</svg>`;
+
+    return "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg);
+  }
+
+  // ---------- Survey ----------
   function getSessionId() {
     const k = "sczn3_session_id";
     let v = localStorage.getItem(k);
@@ -339,7 +413,7 @@
     const dir = directionText(anchor, poib);
 
     // Score + history
-    const { score, colorClass } = computeShooterScore();
+    const { score, tier } = computeShooterScore();
     const hist = pushScore(score);
     const prev3 = getPrevThree(hist);
     const avg = calcAverage(hist, 10);
@@ -350,7 +424,6 @@
     const card = document.createElement("div");
     card.className = "resultsCard";
 
-    // 2-col grid: LEFT content, RIGHT blank
     const grid = document.createElement("div");
     grid.className = "secGrid";
 
@@ -358,7 +431,7 @@
     left.className = "secLeft";
 
     const right = document.createElement("div");
-    right.className = "secRight"; // intentionally blank
+    right.className = "secRight";
 
     // Header: Shooter Experience Card (darker blue)
     const header = document.createElement("div");
@@ -372,10 +445,9 @@
       <div class="secHeaderSub">Tap-n-Score™</div>
     `;
 
-    // Direction block (kept compact)
+    // Adjust block
     const adjust = document.createElement("div");
     adjust.className = "secAdjust";
-
     adjust.innerHTML = `
       <div class="secAdjustTitle">Adjust</div>
       <div class="secAdjustRow">
@@ -391,25 +463,31 @@
       <div class="secAdjustNote">(% until grid calibration converts to inches + clicks)</div>
     `;
 
-    // Score block
+    // Score block (IMAGE)
     const scoreBox = document.createElement("div");
     scoreBox.className = "secScoreBox";
-    scoreBox.innerHTML = `
-      <div class="secScoreTitle">Shooter Score</div>
-      <div class="secScoreBig ${colorClass}">${score}</div>
-      <div class="secScoreMeta">
-        <div class="secScoreLine">
-          <span class="secScoreKey">Previous 3:</span>
-          <span class="secScoreVal">
-            ${prev3.map((n) => (n === null ? "—" : n)).join("  ·  ")}
-          </span>
-        </div>
-        <div class="secScoreLine">
-          <span class="secScoreKey">Average:</span>
-          <span class="secScoreVal">${avg === null ? "—" : avg}</span>
-        </div>
+
+    const scoreImg = document.createElement("img");
+    scoreImg.className = "secScoreImg";
+    scoreImg.alt = `Shooter Score ${score}`;
+    scoreImg.src = scoreSvgDataUrl(score, tier);
+
+    scoreBox.innerHTML = `<div class="secScoreTitle">Shooter Score</div>`;
+    scoreBox.appendChild(scoreImg);
+
+    const meta = document.createElement("div");
+    meta.className = "secScoreMeta";
+    meta.innerHTML = `
+      <div class="secScoreLine">
+        <span class="secScoreKey">Previous 3:</span>
+        <span class="secScoreVal">${prev3.map((n) => (n === null ? "—" : n)).join("  ·  ")}</span>
+      </div>
+      <div class="secScoreLine">
+        <span class="secScoreKey">Average:</span>
+        <span class="secScoreVal">${avg === null ? "—" : avg}</span>
       </div>
     `;
+    scoreBox.appendChild(meta);
 
     // Details (small)
     const details = document.createElement("div");
@@ -449,7 +527,6 @@ Click: ${clickVal} MOA
       if (e.target === overlay) overlay.remove();
     });
 
-    // Compose left
     left.appendChild(header);
     left.appendChild(adjust);
     left.appendChild(scoreBox);
@@ -457,7 +534,6 @@ Click: ${clickVal} MOA
     left.appendChild(ctaRow);
     left.appendChild(closeBtn);
 
-    // Compose grid
     grid.appendChild(left);
     grid.appendChild(right);
 
@@ -482,22 +558,19 @@ Click: ${clickVal} MOA
     objectUrl = URL.createObjectURL(f);
     elImg.src = objectUrl;
 
-    // reset taps
     anchor = null;
     hits = [];
     redrawAll();
 
-    // show tap area + controls
     elImgBox.classList.remove("hidden");
     elControls.classList.remove("hidden");
     setInstruction("Tap bull’s-eye (anchor)");
 
-    // Hide thumbnail when target is on screen (YOU ASKED)
+    // Hide thumbnail when target is on screen
     elThumbBox.classList.add("hidden");
 
     elImgBox.scrollIntoView({ behavior: "smooth", block: "start" });
 
-    // allow reselect same file
     elFile.value = "";
   });
 
@@ -534,10 +607,8 @@ Click: ${clickVal} MOA
     redrawAll();
   });
 
-  // Results button now opens the SEC
   elResults.addEventListener("click", () => showSecModal());
 
-  // Initial
   setHUD();
   redrawAll();
 })();
