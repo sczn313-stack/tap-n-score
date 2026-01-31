@@ -1,7 +1,9 @@
 /* ============================================================
-   styles.css (FULL REPLACEMENT) — vSEC-1g
-   Adds:
-   - .secActionBtnSecondary (full-width Download button)
+   styles.css (FULL REPLACEMENT) — vSEC-SCORES-1
+   - SEC = 2-column grid: LEFT content, RIGHT blank
+   - CTAs smaller so right side stays empty
+   - Shooter Score (current + prev3 + avg) with red/yellow/green
+   - "Shooter Experience Card" header uses darker blue
 ============================================================ */
 
 * { box-sizing: border-box; }
@@ -45,7 +47,6 @@ body {
   font-size: clamp(26px, 4vw, 44px);
   line-height: 1.05;
 }
-
 .tm { color: rgba(0,235,150,0.95); margin-left: 2px; }
 .sub { opacity: 0.85; font-weight: 700; font-size: 15px; }
 
@@ -97,12 +98,7 @@ body {
 }
 .btnPrimary:active { transform: translateY(1px); }
 
-/* ---------- What next list ---------- */
-.whatNext { margin-top: 10px; }
-.bullets { margin: 8px 0 0; padding-left: 18px; }
-.bullets li { opacity: 0.9; font-weight: 700; margin: 6px 0; }
-
-/* ---------- Thumbnail ---------- */
+/* ---------- Thumbnail (SMALL) ---------- */
 .thumbBox {
   margin-top: 8px;
   width: 100%;
@@ -128,13 +124,14 @@ body {
   border: 1px solid rgba(255,255,255,0.10);
 }
 .thumbEmpty { opacity: 0.72; font-weight: 800; padding: 10px 6px; }
-.thumbHidden { display: none !important; }
 
-/* ---------- Image Box ---------- */
+/* ---------- Tap area ---------- */
 .imgBox {
   display: inline-block;
   position: relative;
   width: min(860px, 96vw);
+  padding: 0;
+  margin: 0;
   border-radius: 22px;
   overflow: hidden;
   border: 1px solid rgba(255,255,255,0.10);
@@ -223,7 +220,6 @@ body {
   color: rgba(255,255,255,0.92);
   border: 1px solid rgba(255,255,255,0.10);
 }
-
 .btnCtl:active { transform: translateY(1px); }
 .btnCtl:disabled { opacity: 0.35; cursor: not-allowed; }
 
@@ -233,165 +229,323 @@ body {
   box-shadow: 0 16px 50px rgba(0,0,0,0.55);
 }
 
+/* ============================================================
+   SEC Overlay
+============================================================ */
+.resultsOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 999999;
+  background: rgba(0,0,0,0.55);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+}
+
+.resultsCard {
+  width: min(860px, 96vw);
+  border-radius: 22px;
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(12,14,13,0.78);
+  box-shadow: 0 26px 80px rgba(0,0,0,0.65);
+  padding: 16px;
+}
+
+/* Two columns: RIGHT intentionally blank */
+.secGrid {
+  display: grid;
+  grid-template-columns: minmax(320px, 520px) 1fr;
+  gap: 18px;
+  align-items: start;
+}
+
+@media (max-width: 760px) {
+  /* On small screens, blank column collapses (still "blank" because it disappears) */
+  .secGrid { grid-template-columns: 1fr; }
+  .secRight { display: none; }
+}
+
+.secLeft { width: 100%; }
+.secRight {
+  min-height: 360px;
+  border-radius: 18px;
+  /* intentionally blank (no border, no text) */
+}
+
+/* Header: Shooter Experience Card */
+.secHeader {
+  padding: 6px 2px 10px;
+  margin-bottom: 6px;
+}
+.secHeaderTop {
+  font-weight: 1000;
+  letter-spacing: 0.8px;
+  font-size: 22px;
+  line-height: 1.1;
+  text-transform: uppercase;
+}
+.secWordRed   { color: rgba(255, 80, 80, 0.95); }
+.secWordWhite { color: rgba(255,255,255,0.92); }
+.secWordBlue  { color: rgba(20, 60, 160, 0.95); } /* darker blue */
+.secHeaderSub {
+  margin-top: 4px;
+  font-weight: 900;
+  opacity: 0.82;
+  font-size: 13px;
+}
+
+/* Adjust block */
+.secAdjust {
+  margin-top: 8px;
+  border: 1px solid rgba(255,255,255,0.10);
+  border-radius: 18px;
+  padding: 12px;
+  background: rgba(255,255,255,0.04);
+}
+.secAdjustTitle {
+  font-weight: 1000;
+  font-size: 14px;
+  opacity: 0.88;
+  margin-bottom: 10px;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+}
+.secAdjustRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.secAdjustItem {
+  border-radius: 16px;
+  border: 1px solid rgba(255,255,255,0.10);
+  background: rgba(0,0,0,0.22);
+  padding: 12px;
+  text-align: center;
+}
+.secAdjustNum {
+  font-weight: 1000;
+  font-size: 28px;
+}
+.secAdjustLbl {
+  margin-top: 4px;
+  font-weight: 1000;
+  font-size: 12px; /* smaller and closer to number */
+  opacity: 0.85;
+  letter-spacing: 0.8px;
+}
+.secAdjustNote {
+  margin-top: 10px;
+  font-weight: 900;
+  font-size: 12px;
+  opacity: 0.70;
+}
+
+/* Score box */
+.secScoreBox {
+  margin-top: 12px;
+  border: 1px solid rgba(255,255,255,0.10);
+  border-radius: 18px;
+  padding: 12px;
+  background: rgba(255,255,255,0.04);
+}
+.secScoreTitle {
+  font-weight: 1000;
+  font-size: 14px;
+  opacity: 0.88;
+  margin-bottom: 8px;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+}
+.secScoreBig {
+  font-weight: 1100;
+  font-size: 54px;
+  line-height: 1;
+}
+.scoreRed { color: rgba(255, 70, 70, 0.95); }
+.scoreYellow { color: rgba(255, 208, 60, 0.95); }
+.scoreGreen { color: rgba(0, 220, 130, 0.95); }
+
+.secScoreMeta {
+  margin-top: 10px;
+  border-top: 1px solid rgba(255,255,255,0.08);
+  padding-top: 10px;
+  font-weight: 900;
+  font-size: 13px;
+  opacity: 0.88;
+}
+.secScoreLine {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 6px 0;
+}
+.secScoreKey { opacity: 0.75; }
+.secScoreVal { opacity: 0.95; }
+
+/* small details */
+.secDetails {
+  margin-top: 10px;
+  font-weight: 900;
+  font-size: 12px;
+  opacity: 0.76;
+  white-space: pre-line;
+  line-height: 1.3;
+}
+
+/* CTAs (SMALL) — kept on LEFT only */
+.resultsCtaRow {
+  margin-top: 12px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  max-width: 360px; /* keeps right side blank */
+}
+
+.resultsCtaBtn {
+  border: none;
+  border-radius: 14px;
+  padding: 10px 8px;
+  font-weight: 1000;
+  cursor: pointer;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+
+  background: rgba(255,255,255,0.08);
+  color: rgba(255,255,255,0.92);
+  border: 1px solid rgba(255,255,255,0.10);
+  box-shadow: 0 10px 26px rgba(0,0,0,0.40);
+  text-align: center;
+}
+.resultsCtaBtn:active { transform: translateY(1px); }
+
+.ctaTop { font-size: 13px; letter-spacing: 0.6px; }
+.ctaBottom { font-size: 12px; opacity: 0.85; font-weight: 900; }
+
 /* Close button */
 .btnResults {
   border: none;
   border-radius: 999px;
-  padding: 16px 18px;
-  font-size: 20px;
-  font-weight: 900;
+  padding: 14px 16px;
+  font-size: 16px;
+  font-weight: 1000;
   cursor: pointer;
+  margin-top: 12px;
+  width: 100%;
 
   background: linear-gradient(180deg, rgba(0,170,110,0.95), rgba(0,105,70,0.95));
   color: rgba(255,255,255,0.96);
   border: 1px solid rgba(255,255,255,0.12);
-  box-shadow: 0 18px 60px rgba(0,0,0,0.55);
+  box-shadow: 0 16px 46px rgba(0,0,0,0.55);
 }
 .btnResults:active { transform: translateY(1px); }
 
 /* ============================================================
-   SEC MODAL
+   Survey overlay
 ============================================================ */
-.secCard {
-  width: min(900px, 96vw);
-  border-radius: 22px;
-  border: 1px solid rgba(255,255,255,0.12);
-  background: rgba(12,14,13,0.78);
-  box-shadow: 0 26px 90px rgba(0,0,0,0.70);
+.surveyOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000000;
+  background: rgba(0,0,0,0.50);
+  backdrop-filter: blur(10px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
   padding: 18px;
 }
 
-.secTopLabel {
-  font-weight: 1000;
-  letter-spacing: 0.9px;
-  text-transform: uppercase;
-  font-size: 14px;
-  margin-bottom: 10px;
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-.secTri {
-  padding: 6px 10px;
-  border-radius: 999px;
+.surveyCard {
+  width: min(520px, 96vw);
+  border-radius: 22px;
   border: 1px solid rgba(255,255,255,0.12);
-  background: rgba(0,0,0,0.22);
+  background: rgba(12,14,13,0.78);
+  box-shadow: 0 26px 80px rgba(0,0,0,0.65);
+  padding: 16px 16px 14px;
 }
-.secTri.red { color: rgba(255, 90, 90, 0.96); }
-.secTri.white { color: rgba(255,255,255,0.96); }
-.secTri.blue { color: rgba(120, 170, 255, 0.96); }
 
-.secTitle {
-  font-size: 34px;
-  font-weight: 950;
+.surveyTitle {
+  font-size: 22px;
+  font-weight: 1000;
   margin-bottom: 6px;
 }
-
-.secSub {
-  font-size: 18px;
-  font-weight: 800;
-  opacity: 0.85;
-}
-
-.secMeta {
-  font-size: 12px;
-  font-weight: 900;
-  opacity: 0.62;
-  margin-top: 4px;
-  margin-bottom: 10px;
-  letter-spacing: 0.25px;
-}
-
-.secRows {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 12px;
-}
-
-.secRow {
-  border: 1px solid rgba(255,255,255,0.12);
-  border-radius: 18px;
-  padding: 14px;
-  background: rgba(0,0,0,0.22);
-  display: grid;
-  grid-template-columns: 140px 1fr;
-  align-items: center;
-  gap: 12px;
-}
-@media (max-width: 520px) { .secRow { grid-template-columns: 1fr; } }
-
-.secRowLabel {
-  font-size: 16px;
-  font-weight: 950;
-  opacity: 0.90;
-}
-
-.secRowRight {
-  display: flex;
-  align-items: center;
-  justify-content: flex-start;
-}
-
-.secBig {
-  font-size: 34px;
-  font-weight: 950;
-  letter-spacing: 0.2px;
-  text-shadow: 0 10px 26px rgba(0,0,0,0.55);
-  display: inline-flex;
-  align-items: baseline;
-  gap: 10px;
-}
-
-.secArrow {
-  font-size: 34px;
-  font-weight: 950;
-  opacity: 0.95;
-}
-
-.secNum {
-  font-size: 40px;
-  font-weight: 1000;
-  letter-spacing: 0.2px;
-}
-
-.secDirInline {
+.surveyHelper {
   font-size: 14px;
-  font-weight: 950;
-  opacity: 0.82;
-  letter-spacing: 0.5px;
-  margin-left: 6px;
-  white-space: nowrap;
+  font-weight: 900;
+  opacity: 0.86;
+  margin-bottom: 12px;
+}
+.surveyQuestion {
+  font-size: 18px;
+  font-weight: 1000;
+  line-height: 1.2;
+  margin-bottom: 12px;
 }
 
-/* Actions: 2 equal buttons */
-.secActions {
+.surveyBtnRow {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 12px;
-  margin-top: 12px;
 }
-@media (max-width: 520px) { .secActions { grid-template-columns: 1fr; } }
 
-.secActionBtn {
+.surveyBtn {
   border: none;
-  border-radius: 999px;
-  padding: 16px 18px;
-  font-size: 18px;
-  font-weight: 950;
+  border-radius: 16px;
+  padding: 14px 12px;
+  font-size: 16px;
+  font-weight: 1000;
   cursor: pointer;
-
-  background: linear-gradient(180deg, rgba(0,170,110,0.95), rgba(0,105,70,0.95));
-  color: rgba(255,255,255,0.96);
-  border: 1px solid rgba(255,255,255,0.12);
-  box-shadow: 0 18px 60px rgba(0,0,0,0.55);
-}
-.secActionBtn:active { transform: translateY(1px); }
-
-/* NEW: Download button is secondary + full-width */
-.secActionBtnSecondary {
-  width: 100%;
-  margin-top: 12px;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  border: 1px solid rgba(255,255,255,0.10);
   background: rgba(255,255,255,0.08);
-  box-shadow: none;
-  border: 1px solid rgba(255,255,255,0.14);
+  color: rgba(255,255,255,0.92);
 }
+.surveyBtn:active { transform: translateY(1px); }
+
+.surveyBtnYes {
+  background: linear-gradient(180deg, rgba(0,170,110,0.92), rgba(0,105,70,0.92));
+  border: 1px solid rgba(255,255,255,0.12);
+}
+
+.surveyNotNow {
+  margin-top: 12px;
+  width: 100%;
+  border: none;
+  background: transparent;
+  color: rgba(255,255,255,0.72);
+  font-weight: 1000;
+  padding: 10px 8px;
+  cursor: pointer;
+}
+.surveyNotNow:active { opacity: 0.85; }
+
+.surveyReasonsTitle {
+  margin-top: 12px;
+  font-weight: 1000;
+  opacity: 0.90;
+}
+
+.surveyReasonsGrid {
+  margin-top: 10px;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+
+.surveyReasonBtn {
+  width: 100%;
+  border: none;
+  border-radius: 16px;
+  padding: 14px 12px;
+  font-size: 15px;
+  font-weight: 1000;
+  cursor: pointer;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  background: rgba(255,255,255,0.08);
+  color: rgba(255,255,255,0.92);
+  border: 1px solid rgba(255,255,255,0.10);
+}
+.surveyReasonBtn:active { transform: translateY(1px); }
