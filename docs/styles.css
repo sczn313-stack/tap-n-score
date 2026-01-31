@@ -1,520 +1,400 @@
 /* ============================================================
-   docs/index.js (FULL REPLACEMENT) — vLOCK-SEC-DL-1
-   - Removes landing HUD pills (none in HTML)
-   - Controls bar appears ONLY after first tap (anchor or hit)
-   - All math comes from backend (/api/score)
-   - SEC modal includes Download SEC PNG (with Prev 3 + Avg)
-   - Mobile: smaller dots handled by CSS
+   docs/styles.css (FULL REPLACEMENT) — vLOCK-SEC-DL-1
+   - Mobile sizing fixes: dots + controls smaller
+   - Controls hidden until first tap (JS toggles .hidden)
+   - SEC modal styles + score colors
+   - Removes/avoids any “HUD pill” styling (none in HTML)
 ============================================================ */
 
-(() => {
-  const $ = (id) => document.getElementById(id);
-
-  // Elements
-  const elFile = $("photoInput");
-  const elChoose = $("chooseBtn");
-  const elFileName = $("fileName");
-  const elThumbBox = $("thumbBox");
-  const elLanding = $("landingCard");
-
-  const elImgBox = $("imgBox");
-  const elImg = $("targetImg");
-  const elDots = $("dotsLayer");
-
-  const elDistance = $("distanceYds");
-  const elClick = $("clickValue");
-
-  const elControls = $("controlsBar");
-  const elClear = $("clearBtn");
-  const elUndo = $("undoBtn");
-  const elResults = $("resultsBtn");
-
-  // State
-  let selectedFile = null;
-  let objectUrl = null;
-
-  let anchor = null; // {x,y} normalized
-  let hits = [];     // [{x,y}...]
-
-  // Vendor config
-  let VENDOR = {
-    vendorName: "Baker Printing",
-    buyUrl: "https://bakertargets.com",
-    surveyUrl: "https://example.com/survey",
-    apiBase: "" // set this in vendor.json if you have a Render backend
-  };
-
-  async function loadVendor() {
-    try {
-      const r = await fetch("./vendor.json", { cache: "no-store" });
-      if (!r.ok) return;
-      const j = await r.json();
-      VENDOR = { ...VENDOR, ...j };
-    } catch (_) {}
-  }
-
-  // Helpers
-  const clamp01 = (v) => Math.max(0, Math.min(1, v));
-  const round2 = (n) => Math.round(n * 100) / 100;
-
-  function clearDots() {
-    while (elDots.firstChild) elDots.removeChild(elDots.firstChild);
-  }
-
-  function drawDot(norm, kind) {
-    const dot = document.createElement("div");
-    dot.className = `tapDot ${kind === "anchor" ? "tapDotAnchor" : "tapDotHit"}`;
-
-    dot.style.left = `${(norm.x * 100).toFixed(4)}%`;
-    dot.style.top  = `${(norm.y * 100).toFixed(4)}%`;
-
-    elDots.appendChild(dot);
-  }
-
-  function redrawAll() {
-    clearDots();
-    if (anchor) drawDot(anchor, "anchor");
-    hits.forEach((h) => drawDot(h, "hit"));
-
-    // Enable/disable buttons (only logical; visibility handled separately)
-    const anyTap = !!anchor || hits.length > 0;
-    elClear.disabled = !anyTap;
-    elUndo.disabled = !anyTap;
-    elResults.disabled = !(anchor && hits.length > 0);
-  }
-
-  function setThumb(file) {
-    elThumbBox.innerHTML = "";
-    const img = document.createElement("img");
-    img.alt = "Selected thumbnail";
-    img.src = URL.createObjectURL(file);
-    elThumbBox.appendChild(img);
-  }
-
-  function getNormFromEvent(evt) {
-    const rect = elDots.getBoundingClientRect();
-    const x = (evt.clientX - rect.left) / rect.width;
-    const y = (evt.clientY - rect.top) / rect.height;
-    if (x < 0 || x > 1 || y < 0 || y > 1) return null;
-    return { x: clamp01(x), y: clamp01(y) };
-  }
-
-  // Controls show only after first tap
-  function updateControlsVisibility() {
-    const anyTap = !!anchor || hits.length > 0;
-    if (anyTap) elControls.classList.remove("hidden");
-    else elControls.classList.add("hidden");
-  }
-
-  // Score history (Prev 3 + Avg) stored locally (history is not “math”)
-  function readScoreHistory() {
-    try {
-      const raw = localStorage.getItem("sczn3_score_history_v1");
-      const arr = raw ? JSON.parse(raw) : [];
-      return Array.isArray(arr) ? arr : [];
-    } catch {
-      return [];
-    }
-  }
-
-  function pushScoreHistory(score) {
-    const hist = readScoreHistory();
-    hist.unshift(score);
-    const trimmed = hist.slice(0, 4); // current + prev3 (we’ll display prev3 separately)
-    localStorage.setItem("sczn3_score_history_v1", JSON.stringify(trimmed));
-    return trimmed;
-  }
-
-  function computeAvg(arr) {
-    if (!arr.length) return 0;
-    const s = arr.reduce((a, b) => a + b, 0);
-    return Math.round((s / arr.length) * 10) / 10; // 1 decimal
-  }
-
-  // Backend call (ALL math)
-  async function fetchBackendMath() {
-    const apiBase = (VENDOR.apiBase || "").trim();
-    const url = (apiBase ? apiBase.replace(/\/+$/, "") : "") + "/api/score";
-
-    const payload = {
-      distanceYds: Number(elDistance.value) || 100,
-      clickValue: Number(elClick.value) || 0.25,
-      anchor,
-      hits
-    };
-
-    const r = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload)
-    });
-
-    if (!r.ok) {
-      const t = await r.text().catch(() => "");
-      throw new Error(`Backend error (${r.status}): ${t || "unknown"}`);
-    }
-
-    return r.json();
-  }
-
-  // Score color rule
-  function scoreClass(score) {
-    if (score <= 60) return "scoreRed";
-    if (score <= 79) return "scoreYellow";
-    return "scoreGreen";
-  }
-
-  // Build downloadable SEC PNG (Canvas)
-  async function renderSECToPNG(secData, historyLine) {
-    // High-res canvas (good for sharing)
-    const W = 1400;
-    const H = 860;
-
-    const c = document.createElement("canvas");
-    c.width = W;
-    c.height = H;
-    const ctx = c.getContext("2d");
-
-    // Background
-    ctx.fillStyle = "rgba(0,0,0,0)";
-    ctx.clearRect(0, 0, W, H);
-
-    // Card
-    const x = 60, y = 60, w = W - 120, h = H - 120, r = 44;
-
-    function roundRect(px, py, pw, ph, pr) {
-      ctx.beginPath();
-      ctx.moveTo(px + pr, py);
-      ctx.arcTo(px + pw, py, px + pw, py + ph, pr);
-      ctx.arcTo(px + pw, py + ph, px, py + ph, pr);
-      ctx.arcTo(px, py + ph, px, py, pr);
-      ctx.arcTo(px, py, px + pw, py, pr);
-      ctx.closePath();
-    }
-
-    // shadow
-    ctx.save();
-    ctx.shadowColor = "rgba(0,0,0,0.55)";
-    ctx.shadowBlur = 40;
-    ctx.shadowOffsetY = 18;
-    roundRect(x, y, w, h, r);
-    ctx.fillStyle = "rgba(18,24,22,0.82)";
-    ctx.fill();
-    ctx.restore();
-
-    // border
-    roundRect(x, y, w, h, r);
-    ctx.strokeStyle = "rgba(255,255,255,0.10)";
-    ctx.lineWidth = 3;
-    ctx.stroke();
-
-    // Title: SHOOTER (red) EXPERIENCE (white) CARD (blue)
-    ctx.font = "900 62px system-ui, -apple-system, Segoe UI, Roboto, Arial";
-    ctx.textBaseline = "top";
-    let tx = x + 44, ty = y + 32;
-
-    ctx.fillStyle = "#e53935"; // red
-    ctx.fillText("SHOOTER", tx, ty);
-    tx += ctx.measureText("SHOOTER").width + 18;
-
-    ctx.fillStyle = "rgba(255,255,255,0.92)";
-    ctx.fillText("EXPERIENCE", tx, ty);
-    tx += ctx.measureText("EXPERIENCE").width + 18;
-
-    ctx.fillStyle = "#1e5aa8"; // blue
-    ctx.fillText("CARD", tx, ty);
-
-    // Shots (small)
-    ctx.font = "800 34px system-ui, -apple-system, Segoe UI, Roboto, Arial";
-    ctx.fillStyle = "rgba(255,255,255,0.78)";
-    ctx.fillText(`Shots: ${secData.shots}`, x + 44, y + 112);
-
-    // Score label + giant score
-    ctx.font = "900 44px system-ui, -apple-system, Segoe UI, Roboto, Arial";
-    ctx.fillStyle = "rgba(255,255,255,0.90)";
-    ctx.fillText("Shooter Score", x + 44, y + 170);
-
-    const s = secData.score;
-    const sColor = (s <= 60) ? "#ff3b30" : (s <= 79 ? "#ffd60a" : "#34c759");
-
-    ctx.font = "900 180px system-ui, -apple-system, Segoe UI, Roboto, Arial";
-    ctx.fillStyle = sColor;
-    ctx.textAlign = "right";
-    ctx.fillText(String(s), x + w - 54, y + 140);
-    ctx.textAlign = "left";
-
-    // History line
-    ctx.font = "800 30px system-ui, -apple-system, Segoe UI, Roboto, Arial";
-    ctx.fillStyle = "rgba(255,255,255,0.70)";
-    ctx.fillText(historyLine, x + 44, y + 240);
-
-    // Windage/Elevation boxes
-    const boxW = w - 88;
-    const boxH = 126;
-    const boxX = x + 44;
-    let boxY = y + 300;
-
-    function drawRow(label, arrow, value, dirLetter) {
-      // row background
-      roundRect(boxX, boxY, boxW, boxH, 28);
-      ctx.fillStyle = "rgba(0,0,0,0.24)";
-      ctx.fill();
-      ctx.strokeStyle = "rgba(255,255,255,0.10)";
-      ctx.lineWidth = 2;
-      ctx.stroke();
-
-      // left label
-      ctx.font = "900 46px system-ui, -apple-system, Segoe UI, Roboto, Arial";
-      ctx.fillStyle = "rgba(255,255,255,0.90)";
-      ctx.fillText(label, boxX + 28, boxY + 36);
-
-      // arrow + number + dir
-      ctx.textAlign = "right";
-      ctx.font = "900 58px system-ui, -apple-system, Segoe UI, Roboto, Arial";
-      ctx.fillStyle = "rgba(255,255,255,0.92)";
-      ctx.fillText(arrow, boxX + boxW - 280, boxY + 38);
-
-      ctx.font = "900 78px system-ui, -apple-system, Segoe UI, Roboto, Arial";
-      ctx.fillText(value.toFixed(2), boxX + boxW - 88, boxY + 22);
-
-      ctx.font = "900 44px system-ui, -apple-system, Segoe UI, Roboto, Arial";
-      ctx.fillStyle = "rgba(255,255,255,0.72)";
-      ctx.fillText(dirLetter, boxX + boxW - 28, boxY + 44);
-
-      ctx.textAlign = "left";
-      boxY += boxH + 22;
-    }
-
-    drawRow("Windage Clicks", secData.windageArrow, secData.windageClicks, secData.windageDir);
-    drawRow("Elevation Clicks", secData.elevArrow, secData.elevClicks, secData.elevDir);
-
-    // Export PNG
-    return new Promise((resolve) => {
-      c.toBlob((blob) => resolve(blob), "image/png", 0.95);
-    });
-  }
-
-  function downloadBlob(blob, filename) {
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = filename;
-
-    // iOS Safari sometimes ignores download; opening still lets user save/share
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-
-    setTimeout(() => URL.revokeObjectURL(url), 1500);
-  }
-
-  function buildSECModal(secData, historyLine) {
-    const overlay = document.createElement("div");
-    overlay.className = "secOverlay";
-
-    const card = document.createElement("div");
-    card.className = "secCard";
-
-    // Title line (red/white/blue)
-    const title = document.createElement("div");
-    title.className = "secTitle";
-    title.innerHTML = `
-      <span class="tRed">SHOOTER</span>
-      <span class="tWhite">EXPERIENCE</span>
-      <span class="tBlue">CARD</span>
-    `;
-
-    const shots = document.createElement("div");
-    shots.className = "secShots";
-    shots.textContent = `Shots: ${secData.shots}`;
-
-    // Score row
-    const scoreRow = document.createElement("div");
-    scoreRow.className = "secRow secScoreRow";
-    scoreRow.innerHTML = `
-      <div class="secLabel">Shooter Score</div>
-      <div class="secScoreNum ${scoreClass(secData.score)}">${secData.score}</div>
-    `;
-
-    const hist = document.createElement("div");
-    hist.className = "secHistory";
-    hist.textContent = historyLine;
-
-    // Wind/Elev
-    const wind = document.createElement("div");
-    wind.className = "secRow";
-    wind.innerHTML = `
-      <div class="secLabel">Windage Clicks</div>
-      <div class="secRight">
-        <span class="secArrow">${secData.windageArrow}</span>
-        <span class="secValue">${secData.windageClicks.toFixed(2)}</span>
-        <span class="secDir">${secData.windageDir}</span>
-      </div>
-    `;
-
-    const elev = document.createElement("div");
-    elev.className = "secRow";
-    elev.innerHTML = `
-      <div class="secLabel">Elevation Clicks</div>
-      <div class="secRight">
-        <span class="secArrow">${secData.elevArrow}</span>
-        <span class="secValue">${secData.elevClicks.toFixed(2)}</span>
-        <span class="secDir">${secData.elevDir}</span>
-      </div>
-    `;
-
-    // Buttons row (Buy + Survey)
-    const actions = document.createElement("div");
-    actions.className = "secActions";
-    actions.innerHTML = `
-      <button class="secBtn" id="secBuyBtn" type="button">Buy more targets</button>
-      <button class="secBtn" id="secSurveyBtn" type="button">Survey</button>
-    `;
-
-    const dl = document.createElement("button");
-    dl.className = "secBtn secBtnPrimary";
-    dl.type = "button";
-    dl.textContent = "Download SEC";
-
-    const close = document.createElement("button");
-    close.className = "secBtn secBtnPrimary";
-    close.type = "button";
-    close.textContent = "Close";
-
-    card.appendChild(title);
-    card.appendChild(shots);
-    card.appendChild(scoreRow);
-    card.appendChild(hist);
-    card.appendChild(wind);
-    card.appendChild(elev);
-    card.appendChild(actions);
-    card.appendChild(dl);
-    card.appendChild(close);
-
-    overlay.appendChild(card);
-    document.body.appendChild(overlay);
-
-    // Wire buttons
-    const buyBtn = $("secBuyBtn");
-    const surveyBtn = $("secSurveyBtn");
-
-    buyBtn?.addEventListener("click", () => {
-      const u = (VENDOR.buyUrl || "").trim();
-      if (u) window.open(u, "_blank");
-    });
-
-    surveyBtn?.addEventListener("click", () => {
-      const u = (VENDOR.surveyUrl || "").trim();
-      if (u) window.open(u, "_blank");
-    });
-
-    dl.addEventListener("click", async () => {
-      try {
-        const blob = await renderSECToPNG(secData, historyLine);
-        const ts = new Date().toISOString().slice(0,19).replace(/[:T]/g, "-");
-        downloadBlob(blob, `SEC-${secData.score}-${ts}.png`);
-      } catch (e) {
-        alert(`Download failed: ${e.message || e}`);
-      }
-    });
-
-    close.addEventListener("click", () => overlay.remove());
-    overlay.addEventListener("click", (e) => { if (e.target === overlay) overlay.remove(); });
-  }
-
-  async function showSEC() {
-    if (!anchor || hits.length === 0) return;
-
-    // get math from backend
-    const sec = await fetchBackendMath();
-
-    // update local score history
-    const hist = pushScoreHistory(sec.score);
-    const prev3 = hist.slice(1, 4);
-    const avg = computeAvg(hist);
-
-    const prevText = prev3.length ? prev3.join(", ") : "—";
-    const historyLine = `Prev 3: ${prevText}   Avg: ${avg}`;
-
-    buildSECModal(sec, historyLine);
-  }
-
-  // Events
-  elChoose.addEventListener("click", () => elFile.click());
-
-  elFile.addEventListener("change", async () => {
-    const f = elFile.files && elFile.files[0];
-    if (!f) return;
-
-    selectedFile = f;
-    elFileName.textContent = f.name;
-
-    // thumbnail
-    setThumb(f);
-
-    // main image
-    if (objectUrl) URL.revokeObjectURL(objectUrl);
-    objectUrl = URL.createObjectURL(f);
-    elImg.src = objectUrl;
-
-    // reset taps
-    anchor = null;
-    hits = [];
-    redrawAll();
-    updateControlsVisibility();
-
-    // show image
-    elImgBox.classList.remove("hidden");
-
-    // hide landing thumbnail area once target is shown (your earlier request)
-    elLanding.classList.remove("hidden");
-    // If you want it fully gone while shooting:
-    elLanding.classList.add("secLandingHidden");
-
-    // scroll
-    elImgBox.scrollIntoView({ behavior: "smooth", block: "start" });
-  });
-
-  // Tapping
-  elDots.addEventListener("pointerdown", (evt) => {
-    if (!selectedFile) return;
-    evt.preventDefault();
-
-    const norm = getNormFromEvent(evt);
-    if (!norm) return;
-
-    if (!anchor) anchor = norm;
-    else hits.push(norm);
-
-    redrawAll();
-    updateControlsVisibility();
-  }, { passive: false });
-
-  elClear.addEventListener("click", () => {
-    anchor = null;
-    hits = [];
-    redrawAll();
-    updateControlsVisibility();
-  });
-
-  elUndo.addEventListener("click", () => {
-    if (hits.length > 0) hits.pop();
-    else if (anchor) anchor = null;
-
-    redrawAll();
-    updateControlsVisibility();
-  });
-
-  elResults.addEventListener("click", async () => {
-    try {
-      await showSEC();
-    } catch (e) {
-      alert(e.message || String(e));
-    }
-  });
-
-  // Init
-  loadVendor();
-  redrawAll();
-  updateControlsVisibility();
-})();
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  background: radial-gradient(1200px 800px at 30% 20%, rgba(0,120,80,0.28), rgba(0,0,0,0.92)),
+              linear-gradient(180deg, rgba(7,17,12,1), rgba(0,0,0,1));
+  color: rgba(255,255,255,0.92);
+  -webkit-font-smoothing: antialiased;
+}
+
+.page {
+  min-height: 100vh;
+  padding: 18px 14px 110px; /* room for bottom controls bar */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+}
+
+/* ---------- Card ---------- */
+.card {
+  width: min(860px, 96vw);
+  background: rgba(18, 24, 22, 0.58);
+  border: 1px solid rgba(255,255,255,0.10);
+  border-radius: 22px;
+  padding: 18px 18px 16px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.55);
+  backdrop-filter: blur(14px);
+}
+
+.hero { padding: 6px 2px 10px; margin-bottom: 6px; }
+.brandLine { display: flex; flex-direction: column; gap: 4px; }
+
+.brand {
+  font-weight: 900;
+  letter-spacing: 1.2px;
+  font-size: clamp(26px, 4vw, 44px);
+  line-height: 1.05;
+}
+
+.tm { color: rgba(0,235,150,0.95); margin-left: 2px; }
+.sub { opacity: 0.85; font-weight: 700; font-size: 15px; }
+
+.field { margin: 12px 0; }
+.label { font-weight: 800; opacity: 0.92; margin-bottom: 8px; font-size: 15px; }
+
+.hint { opacity: 0.78; margin-top: 8px; font-weight: 600; }
+.hintStrong { margin-top: 10px; font-weight: 900; opacity: 0.92; }
+
+.row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+@media (max-width: 520px) { .row { grid-template-columns: 1fr; } }
+
+.hiddenFile { display: none !important; }
+.hidden { display: none !important; }
+
+/* Hide landing card when shooting (index.js adds this class) */
+.secLandingHidden { display: none !important; }
+
+.select {
+  width: 100%;
+  appearance: none;
+  -webkit-appearance: none;
+  border-radius: 16px;
+  padding: 14px 14px;
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(0,0,0,0.28);
+  color: rgba(255,255,255,0.92);
+  font-weight: 800;
+  font-size: 16px;
+  outline: none;
+}
+.select:focus {
+  border-color: rgba(0,235,150,0.55);
+  box-shadow: 0 0 0 3px rgba(0,235,150,0.16);
+}
+
+.btnPrimary {
+  width: 100%;
+  border: none;
+  border-radius: 999px;
+  padding: 16px 18px;
+  font-size: 20px;
+  font-weight: 900;
+  cursor: pointer;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+
+  background: linear-gradient(180deg, rgba(0,140,90,0.92), rgba(0,85,55,0.92));
+  color: rgba(255,255,255,0.95);
+  box-shadow: 0 16px 50px rgba(0,0,0,0.50);
+  border: 1px solid rgba(255,255,255,0.10);
+}
+.btnPrimary:active { transform: translateY(1px); }
+
+/* ---------- What next list ---------- */
+.whatNext { margin-top: 10px; }
+.bullets { margin: 8px 0 0; padding-left: 18px; }
+.bullets li { opacity: 0.9; font-weight: 700; margin: 6px 0; }
+
+/* ---------- Thumbnail ---------- */
+.thumbBox {
+  margin-top: 8px;
+  width: 100%;
+  background: rgba(0,0,0,0.20);
+  border: 1px solid rgba(255,255,255,0.10);
+  border-radius: 18px;
+  padding: 10px;
+  overflow: hidden;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  min-height: 90px;
+}
+
+.thumbBox img {
+  display: block;
+  width: auto;
+  height: auto;
+  max-width: 140px;
+  max-height: 140px;
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,0.10);
+}
+
+.thumbEmpty { opacity: 0.72; font-weight: 800; padding: 10px 6px; }
+
+/* ============================================================
+   IMAGE BOX (tap surface)
+============================================================ */
+.imgBox {
+  display: inline-block;
+  position: relative;
+  width: min(860px, 96vw);
+  border-radius: 22px;
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,0.10);
+  box-shadow: 0 20px 60px rgba(0,0,0,0.55);
+  background: rgba(0,0,0,0.18);
+}
+
+#targetImg {
+  display: block;
+  width: 100%;
+  height: auto;
+  object-fit: contain;
+  -webkit-user-drag: none;
+  user-select: none;
+}
+
+/* overlay matches image box exactly */
+#dotsLayer {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  touch-action: none;
+  pointer-events: auto;
+  background: transparent;
+}
+
+/* Tap dots (default) */
+.tapDot {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  border-radius: 999px;
+  border: 2px solid rgba(0,0,0,0.35);
+  box-shadow: 0 10px 28px rgba(0,0,0,0.55);
+  width: 16px;
+  height: 16px;
+}
+
+.tapDotAnchor { background: rgba(255, 196, 0, 0.95); width: 18px; height: 18px; }
+.tapDotHit { background: rgba(0, 220, 130, 0.95); }
+
+/* Mobile: bullet holes HALF size */
+@media (max-width: 520px) {
+  .tapDot { width: 8px; height: 8px; border-width: 2px; }
+  .tapDotAnchor { width: 10px; height: 10px; }
+}
+
+/* ---------- Bottom controls bar ---------- */
+.controlsBar {
+  position: fixed;
+  left: 12px;
+  right: 12px;
+  bottom: 12px;
+  z-index: 9999;
+
+  width: min(860px, calc(100vw - 24px));
+  margin: 0 auto;
+
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 12px;
+
+  padding: 12px;
+  border-radius: 20px;
+  border: 1px solid rgba(255,255,255,0.10);
+  background: rgba(10,12,11,0.55);
+  backdrop-filter: blur(12px);
+  box-shadow: 0 20px 60px rgba(0,0,0,0.55);
+}
+
+.btnCtl {
+  border: none;
+  border-radius: 16px;
+  padding: 16px 12px;
+  font-size: 18px;
+  font-weight: 900;
+  cursor: pointer;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+
+  background: rgba(255,255,255,0.08);
+  color: rgba(255,255,255,0.92);
+  border: 1px solid rgba(255,255,255,0.10);
+}
+
+.btnCtl:active { transform: translateY(1px); }
+
+.btnCtl:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.btnCtlPrimary {
+  background: linear-gradient(180deg, rgba(0,170,110,0.95), rgba(0,105,70,0.95));
+  border: 1px solid rgba(255,255,255,0.12);
+  box-shadow: 0 16px 50px rgba(0,0,0,0.55);
+}
+
+/* Mobile: controls smaller to fit phone screen */
+@media (max-width: 520px) {
+  .controlsBar { padding: 10px; gap: 10px; border-radius: 18px; }
+  .btnCtl { padding: 12px 10px; font-size: 15px; border-radius: 14px; }
+}
+
+/* ============================================================
+   SEC Modal
+============================================================ */
+.secOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 999999;
+  background: rgba(0,0,0,0.55);
+  backdrop-filter: blur(10px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+}
+
+.secCard {
+  width: min(920px, 96vw);
+  border-radius: 26px;
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(12,14,13,0.76);
+  box-shadow: 0 26px 80px rgba(0,0,0,0.65);
+  padding: 18px 18px 16px;
+  color: rgba(255,255,255,0.92);
+}
+
+.secTitle {
+  font-weight: 900;
+  font-size: clamp(28px, 3.6vw, 48px);
+  letter-spacing: 0.8px;
+  display: flex;
+  gap: 10px;
+  align-items: baseline;
+  margin-bottom: 6px;
+}
+
+.tRed { color: #e53935; }
+.tWhite { color: rgba(255,255,255,0.92); }
+.tBlue { color: #1e5aa8; }
+
+.secShots {
+  font-weight: 900;
+  opacity: 0.85;
+  font-size: 18px;
+  margin-bottom: 10px;
+}
+
+.secRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 16px 18px;
+  border-radius: 18px;
+  border: 1px solid rgba(255,255,255,0.10);
+  background: rgba(0,0,0,0.22);
+  margin: 10px 0;
+}
+
+.secScoreRow {
+  padding: 18px 18px;
+}
+
+.secLabel {
+  font-weight: 900;
+  font-size: 22px;
+  opacity: 0.92;
+}
+
+.secRight {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 10px;
+  font-weight: 900;
+}
+
+.secArrow {
+  font-size: 30px;
+  opacity: 0.92;
+}
+
+.secValue {
+  font-size: 44px;
+  letter-spacing: 0.2px;
+}
+
+.secDir {
+  font-size: 18px;
+  opacity: 0.75;
+  margin-left: 2px;
+}
+
+.secScoreNum {
+  font-weight: 900;
+  font-size: clamp(64px, 7vw, 96px);
+  line-height: 1;
+}
+
+.scoreRed { color: #ff3b30; }
+.scoreYellow { color: #ffd60a; }
+.scoreGreen { color: #34c759; }
+
+.secHistory {
+  font-weight: 800;
+  opacity: 0.75;
+  margin: 6px 2px 10px;
+  font-size: 16px;
+}
+
+.secActions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 10px;
+}
+
+.secBtn {
+  border: none;
+  border-radius: 16px;
+  padding: 14px 12px;
+  font-size: 18px;
+  font-weight: 900;
+  cursor: pointer;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+
+  background: rgba(255,255,255,0.08);
+  color: rgba(255,255,255,0.92);
+  border: 1px solid rgba(255,255,255,0.10);
+}
+
+.secBtn:active { transform: translateY(1px); }
+
+.secBtnPrimary {
+  width: 100%;
+  margin-top: 12px;
+  border-radius: 999px;
+  padding: 16px 14px;
+  font-size: 20px;
+  background: linear-gradient(180deg, rgba(0,170,110,0.95), rgba(0,105,70,0.95));
+  border: 1px solid rgba(255,255,255,0.12);
+  box-shadow: 0 18px 60px rgba(0,0,0,0.55);
+}
+
+@media (max-width: 520px) {
+  .secLabel { font-size: 18px; }
+  .secValue { font-size: 34px; }
+  .secArrow { font-size: 26px; }
+  .secDir { font-size: 16px; }
+  .secActions { grid-template-columns: 1fr 1fr; }
+  .secBtn { font-size: 16px; padding: 12px 10px; }
+  .secBtnPrimary { font-size: 18px; padding: 14px 12px; }
+}
