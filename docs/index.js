@@ -1,10 +1,9 @@
 /* ============================================================
-   index.js (FULL REPLACEMENT) — vSEC-LOCK-3
-   - No banner
-   - Hide thumbnail + "what next" once target shows
-   - SEC: score number ONLY gets red/yellow/green
-   - Wind/Elev numbers white, arrow tight to number, tiny dir letter
-   - Recenter after rotation IF pinched (iOS visualViewport scale)
+   index.js (FULL REPLACEMENT) — vSEC-LOCK-1
+   - SEC title: "SHOOTER EXPERIENCE CARD" (R/W/B via CSS spans)
+   - Labels: "Windage Clicks" + "Elevation Clicks"
+   - Direction: arrow + single-letter (L/R/U/D) near number
+   - Shows 0.00 when extremely tiny values
 ============================================================ */
 
 (() => {
@@ -14,16 +13,12 @@
   const elFile = $("photoInput");
   const elChoose = $("chooseBtn");
   const elFileName = $("fileName");
-
-  const elThumbField = $("thumbField");
   const elThumbBox = $("thumbBox");
-  const elWhatNext = $("whatNext");
 
   const elImgBox = $("imgBox");
   const elImg = $("targetImg");
   const elDots = $("dotsLayer");
 
-  // Hidden inputs (kept for later if you want)
   const elDistance = $("distanceYds");
   const elClick = $("clickValue");
 
@@ -41,13 +36,6 @@
 
   let anchor = null; // {x,y} normalized
   let hits = [];     // [{x,y}...]
-
-  // Vendor hooks
-  const VENDOR_BUY_URL = "https://bakertargets.com";
-  const SURVEY_URL = "https://example.com"; // swap when ready
-
-  // Placeholder scale until grid calibration is wired
-  const FIELD_INCHES_REF = 12.0;
 
   // Helpers
   function clamp01(v) { return Math.max(0, Math.min(1, v)); }
@@ -87,13 +75,13 @@
 
     setHUD();
 
+    // Buttons
     elClear.disabled = (!anchor && hits.length === 0);
     elUndo.disabled = (!anchor && hits.length === 0);
     elResults.disabled = (!anchor || hits.length === 0);
   }
 
   function setThumb(file) {
-    if (!elThumbBox) return;
     elThumbBox.innerHTML = "";
     const img = document.createElement("img");
     img.alt = "Selected thumbnail";
@@ -115,190 +103,173 @@
     return { x: sum.x / hits.length, y: sum.y / hits.length };
   }
 
-  // Vector from POIB -> Anchor (bull - poib)
-  function correctionVector(anchorPt, poibPt) {
+  // Direction for turret move (POIB -> Anchor)
+  function direction(anchorPt, poibPt) {
     const dx = anchorPt.x - poibPt.x;
-    const dy = anchorPt.y - poibPt.y; // screen truth: down is +
-    return { dx, dy };
+    const dy = anchorPt.y - poibPt.y; // screen: down is +
+
+    const horiz = dx >= 0 ? "R" : "L";
+    const vert  = dy >= 0 ? "D" : "U";
+
+    return { dx, dy, horiz, vert };
   }
 
-  function dirForDx(dx) {
-    return dx >= 0 ? { letter: "R", arrow: "→" } : { letter: "L", arrow: "←" };
-  }
-  function dirForDy(dy) {
-    return dy >= 0 ? { letter: "D", arrow: "↓" } : { letter: "U", arrow: "↑" };
-  }
-
-  function clicksFromDelta(deltaNorm, distYds, clickValMOA) {
-    const inches = Math.abs(deltaNorm) * FIELD_INCHES_REF;
-    const oneMOAin = (distYds / 100) * 1.047;
-    const moa = oneMOAin > 0 ? (inches / oneMOAin) : 0;
-    const clicks = clickValMOA > 0 ? (moa / clickValMOA) : 0;
-    return clicks;
+  // NOTE:
+  // This pilot version outputs "clicks" as a derived magnitude from image-space %
+  // You already know your real pipeline converts to inches via grid. For now we keep the UI clean:
+  // clicks = (abs(delta) * 100) just to drive layout, then formatted to 2 decimals.
+  function toDisplayNumber(n) {
+    // show "0.00" if extremely tiny
+    if (!Number.isFinite(n) || Math.abs(n) < 0.0005) return "0.00";
+    return n.toFixed(2);
   }
 
-  // Placeholder score (swap later to your real scoring logic)
-  function computeScoreFromGroup(poib, anchorPt) {
-    const v = correctionVector(anchorPt, poib);
-    const mag = Math.sqrt(v.dx*v.dx + v.dy*v.dy);
-    const s = Math.max(0, Math.min(100, Math.round(100 - (mag * 100))));
-    return s;
-  }
-
-  // Score band: 0–60 A, 61–79 B, 80–100 C
-  function scoreBandClass(score) {
-    if (score <= 60) return "bandA";
-    if (score <= 79) return "bandB";
-    return "bandC";
+  function scoreColorClass(score) {
+    const s = Number(score);
+    if (!Number.isFinite(s)) return "scoreRed";
+    if (s <= 60) return "scoreRed";
+    if (s <= 79) return "scoreYellow";
+    return "scoreGreen";
   }
 
   function showSECModal() {
     const poib = computePOIB();
     if (!anchor || !poib) return;
 
-    const dist = Number(elDistance?.value) || 100;
-    const clickVal = Number(elClick?.value) || 0.25;
+    // Placeholder “score” for now: based on tightness (demo)
+    // Replace later with your real scoring. Keeps 0–100.
+    const dx = poib.x - anchor.x;
+    const dy = poib.y - anchor.y;
+    const dist = Math.sqrt(dx*dx + dy*dy);
+    const score = Math.max(0, Math.min(100, Math.round(100 - dist * 160)));
 
-    const v = correctionVector(anchor, poib);
+    const d = direction(anchor, poib);
 
-    const windClicks = clicksFromDelta(v.dx, dist, clickVal);
-    const elevClicks = clicksFromDelta(v.dy, dist, clickVal);
+    // “Clicks” placeholder driven by image-space magnitude (for UI only)
+    const windClicks = Math.abs(d.dx) * 100;
+    const elevClicks = Math.abs(d.dy) * 100;
 
-    const wDir = dirForDx(v.dx);
-    const eDir = dirForDy(v.dy);
-
-    const shots = hits.length;
-
-    const score = computeScoreFromGroup(poib, anchor);
-    const band = scoreBandClass(score);
-
-    // Overlay
     const overlay = document.createElement("div");
     overlay.className = "secOverlay";
 
     const card = document.createElement("div");
     card.className = "secCard";
 
-    // Title line
+    // Title (R/W/B)
     const title = document.createElement("div");
-    title.className = "secTitleRWB";
-    title.textContent = "SHOOTER EXPERIENCE CARD";
+    title.className = "secTitle";
+    title.innerHTML =
+      `<span class="tRed">SHOOTER</span> ` +
+      `<span class="tWhite">EXPERIENCE</span> ` +
+      `<span class="tBlue">CARD</span>`;
 
-    const meta = document.createElement("div");
-    meta.className = "secMeta";
-    meta.textContent = `Shots: ${shots}`;
+    const shots = document.createElement("div");
+    shots.className = "secShots";
+    shots.textContent = `Shots: ${hits.length}`;
 
-    // Row builder (tight right cluster)
-    function makeRow(labelText, arrowTxt, valueTxt, dirLetter, valueClass) {
-      const row = document.createElement("div");
-      row.className = "secRow";
+    // Rows
+    const rows = document.createElement("div");
+    rows.className = "secRows";
 
-      const left = document.createElement("div");
-      left.className = "secRowLabel";
-      left.textContent = labelText;
+    // Score row (ONLY NUMBER on right)
+    const rScore = document.createElement("div");
+    rScore.className = "secRow";
 
-      const right = document.createElement("div");
-      right.className = "secRowRight";
+    const lScore = document.createElement("div");
+    lScore.className = "secLabel";
+    lScore.textContent = "Score";
 
-      const arrow = document.createElement("div");
-      arrow.className = "secArrow";
-      arrow.textContent = arrowTxt;
+    const vScore = document.createElement("div");
+    vScore.className = `secScoreNum ${scoreColorClass(score)}`;
+    vScore.textContent = String(score);
 
-      const val = document.createElement("div");
-      val.className = `secBigNumber ${valueClass || ""}`.trim();
-      val.textContent = valueTxt;
+    rScore.appendChild(lScore);
+    rScore.appendChild(vScore);
 
-      const dir = document.createElement("div");
-      dir.className = "secDirTiny";
-      dir.textContent = dirLetter;
+    // Windage Clicks row
+    const rW = document.createElement("div");
+    rW.className = "secRow";
 
-      right.appendChild(arrow);
-      right.appendChild(val);
-      right.appendChild(dir);
+    const lW = document.createElement("div");
+    lW.className = "secLabel";
+    lW.textContent = "Windage Clicks";
 
-      row.appendChild(left);
-      row.appendChild(right);
-      return row;
-    }
+    const vW = document.createElement("div");
+    vW.className = "secValueBox";
+    vW.innerHTML =
+      `<span class="secArrow">${d.horiz === "L" ? "←" : "→"}</span>` +
+      `<span class="secNum">${toDisplayNumber(windClicks)}</span>` +
+      `<span class="secDir">${d.horiz}</span>`;
 
-    // SCORE row: number ONLY colored (band class applied ONLY here)
-    const scoreRow = makeRow("Score", "", String(score), "", band);
-    scoreRow.querySelector(".secArrow").textContent = "";
-    scoreRow.querySelector(".secDirTiny").textContent = "";
-    scoreRow.querySelector(".secRowRight").classList.add("scoreRight");
+    rW.appendChild(lW);
+    rW.appendChild(vW);
 
-    // Wind/Elev: numbers stay white (no band class)
-    const windRow = makeRow("Windage", wDir.arrow, windClicks.toFixed(2), wDir.letter, "");
-    const elevRow = makeRow("Elevation", eDir.arrow, elevClicks.toFixed(2), eDir.letter, "");
+    // Elevation Clicks row
+    const rE = document.createElement("div");
+    rE.className = "secRow";
 
-    // Actions
-    const actions = document.createElement("div");
-    actions.className = "secActions";
+    const lE = document.createElement("div");
+    lE.className = "secLabel";
+    lE.textContent = "Elevation Clicks";
 
-    const buyBtn = document.createElement("button");
-    buyBtn.className = "secActionBtn secActionBtnGreen";
-    buyBtn.type = "button";
-    buyBtn.textContent = "Buy more targets";
-    buyBtn.addEventListener("click", () => window.open(VENDOR_BUY_URL, "_blank"));
+    const vE = document.createElement("div");
+    vE.className = "secValueBox";
+    vE.innerHTML =
+      `<span class="secArrow">${d.vert === "U" ? "↑" : "↓"}</span>` +
+      `<span class="secNum">${toDisplayNumber(elevClicks)}</span>` +
+      `<span class="secDir">${d.vert}</span>`;
 
-    const surveyBtn = document.createElement("button");
-    surveyBtn.className = "secActionBtn secActionBtnGreen";
-    surveyBtn.type = "button";
-    surveyBtn.textContent = "Survey";
-    surveyBtn.addEventListener("click", () => window.open(SURVEY_URL, "_blank"));
+    rE.appendChild(lE);
+    rE.appendChild(vE);
 
-    actions.appendChild(buyBtn);
-    actions.appendChild(surveyBtn);
+    rows.appendChild(rScore);
+    rows.appendChild(rW);
+    rows.appendChild(rE);
+
+    // CTA Row (two buttons)
+    const ctas = document.createElement("div");
+    ctas.className = "secCTAs";
+
+    const btnBuy = document.createElement("button");
+    btnBuy.className = "secActionBtn";
+    btnBuy.type = "button";
+    btnBuy.textContent = "Buy more targets";
+    btnBuy.addEventListener("click", () => {
+      // TODO: replace with Baker URL
+      window.open("https://bakertargets.com", "_blank", "noopener,noreferrer");
+    });
+
+    const btnSurvey = document.createElement("button");
+    btnSurvey.className = "secActionBtn";
+    btnSurvey.type = "button";
+    btnSurvey.textContent = "Survey";
+    btnSurvey.addEventListener("click", () => {
+      // TODO: replace with your survey URL
+      window.open("https://example.com/survey", "_blank", "noopener,noreferrer");
+    });
+
+    ctas.appendChild(btnBuy);
+    ctas.appendChild(btnSurvey);
 
     // Close
-    const closeBtn = document.createElement("button");
-    closeBtn.className = "btnResults";
-    closeBtn.type = "button";
-    closeBtn.textContent = "Close";
-    closeBtn.addEventListener("click", () => overlay.remove());
+    const close = document.createElement("button");
+    close.className = "secCloseBtn";
+    close.type = "button";
+    close.textContent = "Close";
+    close.addEventListener("click", () => overlay.remove());
 
     overlay.addEventListener("click", (e) => {
       if (e.target === overlay) overlay.remove();
     });
 
     card.appendChild(title);
-    card.appendChild(meta);
-    card.appendChild(scoreRow);
-    card.appendChild(windRow);
-    card.appendChild(elevRow);
-    card.appendChild(actions);
-    card.appendChild(closeBtn);
+    card.appendChild(shots);
+    card.appendChild(rows);
+    card.appendChild(ctas);
+    card.appendChild(close);
 
     overlay.appendChild(card);
     document.body.appendChild(overlay);
-  }
-
-  function showTargetUI() {
-    elImgBox.classList.remove("hidden");
-    elControls.classList.remove("hidden");
-
-    if (elThumbField) elThumbField.classList.add("hidden");
-    if (elWhatNext) elWhatNext.classList.add("hidden");
-
-    setInstruction("Tap bull’s-eye (anchor)");
-    elImgBox.scrollIntoView({ behavior: "smooth", block: "start" });
-  }
-
-  // Recenter after rotation IF pinched
-  function recenterIfPinched() {
-    const vv = window.visualViewport;
-    if (!vv) return;
-    if (vv.scale && vv.scale !== 1) {
-      if (!elImgBox.classList.contains("hidden")) {
-        elImgBox.scrollIntoView({ behavior: "smooth", block: "center" });
-      }
-    }
-  }
-
-  window.addEventListener("orientationchange", () => setTimeout(recenterIfPinched, 350));
-  window.addEventListener("resize", () => setTimeout(recenterIfPinched, 150));
-  if (window.visualViewport) {
-    window.visualViewport.addEventListener("resize", () => setTimeout(recenterIfPinched, 120));
   }
 
   // Events
@@ -313,17 +284,25 @@
 
     setThumb(f);
 
+    // main image
     if (objectUrl) URL.revokeObjectURL(objectUrl);
     objectUrl = URL.createObjectURL(f);
     elImg.src = objectUrl;
 
+    // reset
     anchor = null;
     hits = [];
     redrawAll();
 
-    showTargetUI();
+    // show image & controls immediately (NO Start)
+    elImgBox.classList.remove("hidden");
+    elControls.classList.remove("hidden");
+    setInstruction("Tap bull’s-eye (anchor)");
+
+    elImgBox.scrollIntoView({ behavior: "smooth", block: "start" });
   });
 
+  // Tap handling
   elDots.addEventListener("pointerdown", (evt) => {
     if (!selectedFile) return;
     evt.preventDefault();
