@@ -1,11 +1,9 @@
 /* ============================================================
-   index.js (FULL REPLACEMENT) — vSEC-1c
-   Changes:
-   1) SEC meta line (Distance/Click) is smaller + tighter
-   2) Big numbers are color-coded by performance:
-      - <= GOOD_MAX clicks  => green
-      - <= OK_MAX clicks    => amber
-      - >  OK_MAX clicks    => red
+   index.js (FULL REPLACEMENT) — vSEC-1d
+   Locks performance colors:
+   - GREEN  <= 3.00 clicks
+   - YELLOW <= 6.00 clicks
+   - RED    >  6.00 clicks
 ============================================================ */
 
 (() => {
@@ -162,18 +160,16 @@
     };
   }
 
-  // ===== Performance color logic =====
-  // Adjust these thresholds to match your “performance” definition.
-  // Right now: <=2 clicks is great, <=6 is okay, >6 is needs work.
-  const GOOD_MAX = 2.0;
-  const OK_MAX = 6.0;
+  // ===== Performance color logic (LOCKED: 3 / 6) =====
+  const GREEN_MAX = 3.0;   // <= 3.00 clicks
+  const YELLOW_MAX = 6.0;  // <= 6.00 clicks
 
   function perfColor(clicks) {
     const v = Number(clicks);
     if (!Number.isFinite(v)) return "rgba(255,255,255,0.94)";
-    if (v <= GOOD_MAX) return "rgba(0, 235, 150, 0.96)";     // green
-    if (v <= OK_MAX) return "rgba(255, 196, 0, 0.96)";      // amber
-    return "rgba(255, 90, 90, 0.96)";                       // red
+    if (v <= GREEN_MAX)  return "rgba(0, 235, 150, 0.96)";   // green
+    if (v <= YELLOW_MAX) return "rgba(255, 196, 0, 0.96)";   // yellow
+    return "rgba(255, 90, 90, 0.96)";                        // red
   }
 
   function showSECModal() {
@@ -257,7 +253,7 @@
       big.style.fontSize = "34px";
       big.style.fontWeight = "950";
       big.style.letterSpacing = "0.2px";
-      big.style.color = valueColor;                 // ✅ performance color
+      big.style.color = valueColor; // ✅ performance color
       big.style.textShadow = "0 10px 26px rgba(0,0,0,0.55)";
 
       const small = document.createElement("div");
