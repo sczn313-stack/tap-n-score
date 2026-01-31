@@ -1,10 +1,9 @@
 /* ============================================================
-   styles.css (FULL REPLACEMENT) — vTAP-NOSTART-1
+   styles.css (FULL REPLACEMENT) — LOCK-20260130-01
    Goals:
-   - Thumbnail SMALL (does not take over the page)
-   - No Start button UX
-   - Image + overlay locked
-   - Bottom bar: Clear / Undo / Results always present in tap flow
+   - Thumbnail SMALL (confirmation only)
+   - Image box + overlay locked
+   - Bottom controls bar persistent when photo chosen
 ============================================================ */
 
 * { box-sizing: border-box; }
@@ -21,7 +20,7 @@ body {
 
 .page {
   min-height: 100vh;
-  padding: 18px 14px 110px; /* room for bottom controls bar */
+  padding: 18px 14px 110px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -105,7 +104,7 @@ body {
 .bullets { margin: 8px 0 0; padding-left: 18px; }
 .bullets li { opacity: 0.9; font-weight: 700; margin: 6px 0; }
 
-/* ---------- Thumbnail (MAKE IT SMALL) ---------- */
+/* ---------- Thumbnail SMALL ---------- */
 .thumbBox {
   margin-top: 8px;
   width: 100%;
@@ -126,20 +125,15 @@ body {
   display: block;
   width: auto;
   height: auto;
-
-  /* hard cap: thumbnail stays small */
   max-width: 140px;
   max-height: 140px;
-
   border-radius: 10px;
   border: 1px solid rgba(255,255,255,0.10);
 }
 
 .thumbEmpty { opacity: 0.72; font-weight: 800; padding: 10px 6px; }
 
-/* ============================================================
-   IMAGE BOX (critical lock)
-============================================================ */
+/* ---------- Image Box Lock ---------- */
 .imgBox {
   display: inline-block;
   position: relative;
@@ -169,7 +163,7 @@ body {
   position: absolute;
   inset: 0;
   z-index: 5;
-  touch-action: none;
+  touch-action: none;     /* prevent iOS gesture stealing taps */
   pointer-events: auto;
   background: transparent;
 }
@@ -252,7 +246,7 @@ body {
   box-shadow: 0 16px 50px rgba(0,0,0,0.55);
 }
 
-/* Results modal close button uses this class */
+/* Results modal close button */
 .btnResults {
   border: none;
   border-radius: 999px;
