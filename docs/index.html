@@ -7,14 +7,14 @@
   <meta name="theme-color" content="#07110c" />
   <title>Tap-n-Score™</title>
 
-  <link rel="stylesheet" href="./styles.css?v=vTAP-NO-HUD-1" />
+  <link rel="stylesheet" href="./styles.css?v=vLOCK-SEC-DL-1" />
 </head>
 
 <body>
   <main class="page">
 
-    <!-- Landing card (stays simple) -->
-    <section class="card">
+    <!-- Landing card -->
+    <section class="card" id="landingCard">
       <header class="hero">
         <div class="brandLine">
           <div class="brand">TAP-N-SCORE<span class="tm">™</span></div>
@@ -26,7 +26,6 @@
         <div class="label">Take or Choose Target Photo</div>
 
         <input id="photoInput" class="hiddenFile" type="file" accept="image/*" />
-
         <button id="chooseBtn" class="btnPrimary" type="button">Choose Photo</button>
 
         <div id="fileName" class="hintStrong">No file selected.</div>
@@ -71,22 +70,20 @@
       </div>
     </section>
 
-    <!-- Tap area (image + overlay only) -->
+    <!-- Tap area -->
     <section id="imgBox" class="imgBox hidden" aria-label="Target image box">
       <img id="targetImg" alt="Selected target" />
       <div id="dotsLayer" aria-label="Tap overlay"></div>
     </section>
 
-    <!-- Bottom controls (hidden until photo chosen) -->
+    <!-- Bottom controls (HIDDEN until first tap) -->
     <div id="controlsBar" class="controlsBar hidden" aria-label="Controls">
       <button id="clearBtn" class="btnCtl" type="button">Clear</button>
       <button id="undoBtn" class="btnCtl" type="button">Undo</button>
       <button id="resultsBtn" class="btnCtl btnCtlPrimary" type="button">Results</button>
     </div>
 
-    <!-- NOTE: HUD pills removed on purpose -->
-
-    <script src="./index.js?v=vTAP-NO-HUD-1"></script>
+    <script src="./index.js?v=vLOCK-SEC-DL-1"></script>
   </main>
 </body>
 </html>
