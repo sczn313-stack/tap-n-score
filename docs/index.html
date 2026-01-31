@@ -7,7 +7,7 @@
   <meta name="theme-color" content="#07110c" />
   <title>Tap-n-Score™</title>
 
-  <link rel="stylesheet" href="./styles.css?v=UI-TOOLS-1" />
+  <link rel="stylesheet" href="./styles.css?v=TAP-LAYER-LOCK-6a" />
 </head>
 
 <body>
@@ -54,28 +54,42 @@
 
       <div class="field">
         <div class="label">Selected target photo thumbnail</div>
-        <div id="thumbBox" class="thumbBox thumbSmall">
+        <div id="thumbBox" class="thumbBox">
           <div class="thumbEmpty">No photo selected yet.</div>
         </div>
+        <div class="hintStrong">Next: press Start, then tap bull’s-eye (anchor), then tap hits.</div>
       </div>
 
-      <div class="toolsRow">
-        <button id="undoBtn" class="btnTool" type="button" disabled>Undo</button>
-        <button id="clearBtn" class="btnTool" type="button" disabled>Clear</button>
-        <button id="resultsBtn" class="btnToolPrimary" type="button" disabled>Results</button>
-      </div>
+      <button id="startBtn" class="btnStart" type="button" disabled>Start</button>
     </section>
 
-    <!-- Image + overlay only -->
+    <!-- IMAGE BOX (locked overlay) -->
     <section id="imgBox" class="imgBox hidden" aria-label="Target image box">
       <img id="targetImg" alt="Selected target" />
       <div id="dotsLayer" aria-label="Tap overlay"></div>
+
+      <!-- Controls OVER the image -->
+      <div class="imgControls">
+        <button id="clearBtn" class="btnMini" type="button" disabled>Clear</button>
+        <button id="undoBtn" class="btnMini" type="button" disabled>Undo</button>
+        <button id="resultsBtn" class="btnMiniPrimary" type="button" disabled>Results</button>
+      </div>
     </section>
 
+    <!-- HUD -->
     <div id="instructionLine" class="hudLeft">Choose a photo to begin</div>
     <div id="tapCount" class="hudRight">Taps: 0</div>
 
-    <script src="./index.js?v=UI-TOOLS-1"></script>
+    <!-- Results panel -->
+    <div id="resultsPanel" class="resultsPanel hidden" role="dialog" aria-modal="true">
+      <div class="resultsCard">
+        <div class="resultsTitle">Results</div>
+        <div id="resultsBody" class="resultsBody">—</div>
+        <button id="closeResultsBtn" class="btnPrimary" type="button">Close</button>
+      </div>
+    </div>
+
+    <script src="./index.js?v=TAP-LAYER-LOCK-6a"></script>
   </main>
 </body>
 </html>
