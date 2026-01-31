@@ -1,9 +1,8 @@
 /* ============================================================
-   styles.css (FULL REPLACEMENT) — vSEC-SCORES-1
-   - SEC = 2-column grid: LEFT content, RIGHT blank
-   - CTAs smaller so right side stays empty
-   - Shooter Score (current + prev3 + avg) with red/yellow/green
-   - "Shooter Experience Card" header uses darker blue
+   styles.css (FULL REPLACEMENT) — vSEC-SCOREIMG-1
+   - Shooter Score is an IMAGE
+   - Right column intentionally blank
+   - CTAs compact to keep right side empty
 ============================================================ */
 
 * { box-sizing: border-box; }
@@ -52,7 +51,6 @@ body {
 
 .field { margin: 12px 0; }
 .label { font-weight: 800; opacity: 0.92; margin-bottom: 8px; font-size: 15px; }
-
 .hint { opacity: 0.78; margin-top: 8px; font-weight: 600; }
 .hintStrong { margin-top: 10px; font-weight: 900; opacity: 0.92; }
 
@@ -74,10 +72,6 @@ body {
   font-weight: 800;
   font-size: 16px;
   outline: none;
-}
-.select:focus {
-  border-color: rgba(0,235,150,0.55);
-  box-shadow: 0 0 0 3px rgba(0,235,150,0.16);
 }
 
 .btnPrimary {
@@ -229,9 +223,7 @@ body {
   box-shadow: 0 16px 50px rgba(0,0,0,0.55);
 }
 
-/* ============================================================
-   SEC Overlay
-============================================================ */
+/* ---------- SEC Overlay ---------- */
 .resultsOverlay {
   position: fixed;
   inset: 0;
@@ -260,25 +252,15 @@ body {
   gap: 18px;
   align-items: start;
 }
-
 @media (max-width: 760px) {
-  /* On small screens, blank column collapses (still "blank" because it disappears) */
   .secGrid { grid-template-columns: 1fr; }
   .secRight { display: none; }
 }
-
 .secLeft { width: 100%; }
-.secRight {
-  min-height: 360px;
-  border-radius: 18px;
-  /* intentionally blank (no border, no text) */
-}
+.secRight { min-height: 360px; border-radius: 18px; }
 
-/* Header: Shooter Experience Card */
-.secHeader {
-  padding: 6px 2px 10px;
-  margin-bottom: 6px;
-}
+/* Header */
+.secHeader { padding: 6px 2px 10px; margin-bottom: 6px; }
 .secHeaderTop {
   font-weight: 1000;
   letter-spacing: 0.8px;
@@ -288,13 +270,8 @@ body {
 }
 .secWordRed   { color: rgba(255, 80, 80, 0.95); }
 .secWordWhite { color: rgba(255,255,255,0.92); }
-.secWordBlue  { color: rgba(20, 60, 160, 0.95); } /* darker blue */
-.secHeaderSub {
-  margin-top: 4px;
-  font-weight: 900;
-  opacity: 0.82;
-  font-size: 13px;
-}
+.secWordBlue  { color: rgba(20, 60, 160, 0.95); }
+.secHeaderSub { margin-top: 4px; font-weight: 900; opacity: 0.82; font-size: 13px; }
 
 /* Adjust block */
 .secAdjust {
@@ -312,11 +289,7 @@ body {
   letter-spacing: 0.6px;
   text-transform: uppercase;
 }
-.secAdjustRow {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-}
+.secAdjustRow { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .secAdjustItem {
   border-radius: 16px;
   border: 1px solid rgba(255,255,255,0.10);
@@ -324,25 +297,17 @@ body {
   padding: 12px;
   text-align: center;
 }
-.secAdjustNum {
-  font-weight: 1000;
-  font-size: 28px;
-}
+.secAdjustNum { font-weight: 1000; font-size: 28px; }
 .secAdjustLbl {
   margin-top: 4px;
   font-weight: 1000;
-  font-size: 12px; /* smaller and closer to number */
+  font-size: 12px;
   opacity: 0.85;
   letter-spacing: 0.8px;
 }
-.secAdjustNote {
-  margin-top: 10px;
-  font-weight: 900;
-  font-size: 12px;
-  opacity: 0.70;
-}
+.secAdjustNote { margin-top: 10px; font-weight: 900; font-size: 12px; opacity: 0.70; }
 
-/* Score box */
+/* Score box (IMAGE) */
 .secScoreBox {
   margin-top: 12px;
   border: 1px solid rgba(255,255,255,0.10);
@@ -358,14 +323,13 @@ body {
   letter-spacing: 0.6px;
   text-transform: uppercase;
 }
-.secScoreBig {
-  font-weight: 1100;
-  font-size: 54px;
-  line-height: 1;
+.secScoreImg {
+  width: 100%;
+  max-width: 380px;
+  height: auto;
+  display: block;
+  border-radius: 16px;
 }
-.scoreRed { color: rgba(255, 70, 70, 0.95); }
-.scoreYellow { color: rgba(255, 208, 60, 0.95); }
-.scoreGreen { color: rgba(0, 220, 130, 0.95); }
 
 .secScoreMeta {
   margin-top: 10px;
@@ -384,7 +348,6 @@ body {
 .secScoreKey { opacity: 0.75; }
 .secScoreVal { opacity: 0.95; }
 
-/* small details */
 .secDetails {
   margin-top: 10px;
   font-weight: 900;
@@ -394,15 +357,14 @@ body {
   line-height: 1.3;
 }
 
-/* CTAs (SMALL) — kept on LEFT only */
+/* CTAs compact */
 .resultsCtaRow {
   margin-top: 12px;
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 10px;
-  max-width: 360px; /* keeps right side blank */
+  max-width: 360px;
 }
-
 .resultsCtaBtn {
   border: none;
   border-radius: 14px;
@@ -419,11 +381,10 @@ body {
   text-align: center;
 }
 .resultsCtaBtn:active { transform: translateY(1px); }
-
 .ctaTop { font-size: 13px; letter-spacing: 0.6px; }
 .ctaBottom { font-size: 12px; opacity: 0.85; font-weight: 900; }
 
-/* Close button */
+/* Close */
 .btnResults {
   border: none;
   border-radius: 999px;
@@ -441,9 +402,7 @@ body {
 }
 .btnResults:active { transform: translateY(1px); }
 
-/* ============================================================
-   Survey overlay
-============================================================ */
+/* Survey overlay */
 .surveyOverlay {
   position: fixed;
   inset: 0;
@@ -455,7 +414,6 @@ body {
   justify-content: center;
   padding: 18px;
 }
-
 .surveyCard {
   width: min(520px, 96vw);
   border-radius: 22px;
@@ -464,31 +422,10 @@ body {
   box-shadow: 0 26px 80px rgba(0,0,0,0.65);
   padding: 16px 16px 14px;
 }
-
-.surveyTitle {
-  font-size: 22px;
-  font-weight: 1000;
-  margin-bottom: 6px;
-}
-.surveyHelper {
-  font-size: 14px;
-  font-weight: 900;
-  opacity: 0.86;
-  margin-bottom: 12px;
-}
-.surveyQuestion {
-  font-size: 18px;
-  font-weight: 1000;
-  line-height: 1.2;
-  margin-bottom: 12px;
-}
-
-.surveyBtnRow {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-}
-
+.surveyTitle { font-size: 22px; font-weight: 1000; margin-bottom: 6px; }
+.surveyHelper { font-size: 14px; font-weight: 900; opacity: 0.86; margin-bottom: 12px; }
+.surveyQuestion { font-size: 18px; font-weight: 1000; line-height: 1.2; margin-bottom: 12px; }
+.surveyBtnRow { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .surveyBtn {
   border: none;
   border-radius: 16px;
@@ -503,12 +440,10 @@ body {
   color: rgba(255,255,255,0.92);
 }
 .surveyBtn:active { transform: translateY(1px); }
-
 .surveyBtnYes {
   background: linear-gradient(180deg, rgba(0,170,110,0.92), rgba(0,105,70,0.92));
   border: 1px solid rgba(255,255,255,0.12);
 }
-
 .surveyNotNow {
   margin-top: 12px;
   width: 100%;
@@ -519,21 +454,8 @@ body {
   padding: 10px 8px;
   cursor: pointer;
 }
-.surveyNotNow:active { opacity: 0.85; }
-
-.surveyReasonsTitle {
-  margin-top: 12px;
-  font-weight: 1000;
-  opacity: 0.90;
-}
-
-.surveyReasonsGrid {
-  margin-top: 10px;
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 10px;
-}
-
+.surveyReasonsTitle { margin-top: 12px; font-weight: 1000; opacity: 0.90; }
+.surveyReasonsGrid { margin-top: 10px; display: grid; grid-template-columns: 1fr; gap: 10px; }
 .surveyReasonBtn {
   width: 100%;
   border: none;
