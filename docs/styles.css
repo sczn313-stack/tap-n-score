@@ -1,10 +1,11 @@
 /* ============================================================
-   styles.css (FULL REPLACEMENT) — vTAP-NOSTART-2
+   styles.css (FULL REPLACEMENT) — vSEC-1e
    Goals:
-   - Thumbnail SMALL, and can be hidden during tap flow
-   - Image + overlay locked (dotsLayer == image box)
-   - Bottom controls bar: Clear / Undo / Results
-   - iOS-friendly: prevent gesture stealing taps
+   - Thumbnail SMALL (does not take over the page)
+   - Thumbnail hidden after image loads
+   - Image + overlay locked
+   - Bottom bar: Clear / Undo / Results
+   - SEC modal styled + vendor/survey equal buttons
 ============================================================ */
 
 * { box-sizing: border-box; }
@@ -13,9 +14,8 @@ html, body { height: 100%; }
 body {
   margin: 0;
   font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-  background:
-    radial-gradient(1200px 800px at 30% 20%, rgba(0,120,80,0.28), rgba(0,0,0,0.92)),
-    linear-gradient(180deg, rgba(7,17,12,1), rgba(0,0,0,1));
+  background: radial-gradient(1200px 800px at 30% 20%, rgba(0,120,80,0.28), rgba(0,0,0,0.92)),
+              linear-gradient(180deg, rgba(7,17,12,1), rgba(0,0,0,1));
   color: rgba(255,255,255,0.92);
   -webkit-font-smoothing: antialiased;
 }
@@ -65,7 +65,6 @@ body {
 .hiddenFile { display: none !important; }
 .hidden { display: none !important; }
 
-/* ---------- Selects ---------- */
 .select {
   width: 100%;
   appearance: none;
@@ -84,7 +83,6 @@ body {
   box-shadow: 0 0 0 3px rgba(0,235,150,0.16);
 }
 
-/* ---------- Primary button ---------- */
 .btnPrimary {
   width: 100%;
   border: none;
@@ -108,9 +106,7 @@ body {
 .bullets { margin: 8px 0 0; padding-left: 18px; }
 .bullets li { opacity: 0.9; font-weight: 700; margin: 6px 0; }
 
-/* ============================================================
-   THUMBNAIL (SMALL + HIDEABLE)
-============================================================ */
+/* ---------- Thumbnail (SMALL) ---------- */
 .thumbBox {
   margin-top: 8px;
   width: 100%;
@@ -131,28 +127,21 @@ body {
   display: block;
   width: auto;
   height: auto;
-
-  /* hard cap: thumbnail stays small */
   max-width: 140px;
   max-height: 140px;
-
   border-radius: 10px;
   border: 1px solid rgba(255,255,255,0.10);
 }
 
-.thumbEmpty {
-  opacity: 0.72;
-  font-weight: 800;
-  padding: 10px 6px;
-  text-align: center;
-}
+.thumbEmpty { opacity: 0.72; font-weight: 800; padding: 10px 6px; }
 
-/* Hide thumbnail box when tap flow begins */
-.thumbHidden { display: none !important; }
+/* Hide thumbnail once target is up */
+.thumbHidden {
+  display: none !important;
+}
 
 /* ============================================================
    IMAGE BOX (critical lock)
-   - overlay matches image box exactly
 ============================================================ */
 .imgBox {
   display: inline-block;
@@ -183,10 +172,7 @@ body {
   position: absolute;
   inset: 0;
   z-index: 5;
-
-  /* iOS: do not allow pinch/scroll to steal taps */
   touch-action: none;
-
   pointer-events: auto;
   background: transparent;
 }
@@ -218,9 +204,7 @@ body {
 .hudLeft { left: 12px; }
 .hudRight { right: 12px; }
 
-/* ============================================================
-   BOTTOM CONTROLS BAR
-============================================================ */
+/* ---------- Bottom controls bar ---------- */
 .controlsBar {
   position: fixed;
   left: 12px;
@@ -286,3 +270,113 @@ body {
   box-shadow: 0 18px 60px rgba(0,0,0,0.55);
 }
 .btnResults:active { transform: translateY(1px); }
+
+/* ============================================================
+   SEC MODAL CLASSES (used by index.js)
+============================================================ */
+.secCard {
+  width: min(900px, 96vw);
+  border-radius: 22px;
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(12,14,13,0.78);
+  box-shadow: 0 26px 90px rgba(0,0,0,0.70);
+  padding: 18px;
+}
+
+.secTitle {
+  font-size: 34px;
+  font-weight: 950;
+  margin-bottom: 6px;
+}
+
+.secSub {
+  font-size: 18px;
+  font-weight: 800;
+  opacity: 0.85;
+}
+
+.secMeta {
+  font-size: 12px;
+  font-weight: 900;
+  opacity: 0.62;
+  margin-top: 4px;
+  margin-bottom: 10px;
+  letter-spacing: 0.25px;
+}
+
+.secRows {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+
+.secRow {
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 18px;
+  padding: 14px;
+  background: rgba(0,0,0,0.22);
+  display: grid;
+  grid-template-columns: 140px 1fr;
+  align-items: center;
+  gap: 12px;
+}
+
+@media (max-width: 520px) {
+  .secRow { grid-template-columns: 1fr; }
+}
+
+.secRowLabel {
+  font-size: 16px;
+  font-weight: 950;
+  opacity: 0.90;
+}
+
+.secRowRight {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.secBig {
+  font-size: 34px;
+  font-weight: 950;
+  letter-spacing: 0.2px;
+  text-shadow: 0 10px 26px rgba(0,0,0,0.55);
+}
+
+.secDir {
+  font-size: 16px;
+  font-weight: 900;
+  opacity: 0.78;
+  white-space: nowrap;
+}
+
+/* ===== NEW: equal action buttons ===== */
+.secActions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+@media (max-width: 520px) {
+  .secActions { grid-template-columns: 1fr; }
+}
+
+.secActionBtn {
+  border: none;
+  border-radius: 999px;
+  padding: 16px 18px;
+  font-size: 18px;
+  font-weight: 950;
+  cursor: pointer;
+
+  /* SAME COLOR / SAME STYLE for both actions */
+  background: linear-gradient(180deg, rgba(0,170,110,0.95), rgba(0,105,70,0.95));
+  color: rgba(255,255,255,0.96);
+  border: 1px solid rgba(255,255,255,0.12);
+  box-shadow: 0 18px 60px rgba(0,0,0,0.55);
+}
+
+.secActionBtn:active { transform: translateY(1px); }
