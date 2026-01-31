@@ -7,7 +7,7 @@
   <meta name="theme-color" content="#07110c" />
   <title>Tap-n-Score™</title>
 
-  <link rel="stylesheet" href="./styles.css?v=SEC-LOCK-1" />
+  <link rel="stylesheet" href="./styles.css?v=SEC-LOCK-2" />
 </head>
 
 <body>
@@ -48,8 +48,6 @@
          PAGE 2 — TAP TARGET
     =============================== -->
     <section id="pageTap" class="tapPage hidden" aria-label="Tap target page">
-
-      <!-- Thumbnail is hidden once target appears (we keep the container for later if needed) -->
       <section id="imgBox" class="imgBox" aria-label="Target image box">
         <img id="targetImg" alt="Selected target" />
         <div id="dotsLayer" aria-label="Tap overlay"></div>
@@ -66,15 +64,14 @@
          PAGE 3 — SEC (SCORING PAGE)
     =============================== -->
     <section id="pageSec" class="secPage hidden" aria-label="Shooter Experience Card">
-
       <section id="secCard" class="secCard">
+
         <header class="secHeader">
           <div class="secTitle">
             <span class="secWord">SHOOTER</span>
             <span class="secWord secWordWhite">EXPERIENCE</span>
             <span class="secWord secWordBlue">CARD</span>
           </div>
-
           <div class="secMeta">
             Session: <span id="secSessionId">SEC-00000000</span>
           </div>
@@ -86,9 +83,28 @@
           <div id="scoreHero" class="scoreHero">—</div>
         </section>
 
-        <!-- SMALL SUPPORT ROW (clicks + shots) -->
-        <section class="supportGrid" aria-label="Support info">
+        <!-- STEP 2: HISTORY STRIP -->
+        <section class="historyStrip" aria-label="Score history">
+          <div class="historyTitle">Previous 3</div>
 
+          <div class="historyRow">
+            <div id="prev1" class="histPill">—</div>
+            <div id="prev2" class="histPill">—</div>
+            <div id="prev3" class="histPill">—</div>
+          </div>
+
+          <div class="historyFooter">
+            <div class="histMeta">
+              Avg: <span id="avgScore">—</span>
+            </div>
+            <div class="histMeta">
+              Count: <span id="scoreCount">0</span>
+            </div>
+          </div>
+        </section>
+
+        <!-- SUPPORT ROW (clicks + shots) -->
+        <section class="supportGrid" aria-label="Support info">
           <div class="miniBox" aria-label="Target clicks">
             <div class="miniTitle">Target Clicks</div>
 
@@ -122,22 +138,19 @@
             <div class="shotsBig"><span id="shotsCount">0</span></div>
             <div class="shotsNote">Confirmed hits tapped</div>
           </div>
-
         </section>
 
-        <!-- CTA row (exactly TWO buttons, same size & color) -->
+        <!-- TWO equal CTA buttons -->
         <section class="ctaRow" aria-label="Actions">
           <button id="downloadSecBtn" class="ctaBtn" type="button">Download SEC</button>
           <button id="surveyBtn" class="ctaBtn" type="button">Survey</button>
         </section>
 
-        <!-- hidden canvas used to render downloadable SEC image -->
         <canvas id="secCanvas" class="secCanvas" width="1200" height="1600" aria-hidden="true"></canvas>
       </section>
-
     </section>
 
-    <script src="./index.js?v=SEC-LOCK-1"></script>
+    <script src="./index.js?v=SEC-LOCK-2"></script>
   </main>
 </body>
 </html>
