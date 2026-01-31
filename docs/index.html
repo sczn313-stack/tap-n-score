@@ -7,13 +7,13 @@
   <meta name="theme-color" content="#07110c" />
   <title>Tap-n-Score™</title>
 
-  <link rel="stylesheet" href="./styles.css?v=vSEC-LOCK-3" />
+  <link rel="stylesheet" href="./styles.css?v=vTAP-NO-HUD-1" />
 </head>
 
 <body>
   <main class="page">
 
-    <!-- Landing card -->
+    <!-- Landing card (stays simple) -->
     <section class="card">
       <header class="hero">
         <div class="brandLine">
@@ -33,8 +33,7 @@
         <div class="hint">Tip: Straight-on photos give the most accurate results.</div>
       </div>
 
-      <!-- Hidden for pilot (still available in DOM) -->
-      <div id="rangeInputs" class="row hiddenInputs">
+      <div class="row">
         <div class="field">
           <div class="label">Distance</div>
           <select id="distanceYds" class="select">
@@ -55,16 +54,14 @@
         </div>
       </div>
 
-      <!-- THUMB FIELD (we hide this once target shows) -->
-      <div id="thumbField" class="field">
+      <div class="field">
         <div class="label">Selected target photo thumbnail</div>
         <div id="thumbBox" class="thumbBox">
           <div class="thumbEmpty">No photo selected yet.</div>
         </div>
       </div>
 
-      <!-- WHAT NEXT (we hide this once target shows) -->
-      <div id="whatNext" class="whatNext">
+      <div class="whatNext">
         <div class="label">What happens next</div>
         <ul class="bullets">
           <li>Tap bull’s-eye (anchor)</li>
@@ -74,24 +71,20 @@
       </div>
     </section>
 
-    <!-- Tap area -->
+    <!-- Tap area (image + overlay only) -->
     <section id="imgBox" class="imgBox hidden" aria-label="Target image box">
       <img id="targetImg" alt="Selected target" />
       <div id="dotsLayer" aria-label="Tap overlay"></div>
     </section>
 
-    <!-- Bottom controls -->
+    <!-- Bottom controls (hidden until photo chosen) -->
     <div id="controlsBar" class="controlsBar hidden" aria-label="Controls">
       <button id="clearBtn" class="btnCtl" type="button">Clear</button>
       <button id="undoBtn" class="btnCtl" type="button">Undo</button>
       <button id="resultsBtn" class="btnCtl btnCtlPrimary" type="button">Results</button>
     </div>
 
-    <!-- HUD -->
-    <div id="instructionLine" class="hudLeft">Choose a photo to begin</div>
-    <div id="tapCount" class="hudRight">Taps: 0 (hits: 0)</div>
-
-    <script src="./index.js?v=vSEC-LOCK-3"></script>
+    <script src="./index.js?v=vTAP-NO-HUD-1"></script>
   </main>
 </body>
 </html>
