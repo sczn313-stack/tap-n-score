@@ -1,9 +1,11 @@
 /* ============================================================
-   index.js (FULL REPLACEMENT) — vSEC-LOCK-1
-   - SEC title: "SHOOTER EXPERIENCE CARD" (R/W/B via CSS spans)
-   - Labels: "Windage Clicks" + "Elevation Clicks"
-   - Direction: arrow + single-letter (L/R/U/D) near number
-   - Shows 0.00 when extremely tiny values
+   index.js (FULL REPLACEMENT) — vSEC-CENTERPIECE-1
+   SEC focus:
+   - SEC title = "Shooter’s Score"
+   - Score box is the centerpiece (bigger number)
+   - Shots + windage/elevation moved into smaller secondary panel
+   - Directions shown with arrows + 1-letter (L/R/U/D)
+   - Distance/MOA hidden on SEC
 ============================================================ */
 
 (() => {
@@ -19,8 +21,8 @@
   const elImg = $("targetImg");
   const elDots = $("dotsLayer");
 
-  const elDistance = $("distanceYds");
-  const elClick = $("clickValue");
+  const elDistance = $("distanceYds"); // kept for computation elsewhere if you re-enable later
+  const elClick = $("clickValue");     // kept for computation elsewhere if you re-enable later
 
   const elHUDLeft = $("instructionLine");
   const elHUDRight = $("tapCount");
@@ -103,140 +105,169 @@
     return { x: sum.x / hits.length, y: sum.y / hits.length };
   }
 
-  // Direction for turret move (POIB -> Anchor)
-  function direction(anchorPt, poibPt) {
-    const dx = anchorPt.x - poibPt.x;
-    const dy = anchorPt.y - poibPt.y; // screen: down is +
-
-    const horiz = dx >= 0 ? "R" : "L";
-    const vert  = dy >= 0 ? "D" : "U";
-
-    return { dx, dy, horiz, vert };
+  // Signed deltas in screen space (right +, down +)
+  // Correction vector should move POIB -> Anchor (anchor - poib)
+  function getCorrectionDeltas(anchorPt, poibPt) {
+    return {
+      dx: anchorPt.x - poibPt.x,  // + means move RIGHT
+      dy: anchorPt.y - poibPt.y   // + means move DOWN (screen truth)
+    };
   }
 
-  // NOTE:
-  // This pilot version outputs "clicks" as a derived magnitude from image-space %
-  // You already know your real pipeline converts to inches via grid. For now we keep the UI clean:
-  // clicks = (abs(delta) * 100) just to drive layout, then formatted to 2 decimals.
-  function toDisplayNumber(n) {
-    // show "0.00" if extremely tiny
-    if (!Number.isFinite(n) || Math.abs(n) < 0.0005) return "0.00";
-    return n.toFixed(2);
+  function fmt2(n) {
+    const x = Number(n);
+    if (!Number.isFinite(x)) return "0.00";
+    return x.toFixed(2);
   }
 
-  function scoreColorClass(score) {
-    const s = Number(score);
-    if (!Number.isFinite(s)) return "scoreRed";
+  // Map score to color class:
+  // 0–60 red, 61–79 yellow, 80–100 green
+  function scoreClass(score0to100) {
+    const s = Number(score0to100) || 0;
     if (s <= 60) return "scoreRed";
     if (s <= 79) return "scoreYellow";
     return "scoreGreen";
   }
 
-  function showSECModal() {
+  // Placeholder scoring (keep your real scoring if you already have it elsewhere)
+  // Right now: just a simple inverse of average distance from anchor in normalized units.
+  // If you already compute score elsewhere, replace computeScore() with your value.
+  function computeScore(anchorPt, hitsArr) {
+    if (!anchorPt || hitsArr.length === 0) return 0;
+    const avgDist = hitsArr.reduce((acc, p) => {
+      const dx = p.x - anchorPt.x;
+      const dy = p.y - anchorPt.y;
+      return acc + Math.sqrt(dx*dx + dy*dy);
+    }, 0) / hitsArr.length;
+
+    // Normalize: 0.0 => 100, 0.5-ish => lower
+    let score = Math.round(100 - (avgDist * 220)); // tuned feel
+    score = Math.max(0, Math.min(100, score));
+    return score;
+  }
+
+  function secDirection(dx, dy) {
+    // dx: + = RIGHT, - = LEFT
+    // dy: + = DOWN,  - = UP
+    const wind = dx >= 0 ? { arrow: "→", letter: "R" } : { arrow: "←", letter: "L" };
+    const elev = dy >= 0 ? { arrow: "↓", letter: "D" } : { arrow: "↑", letter: "U" };
+    return { wind, elev };
+  }
+
+  // Convert normalized deltas to "clicks"
+  // NOTE: This uses a normalized scale factor as a stand-in (because grid calibration is separate).
+  // If you already have true inch conversion via grid, replace NORM_TO_CLICKS below.
+  function deltasToClicks(dx, dy) {
+    const clickVal = Number(elClick?.value) || 0.25;
+
+    // "Calibration" placeholder: 1.0 normalized ~= 60 clicks at 1/4 MOA (tuned for UI demo)
+    // Replace this with your true: inches -> MOA -> clicks pipeline when locked.
+    const NORM_TO_MOA = 15; // 1.0 norm -> 15 MOA (placeholder)
+    const windClicks = (Math.abs(dx) * NORM_TO_MOA) / clickVal;
+    const elevClicks = (Math.abs(dy) * NORM_TO_MOA) / clickVal;
+
+    return { windClicks, elevClicks };
+  }
+
+  function showSEC() {
     const poib = computePOIB();
     if (!anchor || !poib) return;
 
-    // Placeholder “score” for now: based on tightness (demo)
-    // Replace later with your real scoring. Keeps 0–100.
-    const dx = poib.x - anchor.x;
-    const dy = poib.y - anchor.y;
-    const dist = Math.sqrt(dx*dx + dy*dy);
-    const score = Math.max(0, Math.min(100, Math.round(100 - dist * 160)));
+    const { dx, dy } = getCorrectionDeltas(anchor, poib);
+    const dirs = secDirection(dx, dy);
+    const { windClicks, elevClicks } = deltasToClicks(dx, dy);
 
-    const d = direction(anchor, poib);
+    const score = computeScore(anchor, hits);
+    const sClass = scoreClass(score);
 
-    // “Clicks” placeholder driven by image-space magnitude (for UI only)
-    const windClicks = Math.abs(d.dx) * 100;
-    const elevClicks = Math.abs(d.dy) * 100;
-
+    // Overlay
     const overlay = document.createElement("div");
     overlay.className = "secOverlay";
 
+    // Card
     const card = document.createElement("div");
     card.className = "secCard";
 
-    // Title (R/W/B)
+    // Header (R/W/B title text)
+    const header = document.createElement("div");
+    header.className = "secHeader";
+
     const title = document.createElement("div");
     title.className = "secTitle";
     title.innerHTML =
-      `<span class="tRed">SHOOTER</span> ` +
-      `<span class="tWhite">EXPERIENCE</span> ` +
-      `<span class="tBlue">CARD</span>`;
+      `<span class="tRed">SHOOTER</span> <span class="tWhite">SCORE</span>`;
 
-    const shots = document.createElement("div");
-    shots.className = "secShots";
-    shots.textContent = `Shots: ${hits.length}`;
+    header.appendChild(title);
 
-    // Rows
-    const rows = document.createElement("div");
-    rows.className = "secRows";
+    // MAIN centerpiece: Score row
+    const main = document.createElement("div");
+    main.className = "secMain";
 
-    // Score row (ONLY NUMBER on right)
-    const rScore = document.createElement("div");
-    rScore.className = "secRow";
+    const scoreRow = document.createElement("div");
+    scoreRow.className = "secRow secScoreRow";
 
-    const lScore = document.createElement("div");
-    lScore.className = "secLabel";
-    lScore.textContent = "Score";
+    const scoreLabel = document.createElement("div");
+    scoreLabel.className = "secLabel";
+    scoreLabel.textContent = "Score";
 
-    const vScore = document.createElement("div");
-    vScore.className = `secScoreNum ${scoreColorClass(score)}`;
-    vScore.textContent = String(score);
+    const scoreVal = document.createElement("div");
+    scoreVal.className = `secBigValue ${sClass}`;
+    scoreVal.textContent = String(score);
 
-    rScore.appendChild(lScore);
-    rScore.appendChild(vScore);
+    scoreRow.appendChild(scoreLabel);
+    scoreRow.appendChild(scoreVal);
 
-    // Windage Clicks row
-    const rW = document.createElement("div");
-    rW.className = "secRow";
+    main.appendChild(scoreRow);
 
-    const lW = document.createElement("div");
-    lW.className = "secLabel";
-    lW.textContent = "Windage Clicks";
+    // Secondary panel: Shots + wind/elev compact
+    const sub = document.createElement("div");
+    sub.className = "secSub";
 
-    const vW = document.createElement("div");
-    vW.className = "secValueBox";
-    vW.innerHTML =
-      `<span class="secArrow">${d.horiz === "L" ? "←" : "→"}</span>` +
-      `<span class="secNum">${toDisplayNumber(windClicks)}</span>` +
-      `<span class="secDir">${d.horiz}</span>`;
+    const shotsLine = document.createElement("div");
+    shotsLine.className = "secShots";
+    shotsLine.innerHTML = `<span class="secShotsLabel">Shots:</span> <span class="secShotsVal">${hits.length}</span>`;
+    sub.appendChild(shotsLine);
 
-    rW.appendChild(lW);
-    rW.appendChild(vW);
+    const grid = document.createElement("div");
+    grid.className = "secMiniGrid";
 
-    // Elevation Clicks row
-    const rE = document.createElement("div");
-    rE.className = "secRow";
+    const windRow = document.createElement("div");
+    windRow.className = "secRow secMiniRow";
+    windRow.innerHTML = `
+      <div class="secLabel">Windage Clicks</div>
+      <div class="secMiniValue">
+        <span class="secArrow">${dirs.wind.arrow}</span>
+        <span class="secNum">${fmt2(windClicks)}</span>
+        <span class="secDir">${dirs.wind.letter}</span>
+      </div>
+    `;
 
-    const lE = document.createElement("div");
-    lE.className = "secLabel";
-    lE.textContent = "Elevation Clicks";
+    const elevRow = document.createElement("div");
+    elevRow.className = "secRow secMiniRow";
+    elevRow.innerHTML = `
+      <div class="secLabel">Elevation Clicks</div>
+      <div class="secMiniValue">
+        <span class="secArrow">${dirs.elev.arrow}</span>
+        <span class="secNum">${fmt2(elevClicks)}</span>
+        <span class="secDir">${dirs.elev.letter}</span>
+      </div>
+    `;
 
-    const vE = document.createElement("div");
-    vE.className = "secValueBox";
-    vE.innerHTML =
-      `<span class="secArrow">${d.vert === "U" ? "↑" : "↓"}</span>` +
-      `<span class="secNum">${toDisplayNumber(elevClicks)}</span>` +
-      `<span class="secDir">${d.vert}</span>`;
+    grid.appendChild(windRow);
+    grid.appendChild(elevRow);
+    sub.appendChild(grid);
 
-    rE.appendChild(lE);
-    rE.appendChild(vE);
-
-    rows.appendChild(rScore);
-    rows.appendChild(rW);
-    rows.appendChild(rE);
-
-    // CTA Row (two buttons)
-    const ctas = document.createElement("div");
-    ctas.className = "secCTAs";
+    // Actions row (2 buttons)
+    const actions = document.createElement("div");
+    actions.className = "secActions";
 
     const btnBuy = document.createElement("button");
     btnBuy.className = "secActionBtn";
     btnBuy.type = "button";
     btnBuy.textContent = "Buy more targets";
     btnBuy.addEventListener("click", () => {
-      // TODO: replace with Baker URL
-      window.open("https://bakertargets.com", "_blank", "noopener,noreferrer");
+      // TODO: replace with Baker link
+      window.open("https://bakertargets.com", "_blank");
     });
 
     const btnSurvey = document.createElement("button");
@@ -244,32 +275,34 @@
     btnSurvey.type = "button";
     btnSurvey.textContent = "Survey";
     btnSurvey.addEventListener("click", () => {
-      // TODO: replace with your survey URL
-      window.open("https://example.com/survey", "_blank", "noopener,noreferrer");
+      // TODO: replace with your survey link
+      window.open("https://example.com", "_blank");
     });
 
-    ctas.appendChild(btnBuy);
-    ctas.appendChild(btnSurvey);
+    actions.appendChild(btnBuy);
+    actions.appendChild(btnSurvey);
 
-    // Close
-    const close = document.createElement("button");
-    close.className = "secCloseBtn";
-    close.type = "button";
-    close.textContent = "Close";
-    close.addEventListener("click", () => overlay.remove());
+    // Close button
+    const closeBtn = document.createElement("button");
+    closeBtn.className = "secCloseBtn";
+    closeBtn.type = "button";
+    closeBtn.textContent = "Close";
+    closeBtn.addEventListener("click", () => overlay.remove());
 
-    overlay.addEventListener("click", (e) => {
-      if (e.target === overlay) overlay.remove();
-    });
-
-    card.appendChild(title);
-    card.appendChild(shots);
-    card.appendChild(rows);
-    card.appendChild(ctas);
-    card.appendChild(close);
+    // Assemble
+    card.appendChild(header);
+    card.appendChild(main);
+    card.appendChild(sub);
+    card.appendChild(actions);
+    card.appendChild(closeBtn);
 
     overlay.appendChild(card);
     document.body.appendChild(overlay);
+
+    // Click outside closes
+    overlay.addEventListener("click", (e) => {
+      if (e.target === overlay) overlay.remove();
+    });
   }
 
   // Events
@@ -284,25 +317,24 @@
 
     setThumb(f);
 
-    // main image
     if (objectUrl) URL.revokeObjectURL(objectUrl);
     objectUrl = URL.createObjectURL(f);
     elImg.src = objectUrl;
 
-    // reset
     anchor = null;
     hits = [];
     redrawAll();
 
-    // show image & controls immediately (NO Start)
     elImgBox.classList.remove("hidden");
     elControls.classList.remove("hidden");
     setInstruction("Tap bull’s-eye (anchor)");
 
+    // Hide thumbnail section once target is up (CSS also supports it, but do it here too)
+    document.body.classList.add("targetLive");
+
     elImgBox.scrollIntoView({ behavior: "smooth", block: "start" });
   });
 
-  // Tap handling
   elDots.addEventListener("pointerdown", (evt) => {
     if (!selectedFile) return;
     evt.preventDefault();
@@ -336,9 +368,8 @@
     redrawAll();
   });
 
-  elResults.addEventListener("click", () => showSECModal());
+  elResults.addEventListener("click", () => showSEC());
 
-  // Initial
   setHUD();
   redrawAll();
 })();
