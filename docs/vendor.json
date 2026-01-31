@@ -1,6 +1,6 @@
 {
   "vendorName": "Baker Printing",
   "buyUrl": "https://bakertargets.com",
-  "surveyUrl": "https://your-survey-link",
-  "apiBase": "https://YOUR-RENDER-BACKEND.onrender.com"
+  "surveyUrl": "https://your-survey-link-here",
+  "apiBase": "https://YOUR-RENDER-SERVICE.onrender.com"
 }
