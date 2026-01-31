@@ -7,8 +7,7 @@
   <meta name="theme-color" content="#07110c" />
   <title>Tap-n-Score™</title>
 
-  <!-- bump querystring to force refresh -->
-  <link rel="stylesheet" href="./styles.css?v=TNS-LOCK-7" />
+  <link rel="stylesheet" href="./styles.css?v=TNS-NOSTART-1" />
 </head>
 
 <body>
@@ -26,7 +25,6 @@
         <div class="label">Take or Choose Target Photo</div>
 
         <input id="photoInput" class="hiddenFile" type="file" accept="image/*" />
-
         <button id="chooseBtn" class="btnPrimary" type="button">Choose Photo</button>
 
         <div id="fileName" class="hintStrong">No file selected.</div>
@@ -56,7 +54,7 @@
 
       <div class="field">
         <div class="label">Selected target photo thumbnail</div>
-        <div id="thumbBox" class="thumbBox">
+        <div id="thumbBox" class="thumbBox thumbSmall">
           <div class="thumbEmpty">No photo selected yet.</div>
         </div>
       </div>
@@ -64,16 +62,11 @@
       <div class="field">
         <div class="label">What happens next</div>
         <ul class="steps">
-          <li>Press <b>Start</b> to enter tap mode</li>
           <li>Tap bull’s-eye (anchor)</li>
           <li>Tap each confirmed hit</li>
           <li>Press <b>Results</b></li>
         </ul>
       </div>
-
-      <button id="startBtn" class="btnStart" type="button" disabled>
-        Start
-      </button>
     </section>
 
     <!-- Image + overlay ONLY -->
@@ -82,7 +75,7 @@
       <div id="dotsLayer" aria-label="Tap overlay"></div>
     </section>
 
-    <!-- Bottom controls (RESTORED) -->
+    <!-- Bottom controls -->
     <section id="controlsBar" class="controlsBar hidden" aria-label="Tap controls">
       <button id="clearBtn" class="btnGhost" type="button">Clear</button>
       <button id="undoBtn" class="btnGhost" type="button">Undo</button>
@@ -92,7 +85,7 @@
     <div id="instructionLine" class="hudLeft">Choose a photo to begin</div>
     <div id="tapCount" class="hudRight">Taps: 0 (hits: 0)</div>
 
-    <script src="./index.js?v=TNS-LOCK-7"></script>
+    <script src="./index.js?v=TNS-NOSTART-1"></script>
   </main>
 </body>
 </html>
