@@ -1,9 +1,5 @@
 /* ============================================================
-   styles.css (FULL REPLACEMENT) — vSEC-LOCK-1
-   - Thumbnail small + hidden when target shows (JS adds .hidden)
-   - SEC modal styling (small click boxes, arrows + single-letter)
-   - Score band coloring applied to NUMBERS ONLY (no color words shown)
-   - Rotation/pinch behavior handled in JS
+   styles.css (FULL REPLACEMENT) — vSEC-LOCK-3
 ============================================================ */
 
 * { box-sizing: border-box; }
@@ -29,6 +25,7 @@ body {
 
 .hiddenFile { display: none !important; }
 .hidden { display: none !important; }
+.hiddenInputs { display: none !important; }
 
 /* ---------- Card ---------- */
 .card {
@@ -76,10 +73,6 @@ body {
   font-size: 16px;
   outline: none;
 }
-.select:focus {
-  border-color: rgba(0,235,150,0.55);
-  box-shadow: 0 0 0 3px rgba(0,235,150,0.16);
-}
 
 .btnPrimary {
   width: 100%;
@@ -91,18 +84,12 @@ body {
   cursor: pointer;
   user-select: none;
   -webkit-tap-highlight-color: transparent;
-
   background: linear-gradient(180deg, rgba(0,140,90,0.92), rgba(0,85,55,0.92));
   color: rgba(255,255,255,0.95);
   box-shadow: 0 16px 50px rgba(0,0,0,0.50);
   border: 1px solid rgba(255,255,255,0.10);
 }
 .btnPrimary:active { transform: translateY(1px); }
-
-/* ---------- What next list ---------- */
-.whatNext { margin-top: 10px; }
-.bullets { margin: 8px 0 0; padding-left: 18px; }
-.bullets li { opacity: 0.9; font-weight: 700; margin: 6px 0; }
 
 /* ---------- Thumbnail ---------- */
 .thumbBox {
@@ -113,25 +100,24 @@ body {
   border-radius: 18px;
   padding: 10px;
   overflow: hidden;
-
   display: flex;
   align-items: center;
   justify-content: center;
-
   min-height: 90px;
 }
-
 .thumbBox img {
   display: block;
-  width: auto;
-  height: auto;
   max-width: 140px;
   max-height: 140px;
   border-radius: 10px;
   border: 1px solid rgba(255,255,255,0.10);
 }
-
 .thumbEmpty { opacity: 0.72; font-weight: 800; padding: 10px 6px; }
+
+/* ---------- What next ---------- */
+.whatNext { margin-top: 10px; }
+.bullets { margin: 8px 0 0; padding-left: 18px; }
+.bullets li { opacity: 0.9; font-weight: 700; margin: 6px 0; }
 
 /* ---------- Image box ---------- */
 .imgBox {
@@ -189,7 +175,7 @@ body {
 .hudLeft { left: 12px; }
 .hudRight { right: 12px; }
 
-/* ---------- Bottom controls ---------- */
+/* ---------- Bottom controls bar ---------- */
 .controlsBar {
   position: fixed;
   left: 12px;
@@ -226,13 +212,8 @@ body {
   color: rgba(255,255,255,0.92);
   border: 1px solid rgba(255,255,255,0.10);
 }
-
 .btnCtl:active { transform: translateY(1px); }
-
-.btnCtl:disabled {
-  opacity: 0.35;
-  cursor: not-allowed;
-}
+.btnCtl:disabled { opacity: 0.35; cursor: not-allowed; }
 
 .btnCtlPrimary {
   background: linear-gradient(180deg, rgba(0,170,110,0.95), rgba(0,105,70,0.95));
@@ -240,13 +221,13 @@ body {
   box-shadow: 0 16px 50px rgba(0,0,0,0.55);
 }
 
-/* ---------- SEC Modal ---------- */
+/* ---------- SEC Overlay ---------- */
 .secOverlay {
   position: fixed;
   inset: 0;
   z-index: 999999;
   background: rgba(0,0,0,0.55);
-  backdrop-filter: blur(10px);
+  backdrop-filter: blur(8px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -259,123 +240,128 @@ body {
   border: 1px solid rgba(255,255,255,0.12);
   background: rgba(12,14,13,0.72);
   box-shadow: 0 26px 80px rgba(0,0,0,0.65);
-  padding: 16px 16px 14px;
+  padding: 18px 18px 16px;
   color: rgba(255,255,255,0.92);
 }
 
-.secHeader { display: flex; flex-direction: column; gap: 6px; margin-bottom: 10px; }
-
+/* Red/White/Blue title */
 .secTitleRWB {
-  font-weight: 1000;
-  letter-spacing: 1px;
   font-size: 20px;
-  line-height: 1.05;
-  text-transform: uppercase;
-
-  /* red / white / blue feel */
-  background: linear-gradient(90deg, rgba(255,60,60,0.95), rgba(255,255,255,0.95), rgba(60,140,255,0.95));
+  font-weight: 1000;
+  letter-spacing: 0.8px;
+  margin-bottom: 8px;
+  background: linear-gradient(90deg, #ff3b3b 0%, #ffffff 48%, #2f6bff 100%);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
 }
 
-.secMeta { font-weight: 900; opacity: 0.9; }
-
-.secScoreRow {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 12px 14px;
-  border-radius: 18px;
-  border: 1px solid rgba(255,255,255,0.10);
-  background: rgba(0,0,0,0.18);
+.secMeta {
+  opacity: 0.9;
+  font-weight: 900;
   margin-bottom: 10px;
 }
 
-.secScoreLabel { font-weight: 900; opacity: 0.9; }
-.secScoreValue {
-  font-weight: 1000;
-  font-size: 28px;
-  letter-spacing: 0.6px;
-}
-
-/* Click rows smaller */
-.secClickRow {
-  display: flex;
+/* Compact rows */
+.secRow {
+  display: grid;
+  grid-template-columns: 1fr auto;
   align-items: center;
-  justify-content: space-between;
-  padding: 10px 14px;
+  gap: 12px;
+
+  padding: 12px 14px;
+  margin: 10px 0;
+
   border-radius: 16px;
   border: 1px solid rgba(255,255,255,0.10);
-  background: rgba(0,0,0,0.16);
-  margin-bottom: 10px;
+  background: rgba(0,0,0,0.18);
 }
 
-.secClickLabel {
+.secRowLabel {
   font-weight: 900;
   opacity: 0.9;
-  font-size: 15px;
+  font-size: 18px;
 }
 
-.secClickMid {
-  display: flex;
+.secRowRight {
+  display: inline-flex;
   align-items: baseline;
-  gap: 10px;
+  justify-content: flex-end;
+  gap: 8px; /* tight cluster */
+  min-width: 220px;
 }
 
+.scoreRight { min-width: 220px; }
+
+/* Arrow tight */
 .secArrow {
-  font-size: 22px;
   font-weight: 1000;
+  font-size: 26px;
   opacity: 0.95;
+  width: 28px;         /* keeps arrow close */
+  text-align: center;
 }
 
-.secValue {
+/* BIG number */
+.secBigNumber {
   font-weight: 1100;
-  font-size: 30px;
-  letter-spacing: 0.4px;
+  font-size: 46px;     /* big but controlled */
+  letter-spacing: 0.2px;
+  line-height: 1;
+  color: rgba(255,255,255,0.95); /* default white (wind/elev) */
 }
 
-.secDir {
+/* Tiny direction letter next to number */
+.secDirTiny {
   font-weight: 1000;
-  font-size: 14px;
-  opacity: 0.9;
-  margin-left: -2px;
+  font-size: 18px;
+  opacity: 0.8;
+  margin-left: 2px;
+  min-width: 18px;
+  text-align: left;
 }
 
-/* Two equal action buttons */
+/* Score band colors (APPLY TO SCORE NUMBER ONLY) */
+.bandA { color: #ff3b3b; }  /* 0–60 */
+.bandB { color: #ffd84a; }  /* 61–79 */
+.bandC { color: #35ff7a; }  /* 80–100 */
+
+/* Actions */
 .secActions {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 12px;
-  margin: 6px 0 12px;
+  margin: 12px 0 10px;
 }
 
+/* Smaller action buttons so right side feels open */
 .secActionBtn {
   border: none;
-  border-radius: 999px;
-  padding: 14px 14px;
+  border-radius: 16px;
+  padding: 14px 12px;
   font-size: 16px;
   font-weight: 1000;
   cursor: pointer;
   user-select: none;
   -webkit-tap-highlight-color: transparent;
-
-  background: rgba(255,255,255,0.10);
-  color: rgba(255,255,255,0.94);
-  border: 1px solid rgba(255,255,255,0.10);
 }
 
-.secActionBtn:active { transform: translateY(1px); }
+.secActionBtnGreen {
+  background: linear-gradient(180deg, rgba(0,170,110,0.95), rgba(0,105,70,0.95));
+  color: rgba(255,255,255,0.96);
+  border: 1px solid rgba(255,255,255,0.12);
+  box-shadow: 0 16px 50px rgba(0,0,0,0.35);
+}
 
-/* Close button */
+/* Close button (same green family) */
 .btnResults {
-  width: 100%;
   border: none;
   border-radius: 999px;
   padding: 16px 18px;
   font-size: 20px;
   font-weight: 1000;
   cursor: pointer;
+  width: 100%;
 
   background: linear-gradient(180deg, rgba(0,170,110,0.95), rgba(0,105,70,0.95));
   color: rgba(255,255,255,0.96);
@@ -383,8 +369,3 @@ body {
   box-shadow: 0 18px 60px rgba(0,0,0,0.55);
 }
 .btnResults:active { transform: translateY(1px); }
-
-/* ===== Numbers-only performance bands (no words) ===== */
-.bandA { color: rgba(255, 70, 70, 0.96); }   /* 0–60 */
-.bandB { color: rgba(255, 205, 70, 0.96); }  /* 61–79 */
-.bandC { color: rgba(70, 230, 140, 0.96); }  /* 80–100 */
