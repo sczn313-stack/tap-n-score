@@ -1,9 +1,11 @@
 /* ============================================================
    docs/styles.css (FULL REPLACEMENT) — FIX-LOCK-IMG-2
-   Hard goal:
-   - Overlay matches EXACTLY the rendered image box
-   - No taps/dots outside image
-   - iOS Safari: prevent gesture stealing
+   Matches docs/index.html:
+   - #imgBox.imgBox contains #targetImg + #dotsLayer only
+   Goal:
+   - Overlay == exact image box
+   - No dots outside image (overflow hidden)
+   - iOS: taps not stolen by scroll/zoom
 ============================================================ */
 
 * { box-sizing: border-box; }
@@ -19,7 +21,6 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* ---------- Page layout ---------- */
 .page {
   min-height: 100vh;
   padding: 18px 14px 44px;
@@ -57,7 +58,7 @@ body {
 .label { font-weight: 800; opacity: 0.92; margin-bottom: 8px; font-size: 15px; }
 
 .hint { opacity: 0.78; margin-top: 8px; font-weight: 600; }
-.hintStrong { margin-top: 10px; font-weight: 900; opacity: 0.92; }
+.hintStrong { margin-top: 8px; font-weight: 900; opacity: 0.92; }
 
 .row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
 @media (max-width: 520px) { .row { grid-template-columns: 1fr; } }
@@ -137,26 +138,26 @@ body {
 .thumbEmpty { opacity: 0.72; font-weight: 800; padding: 10px 6px; }
 
 /* ============================================================
-   IMAGE BOX LOCK (MATCHES YOUR HTML: #targetWrap.targetWrap)
+   IMAGE BOX LOCK — EXACTLY #imgBox (your HTML)
 ============================================================ */
 
-/* This is the ONLY box that should define tap space */
-#targetWrap.targetWrap {
-  display: inline-block;     /* shrink-wrap height to the image */
+.hidden { display: none !important; }
+
+#imgBox.imgBox {
+  display: inline-block;      /* shrink-wrap to image height */
   position: relative;
   width: min(860px, 96vw);
-  padding: 0;                /* padding breaks alignment */
+  padding: 0;
   margin: 0;
   border-radius: 22px;
-  overflow: hidden;          /* prevents dots outside */
+  overflow: hidden;           /* HARD stop: no dots outside */
   border: 1px solid rgba(255,255,255,0.10);
   box-shadow: 0 20px 60px rgba(0,0,0,0.55);
   background: rgba(0,0,0,0.18);
 }
 
-/* The image defines the box height */
 #targetImg {
-  display: block;            /* removes baseline gap */
+  display: block;
   width: 100%;
   height: auto;
   object-fit: contain;
@@ -164,33 +165,37 @@ body {
   user-select: none;
 }
 
-/* Canvas exists in HTML but we are NOT using it right now */
-#tapCanvas {
-  display: none !important;
-}
-
-/* The tap layer sits EXACTLY on the image */
+/* Tap overlay matches the box exactly */
 #dotsLayer {
   position: absolute;
   inset: 0;
   z-index: 5;
-
   background: transparent;
-
-  /* iOS: prevent scroll/zoom stealing taps */
-  touch-action: none;
-
-  /* must receive taps */
   pointer-events: auto;
+
+  /* iOS Safari: no pinch/scroll stealing */
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
 }
 
-/* Tap dots */
+/* Dots */
 .tapDot {
   position: absolute;
+  width: 14px;
+  height: 14px;
   transform: translate(-50%, -50%);
   border-radius: 999px;
+  background: rgba(0,220,120,0.95);
   border: 2px solid rgba(0,0,0,0.35);
   box-shadow: 0 10px 28px rgba(0,0,0,0.55);
+}
+
+/* First dot (anchor) bigger + gold */
+.tapDotAnchor {
+  width: 18px;
+  height: 18px;
+  background: rgba(255,180,0,0.95);
 }
 
 /* ---------- HUD ---------- */
