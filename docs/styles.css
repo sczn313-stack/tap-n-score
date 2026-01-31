@@ -1,13 +1,3 @@
-/* ============================================================
-   docs/styles.css (FULL REPLACEMENT) — FIX-LOCK-IMG-2
-   Matches docs/index.html:
-   - #imgBox.imgBox contains #targetImg + #dotsLayer only
-   Goal:
-   - Overlay == exact image box
-   - No dots outside image (overflow hidden)
-   - iOS: taps not stolen by scroll/zoom
-============================================================ */
-
 * { box-sizing: border-box; }
 html, body { height: 100%; }
 
@@ -30,7 +20,6 @@ body {
   gap: 18px;
 }
 
-/* ---------- Card ---------- */
 .card {
   width: min(860px, 96vw);
   background: rgba(18, 24, 22, 0.58);
@@ -50,13 +39,11 @@ body {
   font-size: clamp(26px, 4vw, 44px);
   line-height: 1.05;
 }
-
 .tm { color: rgba(0,235,150,0.95); margin-left: 2px; }
 .sub { opacity: 0.85; font-weight: 700; font-size: 15px; }
 
 .field { margin: 12px 0; }
 .label { font-weight: 800; opacity: 0.92; margin-bottom: 8px; font-size: 15px; }
-
 .hint { opacity: 0.78; margin-top: 8px; font-weight: 600; }
 .hintStrong { margin-top: 8px; font-weight: 900; opacity: 0.92; }
 
@@ -83,8 +70,7 @@ body {
   box-shadow: 0 0 0 3px rgba(0,235,150,0.16);
 }
 
-.btnPrimary,
-.btnStart {
+.btnPrimary {
   width: 100%;
   border: none;
   border-radius: 999px;
@@ -94,30 +80,12 @@ body {
   cursor: pointer;
   user-select: none;
   -webkit-tap-highlight-color: transparent;
-}
-
-.btnPrimary {
   background: linear-gradient(180deg, rgba(0,140,90,0.92), rgba(0,85,55,0.92));
   color: rgba(255,255,255,0.95);
   box-shadow: 0 16px 50px rgba(0,0,0,0.50);
   border: 1px solid rgba(255,255,255,0.10);
 }
 .btnPrimary:active { transform: translateY(1px); }
-
-.btnStart {
-  margin-top: 12px;
-  background: linear-gradient(180deg, rgba(0,170,110,0.95), rgba(0,105,70,0.95));
-  color: rgba(255,255,255,0.96);
-  border: 1px solid rgba(255,255,255,0.12);
-  box-shadow: 0 18px 60px rgba(0,0,0,0.55);
-}
-.btnStart:active { transform: translateY(1px); }
-
-.btnStart:disabled {
-  opacity: 0.45;
-  cursor: not-allowed;
-  filter: grayscale(30%);
-}
 
 /* ---------- Thumbnail ---------- */
 .thumbBox {
@@ -126,8 +94,14 @@ body {
   background: rgba(0,0,0,0.20);
   border: 1px solid rgba(255,255,255,0.10);
   border-radius: 18px;
-  padding: 12px;
+  padding: 10px;
   overflow: hidden;
+}
+.thumbEmpty { opacity: 0.72; font-weight: 800; padding: 10px 6px; }
+
+/* Small thumbnail mode */
+.thumbSmall {
+  max-width: 340px;
 }
 .thumbBox img {
   width: 100%;
@@ -135,22 +109,57 @@ body {
   display: block;
   border-radius: 12px;
 }
-.thumbEmpty { opacity: 0.72; font-weight: 800; padding: 10px 6px; }
 
-/* ============================================================
-   IMAGE BOX LOCK — EXACTLY #imgBox (your HTML)
-============================================================ */
+/* ---------- Tool buttons row ---------- */
+.toolsRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1.4fr;
+  gap: 12px;
+  margin-top: 10px;
+}
+@media (max-width: 520px) {
+  .toolsRow { grid-template-columns: 1fr; }
+}
 
+.btnTool,
+.btnToolPrimary {
+  border: none;
+  border-radius: 14px;
+  padding: 14px 12px;
+  font-size: 16px;
+  font-weight: 900;
+  cursor: pointer;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  border: 1px solid rgba(255,255,255,0.12);
+  box-shadow: 0 14px 40px rgba(0,0,0,0.45);
+}
+.btnTool {
+  background: rgba(0,0,0,0.28);
+  color: rgba(255,255,255,0.92);
+}
+.btnToolPrimary {
+  background: linear-gradient(180deg, rgba(0,170,110,0.95), rgba(0,105,70,0.95));
+  color: rgba(255,255,255,0.96);
+}
+.btnTool:disabled,
+.btnToolPrimary:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  filter: grayscale(30%);
+}
+
+/* ---------- Image box lock ---------- */
 .hidden { display: none !important; }
 
 #imgBox.imgBox {
-  display: inline-block;      /* shrink-wrap to image height */
+  display: inline-block;
   position: relative;
   width: min(860px, 96vw);
   padding: 0;
   margin: 0;
   border-radius: 22px;
-  overflow: hidden;           /* HARD stop: no dots outside */
+  overflow: hidden;
   border: 1px solid rgba(255,255,255,0.10);
   box-shadow: 0 20px 60px rgba(0,0,0,0.55);
   background: rgba(0,0,0,0.18);
@@ -165,21 +174,17 @@ body {
   user-select: none;
 }
 
-/* Tap overlay matches the box exactly */
 #dotsLayer {
   position: absolute;
   inset: 0;
   z-index: 5;
   background: transparent;
   pointer-events: auto;
-
-  /* iOS Safari: no pinch/scroll stealing */
   touch-action: none;
   -webkit-user-select: none;
   user-select: none;
 }
 
-/* Dots */
 .tapDot {
   position: absolute;
   width: 14px;
@@ -190,8 +195,6 @@ body {
   border: 2px solid rgba(0,0,0,0.35);
   box-shadow: 0 10px 28px rgba(0,0,0,0.55);
 }
-
-/* First dot (anchor) bigger + gold */
 .tapDotAnchor {
   width: 18px;
   height: 18px;
