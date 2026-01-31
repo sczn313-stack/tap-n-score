@@ -6,7 +6,8 @@
   <meta name="color-scheme" content="dark" />
   <meta name="theme-color" content="#07110c" />
   <title>Tap-n-Score™</title>
-  <link rel="stylesheet" href="./styles.css?v=LOCK-20260130-01" />
+
+  <link rel="stylesheet" href="./styles.css?v=vSEC-LOCK-1" />
 </head>
 
 <body>
@@ -25,14 +26,13 @@
         <div class="label">Take or Choose Target Photo</div>
 
         <input id="photoInput" class="hiddenFile" type="file" accept="image/*" />
-
         <button id="chooseBtn" class="btnPrimary" type="button">Choose Photo</button>
 
         <div id="fileName" class="hintStrong">No file selected.</div>
         <div class="hint">Tip: Straight-on photos give the most accurate results.</div>
       </div>
 
-      <div class="row">
+      <div class="row" id="settingsRow">
         <div class="field">
           <div class="label">Distance</div>
           <select id="distanceYds" class="select">
@@ -53,14 +53,15 @@
         </div>
       </div>
 
-      <div class="field">
-        <div class="label">Thumbnail (confirmation only)</div>
+      <!-- Thumbnail field (we will hide this when target shows) -->
+      <div class="field" id="thumbField">
+        <div class="label">Selected target photo thumbnail</div>
         <div id="thumbBox" class="thumbBox">
           <div class="thumbEmpty">No photo selected yet.</div>
         </div>
       </div>
 
-      <div class="whatNext">
+      <div class="whatNext" id="whatNext">
         <div class="label">What happens next</div>
         <ul class="bullets">
           <li>Tap bull’s-eye (anchor)</li>
@@ -70,7 +71,7 @@
       </div>
     </section>
 
-    <!-- Tap area (image + overlay only) -->
+    <!-- Tap area -->
     <section id="imgBox" class="imgBox hidden" aria-label="Target image box">
       <img id="targetImg" alt="Selected target" />
       <div id="dotsLayer" aria-label="Tap overlay"></div>
@@ -87,7 +88,7 @@
     <div id="instructionLine" class="hudLeft">Choose a photo to begin</div>
     <div id="tapCount" class="hudRight">Taps: 0 (hits: 0)</div>
 
-    <script src="./index.js?v=LOCK-20260130-01"></script>
+    <script src="./index.js?v=vSEC-LOCK-1"></script>
   </main>
 </body>
 </html>
