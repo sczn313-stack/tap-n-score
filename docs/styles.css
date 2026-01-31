@@ -1,9 +1,10 @@
 /* ============================================================
-   styles.css (FULL REPLACEMENT) — LOCK-20260130-01
+   styles.css (FULL REPLACEMENT) — vTAP-NOSTART-2
    Goals:
-   - Thumbnail SMALL (confirmation only)
-   - Image box + overlay locked
-   - Bottom controls bar persistent when photo chosen
+   - Thumbnail SMALL, and can be hidden during tap flow
+   - Image + overlay locked (dotsLayer == image box)
+   - Bottom controls bar: Clear / Undo / Results
+   - iOS-friendly: prevent gesture stealing taps
 ============================================================ */
 
 * { box-sizing: border-box; }
@@ -12,15 +13,16 @@ html, body { height: 100%; }
 body {
   margin: 0;
   font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-  background: radial-gradient(1200px 800px at 30% 20%, rgba(0,120,80,0.28), rgba(0,0,0,0.92)),
-              linear-gradient(180deg, rgba(7,17,12,1), rgba(0,0,0,1));
+  background:
+    radial-gradient(1200px 800px at 30% 20%, rgba(0,120,80,0.28), rgba(0,0,0,0.92)),
+    linear-gradient(180deg, rgba(7,17,12,1), rgba(0,0,0,1));
   color: rgba(255,255,255,0.92);
   -webkit-font-smoothing: antialiased;
 }
 
 .page {
   min-height: 100vh;
-  padding: 18px 14px 110px;
+  padding: 18px 14px 110px; /* room for bottom controls bar */
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -63,6 +65,7 @@ body {
 .hiddenFile { display: none !important; }
 .hidden { display: none !important; }
 
+/* ---------- Selects ---------- */
 .select {
   width: 100%;
   appearance: none;
@@ -81,6 +84,7 @@ body {
   box-shadow: 0 0 0 3px rgba(0,235,150,0.16);
 }
 
+/* ---------- Primary button ---------- */
 .btnPrimary {
   width: 100%;
   border: none;
@@ -104,7 +108,9 @@ body {
 .bullets { margin: 8px 0 0; padding-left: 18px; }
 .bullets li { opacity: 0.9; font-weight: 700; margin: 6px 0; }
 
-/* ---------- Thumbnail SMALL ---------- */
+/* ============================================================
+   THUMBNAIL (SMALL + HIDEABLE)
+============================================================ */
 .thumbBox {
   margin-top: 8px;
   width: 100%;
@@ -125,15 +131,29 @@ body {
   display: block;
   width: auto;
   height: auto;
+
+  /* hard cap: thumbnail stays small */
   max-width: 140px;
   max-height: 140px;
+
   border-radius: 10px;
   border: 1px solid rgba(255,255,255,0.10);
 }
 
-.thumbEmpty { opacity: 0.72; font-weight: 800; padding: 10px 6px; }
+.thumbEmpty {
+  opacity: 0.72;
+  font-weight: 800;
+  padding: 10px 6px;
+  text-align: center;
+}
 
-/* ---------- Image Box Lock ---------- */
+/* Hide thumbnail box when tap flow begins */
+.thumbHidden { display: none !important; }
+
+/* ============================================================
+   IMAGE BOX (critical lock)
+   - overlay matches image box exactly
+============================================================ */
 .imgBox {
   display: inline-block;
   position: relative;
@@ -163,7 +183,10 @@ body {
   position: absolute;
   inset: 0;
   z-index: 5;
-  touch-action: none;     /* prevent iOS gesture stealing taps */
+
+  /* iOS: do not allow pinch/scroll to steal taps */
+  touch-action: none;
+
   pointer-events: auto;
   background: transparent;
 }
@@ -195,7 +218,9 @@ body {
 .hudLeft { left: 12px; }
 .hudRight { right: 12px; }
 
-/* ---------- Bottom controls bar ---------- */
+/* ============================================================
+   BOTTOM CONTROLS BAR
+============================================================ */
 .controlsBar {
   position: fixed;
   left: 12px;
@@ -246,7 +271,7 @@ body {
   box-shadow: 0 16px 50px rgba(0,0,0,0.55);
 }
 
-/* Results modal close button */
+/* Results modal close button uses this class */
 .btnResults {
   border: none;
   border-radius: 999px;
