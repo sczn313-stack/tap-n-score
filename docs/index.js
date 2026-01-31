@@ -1,6 +1,9 @@
 /* ============================================================
-   index.js (FULL REPLACEMENT) — vSEC-1d
-   Locks performance colors:
+   index.js (FULL REPLACEMENT) — vSEC-1e
+   Adds SEC vendor hook + survey CTA:
+   - Two equal-size, equal-color buttons:
+     "Buy more targets like this" + "Survey"
+   Performance colors locked:
    - GREEN  <= 3.00 clicks
    - YELLOW <= 6.00 clicks
    - RED    >  6.00 clicks
@@ -8,6 +11,12 @@
 
 (() => {
   const $ = (id) => document.getElementById(id);
+
+  // ===== Vendor Hooks (EDIT THESE if you want) =====
+  // Baker / vendor buy link
+  const VENDOR_BUY_URL = "https://bakertargets.com/";
+  // Survey link (replace with your real survey URL)
+  const SURVEY_URL = "https://example.com/survey";
 
   // Elements
   const elFile = $("photoInput");
@@ -172,6 +181,17 @@
     return "rgba(255, 90, 90, 0.96)";                        // red
   }
 
+  function openUrl(url) {
+    if (!url) return;
+    // safer for iOS + prevents opener access
+    try {
+      const w = window.open(url, "_blank", "noopener,noreferrer");
+      if (!w) window.location.href = url; // fallback if popup blocked
+    } catch {
+      window.location.href = url;
+    }
+  }
+
   function showSECModal() {
     const poib = computePOIB();
     if (!anchor || !poib) return;
@@ -190,84 +210,50 @@
     overlay.style.padding = "18px";
 
     const card = document.createElement("div");
-    card.style.width = "min(900px, 96vw)";
-    card.style.borderRadius = "22px";
-    card.style.border = "1px solid rgba(255,255,255,0.12)";
-    card.style.background = "rgba(12,14,13,0.78)";
-    card.style.boxShadow = "0 26px 90px rgba(0,0,0,0.70)";
-    card.style.padding = "18px";
+    card.className = "secCard"; // uses CSS sizing + look
     card.style.color = "rgba(255,255,255,0.94)";
 
     const title = document.createElement("div");
     title.textContent = "SEC";
-    title.style.fontSize = "34px";
-    title.style.fontWeight = "950";
-    title.style.marginBottom = "8px";
+    title.className = "secTitle";
 
     const sub = document.createElement("div");
     sub.textContent = `Shots: ${hits.length}`;
-    sub.style.fontSize = "18px";
-    sub.style.fontWeight = "800";
-    sub.style.opacity = "0.85";
+    sub.className = "secSub";
 
-    // Smaller + tighter meta line
     const meta = document.createElement("div");
     meta.textContent = `Distance: ${sec.dist} yd  •  Click: ${sec.clickVal} MOA`;
-    meta.style.fontSize = "12px";
-    meta.style.fontWeight = "900";
-    meta.style.opacity = "0.62";
-    meta.style.marginTop = "4px";
-    meta.style.marginBottom = "10px";
-    meta.style.letterSpacing = "0.25px";
+    meta.className = "secMeta";
 
     const rowWrap = document.createElement("div");
-    rowWrap.style.display = "grid";
-    rowWrap.style.gridTemplateColumns = "1fr";
-    rowWrap.style.gap = "12px";
+    rowWrap.className = "secRows";
 
     function makeRow(label, arrow, valueText, dirText, valueColor) {
       const row = document.createElement("div");
-      row.style.border = "1px solid rgba(255,255,255,0.12)";
-      row.style.borderRadius = "18px";
-      row.style.padding = "14px 14px";
-      row.style.background = "rgba(0,0,0,0.22)";
-      row.style.display = "grid";
-      row.style.gridTemplateColumns = "140px 1fr";
-      row.style.alignItems = "center";
-      row.style.gap = "12px";
+      row.className = "secRow";
 
       const left = document.createElement("div");
       left.textContent = label;
-      left.style.fontSize = "16px";
-      left.style.fontWeight = "950";
-      left.style.opacity = "0.9";
+      left.className = "secRowLabel";
 
       const right = document.createElement("div");
-      right.style.display = "flex";
-      right.style.alignItems = "baseline";
-      right.style.justifyContent = "space-between";
-      right.style.gap = "12px";
+      right.className = "secRowRight";
 
       const big = document.createElement("div");
       big.textContent = `${arrow} ${valueText}`;
-      big.style.fontSize = "34px";
-      big.style.fontWeight = "950";
-      big.style.letterSpacing = "0.2px";
-      big.style.color = valueColor; // ✅ performance color
-      big.style.textShadow = "0 10px 26px rgba(0,0,0,0.55)";
+      big.className = "secBig";
+      big.style.color = valueColor; // performance color
 
       const small = document.createElement("div");
       small.textContent = dirText;
-      small.style.fontSize = "16px";
-      small.style.fontWeight = "900";
-      small.style.opacity = "0.78";
-      small.style.whiteSpace = "nowrap";
+      small.className = "secDir";
 
       right.appendChild(big);
       right.appendChild(small);
 
       row.appendChild(left);
       row.appendChild(right);
+
       return row;
     }
 
@@ -281,13 +267,32 @@
       makeRow("Elevation", sec.elevArrow, elevVal, sec.elevDir, perfColor(sec.elevClicks))
     );
 
-    const btn = document.createElement("button");
-    btn.textContent = "Close";
-    btn.className = "btnResults";
-    btn.style.width = "100%";
-    btn.style.marginTop = "14px";
+    // ===== NEW: equal action buttons (vendor + survey) =====
+    const actions = document.createElement("div");
+    actions.className = "secActions";
 
-    btn.addEventListener("click", () => overlay.remove());
+    const btnBuy = document.createElement("button");
+    btnBuy.type = "button";
+    btnBuy.className = "secActionBtn";
+    btnBuy.textContent = "Buy more targets like this";
+    btnBuy.addEventListener("click", () => openUrl(VENDOR_BUY_URL));
+
+    const btnSurvey = document.createElement("button");
+    btnSurvey.type = "button";
+    btnSurvey.className = "secActionBtn";
+    btnSurvey.textContent = "Survey";
+    btnSurvey.addEventListener("click", () => openUrl(SURVEY_URL));
+
+    actions.appendChild(btnBuy);
+    actions.appendChild(btnSurvey);
+
+    const btnClose = document.createElement("button");
+    btnClose.textContent = "Close";
+    btnClose.className = "btnResults";
+    btnClose.style.width = "100%";
+    btnClose.style.marginTop = "12px";
+
+    btnClose.addEventListener("click", () => overlay.remove());
     overlay.addEventListener("click", (e) => {
       if (e.target === overlay) overlay.remove();
     });
@@ -296,7 +301,9 @@
     card.appendChild(sub);
     card.appendChild(meta);
     card.appendChild(rowWrap);
-    card.appendChild(btn);
+    card.appendChild(actions);
+    card.appendChild(btnClose);
+
     overlay.appendChild(card);
     document.body.appendChild(overlay);
   }
