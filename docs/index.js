@@ -1,256 +1,315 @@
 /* ============================================================
-   index.js (FULL REPLACEMENT) — vTAP-LOCK-SEC-1
-   Fixes:
-   1) iOS "Load failed" recovery:
-      - try objectURL first
-      - if img.onerror, fallback to FileReader dataURL
-   2) Controls bar appears ONLY after first tap (anchor or hit)
-   3) Dots remain correct on resize/orientation changes
-   4) Keeps thumbnail on landing, but hides it once target is shown
+   index.js (FULL REPLACEMENT) — SEC-LOCK-1
+   - Card-contained SEC scoring page
+   - HERO score is centerpiece; numerals only; colored by thresholds
+   - Controls (Clear/Undo/Results) appear ONLY after first tap
+   - All math/results come from backend endpoint
 ============================================================ */
 
 (() => {
   const $ = (id) => document.getElementById(id);
 
-  // Elements
+  // Pages
+  const pageLanding = $("pageLanding");
+  const pageTap = $("pageTap");
+  const pageSec = $("pageSec");
+
+  // Landing
   const elFile = $("photoInput");
   const elChoose = $("chooseBtn");
   const elFileName = $("fileName");
-  const elThumbBox = $("thumbBox");
 
-  const elImgBox = $("imgBox");
-  const elImg = $("targetImg");
-  const elDots = $("dotsLayer");
+  // Tap
+  const imgBox = $("imgBox");
+  const targetImg = $("targetImg");
+  const dotsLayer = $("dotsLayer");
 
-  const elDistance = $("distanceYds");
-  const elClick = $("clickValue");
+  const controlsBar = $("controlsBar");
+  const clearBtn = $("clearBtn");
+  const undoBtn = $("undoBtn");
+  const resultsBtn = $("resultsBtn");
 
-  const elControls = $("controlsBar");
-  const elClear = $("clearBtn");
-  const elUndo = $("undoBtn");
-  const elResults = $("resultsBtn");
+  // SEC
+  const secSessionId = $("secSessionId");
+  const scoreHero = $("scoreHero");
+  const clickUp = $("clickUp");
+  const clickDown = $("clickDown");
+  const clickLeft = $("clickLeft");
+  const clickRight = $("clickRight");
+  const shotsCount = $("shotsCount");
+
+  const downloadSecBtn = $("downloadSecBtn");
+  const surveyBtn = $("surveyBtn");
+  const secCanvas = $("secCanvas");
 
   // State
   let selectedFile = null;
   let objectUrl = null;
 
-  let anchor = null; // {x,y} normalized
+  let anchor = null; // {x,y}
   let hits = [];     // [{x,y}...]
 
-  let hasFirstTap = false; // controls bar gate
+  let controlsShown = false;
 
-  // ---------- Helpers ----------
-  function clamp01(v) { return Math.max(0, Math.min(1, v)); }
+  // ------------ Helpers ------------
+  const clamp01 = (v) => Math.max(0, Math.min(1, v));
 
-  function enableControlsVisibility() {
-    if (!hasFirstTap) return;
-    elControls.classList.remove("hidden");
+  function showPage(which) {
+    pageLanding.classList.add("hidden");
+    pageTap.classList.add("hidden");
+    pageSec.classList.add("hidden");
+
+    which.classList.remove("hidden");
+
+    // recenter after page change
+    requestAnimationFrame(() => {
+      which.scrollIntoView({ behavior: "instant", block: "start" });
+    });
   }
 
-  function hideControlsVisibility() {
-    elControls.classList.add("hidden");
+  function setScoreColor(scoreNum) {
+    // your rules (numbers only colored)
+    scoreHero.style.color = "rgba(255,255,255,0.92)";
+    if (!Number.isFinite(scoreNum)) return;
+
+    if (scoreNum <= 60) scoreHero.style.color = "rgba(255, 70, 70, 0.98)";
+    else if (scoreNum <= 79) scoreHero.style.color = "rgba(255, 208, 70, 0.98)";
+    else scoreHero.style.color = "rgba(0, 235, 150, 0.98)";
+  }
+
+  function setClicks({ up, down, left, right }) {
+    clickUp.textContent = (Number(up) || 0).toFixed(2);
+    clickDown.textContent = (Number(down) || 0).toFixed(2);
+    clickLeft.textContent = (Number(left) || 0).toFixed(2);
+    clickRight.textContent = (Number(right) || 0).toFixed(2);
   }
 
   function clearDots() {
-    while (elDots.firstChild) elDots.removeChild(elDots.firstChild);
+    while (dotsLayer.firstChild) dotsLayer.removeChild(dotsLayer.firstChild);
   }
 
-  function drawDot(norm, kind) {
-    const dot = document.createElement("div");
-    dot.className = `tapDot ${kind === "anchor" ? "tapDotAnchor" : "tapDotHit"}`;
+  function drawDot(p, kind) {
+    const d = document.createElement("div");
+    d.className = "tapDot";
 
-    dot.style.left = `${(norm.x * 100).toFixed(4)}%`;
-    dot.style.top  = `${(norm.y * 100).toFixed(4)}%`;
+    // smaller dots for iPhone (anchor a touch bigger)
+    const size = (kind === "anchor") ? 12 : 10;
+    d.style.width = `${size}px`;
+    d.style.height = `${size}px`;
 
-    elDots.appendChild(dot);
+    d.style.left = `${(p.x * 100).toFixed(4)}%`;
+    d.style.top  = `${(p.y * 100).toFixed(4)}%`;
+
+    d.style.background = (kind === "anchor")
+      ? "rgba(255, 196, 0, 0.95)"
+      : "rgba(0, 220, 130, 0.95)";
+
+    dotsLayer.appendChild(d);
   }
 
-  function redrawAll() {
+  function redraw() {
     clearDots();
     if (anchor) drawDot(anchor, "anchor");
     hits.forEach((h) => drawDot(h, "hit"));
-
-    // Buttons
-    elClear.disabled = (!anchor && hits.length === 0);
-    elUndo.disabled = (!anchor && hits.length === 0);
-    elResults.disabled = (!anchor || hits.length === 0);
-
-    // Controls appear only after first tap
-    if (hasFirstTap) enableControlsVisibility();
-    else hideControlsVisibility();
   }
 
-  function setThumb(file) {
-    elThumbBox.innerHTML = "";
-    const img = document.createElement("img");
-    img.alt = "Selected thumbnail";
-    img.src = URL.createObjectURL(file);
-    elThumbBox.appendChild(img);
+  function showControlsIfNeeded() {
+    if (controlsShown) return;
+    controlsShown = true;
+    controlsBar.classList.remove("hidden");
+    // initial enable states
+    clearBtn.disabled = false;
+    undoBtn.disabled = false;
+    resultsBtn.disabled = false;
   }
 
-  function hideThumbnailArea() {
-    // when the target is on screen, we remove the thumbnail box content to reclaim space
-    // (keeps landing layout stable but eliminates the visual clutter)
-    elThumbBox.innerHTML = "";
-    const msg = document.createElement("div");
-    msg.className = "thumbEmpty";
-    msg.textContent = "Photo loaded.";
-    elThumbBox.appendChild(msg);
-  }
+  function getNormFromPointer(evt) {
+    const rect = dotsLayer.getBoundingClientRect();
+    if (!rect.width || !rect.height) return null;
 
-  function getNormFromEvent(evt) {
-    const rect = elDots.getBoundingClientRect();
     const x = (evt.clientX - rect.left) / rect.width;
     const y = (evt.clientY - rect.top) / rect.height;
+
     if (x < 0 || x > 1 || y < 0 || y > 1) return null;
     return { x: clamp01(x), y: clamp01(y) };
   }
 
-  function computePOIB() {
-    if (hits.length === 0) return null;
-    const sum = hits.reduce((acc, p) => ({ x: acc.x + p.x, y: acc.y + p.y }), { x: 0, y: 0 });
-    return { x: sum.x / hits.length, y: sum.y / hits.length };
+  function newSessionId() {
+    const n = Math.random().toString(16).slice(2, 10).toUpperCase();
+    return `SEC-${n}`;
   }
 
-  function directionText(anchorPt, poibPt) {
-    // POIB -> Anchor (bull - poib)
-    const dx = anchorPt.x - poibPt.x;
-    const dy = anchorPt.y - poibPt.y; // screen space
-
-    // NOTE: These are correction directions in screen truth
-    const horizDir = dx >= 0 ? "R" : "L";
-    const vertDir  = dy >= 0 ? "D" : "U";
-
-    return { dx, dy, horizDir, vertDir };
-  }
-
-  function showSECModal() {
-    const poib = computePOIB();
-    if (!anchor || !poib) return;
-
-    const dist = Number(elDistance.value) || 100;
-    const clickVal = Number(elClick.value) || 0.25;
-
-    // Placeholder conversion for now (your backend will own all math later)
-    const dir = directionText(anchor, poib);
-    const wind = Math.abs(dir.dx) * 100; // placeholder
-    const elev = Math.abs(dir.dy) * 100; // placeholder
-
-    const overlay = document.createElement("div");
-    overlay.className = "secOverlay";
-
-    const card = document.createElement("div");
-    card.className = "secCard";
-
-    const title = document.createElement("div");
-    title.className = "secTitle";
-    title.textContent = "SEC";
-
-    const shots = document.createElement("div");
-    shots.className = "secShots";
-    shots.textContent = `Shots: ${hits.length}`;
-
-    const row1 = document.createElement("div");
-    row1.className = "secRow";
-    row1.innerHTML = `
-      <div class="secLabel">Windage</div>
-      <div class="secValue">
-        <span class="secArrow">${dir.horizDir === "R" ? "→" : "←"}</span>
-        <span class="secNum">${wind.toFixed(2)}</span>
-        <span class="secDir">${dir.horizDir}</span>
-      </div>
-    `;
-
-    const row2 = document.createElement("div");
-    row2.className = "secRow";
-    row2.innerHTML = `
-      <div class="secLabel">Elevation</div>
-      <div class="secValue">
-        <span class="secArrow">${dir.vertDir === "U" ? "↑" : "↓"}</span>
-        <span class="secNum">${elev.toFixed(2)}</span>
-        <span class="secDir">${dir.vertDir}</span>
-      </div>
-    `;
-
-    const actions = document.createElement("div");
-    actions.className = "secActions";
-
-    const buyBtn = document.createElement("button");
-    buyBtn.className = "secActionBtn";
-    buyBtn.type = "button";
-    buyBtn.textContent = "Buy more targets";
-    buyBtn.addEventListener("click", () => {
-      // placeholder hook (you’ll wire Baker URL later)
-      window.open("https://bakertargets.com", "_blank");
-    });
-
-    const surveyBtn = document.createElement("button");
-    surveyBtn.className = "secActionBtn";
-    surveyBtn.type = "button";
-    surveyBtn.textContent = "Survey";
-    surveyBtn.addEventListener("click", () => {
-      // placeholder hook (you’ll wire survey later)
-      alert("Survey link coming next.");
-    });
-
-    actions.appendChild(buyBtn);
-    actions.appendChild(surveyBtn);
-
-    const closeBtn = document.createElement("button");
-    closeBtn.className = "secCloseBtn";
-    closeBtn.type = "button";
-    closeBtn.textContent = "Close";
-    closeBtn.addEventListener("click", () => overlay.remove());
-
-    card.appendChild(title);
-    card.appendChild(shots);
-    card.appendChild(row1);
-    card.appendChild(row2);
-    card.appendChild(actions);
-    card.appendChild(closeBtn);
-
-    overlay.appendChild(card);
-    overlay.addEventListener("click", (e) => {
-      if (e.target === overlay) overlay.remove();
-    });
-
-    document.body.appendChild(overlay);
-  }
-
-  // ---------- Image Load (iOS fix) ----------
-  function loadImageFile(file) {
-    // Try objectURL first (fast)
-    if (objectUrl) URL.revokeObjectURL(objectUrl);
-    objectUrl = URL.createObjectURL(file);
-
-    let didFallback = false;
-
-    elImg.onload = () => {
-      // success
-    };
-
-    elImg.onerror = async () => {
-      if (didFallback) return;
-      didFallback = true;
-
-      // Fallback: FileReader -> dataURL
-      try {
-        const dataUrl = await new Promise((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onload = () => resolve(reader.result);
-          reader.onerror = reject;
-          reader.readAsDataURL(file);
-        });
-        elImg.src = dataUrl;
-      } catch (e) {
-        alert("Load failed");
+  // Recenter after rotation/pinch changes
+  function bindRecenter() {
+    const recenter = () => {
+      if (!pageSec.classList.contains("hidden")) {
+        document.documentElement.scrollTop = 0;
+        document.body.scrollTop = 0;
+        $("secCard")?.scrollIntoView({ behavior: "instant", block: "start" });
+      }
+      if (!pageTap.classList.contains("hidden")) {
+        document.documentElement.scrollTop = 0;
+        document.body.scrollTop = 0;
+        imgBox?.scrollIntoView({ behavior: "instant", block: "start" });
       }
     };
 
-    elImg.src = objectUrl;
+    window.addEventListener("orientationchange", () => setTimeout(recenter, 120));
+    window.addEventListener("resize", () => setTimeout(recenter, 120));
+
+    // iOS pinch/visual viewport shifts
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener("resize", () => setTimeout(recenter, 120));
+      window.visualViewport.addEventListener("scroll", () => setTimeout(recenter, 120));
+    }
   }
 
-  // ---------- Events ----------
+  // ------------ Backend call ------------
+  async function fetchBackendResults() {
+    // This endpoint must exist on your backend.
+    // If yours is different, change it here ONLY.
+    const endpoint = "/api/analyze";
+
+    const payload = {
+      // Backend is authority for ALL math.
+      anchor,
+      hits,
+      // We intentionally HIDE distance/MOA on SEC UI,
+      // but backend may still need them internally later.
+      // Keep these in payload if your backend uses them.
+      // distanceYds: Number($("distanceYds")?.value || 100),
+      // clickValue: Number($("clickValue")?.value || 0.25),
+    };
+
+    const res = await fetch(endpoint, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+
+    if (!res.ok) {
+      const t = await res.text().catch(() => "");
+      throw new Error(`Backend error ${res.status}: ${t || "no body"}`);
+    }
+    return res.json();
+  }
+
+  function applySecData(data) {
+    // expected shape (example):
+    // {
+    //   sessionId: "SEC-....",
+    //   score: 87,
+    //   shots: 5,
+    //   clicks: {up:0.25, down:0, left:0, right:0},
+    // }
+    const session = (data && data.sessionId) ? String(data.sessionId) : newSessionId();
+    secSessionId.textContent = session;
+
+    const score = Number(data && data.score);
+    scoreHero.textContent = Number.isFinite(score) ? String(Math.round(score)) : "—";
+    setScoreColor(Number.isFinite(score) ? score : NaN);
+
+    const shots = Number(data && data.shots);
+    shotsCount.textContent = Number.isFinite(shots) ? String(shots) : String(hits.length);
+
+    const clicks = (data && data.clicks) ? data.clicks : { up: 0, down: 0, left: 0, right: 0 };
+    setClicks(clicks);
+  }
+
+  // ------------ SEC Download ------------
+  function downloadSecAsImage() {
+    // Simple v1: render a clean card image with score + clicks + shots.
+    // (We’ll add history strip in Step 2, then enhance this.)
+    const ctx = secCanvas.getContext("2d");
+    const W = secCanvas.width;
+    const H = secCanvas.height;
+
+    // background
+    ctx.clearRect(0, 0, W, H);
+    ctx.fillStyle = "#0b0f0d";
+    ctx.fillRect(0, 0, W, H);
+
+    // card
+    const pad = 70;
+    const r = 40;
+    const x = pad, y = pad, w = W - pad * 2, h = H - pad * 2;
+
+    // rounded rect
+    ctx.fillStyle = "rgba(20,26,24,0.90)";
+    roundRect(ctx, x, y, w, h, r, true, false);
+
+    // title
+    ctx.font = "900 44px system-ui, -apple-system, Segoe UI, Roboto, Arial";
+    ctx.fillStyle = "rgba(255,255,255,0.92)";
+    ctx.fillText("Shooter Experience Card", x + 56, y + 92);
+
+    // session
+    ctx.font = "800 26px system-ui, -apple-system, Segoe UI, Roboto, Arial";
+    ctx.fillStyle = "rgba(255,255,255,0.70)";
+    ctx.fillText(`Session: ${secSessionId.textContent}`, x + 56, y + 140);
+
+    // score
+    const scoreTxt = scoreHero.textContent || "—";
+    ctx.font = "1000 220px system-ui, -apple-system, Segoe UI, Roboto, Arial";
+    ctx.fillStyle = getScoreColorForCanvas(scoreTxt);
+    ctx.textAlign = "center";
+    ctx.fillText(scoreTxt, x + w / 2, y + 430);
+    ctx.textAlign = "left";
+
+    // clicks + shots
+    ctx.font = "900 34px system-ui, -apple-system, Segoe UI, Roboto, Arial";
+    ctx.fillStyle = "rgba(255,255,255,0.88)";
+    ctx.fillText("Target Clicks", x + 56, y + 560);
+
+    ctx.font = "900 40px system-ui, -apple-system, Segoe UI, Roboto, Arial";
+    ctx.fillStyle = "rgba(255,255,255,0.92)";
+    ctx.fillText(`↑ U  ${clickUp.textContent}`, x + 56, y + 630);
+    ctx.fillText(`↓ D  ${clickDown.textContent}`, x + 56, y + 690);
+    ctx.fillText(`← L  ${clickLeft.textContent}`, x + 56, y + 750);
+    ctx.fillText(`→ R  ${clickRight.textContent}`, x + 56, y + 810);
+
+    ctx.font = "900 34px system-ui, -apple-system, Segoe UI, Roboto, Arial";
+    ctx.fillStyle = "rgba(255,255,255,0.88)";
+    ctx.fillText("Shots", x + 56, y + 900);
+
+    ctx.font = "1000 72px system-ui, -apple-system, Segoe UI, Roboto, Arial";
+    ctx.fillStyle = "rgba(255,255,255,0.92)";
+    ctx.fillText(`${shotsCount.textContent}`, x + 56, y + 980);
+
+    // timestamp
+    ctx.font = "800 24px system-ui, -apple-system, Segoe UI, Roboto, Arial";
+    ctx.fillStyle = "rgba(255,255,255,0.62)";
+    ctx.fillText(new Date().toLocaleString(), x + 56, y + h - 56);
+
+    // download
+    const a = document.createElement("a");
+    a.download = `${secSessionId.textContent}.png`;
+    a.href = secCanvas.toDataURL("image/png");
+    a.click();
+  }
+
+  function roundRect(ctx, x, y, w, h, r, fill, stroke) {
+    const rr = Math.min(r, w / 2, h / 2);
+    ctx.beginPath();
+    ctx.moveTo(x + rr, y);
+    ctx.arcTo(x + w, y, x + w, y + h, rr);
+    ctx.arcTo(x + w, y + h, x, y + h, rr);
+    ctx.arcTo(x, y + h, x, y, rr);
+    ctx.arcTo(x, y, x + w, y, rr);
+    ctx.closePath();
+    if (fill) ctx.fill();
+    if (stroke) ctx.stroke();
+  }
+
+  function getScoreColorForCanvas(scoreTxt) {
+    const s = Number(scoreTxt);
+    if (!Number.isFinite(s)) return "rgba(255,255,255,0.92)";
+    if (s <= 60) return "rgba(255, 70, 70, 0.98)";
+    if (s <= 79) return "rgba(255, 208, 70, 0.98)";
+    return "rgba(0, 235, 150, 0.98)";
+  }
+
+  // ------------ Events ------------
   elChoose.addEventListener("click", () => elFile.click());
 
   elFile.addEventListener("change", () => {
@@ -260,83 +319,82 @@
     selectedFile = f;
     elFileName.textContent = f.name;
 
-    setThumb(f);
+    // load image
+    if (objectUrl) URL.revokeObjectURL(objectUrl);
+    objectUrl = URL.createObjectURL(f);
+    targetImg.src = objectUrl;
 
-    // Reset taps
+    // reset taps
     anchor = null;
     hits = [];
-    hasFirstTap = false;
-    redrawAll();
+    controlsShown = false;
+    controlsBar.classList.add("hidden");
+    redraw();
 
-    // Show image box
-    elImgBox.classList.remove("hidden");
-    hideControlsVisibility(); // stays hidden until first tap
-
-    // Load image with iOS-safe fallback
-    loadImageFile(f);
-
-    // Hide thumbnail visual once the target is shown
-    hideThumbnailArea();
-
-    // Scroll to image
-    elImgBox.scrollIntoView({ behavior: "smooth", block: "start" });
-
-    // Allow re-selecting the same photo again later
+    showPage(pageTap);
+    // allow selecting same file again later
     elFile.value = "";
   });
 
-  // Tap handling
-  elDots.addEventListener("pointerdown", (evt) => {
+  // taps
+  dotsLayer.addEventListener("pointerdown", (evt) => {
     if (!selectedFile) return;
     evt.preventDefault();
 
-    const norm = getNormFromEvent(evt);
-    if (!norm) return;
+    const p = getNormFromPointer(evt);
+    if (!p) return;
 
-    if (!hasFirstTap) hasFirstTap = true; // SHOW controls after first tap
+    showControlsIfNeeded();
 
-    if (!anchor) {
-      anchor = norm;
-    } else {
-      hits.push(norm);
-    }
+    if (!anchor) anchor = p;
+    else hits.push(p);
 
-    redrawAll();
+    redraw();
   }, { passive: false });
 
-  elClear.addEventListener("click", () => {
+  clearBtn.addEventListener("click", () => {
     anchor = null;
     hits = [];
-    // keep hasFirstTap true once user begins; controls stay available
-    redrawAll();
+    redraw();
   });
 
-  elUndo.addEventListener("click", () => {
-    if (hits.length > 0) {
-      hits.pop();
-    } else if (anchor) {
-      anchor = null;
+  undoBtn.addEventListener("click", () => {
+    if (hits.length > 0) hits.pop();
+    else anchor = null;
+    redraw();
+  });
+
+  resultsBtn.addEventListener("click", async () => {
+    if (!anchor || hits.length === 0) return;
+
+    // show SEC page even if backend fails, but with safe placeholders
+    const localSession = newSessionId();
+    secSessionId.textContent = localSession;
+    scoreHero.textContent = "—";
+    setScoreColor(NaN);
+    shotsCount.textContent = String(hits.length);
+    setClicks({ up: 0, down: 0, left: 0, right: 0 });
+
+    showPage(pageSec);
+
+    try {
+      const data = await fetchBackendResults();
+      applySecData(data);
+    } catch (e) {
+      // keep page stable; just show safe text in console
+      console.warn("Backend not ready / failed:", e);
+      // optional: you can display a tiny non-intrusive message later
     }
-    redrawAll();
   });
 
-  elResults.addEventListener("click", () => showSECModal());
+  downloadSecBtn.addEventListener("click", () => downloadSecAsImage());
 
-  // Recenter on rotation / resize (keeps tap rect accurate, and recenters view)
-  window.addEventListener("orientationchange", () => {
-    setTimeout(() => {
-      if (!elImgBox.classList.contains("hidden")) {
-        elImgBox.scrollIntoView({ behavior: "smooth", block: "start" });
-      }
-    }, 250);
+  surveyBtn.addEventListener("click", () => {
+    // Placeholder: wire to your survey URL later
+    alert("Survey coming next.");
   });
 
-  window.addEventListener("resize", () => {
-    // nothing to recompute because we store normalized coords,
-    // but we redraw for safety (and to ensure dots stay crisp).
-    redrawAll();
-  });
-
-  // Initial
-  redrawAll();
+  // Init
+  bindRecenter();
+  showPage(pageLanding);
 })();
