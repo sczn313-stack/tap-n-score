@@ -1,9 +1,15 @@
 /* ============================================================
-   index.js (FULL REPLACEMENT) — vTAP-NOSTART-2
-   - Thumbnail disappears when target pops up
-   - NO Start button / tap immediately after photo loads
-   - Clear / Undo / Results logic preserved
-   - Direction text preserved (screen truth)
+   index.js (FULL REPLACEMENT) — vSEC-1
+   - NO Start button / no “tap mode”
+   - Photo loads -> target shows -> tapping works
+   - Thumbnail DISAPPEARS when target shows
+   - SEC modal (NOT “Results”):
+       • ONLY two outputs: Windage + Elevation
+       • BIG number + arrow in the direction to turn
+       • Removes % + removes extra text
+   Notes:
+   - Clicks require inches.
+   - This build converts image-space -> inches using paper size (8.5x11).
 ============================================================ */
 
 (() => {
@@ -37,25 +43,16 @@
   let anchor = null; // {x,y} normalized
   let hits = [];     // [{x,y}...]
 
-  // ---------- Thumbnail visibility ----------
-  function hideThumb() {
-    if (!elThumbBox) return;
-    elThumbBox.classList.add("thumbHidden");
-  }
-
-  function showThumb() {
-    if (!elThumbBox) return;
-    elThumbBox.classList.remove("thumbHidden");
-  }
-
-  // Helpers
+  // ===== Helpers =====
   function clamp01(v) { return Math.max(0, Math.min(1, v)); }
 
   function setHUD() {
     elHUDRight.textContent = `Taps: ${(anchor ? 1 : 0) + hits.length} (hits: ${hits.length})`;
   }
 
-  function setInstruction(msg) { elHUDLeft.textContent = msg; }
+  function setInstruction(msg) {
+    elHUDLeft.textContent = msg;
+  }
 
   function clearDots() {
     while (elDots.firstChild) elDots.removeChild(elDots.firstChild);
@@ -86,19 +83,26 @@
 
     setHUD();
 
-    // Buttons
     elClear.disabled = (!anchor && hits.length === 0);
     elUndo.disabled = (!anchor && hits.length === 0);
     elResults.disabled = (!anchor || hits.length === 0);
   }
 
   function setThumb(file) {
-    if (!elThumbBox) return;
     elThumbBox.innerHTML = "";
     const img = document.createElement("img");
     img.alt = "Selected thumbnail";
     img.src = URL.createObjectURL(file);
     elThumbBox.appendChild(img);
+  }
+
+  function hideThumb() {
+    // CSS class exists in your styles: .thumbHidden { display:none !important; }
+    elThumbBox.classList.add("thumbHidden");
+  }
+
+  function showThumb() {
+    elThumbBox.classList.remove("thumbHidden");
   }
 
   function getNormFromEvent(evt) {
@@ -115,76 +119,158 @@
     return { x: sum.x / hits.length, y: sum.y / hits.length };
   }
 
-  function directionText(anchorPt, poibPt) {
-    // POIB -> Anchor (bull - poib)
-    const dx = anchorPt.x - poibPt.x;
-    const dy = anchorPt.y - poibPt.y; // screen truth: down is +
-
-    const horizDir = dx >= 0 ? "RIGHT" : "LEFT";
-    const vertDir  = dy >= 0 ? "DOWN" : "UP";
-
+  // Convert normalized delta -> inches (paper-based)
+  // dx, dy are normalized fractions of the displayed image box.
+  // Assumption used here: the target photo represents a full 8.5x11 page in portrait.
+  function normDeltaToInches(dxNorm, dyNorm) {
+    const PAPER_W_IN = 8.5;
+    const PAPER_H_IN = 11.0;
     return {
-      horizDir,
-      vertDir,
-      horizPct: Math.abs(dx) * 100,
-      vertPct:  Math.abs(dy) * 100
+      xIn: dxNorm * PAPER_W_IN,
+      yIn: dyNorm * PAPER_H_IN
     };
   }
 
-  function showResultsModal() {
+  function moaAtDistanceInches(distYds) {
+    // 1 MOA ~ 1.047" at 100 yards
+    return (distYds / 100) * 1.047;
+  }
+
+  function clicksFromInches(inches, oneMOAin, clickVal) {
+    // clicks = inches / (inches per click)
+    const inchesPerClick = oneMOAin * clickVal;
+    if (!Number.isFinite(inchesPerClick) || inchesPerClick <= 0) return 0;
+    return inches / inchesPerClick;
+  }
+
+  // Direction + arrow for the TURRET TURN instruction
+  // We compute vector POIB -> Anchor (bull - poib).
+  function computeTurretInstructions(anchorPt, poibPt) {
+    const dx = anchorPt.x - poibPt.x;     // + => bull is to the right of POIB
+    const dy = anchorPt.y - poibPt.y;     // screen truth: +dy means bull is LOWER than POIB (down)
+
+    // Convert to inches using paper size
+    const inch = normDeltaToInches(dx, dy);
+
+    // Distance & click value
+    const dist = Number(elDistance.value) || 100;
+    const clickVal = Number(elClick.value) || 0.25;
+    const oneMOAin = moaAtDistanceInches(dist);
+
+    // Click magnitudes
+    const windClicks = Math.abs(clicksFromInches(inch.xIn, oneMOAin, clickVal));
+    const elevClicks = Math.abs(clicksFromInches(inch.yIn, oneMOAin, clickVal));
+
+    // Directions
+    const windDir = dx >= 0 ? "RIGHT" : "LEFT";
+    const elevDir = dy >= 0 ? "DOWN" : "UP";
+
+    const windArrow = dx >= 0 ? "→" : "←";
+    const elevArrow = dy >= 0 ? "↓" : "↑";
+
+    return {
+      windDir, elevDir,
+      windArrow, elevArrow,
+      windClicks, elevClicks
+    };
+  }
+
+  function showSECModal() {
     const poib = computePOIB();
     if (!anchor || !poib) return;
 
-    const dist = Number(elDistance.value) || 100;
-    const clickVal = Number(elClick.value) || 0.25;
-    const oneMOAin = (dist / 100) * 1.047;
-
-    const dir = directionText(anchor, poib);
+    const sec = computeTurretInstructions(anchor, poib);
 
     const overlay = document.createElement("div");
     overlay.style.position = "fixed";
     overlay.style.inset = "0";
     overlay.style.zIndex = "999999";
-    overlay.style.background = "rgba(0,0,0,0.55)";
-    overlay.style.backdropFilter = "blur(8px)";
+    overlay.style.background = "rgba(0,0,0,0.60)";
+    overlay.style.backdropFilter = "blur(10px)";
     overlay.style.display = "flex";
     overlay.style.alignItems = "center";
     overlay.style.justifyContent = "center";
     overlay.style.padding = "18px";
 
     const card = document.createElement("div");
-    card.style.width = "min(860px, 96vw)";
+    card.style.width = "min(900px, 96vw)";
     card.style.borderRadius = "22px";
     card.style.border = "1px solid rgba(255,255,255,0.12)";
-    card.style.background = "rgba(12,14,13,0.72)";
-    card.style.boxShadow = "0 26px 80px rgba(0,0,0,0.65)";
-    card.style.padding = "18px 18px 16px";
-    card.style.color = "rgba(255,255,255,0.92)";
+    card.style.background = "rgba(12,14,13,0.78)";
+    card.style.boxShadow = "0 26px 90px rgba(0,0,0,0.70)";
+    card.style.padding = "18px";
+    card.style.color = "rgba(255,255,255,0.94)";
 
     const title = document.createElement("div");
-    title.textContent = "Results";
-    title.style.fontSize = "28px";
-    title.style.fontWeight = "900";
+    title.textContent = "SEC";
+    title.style.fontSize = "34px";
+    title.style.fontWeight = "950";
     title.style.marginBottom = "10px";
 
-    const body = document.createElement("div");
-    body.style.fontSize = "18px";
-    body.style.fontWeight = "800";
-    body.style.opacity = "0.92";
-    body.style.whiteSpace = "pre-line";
+    const sub = document.createElement("div");
+    sub.textContent = `Shots: ${hits.length}`;
+    sub.style.fontSize = "18px";
+    sub.style.fontWeight = "800";
+    sub.style.opacity = "0.85";
+    sub.style.marginBottom = "16px";
 
-    body.textContent =
-`Shots: ${hits.length}
+    const rowWrap = document.createElement("div");
+    rowWrap.style.display = "grid";
+    rowWrap.style.gridTemplateColumns = "1fr";
+    rowWrap.style.gap = "12px";
 
-POIB vs Anchor (image-space):
-Horizontal: ${dir.horizPct.toFixed(2)}% ${dir.horizDir}
-Vertical:   ${dir.vertPct.toFixed(2)}% ${dir.vertDir}
+    function makeRow(label, arrow, valueText, dirText) {
+      const row = document.createElement("div");
+      row.style.border = "1px solid rgba(255,255,255,0.12)";
+      row.style.borderRadius = "18px";
+      row.style.padding = "14px 14px";
+      row.style.background = "rgba(0,0,0,0.22)";
+      row.style.display = "grid";
+      row.style.gridTemplateColumns = "140px 1fr";
+      row.style.alignItems = "center";
+      row.style.gap = "12px";
 
-Distance: ${dist} yd
-Click: ${clickVal} MOA per click
-1 MOA ≈ ${oneMOAin.toFixed(3)}" at this distance
+      const left = document.createElement("div");
+      left.textContent = label;
+      left.style.fontSize = "16px";
+      left.style.fontWeight = "950";
+      left.style.opacity = "0.9";
 
-Next step: add GRID calibration to convert % → inches → clicks.`;
+      const right = document.createElement("div");
+      right.style.display = "flex";
+      right.style.alignItems = "baseline";
+      right.style.justifyContent = "space-between";
+      right.style.gap = "12px";
+
+      const big = document.createElement("div");
+      big.textContent = `${arrow} ${valueText}`;
+      big.style.fontSize = "34px";
+      big.style.fontWeight = "950";
+      big.style.letterSpacing = "0.2px";
+
+      const small = document.createElement("div");
+      small.textContent = dirText;
+      small.style.fontSize = "16px";
+      small.style.fontWeight = "900";
+      small.style.opacity = "0.78";
+      small.style.whiteSpace = "nowrap";
+
+      right.appendChild(big);
+      right.appendChild(small);
+
+      row.appendChild(left);
+      row.appendChild(right);
+      return row;
+    }
+
+    const windVal = sec.windClicks.toFixed(2);
+    const elevVal = sec.elevClicks.toFixed(2);
+
+    const rowWind = makeRow("Windage", sec.windArrow, windVal, sec.windDir);
+    const rowElev = makeRow("Elevation", sec.elevArrow, elevVal, sec.elevDir);
+
+    rowWrap.appendChild(rowWind);
+    rowWrap.appendChild(rowElev);
 
     const btn = document.createElement("button");
     btn.textContent = "Close";
@@ -198,13 +284,14 @@ Next step: add GRID calibration to convert % → inches → clicks.`;
     });
 
     card.appendChild(title);
-    card.appendChild(body);
+    card.appendChild(sub);
+    card.appendChild(rowWrap);
     card.appendChild(btn);
     overlay.appendChild(card);
     document.body.appendChild(overlay);
   }
 
-  // Events
+  // ===== Events =====
   elChoose.addEventListener("click", () => elFile.click());
 
   elFile.addEventListener("change", () => {
@@ -214,24 +301,25 @@ Next step: add GRID calibration to convert % → inches → clicks.`;
     selectedFile = f;
     elFileName.textContent = f.name;
 
-    // Set thumbnail, but we'll hide it once the big target shows
+    // show thumb immediately (then hide once target shows)
     setThumb(f);
+    showThumb();
 
     // main image
     if (objectUrl) URL.revokeObjectURL(objectUrl);
     objectUrl = URL.createObjectURL(f);
     elImg.src = objectUrl;
 
-    // reset
+    // reset taps
     anchor = null;
     hits = [];
     redrawAll();
 
-    // show image & controls immediately (NO Start)
+    // show target immediately (NO Start)
     elImgBox.classList.remove("hidden");
     elControls.classList.remove("hidden");
 
-    // ✅ hide thumbnail now that target is live
+    // once target is up, thumbnail should disappear
     hideThumb();
 
     setInstruction("Tap bull’s-eye (anchor)");
@@ -260,9 +348,6 @@ Next step: add GRID calibration to convert % → inches → clicks.`;
     hits = [];
     setInstruction("Tap bull’s-eye (anchor)");
     redrawAll();
-
-    // Optional: bring thumb back when cleared out
-    showThumb();
   });
 
   elUndo.addEventListener("click", () => {
@@ -275,7 +360,7 @@ Next step: add GRID calibration to convert % → inches → clicks.`;
     redrawAll();
   });
 
-  elResults.addEventListener("click", () => showResultsModal());
+  elResults.addEventListener("click", () => showSECModal());
 
   // Initial
   setHUD();
