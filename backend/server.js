@@ -1,175 +1,115 @@
 /* ============================================================
-   server.js (FULL REPLACEMENT) — Tap-n-Score Backend (v1.0.1)
-   Purpose:
-   - Backend is the ONLY authority for click math + directions.
-   - True MOA: 1.047" at 100 yards (scaled by distance).
-   - Correction vector = bull - POIB (POIB = average of holes)
-   - Directions derived ONLY from signed deltas:
-       dx > 0 => RIGHT, dx < 0 => LEFT
-       dy > 0 => DOWN  (screen-space +y), dy < 0 => UP
-   - Output precision: ALWAYS two decimals (strings)
-   Render hardening:
-   - trust proxy enabled (Render sits behind a proxy)
-   - bind to 0.0.0.0
+   backend/server.js (FULL REPLACEMENT) — vLOCK-SEC-DL-1
+   ALL MATH HERE (truth)
+   Endpoint: POST /api/score
+   Inputs: distanceYds, clickValue, anchor{x,y}, hits[{x,y}]
+   Output: score(0-100), windageClicks, elevClicks, arrows, dir letters, shots
 ============================================================ */
 
 const express = require("express");
 const cors = require("cors");
 
 const app = express();
-
-// Render / proxy hygiene
-app.set("trust proxy", 1);
-
-// ---- Middleware
 app.use(cors({ origin: true }));
 app.use(express.json({ limit: "2mb" }));
 
-// ---- Helpers
-function clampNum(n, fallback = 0) {
-  const x = Number(n);
-  return Number.isFinite(x) ? x : fallback;
+// --- Tunables (until you add real grid calibration):
+// Treat normalized delta as inches using an assumed printable span.
+// If this is your Baker grid, you can tune these later.
+const ASSUMED_TARGET_SPAN_IN = 23.0;
+
+// Inches per MOA at given distance (yards)
+function moaInchesAt(distanceYds) {
+  return (distanceYds / 100) * 1.047;
 }
 
-function toFixed2(n) {
-  const x = Number(n);
-  return (Number.isFinite(x) ? x : 0).toFixed(2);
+function clamp(n, a, b) {
+  return Math.max(a, Math.min(b, n));
 }
 
-function avg(arr, key) {
-  if (!arr || arr.length === 0) return 0;
-  const s = arr.reduce((acc, o) => acc + clampNum(o[key], 0), 0);
-  return s / arr.length;
+function isPoint(p) {
+  return p && Number.isFinite(p.x) && Number.isFinite(p.y);
 }
 
-// Inches per MOA at a given distance (yards)
-// True MOA: 1.047" at 100y, scales linearly with distance.
-function inchesPerMoa(distanceYds) {
-  const d = clampNum(distanceYds, 100);
-  return 1.047 * (d / 100);
+function avgPoints(points) {
+  const s = points.reduce((acc, p) => ({ x: acc.x + p.x, y: acc.y + p.y }), { x: 0, y: 0 });
+  return { x: s.x / points.length, y: s.y / points.length };
 }
 
-// Score (simple + stable): based on radial distance in MOA
-// 100 = perfect. Drops as error grows. Clamp 0..100.
-function computeScore(radMoa) {
-  const k = 10; // slope (tune later)
-  const raw = 100 - radMoa * k;
-  const s = Math.max(0, Math.min(100, Math.round(raw)));
-  return s;
+function toInchesFromNormDelta(dNorm) {
+  return dNorm * ASSUMED_TARGET_SPAN_IN;
 }
 
-// Session ID
-function makeSessionId() {
-  const a = Math.random().toString(16).slice(2, 8).toUpperCase();
-  const b = Math.random().toString(16).slice(2, 8).toUpperCase();
-  return `SEC-${a}-${b}`;
+function clicksFromInches(inches, distanceYds, clickValue) {
+  const moaIn = moaInchesAt(distanceYds);
+  const moa = inches / moaIn;
+  const clicks = moa / clickValue;
+  return Math.abs(clicks);
 }
 
-/* ============================================================
-   POST /api/score
-   Body:
-   {
-     bull: { x: 0..1, y: 0..1 },          // normalized
-     holes: [{ x: 0..1, y: 0..1 }, ...],  // normalized
-     target: { widthIn: number, heightIn: number }, // physical inches
-     distanceYds: number,                 // e.g., 100
-     moaPerClick: number                  // e.g., 0.25
-   }
-============================================================ */
+// Score model: based on radial error in MOA from POIB to Anchor.
+// This is a simple, consistent starting model (can be replaced later).
+function computeScore(dxIn, dyIn, distanceYds) {
+  const moaIn = moaInchesAt(distanceYds);
+  const errIn = Math.sqrt(dxIn * dxIn + dyIn * dyIn);
+  const errMoa = errIn / moaIn;
+
+  // Map error MOA to score
+  // 0 MOA => 100
+  // ~8.3 MOA => 0 (with this slope)
+  const raw = 100 - (errMoa * 12.0);
+  return Math.round(clamp(raw, 0, 100));
+}
+
 app.post("/api/score", (req, res) => {
   try {
-    const bull = req.body?.bull || null;
-    const holes = Array.isArray(req.body?.holes) ? req.body.holes : [];
-    const target = req.body?.target || {};
-    const distanceYds = clampNum(req.body?.distanceYds, 100);
-    const moaPerClick = clampNum(req.body?.moaPerClick, 0.25);
+    const distanceYds = Number(req.body.distanceYds) || 100;
+    const clickValue = Number(req.body.clickValue) || 0.25;
+    const anchor = req.body.anchor;
+    const hits = Array.isArray(req.body.hits) ? req.body.hits : [];
 
-    const widthIn = clampNum(target.widthIn, 8.5);
-    const heightIn = clampNum(target.heightIn, 11);
+    if (!isPoint(anchor)) return res.status(400).json({ error: "Missing/invalid anchor" });
+    if (!hits.length || !hits.every(isPoint)) return res.status(400).json({ error: "Missing/invalid hits" });
 
-    if (!bull || holes.length === 0) {
-      return res.status(400).json({ ok: false, error: "Missing bull or holes." });
-    }
+    const poib = avgPoints(hits);
 
-    const bullX = clampNum(bull.x, 0);
-    const bullY = clampNum(bull.y, 0);
+    // Correction vector: POIB -> Anchor (bull - poib)
+    const dxNorm = anchor.x - poib.x; // + means move RIGHT
+    const dyNorm = anchor.y - poib.y; // + means move DOWN (screen space)
 
-    const poibX = avg(holes, "x");
-    const poibY = avg(holes, "y");
+    // Convert to inches using assumed span
+    const dxIn = toInchesFromNormDelta(dxNorm);
+    const dyIn = toInchesFromNormDelta(dyNorm);
 
-    // Correction vector (bull - POIB) in normalized units
-    const dxN = bullX - poibX;
-    const dyN = bullY - poibY;
+    // Clicks
+    const windageClicks = clicksFromInches(dxIn, distanceYds, clickValue);
+    const elevClicks = clicksFromInches(dyIn, distanceYds, clickValue);
 
-    // Convert to inches using target physical size
-    const dxIn = dxN * widthIn;
-    const dyIn = dyN * heightIn;
+    // Directions as single letters
+    const windageDir = dxNorm >= 0 ? "R" : "L";
+    const elevDir = dyNorm >= 0 ? "D" : "U";
 
-    // Convert to MOA
-    const ipm = inchesPerMoa(distanceYds);
-    const dxMoa = dxIn / ipm;
-    const dyMoa = dyIn / ipm;
-
-    // Convert to clicks
-    const dxClicks = dxMoa / moaPerClick;
-    const dyClicks = dyMoa / moaPerClick;
-
-    // Break into Up/Down/Left/Right (non-negative)
-    const right = dxClicks > 0 ? dxClicks : 0;
-    const left = dxClicks < 0 ? Math.abs(dxClicks) : 0;
-
-    // screen-space Y: +dy means bull is BELOW POIB => need move POI DOWN
-    const down = dyClicks > 0 ? dyClicks : 0;
-    const up = dyClicks < 0 ? Math.abs(dyClicks) : 0;
+    // Arrows (visual)
+    const windageArrow = dxNorm >= 0 ? "→" : "←";
+    const elevArrow = dyNorm >= 0 ? "↓" : "↑";
 
     // Score
-    const radMoa = Math.sqrt(dxMoa * dxMoa + dyMoa * dyMoa);
-    const score = computeScore(radMoa);
+    const score = computeScore(dxIn, dyIn, distanceYds);
 
-    const sessionId = makeSessionId();
-
-    return res.json({
-      ok: true,
-      sessionId,
-
-      // Helpful debug (keep for now)
-      poib: { x: poibX, y: poibY },
-      bull: { x: bullX, y: bullY },
-
-      delta: {
-        dxIn, dyIn,
-        dxMoa, dyMoa,
-        dxClicks, dyClicks
-      },
-
-      // Shooter-facing values (ALWAYS 2 decimals)
-      clicks: {
-        up: toFixed2(up),
-        down: toFixed2(down),
-        left: toFixed2(left),
-        right: toFixed2(right)
-      },
-
-      score: {
-        current: score
-      }
+    res.json({
+      shots: hits.length,
+      score,
+      windageClicks: Number(windageClicks.toFixed(2)),
+      elevClicks: Number(elevClicks.toFixed(2)),
+      windageDir,
+      elevDir,
+      windageArrow,
+      elevArrow
     });
   } catch (e) {
-    return res.status(500).json({
-      ok: false,
-      error: "Server error",
-      detail: String(e?.message || e)
-    });
+    res.status(500).json({ error: e.message || String(e) });
   }
 });
 
-// ---- Health check
-app.get("/health", (_req, res) => res.json({ ok: true }));
-
-// Optional: root ping (handy for quick browser check)
-app.get("/", (_req, res) => res.send("Tap-n-Score backend OK"));
-
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, "0.0.0.0", () =>
-  console.log(`Tap-n-Score backend running on :${PORT}`)
-);
+app.listen(PORT, () => console.log("SCZN3 backend listening on", PORT));
