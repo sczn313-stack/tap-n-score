@@ -677,3 +677,40 @@
   setHUD();
   redrawAll();
 })();  
+/* ============================================================
+   Service Worker Register (LOCKED for /docs GitHub Pages)
+   - Ensures correct scope under /tap-n-score/
+   - Forces immediate control after update
+============================================================ */
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", async () => {
+    try {
+      const reg = await navigator.serviceWorker.register("./sw.js", { scope: "./" });
+
+      // If a new SW is waiting, activate it immediately
+      if (reg.waiting) reg.waiting.postMessage({ type: "SKIP_WAITING" });
+
+      // If an update is found, when installed -> activate it
+      reg.addEventListener("updatefound", () => {
+        const newWorker = reg.installing;
+        if (!newWorker) return;
+
+        newWorker.addEventListener("statechange", () => {
+          if (newWorker.state === "installed" && navigator.serviceWorker.controller) {
+            newWorker.postMessage({ type: "SKIP_WAITING" });
+          }
+        });
+      });
+
+      // When controller changes, reload once so newest assets are live
+      let reloaded = false;
+      navigator.serviceWorker.addEventListener("controllerchange", () => {
+        if (reloaded) return;
+        reloaded = true;
+        window.location.reload();
+      });
+    } catch (err) {
+      // silent on purpose — SW is a bonus, app still runs
+    }
+  });
+}
