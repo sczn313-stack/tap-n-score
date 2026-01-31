@@ -1,5 +1,10 @@
 /* ============================================================
-   styles.css (FULL REPLACEMENT) — vSEC-LOCK-3
+   styles.css (FULL REPLACEMENT) — vSEC-LOCK-1
+   - Thumbnail stays small
+   - SEC modal: darker + slightly blue tint
+   - Title is Red / White / Blue (per word)
+   - Score number color = performance (red/yellow/green)
+   - Wind/Elev value cluster tighter to the number, pushed right
 ============================================================ */
 
 * { box-sizing: border-box; }
@@ -16,16 +21,12 @@ body {
 
 .page {
   min-height: 100vh;
-  padding: 18px 14px 110px;
+  padding: 18px 14px 110px; /* room for bottom controls bar */
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 18px;
 }
-
-.hiddenFile { display: none !important; }
-.hidden { display: none !important; }
-.hiddenInputs { display: none !important; }
 
 /* ---------- Card ---------- */
 .card {
@@ -60,6 +61,9 @@ body {
 .row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
 @media (max-width: 520px) { .row { grid-template-columns: 1fr; } }
 
+.hiddenFile { display: none !important; }
+.hidden { display: none !important; }
+
 .select {
   width: 100%;
   appearance: none;
@@ -73,6 +77,10 @@ body {
   font-size: 16px;
   outline: none;
 }
+.select:focus {
+  border-color: rgba(0,235,150,0.55);
+  box-shadow: 0 0 0 3px rgba(0,235,150,0.16);
+}
 
 .btnPrimary {
   width: 100%;
@@ -84,6 +92,7 @@ body {
   cursor: pointer;
   user-select: none;
   -webkit-tap-highlight-color: transparent;
+
   background: linear-gradient(180deg, rgba(0,140,90,0.92), rgba(0,85,55,0.92));
   color: rgba(255,255,255,0.95);
   box-shadow: 0 16px 50px rgba(0,0,0,0.50);
@@ -91,7 +100,12 @@ body {
 }
 .btnPrimary:active { transform: translateY(1px); }
 
-/* ---------- Thumbnail ---------- */
+/* ---------- What next list ---------- */
+.whatNext { margin-top: 10px; }
+.bullets { margin: 8px 0 0; padding-left: 18px; }
+.bullets li { opacity: 0.9; font-weight: 700; margin: 6px 0; }
+
+/* ---------- Thumbnail (SMALL) ---------- */
 .thumbBox {
   margin-top: 8px;
   width: 100%;
@@ -100,32 +114,39 @@ body {
   border-radius: 18px;
   padding: 10px;
   overflow: hidden;
+
   display: flex;
   align-items: center;
   justify-content: center;
+
   min-height: 90px;
 }
+
 .thumbBox img {
   display: block;
+  width: auto;
+  height: auto;
   max-width: 140px;
   max-height: 140px;
   border-radius: 10px;
   border: 1px solid rgba(255,255,255,0.10);
 }
+
 .thumbEmpty { opacity: 0.72; font-weight: 800; padding: 10px 6px; }
 
-/* ---------- What next ---------- */
-.whatNext { margin-top: 10px; }
-.bullets { margin: 8px 0 0; padding-left: 18px; }
-.bullets li { opacity: 0.9; font-weight: 700; margin: 6px 0; }
-
-/* ---------- Image box ---------- */
+/* ============================================================
+   IMAGE BOX (critical lock)
+============================================================ */
 .imgBox {
   display: inline-block;
   position: relative;
   width: min(860px, 96vw);
+  padding: 0;
+  margin: 0;
+
   border-radius: 22px;
   overflow: hidden;
+
   border: 1px solid rgba(255,255,255,0.10);
   box-shadow: 0 20px 60px rgba(0,0,0,0.55);
   background: rgba(0,0,0,0.18);
@@ -140,6 +161,7 @@ body {
   user-select: none;
 }
 
+/* overlay matches image box exactly */
 #dotsLayer {
   position: absolute;
   inset: 0;
@@ -149,6 +171,7 @@ body {
   background: transparent;
 }
 
+/* Tap dots */
 .tapDot {
   position: absolute;
   transform: translate(-50%, -50%);
@@ -221,7 +244,10 @@ body {
   box-shadow: 0 16px 50px rgba(0,0,0,0.55);
 }
 
-/* ---------- SEC Overlay ---------- */
+/* ============================================================
+   SEC MODAL (Shooter Experience Card)
+============================================================ */
+
 .secOverlay {
   position: fixed;
   inset: 0;
@@ -235,137 +261,151 @@ body {
 }
 
 .secCard {
-  width: min(860px, 96vw);
+  width: min(920px, 96vw);
   border-radius: 22px;
   border: 1px solid rgba(255,255,255,0.12);
-  background: rgba(12,14,13,0.72);
+
+  /* darker + slightly blue tint like you asked */
+  background: rgba(10, 14, 22, 0.78);
+
   box-shadow: 0 26px 80px rgba(0,0,0,0.65);
   padding: 18px 18px 16px;
   color: rgba(255,255,255,0.92);
 }
 
-/* Red/White/Blue title */
-.secTitleRWB {
-  font-size: 20px;
+.secTitle {
+  font-size: 34px;
   font-weight: 1000;
   letter-spacing: 0.8px;
+  line-height: 1.05;
   margin-bottom: 8px;
-  background: linear-gradient(90deg, #ff3b3b 0%, #ffffff 48%, #2f6bff 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
 }
 
-.secMeta {
-  opacity: 0.9;
+.tRed { color: #e53935; }
+.tWhite { color: rgba(255,255,255,0.92); }
+.tBlue { color: #1e5bb8; } /* darker blue */
+
+.secShots {
+  font-size: 20px;
   font-weight: 900;
-  margin-bottom: 10px;
+  opacity: 0.95;
+  margin-bottom: 12px;
 }
 
-/* Compact rows */
+.secRows {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
 .secRow {
   display: grid;
-  grid-template-columns: 1fr auto;
-  align-items: center;
+
+  /* LEFT LABEL | RIGHT VALUE (pushed right) */
+  grid-template-columns: 1fr minmax(240px, 320px);
+
   gap: 12px;
+  align-items: center;
 
-  padding: 12px 14px;
-  margin: 10px 0;
-
-  border-radius: 16px;
+  padding: 14px 14px;
+  border-radius: 18px;
   border: 1px solid rgba(255,255,255,0.10);
-  background: rgba(0,0,0,0.18);
+  background: rgba(0,0,0,0.22);
 }
 
-.secRowLabel {
+@media (max-width: 560px) {
+  .secRow {
+    grid-template-columns: 1fr minmax(190px, 240px);
+  }
+}
+
+.secLabel {
+  font-size: 22px;
   font-weight: 900;
-  opacity: 0.9;
-  font-size: 18px;
+  opacity: 0.92;
 }
 
-.secRowRight {
-  display: inline-flex;
-  align-items: baseline;
+/* Score number (ONLY number on right) */
+.secScoreNum {
+  text-align: right;
+  font-size: 56px;
+  font-weight: 1000;
+  letter-spacing: 0.4px;
+}
+
+/* performance colors for score number ONLY */
+.scoreRed { color: #e53935; }
+.scoreYellow { color: #f4c20d; }
+.scoreGreen { color: #2ecc71; }
+
+/* Wind/Elev value cluster: tighter, closer to number */
+.secValueBox {
+  display: flex;
   justify-content: flex-end;
-  gap: 8px; /* tight cluster */
-  min-width: 220px;
+  align-items: center;
+  gap: 10px;
 }
 
-.scoreRight { min-width: 220px; }
-
-/* Arrow tight */
 .secArrow {
+  font-size: 30px;
   font-weight: 1000;
-  font-size: 26px;
   opacity: 0.95;
-  width: 28px;         /* keeps arrow close */
-  text-align: center;
 }
 
-/* BIG number */
-.secBigNumber {
-  font-weight: 1100;
-  font-size: 46px;     /* big but controlled */
-  letter-spacing: 0.2px;
-  line-height: 1;
-  color: rgba(255,255,255,0.95); /* default white (wind/elev) */
-}
-
-/* Tiny direction letter next to number */
-.secDirTiny {
+.secNum {
+  font-size: 50px;
   font-weight: 1000;
-  font-size: 18px;
-  opacity: 0.8;
-  margin-left: 2px;
-  min-width: 18px;
-  text-align: left;
+  letter-spacing: 0.4px;
 }
 
-/* Score band colors (APPLY TO SCORE NUMBER ONLY) */
-.bandA { color: #ff3b3b; }  /* 0–60 */
-.bandB { color: #ffd84a; }  /* 61–79 */
-.bandC { color: #35ff7a; }  /* 80–100 */
+.secDir {
+  font-size: 20px;
+  font-weight: 1000;
+  opacity: 0.9;
+  min-width: 18px;
+  text-align: right;
+}
 
-/* Actions */
-.secActions {
+/* Two action buttons */
+.secCTAs {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 12px;
-  margin: 12px 0 10px;
+  margin-bottom: 12px;
 }
 
-/* Smaller action buttons so right side feels open */
 .secActionBtn {
   border: none;
   border-radius: 16px;
-  padding: 14px 12px;
-  font-size: 16px;
+  padding: 14px 12px; /* slightly smaller like you asked */
+  font-size: 18px;
   font-weight: 1000;
   cursor: pointer;
   user-select: none;
   -webkit-tap-highlight-color: transparent;
-}
 
-.secActionBtnGreen {
-  background: linear-gradient(180deg, rgba(0,170,110,0.95), rgba(0,105,70,0.95));
+  /* equal same color */
+  background: linear-gradient(180deg, rgba(0,170,110,0.92), rgba(0,105,70,0.92));
   color: rgba(255,255,255,0.96);
   border: 1px solid rgba(255,255,255,0.12);
-  box-shadow: 0 16px 50px rgba(0,0,0,0.35);
+  box-shadow: 0 14px 46px rgba(0,0,0,0.45);
 }
+.secActionBtn:active { transform: translateY(1px); }
 
-/* Close button (same green family) */
-.btnResults {
+/* Close button */
+.secCloseBtn {
+  width: 100%;
   border: none;
   border-radius: 999px;
   padding: 16px 18px;
   font-size: 20px;
   font-weight: 1000;
   cursor: pointer;
-  width: 100%;
 
   background: linear-gradient(180deg, rgba(0,170,110,0.95), rgba(0,105,70,0.95));
   color: rgba(255,255,255,0.96);
   border: 1px solid rgba(255,255,255,0.12);
   box-shadow: 0 18px 60px rgba(0,0,0,0.55);
 }
-.btnResults:active { transform: translateY(1px); }
+.secCloseBtn:active { transform: translateY(1px); }
