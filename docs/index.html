@@ -7,13 +7,14 @@
   <meta name="theme-color" content="#07110c" />
   <title>Tap-n-Score™</title>
 
-  <link rel="stylesheet" href="./styles.css?v=TNS-NOSTART-1" />
+  <link rel="stylesheet" href="./styles.css?v=vTAP-NOSTART-1" />
 </head>
 
 <body>
   <main class="page">
 
-    <section class="card" id="setupCard">
+    <!-- Landing card (stays simple) -->
+    <section class="card">
       <header class="hero">
         <div class="brandLine">
           <div class="brand">TAP-N-SCORE<span class="tm">™</span></div>
@@ -25,6 +26,7 @@
         <div class="label">Take or Choose Target Photo</div>
 
         <input id="photoInput" class="hiddenFile" type="file" accept="image/*" />
+
         <button id="chooseBtn" class="btnPrimary" type="button">Choose Photo</button>
 
         <div id="fileName" class="hintStrong">No file selected.</div>
@@ -54,38 +56,39 @@
 
       <div class="field">
         <div class="label">Selected target photo thumbnail</div>
-        <div id="thumbBox" class="thumbBox thumbSmall">
+        <div id="thumbBox" class="thumbBox">
           <div class="thumbEmpty">No photo selected yet.</div>
         </div>
       </div>
 
-      <div class="field">
+      <div class="whatNext">
         <div class="label">What happens next</div>
-        <ul class="steps">
+        <ul class="bullets">
           <li>Tap bull’s-eye (anchor)</li>
           <li>Tap each confirmed hit</li>
-          <li>Press <b>Results</b></li>
+          <li>Press Results</li>
         </ul>
       </div>
     </section>
 
-    <!-- Image + overlay ONLY -->
+    <!-- Tap area (image + overlay only) -->
     <section id="imgBox" class="imgBox hidden" aria-label="Target image box">
       <img id="targetImg" alt="Selected target" />
       <div id="dotsLayer" aria-label="Tap overlay"></div>
     </section>
 
-    <!-- Bottom controls -->
-    <section id="controlsBar" class="controlsBar hidden" aria-label="Tap controls">
-      <button id="clearBtn" class="btnGhost" type="button">Clear</button>
-      <button id="undoBtn" class="btnGhost" type="button">Undo</button>
-      <button id="resultsBtn" class="btnResults" type="button">Results</button>
-    </section>
+    <!-- Bottom controls (hidden until photo chosen) -->
+    <div id="controlsBar" class="controlsBar hidden" aria-label="Controls">
+      <button id="clearBtn" class="btnCtl" type="button">Clear</button>
+      <button id="undoBtn" class="btnCtl" type="button">Undo</button>
+      <button id="resultsBtn" class="btnCtl btnCtlPrimary" type="button">Results</button>
+    </div>
 
+    <!-- HUD -->
     <div id="instructionLine" class="hudLeft">Choose a photo to begin</div>
     <div id="tapCount" class="hudRight">Taps: 0 (hits: 0)</div>
 
-    <script src="./index.js?v=TNS-NOSTART-1"></script>
+    <script src="./index.js?v=vTAP-NOSTART-1"></script>
   </main>
 </body>
 </html>
