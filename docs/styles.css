@@ -1,8 +1,7 @@
 /* ============================================================
-   styles.css (FULL REPLACEMENT) — vSEC-1f
+   styles.css (FULL REPLACEMENT) — vSEC-1g
    Adds:
-   - "SHOOTER EXPERIENCE CARD" red/white/blue top label
-   - Direction words smaller + closer to the number
+   - .secActionBtnSecondary (full-width Download button)
 ============================================================ */
 
 * { box-sizing: border-box; }
@@ -262,7 +261,6 @@ body {
   padding: 18px;
 }
 
-/* NEW top-level label */
 .secTopLabel {
   font-weight: 1000;
   letter-spacing: 0.9px;
@@ -334,7 +332,6 @@ body {
   justify-content: flex-start;
 }
 
-/* tighter number + direction */
 .secBig {
   font-size: 34px;
   font-weight: 950;
@@ -342,7 +339,7 @@ body {
   text-shadow: 0 10px 26px rgba(0,0,0,0.55);
   display: inline-flex;
   align-items: baseline;
-  gap: 10px; /* keeps it close */
+  gap: 10px;
 }
 
 .secArrow {
@@ -357,17 +354,16 @@ body {
   letter-spacing: 0.2px;
 }
 
-/* Direction words smaller + closer */
 .secDirInline {
-  font-size: 14px;     /* smaller */
+  font-size: 14px;
   font-weight: 950;
   opacity: 0.82;
   letter-spacing: 0.5px;
-  margin-left: 6px;    /* close to number */
+  margin-left: 6px;
   white-space: nowrap;
 }
 
-/* Actions */
+/* Actions: 2 equal buttons */
 .secActions {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -390,3 +386,12 @@ body {
   box-shadow: 0 18px 60px rgba(0,0,0,0.55);
 }
 .secActionBtn:active { transform: translateY(1px); }
+
+/* NEW: Download button is secondary + full-width */
+.secActionBtnSecondary {
+  width: 100%;
+  margin-top: 12px;
+  background: rgba(255,255,255,0.08);
+  box-shadow: none;
+  border: 1px solid rgba(255,255,255,0.14);
+}
