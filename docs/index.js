@@ -1,45 +1,57 @@
-/* ============================================================
-   index.js (FULL REPLACEMENT) — vSEC-DL-HIST-1
-   Adds:
-   - SEC modal with Download SEC (PNG)
-   - Stores current score + previous 3 + average
-   - Score numeral color follows thresholds:
-       0–60 red, 61–79 yellow, 80–100 green
-   Also:
-   - Controls (Clear/Undo/Results) appear AFTER first tap
-   - Thumbnail section hides once target image is shown
+ /* ============================================================
+   index.js (FULL REPLACEMENT) — vSEC-BACKEND-TRUTH-1
+   Rule:
+   - ALL math comes from backend (score, clicks, directions).
+   Frontend:
+   - Collect taps (anchor + hits)
+   - POST to backend on Results
+   - Render SEC + Download SEC PNG from backend response
 ============================================================ */
 
 (() => {
   const $ = (id) => document.getElementById(id);
 
-  // ---------- CONFIG (edit these for Baker pilot) ----------
-  const BUY_MORE_URL = "https://bakertargets.com"; // <-- change if needed
-  const SURVEY_URL   = "https://example.com/survey"; // <-- change if needed
+  // ------------------------------
+  // CONFIG: BACKEND URL
+  // ------------------------------
+  // If your frontend and backend share the same origin, leave "".
+  // If backend is on Render (different domain), paste it here:
+  //   const BACKEND_URL = "https://YOUR-BACKEND.onrender.com";
+  const BACKEND_URL = "";
 
-  // ---------- Elements ----------
-  const elFile      = $("photoInput");
-  const elChoose    = $("chooseBtn");
-  const elFileName  = $("fileName");
-  const elThumbBox  = $("thumbBox");
+  // Endpoint preference order (we try first, then fallback)
+  const ENDPOINTS = ["/api/calc", "/api/analyze"];
 
-  const elImgBox    = $("imgBox");
-  const elImg       = $("targetImg");
-  const elDots      = $("dotsLayer");
+  // Vendor links (Baker pilot)
+  const BUY_MORE_URL = "https://bakertargets.com";
+  const SURVEY_URL   = "https://example.com/survey";
 
-  const elHUDLeft   = $("instructionLine");
-  const elHUDRight  = $("tapCount");
+  // ------------------------------
+  // Elements
+  // ------------------------------
+  const elFile     = $("photoInput");
+  const elChoose   = $("chooseBtn");
+  const elFileName = $("fileName");
+  const elThumbBox = $("thumbBox");
 
-  const elControls  = $("controlsBar");
-  const elClear     = $("clearBtn");
-  const elUndo      = $("undoBtn");
-  const elResults   = $("resultsBtn");
+  const elImgBox   = $("imgBox");
+  const elImg      = $("targetImg");
+  const elDots     = $("dotsLayer");
 
-  // Optional (present in your HTML right now, but we will not show values on SEC)
-  const elDistance  = $("distanceYds");
-  const elClick     = $("clickValue");
+  const elDistance = $("distanceYds");  // hidden on SEC, but still useful for backend
+  const elClick    = $("clickValue");   // hidden on SEC, but still useful for backend
 
-  // ---------- State ----------
+  const elHUDLeft  = $("instructionLine");
+  const elHUDRight = $("tapCount");
+
+  const elControls = $("controlsBar");
+  const elClear    = $("clearBtn");
+  const elUndo     = $("undoBtn");
+  const elResults  = $("resultsBtn");
+
+  // ------------------------------
+  // State
+  // ------------------------------
   let selectedFile = null;
   let objectUrl = null;
 
@@ -48,7 +60,9 @@
 
   let hasAnyTap = false; // controls appear after first tap
 
-  // ---------- Storage (score history) ----------
+  // ------------------------------
+  // Score history (display only; math stays backend)
+  // ------------------------------
   const SCORE_KEY = "sczn3_score_history_v1";
 
   function loadScoreHistory() {
@@ -68,15 +82,13 @@
   function pushScore(score) {
     const s = Number(score);
     if (!Number.isFinite(s)) return;
-
     const hist = loadScoreHistory();
-    hist.unshift(s);              // newest first
+    hist.unshift(s);
     saveScoreHistory(hist);
   }
 
   function getPrevThreeExcludingCurrent() {
     const hist = loadScoreHistory();
-    // hist[0] should be current after pushScore(). Previous three are hist[1..3]
     return hist.slice(1, 4);
   }
 
@@ -87,7 +99,9 @@
     return sum / hist.length;
   }
 
-  // ---------- Helpers ----------
+  // ------------------------------
+  // UI helpers
+  // ------------------------------
   function clamp01(v) { return Math.max(0, Math.min(1, v)); }
 
   function setHUD() {
@@ -117,12 +131,8 @@
   }
 
   function showControlsIfNeeded() {
-    // Controls appear only after first tap of any kind
-    if (!hasAnyTap) {
-      elControls.classList.add("hidden");
-      return;
-    }
-    elControls.classList.remove("hidden");
+    if (!hasAnyTap) elControls.classList.add("hidden");
+    else elControls.classList.remove("hidden");
   }
 
   function redrawAll() {
@@ -132,7 +142,6 @@
 
     setHUD();
 
-    // Buttons enabled logic
     elClear.disabled   = (!anchor && hits.length === 0);
     elUndo.disabled    = (!anchor && hits.length === 0);
     elResults.disabled = (!anchor || hits.length === 0);
@@ -149,8 +158,6 @@
   }
 
   function hideThumbnailSection() {
-    // Hide the whole "Selected target photo thumbnail" field if possible
-    // thumbBox is inside a .field in your HTML
     const field = elThumbBox ? elThumbBox.closest(".field") : null;
     if (field) field.classList.add("hidden");
   }
@@ -163,86 +170,126 @@
     return { x: clamp01(x), y: clamp01(y) };
   }
 
-  function computePOIB() {
-    if (hits.length === 0) return null;
-    const sum = hits.reduce((acc, p) => ({ x: acc.x + p.x, y: acc.y + p.y }), { x: 0, y: 0 });
-    return { x: sum.x / hits.length, y: sum.y / hits.length };
-  }
-
-  // Direction labels for the *scope move* (user-facing)
-  // If POIB is LEFT of anchor -> move RIGHT
-  // If POIB is ABOVE anchor -> move UP (screen Y smaller)
-  function computeScopeMove(anchorPt, poibPt) {
-    const dx = anchorPt.x - poibPt.x; // + means move RIGHT
-    const dy = anchorPt.y - poibPt.y; // + means move DOWN in screen-space
-
-    const windDir = dx >= 0 ? "R" : "L";
-    const elevDir = dy >= 0 ? "D" : "U";
-
-    return { windDir, elevDir, dx, dy };
-  }
-
-  // Score color thresholds
+  // ------------------------------
+  // Display-only score color
+  // ------------------------------
   function scoreColor(score) {
     const s = Number(score);
     if (!Number.isFinite(s)) return "rgba(255,255,255,0.92)";
-    if (s <= 60) return "rgba(255, 70, 70, 0.96)";      // red
-    if (s <= 79) return "rgba(255, 205, 70, 0.96)";     // yellow
-    return "rgba(0, 235, 150, 0.96)";                   // green
+    if (s <= 60) return "rgba(255, 70, 70, 0.96)";
+    if (s <= 79) return "rgba(255, 205, 70, 0.96)";
+    return "rgba(0, 235, 150, 0.96)";
   }
 
-  // ----------------------------------------------------------
-  // IMPORTANT:
-  // Your platform already has "score" + "windage clicks" + "elevation clicks"
-  // working in your current build.
-  //
-  // So this function tries to read those values from wherever you currently set them.
-  // If you already compute them elsewhere, plug them in here in ONE place.
-  //
-  // For now:
-  // - Score: simple placeholder derived from group size (you can replace)
-  // - Click values: placeholder based on dx/dy percent (you can replace)
-  // ----------------------------------------------------------
-  function computeScoreAndClicks() {
-    const poib = computePOIB();
-    if (!anchor || !poib) return null;
+  // ------------------------------
+  // Backend call (truth)
+  // ------------------------------
+  async function postJSON(url, bodyObj) {
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(bodyObj),
+      cache: "no-store"
+    });
 
-    const move = computeScopeMove(anchor, poib);
+    const text = await res.text();
+    let json = null;
+    try { json = JSON.parse(text); } catch {}
 
-    // PLACEHOLDER score (replace with your true scoring logic)
-    // Small correction distance => higher score
-    const dist = Math.sqrt((move.dx * move.dx) + (move.dy * move.dy));
-    let score = Math.round(100 - (dist * 200)); // heuristic
-    score = Math.max(0, Math.min(100, score));
+    if (!res.ok) {
+      const msg = (json && (json.error || json.message)) ? (json.error || json.message) : text;
+      throw new Error(msg || `HTTP ${res.status}`);
+    }
+    if (!json) throw new Error("Backend did not return JSON.");
+    return json;
+  }
 
-    // PLACEHOLDER clicks (replace with true inches→clicks pipeline)
-    const windClicks = Math.abs(move.dx) * 100; // acts like "some number"
-    const elevClicks = Math.abs(move.dy) * 100;
+  async function fetchBackendTruth(payload) {
+    // Try endpoints in order
+    let lastErr = null;
+
+    for (const ep of ENDPOINTS) {
+      const url = `${BACKEND_URL}${ep}`;
+      try {
+        const data = await postJSON(url, payload);
+        return data;
+      } catch (e) {
+        lastErr = e;
+      }
+    }
+    throw lastErr || new Error("Backend call failed.");
+  }
+
+  // Payload we send to backend
+  function buildPayload() {
+    const distanceYds = elDistance ? Number(elDistance.value) : 100;
+    const clickValue  = elClick ? Number(elClick.value) : 0.25;
 
     return {
-      score,
+      distanceYds: Number.isFinite(distanceYds) ? distanceYds : 100,
+      clickValue: Number.isFinite(clickValue) ? clickValue : 0.25,
+      anchor, // {x,y} normalized 0..1
+      hits,   // [{x,y}...] normalized 0..1
       shots: hits.length,
-      windClicks,
-      elevClicks,
-      windDir: move.windDir,
-      elevDir: move.elevDir
+      // optional context (harmless if backend ignores)
+      client: { app: "tap-n-score", ver: "vSEC-BACKEND-TRUTH-1" }
     };
   }
 
-  // ---------- Canvas download (PNG) ----------
+  // ------------------------------
+  // SEC modal + Download (PNG)
+  // ------------------------------
+  function roundedRect(ctx, x, y, w, h, r, fill, stroke) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
+    if (fill) { ctx.fillStyle = fill; ctx.fill(); }
+    if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = 2; ctx.stroke(); }
+  }
+
+  function pill(ctx, x, y, w, h, fill) {
+    roundedRect(ctx, x, y, w, h, h / 2, fill, "rgba(255,255,255,0.10)");
+    ctx.save();
+    ctx.globalAlpha = 0.14;
+    roundedRect(ctx, x + 2, y + 2, w - 4, h * 0.55, (h / 2) - 2, "rgba(255,255,255,1)", null);
+    ctx.restore();
+  }
+
+  function normalizeDirLetter(dir) {
+    // backend may return "RIGHT"/"LEFT"/"UP"/"DOWN" or "R/L/U/D"
+    const d = String(dir || "").toUpperCase().trim();
+    if (d === "RIGHT") return "R";
+    if (d === "LEFT")  return "L";
+    if (d === "UP")    return "U";
+    if (d === "DOWN")  return "D";
+    if (["R","L","U","D"].includes(d)) return d;
+    return d ? d[0] : "?";
+  }
+
+  function arrowForDir(letter) {
+    if (letter === "R") return "→";
+    if (letter === "L") return "←";
+    if (letter === "U") return "↑";
+    if (letter === "D") return "↓";
+    return "•";
+  }
+
   function downloadSECPng(payload) {
     const {
       score,
       shots,
       windClicks,
-      elevClicks,
       windDir,
+      elevClicks,
       elevDir,
       prev3,
       avg
     } = payload;
 
-    // Canvas size tuned for a nice shareable card
     const W = 1400;
     const H = 820;
 
@@ -251,11 +298,10 @@
     canvas.height = H;
     const ctx = canvas.getContext("2d");
 
-    // Background
+    // background
     ctx.fillStyle = "rgba(10,12,11,1)";
     ctx.fillRect(0, 0, W, H);
 
-    // Card
     const pad = 44;
     const x = pad, y = pad, w = W - pad * 2, h = H - pad * 2;
 
@@ -288,10 +334,9 @@
     ctx.fillStyle = "rgba(255,255,255,0.88)";
     ctx.fillText(`Shots: ${shots}`, x + 44, titleY + 54);
 
-    // Big Score centerpiece
+    // Score centerpiece
     const scoreBoxY = y + 170;
     const scoreBoxH = 160;
-
     roundedRect(ctx, x + 34, scoreBoxY, w - 68, scoreBoxH, 28, "rgba(0,0,0,0.20)", "rgba(255,255,255,0.10)");
 
     ctx.font = "900 40px system-ui, -apple-system, Segoe UI, Roboto, Arial";
@@ -304,16 +349,19 @@
     ctx.fillText(String(score), x + w - 70, scoreBoxY + 120);
     ctx.textAlign = "left";
 
-    // Info line: current / prev3 / avg
+    // Current / Prev3 / Avg
     ctx.font = "800 28px system-ui, -apple-system, Segoe UI, Roboto, Arial";
     ctx.fillStyle = "rgba(255,255,255,0.82)";
     const prevText = prev3.length ? prev3.join(", ") : "—";
     const avgText = (avg == null) ? "—" : avg.toFixed(1);
     ctx.fillText(`Current: ${score}   Prev 3: ${prevText}   Avg: ${avgText}`, x + 70, scoreBoxY + 140);
 
-    // Windage / Elevation compact area
+    // Windage/Elevation compact area
     const smallAreaY = scoreBoxY + scoreBoxH + 22;
     const rowH = 128;
+
+    const wDir = normalizeDirLetter(windDir);
+    const eDir = normalizeDirLetter(elevDir);
 
     // Windage row
     roundedRect(ctx, x + 34, smallAreaY, w - 68, rowH, 26, "rgba(0,0,0,0.18)", "rgba(255,255,255,0.10)");
@@ -321,14 +369,12 @@
     ctx.fillStyle = "rgba(255,255,255,0.90)";
     ctx.fillText("Windage", x + 70, smallAreaY + 78);
 
-    // arrow + number + dir
-    const windArrow = (windDir === "R") ? "→" : "←";
     ctx.font = "900 64px system-ui, -apple-system, Segoe UI, Roboto, Arial";
     ctx.textAlign = "right";
-    ctx.fillText(`${windArrow} ${Number(windClicks).toFixed(2)}`, x + w - 120, smallAreaY + 86);
+    ctx.fillText(`${arrowForDir(wDir)} ${Number(windClicks).toFixed(2)}`, x + w - 120, smallAreaY + 86);
     ctx.textAlign = "left";
     ctx.font = "900 40px system-ui, -apple-system, Segoe UI, Roboto, Arial";
-    ctx.fillText(windDir, x + w - 98, smallAreaY + 86);
+    ctx.fillText(wDir, x + w - 98, smallAreaY + 86);
 
     // Elevation row
     const elevY = smallAreaY + rowH + 18;
@@ -337,15 +383,14 @@
     ctx.fillStyle = "rgba(255,255,255,0.90)";
     ctx.fillText("Elevation", x + 70, elevY + 78);
 
-    const elevArrow = (elevDir === "U") ? "↑" : "↓";
     ctx.font = "900 64px system-ui, -apple-system, Segoe UI, Roboto, Arial";
     ctx.textAlign = "right";
-    ctx.fillText(`${elevArrow} ${Number(elevClicks).toFixed(2)}`, x + w - 120, elevY + 86);
+    ctx.fillText(`${arrowForDir(eDir)} ${Number(elevClicks).toFixed(2)}`, x + w - 120, elevY + 86);
     ctx.textAlign = "left";
     ctx.font = "900 40px system-ui, -apple-system, Segoe UI, Roboto, Arial";
-    ctx.fillText(elevDir, x + w - 98, elevY + 86);
+    ctx.fillText(eDir, x + w - 98, elevY + 86);
 
-    // Action buttons row (Buy more / Survey) + Close
+    // Action buttons row
     const btnY = elevY + rowH + 26;
     const btnH = 86;
     const gap = 18;
@@ -361,13 +406,13 @@
     ctx.fillText("Survey", x + 34 + btnW + gap + btnW / 2, btnY + 56);
     ctx.textAlign = "left";
 
+    // Close button look
     const closeY = btnY + btnH + 16;
     pill(ctx, x + 34, closeY, w - 68, 92, "rgba(0,170,110,0.95)");
     ctx.textAlign = "center";
     ctx.fillText("Close", x + 34 + (w - 68) / 2, closeY + 60);
     ctx.textAlign = "left";
 
-    // Download
     canvas.toBlob((blob) => {
       if (!blob) return;
       const url = URL.createObjectURL(blob);
@@ -381,41 +426,34 @@
     }, "image/png");
   }
 
-  function roundedRect(ctx, x, y, w, h, r, fill, stroke) {
-    ctx.beginPath();
-    ctx.moveTo(x + r, y);
-    ctx.arcTo(x + w, y, x + w, y + h, r);
-    ctx.arcTo(x + w, y + h, x, y + h, r);
-    ctx.arcTo(x, y + h, x, y, r);
-    ctx.arcTo(x, y, x + w, y, r);
-    ctx.closePath();
-    if (fill) {
-      ctx.fillStyle = fill;
-      ctx.fill();
+  function showSECModalFromBackend(truth) {
+    // We accept a few shapes — we normalize what we need.
+    // Expected (ideal):
+    // {
+    //   score: 87,
+    //   shots: 5,
+    //   windage: { clicks: 1.25, dir: "R" },
+    //   elevation:{ clicks: 0.50, dir: "U" }
+    // }
+    const score = Number(truth.score);
+    const shots = Number(truth.shots ?? truth.shotCount ?? hits.length);
+
+    const windObj = truth.windage || truth.wind || {};
+    const elevObj = truth.elevation || truth.elev || {};
+
+    const windClicks = Number(windObj.clicks ?? truth.windClicks ?? truth.windageClicks);
+    const elevClicks = Number(elevObj.clicks ?? truth.elevClicks ?? truth.elevationClicks);
+
+    const windDir = windObj.dir ?? truth.windDir ?? truth.windageDir;
+    const elevDir = elevObj.dir ?? truth.elevDir ?? truth.elevationDir;
+
+    if (!Number.isFinite(score)) throw new Error("Backend did not return a valid score.");
+    if (!Number.isFinite(windClicks) || !Number.isFinite(elevClicks)) {
+      throw new Error("Backend did not return valid click numbers.");
     }
-    if (stroke) {
-      ctx.strokeStyle = stroke;
-      ctx.lineWidth = 2;
-      ctx.stroke();
-    }
-  }
 
-  function pill(ctx, x, y, w, h, fill) {
-    roundedRect(ctx, x, y, w, h, h / 2, fill, "rgba(255,255,255,0.10)");
-    // subtle top sheen
-    ctx.save();
-    ctx.globalAlpha = 0.14;
-    roundedRect(ctx, x + 2, y + 2, w - 4, h * 0.55, (h / 2) - 2, "rgba(255,255,255,1)", null);
-    ctx.restore();
-  }
-
-  // ---------- SEC Modal ----------
-  function showSECModal() {
-    const data = computeScoreAndClicks();
-    if (!data) return;
-
-    // Save score into history first so "previous 3" means before current
-    pushScore(data.score);
+    // Update history (display only)
+    pushScore(score);
     const prev3 = getPrevThreeExcludingCurrent();
     const avg = getAverageAll();
 
@@ -425,7 +463,6 @@
     const card = document.createElement("div");
     card.className = "secCard";
 
-    // Title (red/white/blue)
     const title = document.createElement("div");
     title.className = "secTitle";
     title.innerHTML = `
@@ -434,33 +471,33 @@
       <span class="tBlue">CARD</span>
     `;
 
-    const shots = document.createElement("div");
-    shots.className = "secShots";
-    shots.textContent = `Shots: ${data.shots}`;
+    const shotsLine = document.createElement("div");
+    shotsLine.className = "secShots";
+    shotsLine.textContent = `Shots: ${Number.isFinite(shots) ? shots : hits.length}`;
 
-    // Score centerpiece
     const scoreRow = document.createElement("div");
     scoreRow.className = "secRow secScoreRow";
     scoreRow.innerHTML = `
       <div class="secLabel">Shooter’s Score</div>
-      <div class="secValue secScoreValue" style="color:${scoreColor(data.score)}">${data.score}</div>
+      <div class="secValue secScoreValue" style="color:${scoreColor(score)}">${score}</div>
     `;
 
-    // Info line under score
     const info = document.createElement("div");
     info.className = "secInfoLine";
     info.textContent =
-      `Current: ${data.score}   Prev 3: ${prev3.length ? prev3.join(", ") : "—"}   Avg: ${avg == null ? "—" : avg.toFixed(1)}`;
+      `Current: ${score}   Prev 3: ${prev3.length ? prev3.join(", ") : "—"}   Avg: ${avg == null ? "—" : avg.toFixed(1)}`;
 
-    // Windage/Elevation compact area
+    const wDir = normalizeDirLetter(windDir);
+    const eDir = normalizeDirLetter(elevDir);
+
     const wind = document.createElement("div");
     wind.className = "secRow";
     wind.innerHTML = `
       <div class="secLabel">Windage</div>
       <div class="secValue">
-        <span class="secArrow">${data.windDir === "R" ? "→" : "←"}</span>
-        <span class="secNum">${Number(data.windClicks).toFixed(2)}</span>
-        <span class="secDir">${data.windDir}</span>
+        <span class="secArrow">${arrowForDir(wDir)}</span>
+        <span class="secNum">${Number(windClicks).toFixed(2)}</span>
+        <span class="secDir">${wDir}</span>
       </div>
     `;
 
@@ -469,13 +506,12 @@
     elev.innerHTML = `
       <div class="secLabel">Elevation</div>
       <div class="secValue">
-        <span class="secArrow">${data.elevDir === "U" ? "↑" : "↓"}</span>
-        <span class="secNum">${Number(data.elevClicks).toFixed(2)}</span>
-        <span class="secDir">${data.elevDir}</span>
+        <span class="secArrow">${arrowForDir(eDir)}</span>
+        <span class="secNum">${Number(elevClicks).toFixed(2)}</span>
+        <span class="secDir">${eDir}</span>
       </div>
     `;
 
-    // Buttons row
     const actions = document.createElement("div");
     actions.className = "secActions";
 
@@ -494,7 +530,6 @@
     actions.appendChild(buyBtn);
     actions.appendChild(surveyBtn);
 
-    // Download + Close row
     const bottom = document.createElement("div");
     bottom.className = "secBottom";
 
@@ -504,12 +539,12 @@
     dlBtn.textContent = "Download SEC";
     dlBtn.addEventListener("click", () => {
       downloadSECPng({
-        score: data.score,
-        shots: data.shots,
-        windClicks: data.windClicks,
-        elevClicks: data.elevClicks,
-        windDir: data.windDir,
-        elevDir: data.elevDir,
+        score,
+        shots: Number.isFinite(shots) ? shots : hits.length,
+        windClicks,
+        windDir: wDir,
+        elevClicks,
+        elevDir: eDir,
         prev3,
         avg
       });
@@ -524,9 +559,8 @@
     bottom.appendChild(dlBtn);
     bottom.appendChild(closeBtn);
 
-    // Assemble
     card.appendChild(title);
-    card.appendChild(shots);
+    card.appendChild(shotsLine);
     card.appendChild(scoreRow);
     card.appendChild(info);
     card.appendChild(wind);
@@ -537,13 +571,14 @@
     overlay.appendChild(card);
     document.body.appendChild(overlay);
 
-    // close when tapping outside
     overlay.addEventListener("click", (e) => {
       if (e.target === overlay) overlay.remove();
     });
   }
 
-  // ---------- Events ----------
+  // ------------------------------
+  // Events
+  // ------------------------------
   elChoose.addEventListener("click", () => elFile.click());
 
   elFile.addEventListener("change", () => {
@@ -553,29 +588,24 @@
     selectedFile = f;
     elFileName.textContent = f.name;
 
-    // show thumb briefly (then we hide the whole section once target appears)
     setThumb(f);
 
     if (objectUrl) URL.revokeObjectURL(objectUrl);
     objectUrl = URL.createObjectURL(f);
     elImg.src = objectUrl;
 
-    // reset taps
     anchor = null;
     hits = [];
     hasAnyTap = false;
     redrawAll();
 
-    // show image immediately
     elImgBox.classList.remove("hidden");
     hideThumbnailSection();
-    setInstruction("Tap bull’s-eye (anchor)");
 
-    // scroll to target
+    setInstruction("Tap bull’s-eye (anchor)");
     elImgBox.scrollIntoView({ behavior: "smooth", block: "start" });
   });
 
-  // Tap handling (first tap triggers control bar appearance)
   elDots.addEventListener("pointerdown", (evt) => {
     if (!selectedFile) return;
     evt.preventDefault();
@@ -583,9 +613,7 @@
     const norm = getNormFromEvent(evt);
     if (!norm) return;
 
-    if (!hasAnyTap) {
-      hasAnyTap = true;
-    }
+    if (!hasAnyTap) hasAnyTap = true;
 
     if (!anchor) {
       anchor = norm;
@@ -593,52 +621,59 @@
     } else {
       hits.push(norm);
     }
-
     redrawAll();
   }, { passive: false });
 
   elClear.addEventListener("click", () => {
     anchor = null;
     hits = [];
-    hasAnyTap = false;          // hide controls again until next first tap
+    hasAnyTap = false;
     setInstruction("Tap bull’s-eye (anchor)");
     redrawAll();
   });
 
   elUndo.addEventListener("click", () => {
-    if (hits.length > 0) {
-      hits.pop();
-    } else if (anchor) {
+    if (hits.length > 0) hits.pop();
+    else if (anchor) {
       anchor = null;
       setInstruction("Tap bull’s-eye (anchor)");
     }
-    // if everything is gone, drop controls until next tap
     if (!anchor && hits.length === 0) hasAnyTap = false;
     redrawAll();
   });
 
-  elResults.addEventListener("click", () => {
-    // IMPORTANT: We only show SEC when we have anchor + hits
-    showSECModal();
+  elResults.addEventListener("click", async () => {
+    if (!anchor || hits.length === 0) return;
+
+    elResults.disabled = true;
+    setInstruction("Computing…");
+
+    const payload = buildPayload();
+
+    try {
+      const truth = await fetchBackendTruth(payload);
+      setInstruction("Results ready");
+      showSECModalFromBackend(truth);
+    } catch (e) {
+      console.error(e);
+      alert(`Backend error: ${e.message || e}`);
+      setInstruction("Backend error");
+    } finally {
+      elResults.disabled = false;
+    }
   });
 
   // Recenter after rotation / resize
-  window.addEventListener("orientationchange", () => {
-    setTimeout(() => {
-      if (!elImgBox.classList.contains("hidden")) {
-        elImgBox.scrollIntoView({ behavior: "auto", block: "start" });
-      }
-    }, 250);
-  });
-
-  window.addEventListener("resize", () => {
+  function recenterIfVisible() {
     if (!elImgBox.classList.contains("hidden")) {
-      // Keep target centered-ish after pinch/rotate changes
       elImgBox.scrollIntoView({ behavior: "auto", block: "start" });
     }
-  });
+  }
+
+  window.addEventListener("orientationchange", () => setTimeout(recenterIfVisible, 250));
+  window.addEventListener("resize", () => setTimeout(recenterIfVisible, 60));
 
   // Initial
   setHUD();
   redrawAll();
-})();
+})();  
