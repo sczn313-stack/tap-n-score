@@ -1,13 +1,11 @@
 /* ============================================================
-   index.js (FULL REPLACEMENT) — vSEC-1f
-   Changes:
-   - Adds top-level header: "SHOOTER EXPERIENCE CARD" (red/white/blue)
-   - Direction words (LEFT/RIGHT/UP/DOWN) are smaller + closer to number
-   - Two equal CTAs stay: "Buy more targets like this" + "Survey"
-   Performance colors locked:
-   - GREEN  <= 3.00 clicks
-   - YELLOW <= 6.00 clicks
-   - RED    >  6.00 clicks
+   index.js (FULL REPLACEMENT) — vSEC-1g
+   Adds:
+   - SEC modal includes:
+     1) Buy more targets like this (primary)
+     2) Survey (primary)
+     3) Download SEC (Image) (secondary, full-width)
+   Includes built-in PNG generator via Canvas (no libraries)
 ============================================================ */
 
 (() => {
@@ -177,6 +175,141 @@
     }
   }
 
+  // ===== Download SEC as PNG (no libraries) =====
+  function downloadSECPng(sec, shotCount) {
+    // Canvas size: phone-friendly, crisp
+    const W = 1200;
+    const H = 700;
+
+    const c = document.createElement("canvas");
+    c.width = W;
+    c.height = H;
+    const ctx = c.getContext("2d");
+
+    // Background
+    ctx.fillStyle = "rgba(10,12,11,1)";
+    ctx.fillRect(0, 0, W, H);
+
+    // Soft border card
+    const pad = 40;
+    const r = 32;
+    roundRect(ctx, pad, pad, W - pad * 2, H - pad * 2, r);
+    ctx.fillStyle = "rgba(18, 24, 22, 0.95)";
+    ctx.fill();
+    ctx.lineWidth = 4;
+    ctx.strokeStyle = "rgba(255,255,255,0.10)";
+    ctx.stroke();
+
+    // Top label: SHOOTER EXPERIENCE CARD (R/W/B)
+    ctx.font = "900 42px system-ui, -apple-system, Segoe UI, Roboto, Arial";
+    ctx.textBaseline = "top";
+    let x = pad + 36;
+    let y = pad + 28;
+
+    x = drawPill(ctx, x, y, "SHOOTER", "rgba(255, 90, 90, 0.96)");
+    x += 16;
+    x = drawPill(ctx, x, y, "EXPERIENCE", "rgba(255,255,255,0.96)");
+    x += 16;
+    drawPill(ctx, x, y, "CARD", "rgba(120, 170, 255, 0.96)");
+
+    // Title SEC
+    ctx.fillStyle = "rgba(255,255,255,0.96)";
+    ctx.font = "1000 86px system-ui, -apple-system, Segoe UI, Roboto, Arial";
+    ctx.fillText("SEC", pad + 36, y + 92);
+
+    // Meta
+    ctx.font = "800 30px system-ui, -apple-system, Segoe UI, Roboto, Arial";
+    ctx.fillStyle = "rgba(255,255,255,0.78)";
+    ctx.fillText(`Shots: ${shotCount}`, pad + 36, y + 192);
+
+    ctx.font = "900 24px system-ui, -apple-system, Segoe UI, Roboto, Arial";
+    ctx.fillStyle = "rgba(255,255,255,0.62)";
+    ctx.fillText(`Distance: ${sec.dist} yd   •   Click: ${sec.clickVal} MOA`, pad + 36, y + 232);
+
+    // Two rows (Windage / Elevation)
+    const boxW = (W - pad * 2) - 72;
+    const rowH = 170;
+    const rowY1 = y + 290;
+    const rowY2 = rowY1 + rowH + 24;
+
+    drawRow(ctx, pad + 36, rowY1, boxW, rowH, "Windage", sec.windArrow, sec.windClicks.toFixed(2), sec.windDir, perfColor(sec.windClicks));
+    drawRow(ctx, pad + 36, rowY2, boxW, rowH, "Elevation", sec.elevArrow, sec.elevClicks.toFixed(2), sec.elevDir, perfColor(sec.elevClicks));
+
+    // Export
+    const a = document.createElement("a");
+    a.download = `SEC_${sec.dist}yd_${shotCount}shots.png`;
+    a.href = c.toDataURL("image/png");
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  }
+
+  function roundRect(ctx, x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
+  }
+
+  function drawPill(ctx, x, y, text, color) {
+    const padX = 18;
+    const padY = 10;
+
+    ctx.font = "1000 34px system-ui, -apple-system, Segoe UI, Roboto, Arial";
+    const m = ctx.measureText(text);
+    const w = m.width + padX * 2;
+    const h = 58;
+
+    roundRect(ctx, x, y, w, h, 999);
+    ctx.fillStyle = "rgba(0,0,0,0.22)";
+    ctx.fill();
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = "rgba(255,255,255,0.12)";
+    ctx.stroke();
+
+    ctx.fillStyle = color;
+    ctx.fillText(text, x + padX, y + padY - 2);
+    return x + w;
+  }
+
+  function drawRow(ctx, x, y, w, h, label, arrow, num, dir, color) {
+    roundRect(ctx, x, y, w, h, 28);
+    ctx.fillStyle = "rgba(0,0,0,0.22)";
+    ctx.fill();
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = "rgba(255,255,255,0.12)";
+    ctx.stroke();
+
+    ctx.textBaseline = "middle";
+
+    // Label
+    ctx.font = "950 34px system-ui, -apple-system, Segoe UI, Roboto, Arial";
+    ctx.fillStyle = "rgba(255,255,255,0.90)";
+    ctx.fillText(label, x + 28, y + h / 2);
+
+    // Right side big number
+    const rightX = x + w - 28;
+
+    ctx.font = "1000 64px system-ui, -apple-system, Segoe UI, Roboto, Arial";
+    ctx.fillStyle = "rgba(255,255,255,0.92)";
+    const arrowW = ctx.measureText(arrow).width;
+
+    ctx.fillStyle = "rgba(255,255,255,0.95)";
+    ctx.fillText(arrow, rightX - 420, y + h / 2);
+
+    ctx.fillStyle = color;
+    ctx.font = "1000 84px system-ui, -apple-system, Segoe UI, Roboto, Arial";
+    ctx.fillText(num, rightX - 360, y + h / 2 + 2);
+
+    // Dir small + close
+    ctx.fillStyle = "rgba(255,255,255,0.78)";
+    ctx.font = "950 28px system-ui, -apple-system, Segoe UI, Roboto, Arial";
+    ctx.fillText(dir, rightX - 120, y + h / 2 + 6);
+  }
+
   function showSECModal() {
     const poib = computePOIB();
     if (!anchor || !poib) return;
@@ -198,7 +331,7 @@
     card.className = "secCard";
     card.style.color = "rgba(255,255,255,0.94)";
 
-    // NEW top banner text
+    // Top label
     const topLabel = document.createElement("div");
     topLabel.className = "secTopLabel";
     topLabel.innerHTML = `
@@ -237,7 +370,6 @@
       big.className = "secBig";
       big.style.color = valueColor;
 
-      // tighter layout: arrow + number + direction close
       big.innerHTML = `
         <span class="secArrow">${arrow}</span>
         <span class="secNum">${valueText}</span>
@@ -256,7 +388,7 @@
     rowWrap.appendChild(makeRow("Windage", sec.windArrow, windVal, sec.windDir, perfColor(sec.windClicks)));
     rowWrap.appendChild(makeRow("Elevation", sec.elevArrow, elevVal, sec.elevDir, perfColor(sec.elevClicks)));
 
-    // Actions
+    // Actions (two equal buttons)
     const actions = document.createElement("div");
     actions.className = "secActions";
 
@@ -275,6 +407,13 @@
     actions.appendChild(btnBuy);
     actions.appendChild(btnSurvey);
 
+    // NEW: Download SEC image (secondary, full width)
+    const dl = document.createElement("button");
+    dl.type = "button";
+    dl.className = "secActionBtn secActionBtnSecondary";
+    dl.textContent = "Download SEC (Image)";
+    dl.addEventListener("click", () => downloadSECPng(sec, hits.length));
+
     const btnClose = document.createElement("button");
     btnClose.textContent = "Close";
     btnClose.className = "btnResults";
@@ -290,6 +429,7 @@
     card.appendChild(meta);
     card.appendChild(rowWrap);
     card.appendChild(actions);
+    card.appendChild(dl);
     card.appendChild(btnClose);
 
     overlay.appendChild(card);
