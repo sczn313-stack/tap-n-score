@@ -1,12 +1,9 @@
 /* ============================================================
-   index.js (FULL REPLACEMENT) — vTAP-LAYER-LOCK-7
-   Fixes:
-   - Restores Clear / Undo / Results
-   - Tap layer locked to rendered image box (uses dotsLayer rect)
-   - Prevent taps outside image
-   - Anchor first (yellow), hits next (green)
-   - Direction authority: TOP = UP, RIGHT = RIGHT (screen truth)
-   - Green banner always shows when correct JS is running
+   index.js (FULL REPLACEMENT) — vTAP-NOSTART-1
+   - NO Start button / no “tap mode”
+   - As soon as photo loads: image shows, tapping works
+   - Clear/Undo/Results enabled appropriately
+   - Direction: TOP=UP, RIGHT=RIGHT (screen truth)
 ============================================================ */
 
 (() => {
@@ -17,7 +14,6 @@
   const elChoose = $("chooseBtn");
   const elFileName = $("fileName");
   const elThumbBox = $("thumbBox");
-  const elStart = $("startBtn");
 
   const elImgBox = $("imgBox");
   const elImg = $("targetImg");
@@ -37,15 +33,11 @@
   // State
   let selectedFile = null;
   let objectUrl = null;
-  let tapMode = false;
 
-  // anchor: {x,y} in normalized [0..1]
-  let anchor = null;
+  let anchor = null; // {x,y} normalized
+  let hits = [];     // [{x,y}...]
 
-  // hits: array of {x,y} normalized
-  let hits = [];
-
-  // ---------- Banner (debug that correct JS loaded) ----------
+  // ---------- Banner ----------
   function showBanner(text) {
     const b = document.createElement("div");
     b.textContent = text;
@@ -63,27 +55,24 @@
     b.style.color = "white";
     b.style.boxShadow = "0 12px 34px rgba(0,0,0,0.45)";
     document.body.appendChild(b);
-    setTimeout(() => b.remove(), 2600);
+    setTimeout(() => b.remove(), 2200);
   }
-  showBanner("INDEX.JS LOADED ✅ vTAP-LAYER-LOCK-7");
+  showBanner("INDEX.JS LOADED ✅ vTAP-NOSTART-1");
 
-  // ---------- Helpers ----------
+  // Helpers
   function clamp01(v) { return Math.max(0, Math.min(1, v)); }
 
   function setHUD() {
     elHUDRight.textContent = `Taps: ${(anchor ? 1 : 0) + hits.length} (hits: ${hits.length})`;
   }
 
-  function setInstruction(msg) {
-    elHUDLeft.textContent = msg;
-  }
+  function setInstruction(msg) { elHUDLeft.textContent = msg; }
 
   function clearDots() {
     while (elDots.firstChild) elDots.removeChild(elDots.firstChild);
   }
 
   function drawDot(norm, kind) {
-    // norm: {x,y} normalized; kind: "anchor"|"hit"
     const dot = document.createElement("div");
     dot.className = "tapDot";
 
@@ -94,11 +83,9 @@
     dot.style.left = `${(norm.x * 100).toFixed(4)}%`;
     dot.style.top  = `${(norm.y * 100).toFixed(4)}%`;
 
-    if (kind === "anchor") {
-      dot.style.background = "rgba(255, 196, 0, 0.95)";
-    } else {
-      dot.style.background = "rgba(0, 220, 130, 0.95)";
-    }
+    dot.style.background = (kind === "anchor")
+      ? "rgba(255, 196, 0, 0.95)"
+      : "rgba(0, 220, 130, 0.95)";
 
     elDots.appendChild(dot);
   }
@@ -107,16 +94,16 @@
     clearDots();
     if (anchor) drawDot(anchor, "anchor");
     hits.forEach((h) => drawDot(h, "hit"));
+
     setHUD();
 
-    // buttons
+    // Buttons
     elClear.disabled = (!anchor && hits.length === 0);
     elUndo.disabled = (!anchor && hits.length === 0);
     elResults.disabled = (!anchor || hits.length === 0);
   }
 
   function setThumb(file) {
-    // replace thumb content
     elThumbBox.innerHTML = "";
     const img = document.createElement("img");
     img.alt = "Selected thumbnail";
@@ -124,34 +111,11 @@
     elThumbBox.appendChild(img);
   }
 
-  function enterTapMode() {
-    tapMode = true;
-    elImgBox.classList.remove("hidden");
-    elControls.classList.remove("hidden");
-    setInstruction("Tap bull’s-eye (anchor)");
-    redrawAll();
-
-    // scroll to image
-    elImgBox.scrollIntoView({ behavior: "smooth", block: "start" });
-  }
-
-  function exitTapMode() {
-    tapMode = false;
-    elControls.classList.add("hidden");
-    setInstruction("Press Start to enter tap mode");
-  }
-
-  // Convert a pointer event into normalized coordinates inside dotsLayer
   function getNormFromEvent(evt) {
     const rect = elDots.getBoundingClientRect();
-
-    // clientX/Y relative to overlay box
     const x = (evt.clientX - rect.left) / rect.width;
     const y = (evt.clientY - rect.top) / rect.height;
-
-    // Reject outside
     if (x < 0 || x > 1 || y < 0 || y > 1) return null;
-
     return { x: clamp01(x), y: clamp01(y) };
   }
 
@@ -162,19 +126,19 @@
   }
 
   function directionText(anchorPt, poibPt) {
-    // We want vector POIB -> Anchor (bull - poib)
-    // dx > 0 means anchor is RIGHT of poib => need move POI RIGHT => dial RIGHT
-    // dy > 0 means anchor is DOWN of poib (screen y+) => need move POI DOWN => dial DOWN
+    // POIB -> Anchor (bull - poib)
     const dx = anchorPt.x - poibPt.x;
     const dy = anchorPt.y - poibPt.y; // screen truth: down is +
 
     const horizDir = dx >= 0 ? "RIGHT" : "LEFT";
     const vertDir  = dy >= 0 ? "DOWN" : "UP";
 
-    const horizPct = Math.abs(dx) * 100;
-    const vertPct  = Math.abs(dy) * 100;
-
-    return { horizDir, vertDir, horizPct, vertPct };
+    return {
+      horizDir,
+      vertDir,
+      horizPct: Math.abs(dx) * 100,
+      vertPct:  Math.abs(dy) * 100
+    };
   }
 
   function showResultsModal() {
@@ -183,13 +147,10 @@
 
     const dist = Number(elDistance.value) || 100;
     const clickVal = Number(elClick.value) || 0.25;
+    const oneMOAin = (dist / 100) * 1.047;
 
-    const oneMOAin = (dist / 100) * 1.047; // inches per MOA at distance (approx)
     const dir = directionText(anchor, poib);
 
-    const shots = hits.length;
-
-    // Modal
     const overlay = document.createElement("div");
     overlay.style.position = "fixed";
     overlay.style.inset = "0";
@@ -223,7 +184,7 @@
     body.style.whiteSpace = "pre-line";
 
     body.textContent =
-`Shots: ${shots}
+`Shots: ${hits.length}
 
 POIB vs Anchor (image-space):
 Horizontal: ${dir.horizPct.toFixed(2)}% ${dir.horizDir}
@@ -253,7 +214,7 @@ Next step: add GRID calibration to convert % → inches → clicks.`;
     document.body.appendChild(overlay);
   }
 
-  // ---------- Events ----------
+  // Events
   elChoose.addEventListener("click", () => elFile.click());
 
   elFile.addEventListener("change", () => {
@@ -263,40 +224,34 @@ Next step: add GRID calibration to convert % → inches → clicks.`;
     selectedFile = f;
     elFileName.textContent = f.name;
 
-    // set thumbnail
     setThumb(f);
 
-    // set main image
+    // main image
     if (objectUrl) URL.revokeObjectURL(objectUrl);
     objectUrl = URL.createObjectURL(f);
     elImg.src = objectUrl;
 
-    // reset taps
+    // reset
     anchor = null;
     hits = [];
-    tapMode = false;
     redrawAll();
-    exitTapMode();
 
-    // enable start
-    elStart.disabled = false;
-    setInstruction("Press Start to enter tap mode");
+    // show image & controls immediately (NO Start)
+    elImgBox.classList.remove("hidden");
+    elControls.classList.remove("hidden");
+    setInstruction("Tap bull’s-eye (anchor)");
+
+    elImgBox.scrollIntoView({ behavior: "smooth", block: "start" });
   });
 
-  elStart.addEventListener("click", () => {
-    if (!selectedFile) return;
-    enterTapMode();
-  });
-
-  // Tap handling — use pointerdown + preventDefault to stop iOS gesture conflicts
+  // Tap handling
   elDots.addEventListener("pointerdown", (evt) => {
-    if (!tapMode) return;
+    if (!selectedFile) return; // only after photo chosen
     evt.preventDefault();
 
     const norm = getNormFromEvent(evt);
     if (!norm) return;
 
-    // Anchor first, then hits
     if (!anchor) {
       anchor = norm;
       setInstruction("Now tap each confirmed hit");
@@ -323,10 +278,9 @@ Next step: add GRID calibration to convert % → inches → clicks.`;
     redrawAll();
   });
 
-  elResults.addEventListener("click", () => {
-    showResultsModal();
-  });
+  elResults.addEventListener("click", () => showResultsModal());
 
-  // Initial state
+  // Initial
   setHUD();
+  redrawAll();
 })();
