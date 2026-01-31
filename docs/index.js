@@ -1,15 +1,7 @@
 /* ============================================================
-   index.js (FULL REPLACEMENT) — vSEC-1
-   - NO Start button / no “tap mode”
-   - Photo loads -> target shows -> tapping works
-   - Thumbnail DISAPPEARS when target shows
-   - SEC modal (NOT “Results”):
-       • ONLY two outputs: Windage + Elevation
-       • BIG number + arrow in the direction to turn
-       • Removes % + removes extra text
-   Notes:
-   - Clicks require inches.
-   - This build converts image-space -> inches using paper size (8.5x11).
+   index.js (FULL REPLACEMENT) — vSEC-1b
+   Change from vSEC-1:
+   - SEC modal now shows: Distance + Click under Shots
 ============================================================ */
 
 (() => {
@@ -97,7 +89,6 @@
   }
 
   function hideThumb() {
-    // CSS class exists in your styles: .thumbHidden { display:none !important; }
     elThumbBox.classList.add("thumbHidden");
   }
 
@@ -120,8 +111,6 @@
   }
 
   // Convert normalized delta -> inches (paper-based)
-  // dx, dy are normalized fractions of the displayed image box.
-  // Assumption used here: the target photo represents a full 8.5x11 page in portrait.
   function normDeltaToInches(dxNorm, dyNorm) {
     const PAPER_W_IN = 8.5;
     const PAPER_H_IN = 11.0;
@@ -132,36 +121,28 @@
   }
 
   function moaAtDistanceInches(distYds) {
-    // 1 MOA ~ 1.047" at 100 yards
     return (distYds / 100) * 1.047;
   }
 
   function clicksFromInches(inches, oneMOAin, clickVal) {
-    // clicks = inches / (inches per click)
     const inchesPerClick = oneMOAin * clickVal;
     if (!Number.isFinite(inchesPerClick) || inchesPerClick <= 0) return 0;
     return inches / inchesPerClick;
   }
 
-  // Direction + arrow for the TURRET TURN instruction
-  // We compute vector POIB -> Anchor (bull - poib).
   function computeTurretInstructions(anchorPt, poibPt) {
-    const dx = anchorPt.x - poibPt.x;     // + => bull is to the right of POIB
-    const dy = anchorPt.y - poibPt.y;     // screen truth: +dy means bull is LOWER than POIB (down)
+    const dx = anchorPt.x - poibPt.x;
+    const dy = anchorPt.y - poibPt.y; // screen truth: +dy means DOWN
 
-    // Convert to inches using paper size
     const inch = normDeltaToInches(dx, dy);
 
-    // Distance & click value
     const dist = Number(elDistance.value) || 100;
     const clickVal = Number(elClick.value) || 0.25;
     const oneMOAin = moaAtDistanceInches(dist);
 
-    // Click magnitudes
     const windClicks = Math.abs(clicksFromInches(inch.xIn, oneMOAin, clickVal));
     const elevClicks = Math.abs(clicksFromInches(inch.yIn, oneMOAin, clickVal));
 
-    // Directions
     const windDir = dx >= 0 ? "RIGHT" : "LEFT";
     const elevDir = dy >= 0 ? "DOWN" : "UP";
 
@@ -171,7 +152,8 @@
     return {
       windDir, elevDir,
       windArrow, elevArrow,
-      windClicks, elevClicks
+      windClicks, elevClicks,
+      dist, clickVal
     };
   }
 
@@ -212,7 +194,15 @@
     sub.style.fontSize = "18px";
     sub.style.fontWeight = "800";
     sub.style.opacity = "0.85";
-    sub.style.marginBottom = "16px";
+
+    // ✅ NEW: distance + click line (compact)
+    const meta = document.createElement("div");
+    meta.textContent = `Distance: ${sec.dist} yd  •  Click: ${sec.clickVal} MOA`;
+    meta.style.fontSize = "14px";
+    meta.style.fontWeight = "900";
+    meta.style.opacity = "0.72";
+    meta.style.marginTop = "6px";
+    meta.style.marginBottom = "14px";
 
     const rowWrap = document.createElement("div");
     rowWrap.style.display = "grid";
@@ -266,11 +256,8 @@
     const windVal = sec.windClicks.toFixed(2);
     const elevVal = sec.elevClicks.toFixed(2);
 
-    const rowWind = makeRow("Windage", sec.windArrow, windVal, sec.windDir);
-    const rowElev = makeRow("Elevation", sec.elevArrow, elevVal, sec.elevDir);
-
-    rowWrap.appendChild(rowWind);
-    rowWrap.appendChild(rowElev);
+    rowWrap.appendChild(makeRow("Windage", sec.windArrow, windVal, sec.windDir));
+    rowWrap.appendChild(makeRow("Elevation", sec.elevArrow, elevVal, sec.elevDir));
 
     const btn = document.createElement("button");
     btn.textContent = "Close";
@@ -285,6 +272,7 @@
 
     card.appendChild(title);
     card.appendChild(sub);
+    card.appendChild(meta); // ✅ NEW line inserted here
     card.appendChild(rowWrap);
     card.appendChild(btn);
     overlay.appendChild(card);
@@ -301,32 +289,25 @@
     selectedFile = f;
     elFileName.textContent = f.name;
 
-    // show thumb immediately (then hide once target shows)
     setThumb(f);
     showThumb();
 
-    // main image
     if (objectUrl) URL.revokeObjectURL(objectUrl);
     objectUrl = URL.createObjectURL(f);
     elImg.src = objectUrl;
 
-    // reset taps
     anchor = null;
     hits = [];
     redrawAll();
 
-    // show target immediately (NO Start)
     elImgBox.classList.remove("hidden");
     elControls.classList.remove("hidden");
-
-    // once target is up, thumbnail should disappear
     hideThumb();
 
     setInstruction("Tap bull’s-eye (anchor)");
     elImgBox.scrollIntoView({ behavior: "smooth", block: "start" });
   });
 
-  // Tap handling
   elDots.addEventListener("pointerdown", (evt) => {
     if (!selectedFile) return;
     evt.preventDefault();
@@ -362,7 +343,6 @@
 
   elResults.addEventListener("click", () => showSECModal());
 
-  // Initial
   setHUD();
   redrawAll();
 })();
