@@ -7,12 +7,12 @@
   <meta name="theme-color" content="#07110c" />
   <title>Tap-n-Score™</title>
 
-  <!-- BUST CACHE: bump this v when testing -->
-  <link rel="stylesheet" href="./styles.css?v=20260130c" />
+  <link rel="stylesheet" href="./styles.css?v=FIX-LOCK-IMG-1" />
 </head>
 
 <body>
   <main class="page">
+
     <section class="card">
       <header class="hero">
         <div class="brandLine">
@@ -24,13 +24,11 @@
       <div class="field">
         <div class="label">Take or Choose Target Photo</div>
 
-        <!-- hidden real input -->
         <input id="photoInput" class="hiddenFile" type="file" accept="image/*" />
 
-        <!-- our button -->
         <button id="chooseBtn" class="btnPrimary" type="button">Choose Photo</button>
 
-        <div id="fileName" class="hint">No file selected.</div>
+        <div id="fileName" class="hintStrong">No file selected.</div>
         <div class="hint">Tip: Straight-on photos give the most accurate results.</div>
       </div>
 
@@ -60,35 +58,23 @@
         <div id="thumbBox" class="thumbBox">
           <div class="thumbEmpty">No photo selected yet.</div>
         </div>
-        <div class="hintStrong">Next: tap your confirmed hits.</div>
       </div>
 
-      <div class="field">
-        <div class="bigTitle">What happens next</div>
-        <ul class="bullets">
-          <li>Tap bull’s-eye (anchor)</li>
-          <li>Calibrate once (grid)</li>
-          <li>Tap each confirmed hit</li>
-          <li>Get measured clicks</li>
-        </ul>
-      </div>
-
-      <button id="startBtn" class="btnStart" type="button">Start</button>
+      <button id="startBtn" class="btnStart" type="button" disabled>
+        Start
+      </button>
     </section>
 
-    <!-- Target + Tap Layer (HIDDEN until image loads) -->
-    <section id="targetWrap" class="targetWrap hidden">
+    <!-- This box MUST contain ONLY the image + overlay -->
+    <section id="imgBox" class="imgBox hidden" aria-label="Target image box">
       <img id="targetImg" alt="Selected target" />
-      <!-- THIS overlay is the ONLY tap receiver -->
-      <div id="tapLayer" aria-label="Tap layer"></div>
+      <div id="dotsLayer" aria-label="Tap overlay"></div>
     </section>
 
-    <!-- HUD -->
     <div id="instructionLine" class="hudLeft">Choose a photo to begin</div>
     <div id="tapCount" class="hudRight">Taps: 0</div>
 
-    <!-- BUST CACHE: bump this v when testing -->
-    <script src="./index.js?v=20260130c"></script>
+    <script src="./index.js?v=FIX-LOCK-IMG-1"></script>
   </main>
 </body>
 </html>
