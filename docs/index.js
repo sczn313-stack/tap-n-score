@@ -1,85 +1,42 @@
 /* ============================================================
-   index.js (FULL REPLACEMENT) — TAP-LAYER-LOCK-6a
+   index.js (FULL REPLACEMENT) — TAP-RESET-1
    Restores:
-   - Start flow
-   - Clear / Undo / Results buttons
-   - Thumbnail not huge (CSS handles size)
-   Fixes:
-   - Tap binding on #dotsLayer only (no double count)
+   - Start -> Tap Mode gate
+   - Clear / Undo / Results
+   - Anchor first tap, then hits
    - Overlay locked to image box
+   - Direction: shows OFFSET + SUGGESTED DIAL (opposite)
 ============================================================ */
 
 (() => {
   const $ = (id) => document.getElementById(id);
 
-  function showBanner(msg, ms = 2200) {
-    let b = document.getElementById("scznBanner");
-    if (!b) {
-      b = document.createElement("div");
-      b.id = "scznBanner";
-      b.style.position = "fixed";
-      b.style.left = "12px";
-      b.style.right = "12px";
-      b.style.bottom = "12px";
-      b.style.zIndex = "999999";
-      b.style.padding = "12px 14px";
-      b.style.borderRadius = "12px";
-      b.style.fontFamily = "system-ui,-apple-system,Segoe UI,Roboto,Arial";
-      b.style.fontSize = "14px";
-      b.style.fontWeight = "900";
-      b.style.background = "rgba(0,160,70,0.92)";
-      b.style.color = "#fff";
-      b.style.boxShadow = "0 12px 32px rgba(0,0,0,0.45)";
-      document.body.appendChild(b);
-    }
-    b.textContent = msg;
-    b.style.display = "block";
-    clearTimeout(showBanner._t);
-    showBanner._t = setTimeout(() => (b.style.display = "none"), ms);
+  const log = (...a) => console.log("[TAP-N-SCORE]", ...a);
+
+  // State
+  let tapMode = false;
+  let points = []; // {nx, ny} normalized to image box
+  let objectUrl = null;
+
+  function clamp01(v) { return Math.max(0, Math.min(1, v)); }
+
+  function setHud(text) {
+    const el = $("instructionLine");
+    if (el) el.textContent = text;
   }
 
-  const log = (...a) => console.log("[SCZN3]", ...a);
-
-  let taps = [];          // [{nx, ny}] first = anchor
-  let objectUrl = null;
-  let started = false;
+  function setTapCount() {
+    const el = $("tapCount");
+    if (!el) return;
+    const hits = Math.max(0, points.length - 1);
+    el.textContent = `Taps: ${points.length}  (hits: ${hits})`;
+  }
 
   function revokeUrl() {
     if (objectUrl) {
       try { URL.revokeObjectURL(objectUrl); } catch (_) {}
       objectUrl = null;
     }
-  }
-
-  function clamp01(v) {
-    return Math.max(0, Math.min(1, v));
-  }
-
-  function getClientXY(evt) {
-    if (evt && typeof evt.clientX === "number") return { x: evt.clientX, y: evt.clientY };
-    if (evt.touches && evt.touches[0]) return { x: evt.touches[0].clientX, y: evt.touches[0].clientY };
-    return null;
-  }
-
-  function renderDots(dotsLayer, imgBox, tapCountEl) {
-    dotsLayer.innerHTML = "";
-
-    const r = imgBox.getBoundingClientRect();
-    const w = r.width || 1;
-    const h = r.height || 1;
-
-    taps.forEach((t, i) => {
-      const d = document.createElement("div");
-      d.className = "tapDot";
-      d.style.width = i === 0 ? "18px" : "14px";
-      d.style.height = i === 0 ? "18px" : "14px";
-      d.style.left = `${t.nx * w}px`;
-      d.style.top = `${t.ny * h}px`;
-      d.style.background = i === 0 ? "rgba(255,180,0,0.95)" : "rgba(0,220,120,0.95)";
-      dotsLayer.appendChild(d);
-    });
-
-    tapCountEl.textContent = `Taps: ${taps.length}`;
   }
 
   async function loadImgSrc(imgEl, src) {
@@ -104,17 +61,17 @@
   async function loadFileToImg(file, imgEl) {
     revokeUrl();
 
-    // Try ObjectURL first
+    // ObjectURL first
     try {
       objectUrl = URL.createObjectURL(file);
       await loadImgSrc(imgEl, objectUrl);
       return;
     } catch (e) {
-      log("ObjectURL failed, using FileReader:", e);
+      log("ObjectURL failed, fallback to FileReader", e);
       revokeUrl();
     }
 
-    // Fallback: FileReader
+    // FileReader fallback
     const dataUrl = await new Promise((resolve, reject) => {
       const r = new FileReader();
       r.onload = () => resolve(r.result);
@@ -125,7 +82,9 @@
     await loadImgSrc(imgEl, dataUrl);
   }
 
-  function setThumb(thumbBox, src) {
+  function setThumb(src) {
+    const thumbBox = $("thumbBox");
+    if (!thumbBox) return;
     thumbBox.innerHTML = "";
     const im = document.createElement("img");
     im.src = src;
@@ -133,215 +92,255 @@
     thumbBox.appendChild(im);
   }
 
-  function moaInchesAt(distanceYds) {
-    // 1 MOA ~ 1.047" at 100yd (scale linearly)
-    return 1.047 * (Number(distanceYds) / 100);
+  function renderDots() {
+    const dotsLayer = $("dotsLayer");
+    const img = $("targetImg");
+    if (!dotsLayer || !img) return;
+
+    dotsLayer.innerHTML = "";
+
+    // Use IMG rect so dots match the real rendered pixels
+    const r = img.getBoundingClientRect();
+    const w = r.width || 1;
+    const h = r.height || 1;
+
+    points.forEach((p, i) => {
+      const d = document.createElement("div");
+      d.className = "tapDot";
+
+      const isAnchor = i === 0;
+      const size = isAnchor ? 18 : 14;
+
+      d.style.width = `${size}px`;
+      d.style.height = `${size}px`;
+      d.style.left = `${p.nx * w}px`;
+      d.style.top = `${p.ny * h}px`;
+      d.style.background = isAnchor
+        ? "rgba(255,180,0,0.95)"
+        : "rgba(0,220,120,0.95)";
+
+      dotsLayer.appendChild(d);
+    });
+
+    setTapCount();
   }
 
-  function computeResultsText(distanceYds, clickValue) {
-    if (taps.length < 2) return "Need anchor + at least 1 hit.";
+  function showTapUI(on) {
+    const imgBox = $("imgBox");
+    const actionBar = $("actionBar");
+    if (imgBox) imgBox.classList.toggle("hidden", !on);
+    if (actionBar) actionBar.classList.toggle("hidden", !on);
+  }
 
-    const anchor = taps[0];
-    const hits = taps.slice(1);
+  function enterTapMode() {
+    tapMode = true;
+    showTapUI(true);
+    setHud(points.length === 0 ? "Tap bull’s-eye (anchor)" : "Now tap each confirmed hit");
+  }
 
-    const avg = hits.reduce((acc, t) => {
-      acc.nx += t.nx;
-      acc.ny += t.ny;
+  function exitTapMode() {
+    tapMode = false;
+    showTapUI(false);
+    setHud("Press Start to enter tap mode");
+  }
+
+  function clearAll() {
+    points = [];
+    renderDots();
+    setHud("Tap bull’s-eye (anchor)");
+  }
+
+  function undoOne() {
+    points.pop();
+    renderDots();
+    if (points.length === 0) setHud("Tap bull’s-eye (anchor)");
+    else if (points.length === 1) setHud("Now tap each confirmed hit");
+    else setHud("Now tap each confirmed hit");
+  }
+
+  function pct(n) { return (Math.abs(n) * 100).toFixed(2) + "%"; }
+
+  function computeResults() {
+    if (points.length < 2) {
+      return "Need at least:\n- 1 anchor tap\n- 1 hit tap";
+    }
+
+    const anchor = points[0];
+    const hits = points.slice(1);
+
+    const poib = hits.reduce((acc, p) => {
+      acc.x += p.nx;
+      acc.y += p.ny;
       return acc;
-    }, { nx: 0, ny: 0 });
+    }, { x: 0, y: 0 });
 
-    avg.nx /= hits.length;
-    avg.ny /= hits.length;
+    poib.x /= hits.length;
+    poib.y /= hits.length;
 
-    // dx/dy in "image percent" relative to anchor (for now)
-    const dx = avg.nx - anchor.nx; // + right
-    const dy = avg.ny - anchor.ny; // + down (screen space)
+    // Offset of POIB relative to Anchor in IMAGE SPACE:
+    // x: right positive, y: down positive (screen coords)
+    const dx = poib.x - anchor.nx; // + => POIB right of anchor
+    const dy = poib.y - anchor.ny; // + => POIB down of anchor
 
-    // We can’t convert to inches without calibration here, so we show percent + direction.
-    // This keeps the UI working while you finish grid calibration.
-    const dirH = dx > 0 ? "RIGHT" : "LEFT";
-    const dirV = dy > 0 ? "DOWN" : "UP";
+    const offsetH = dx >= 0 ? `${pct(dx)} RIGHT` : `${pct(dx)} LEFT`;
+    const offsetV = dy >= 0 ? `${pct(dy)} DOWN` : `${pct(dy)} UP`;
 
-    const absDx = Math.abs(dx) * 100;
-    const absDy = Math.abs(dy) * 100;
+    // Suggested dial to move POIB back to anchor = OPPOSITE of offset
+    const dialH = dx >= 0 ? "LEFT" : "RIGHT";
+    const dialV = dy >= 0 ? "UP" : "DOWN";
 
-    const moaPerClick = Number(clickValue);
-    const inchesPerMoa = moaInchesAt(distanceYds);
+    const dist = Number($("distanceYds")?.value || 100);
+    const click = Number($("clickValue")?.value || 0.25);
 
-    // Placeholder “clicks” in percent-space is meaningless, so do NOT fake it.
-    // Show the framework only.
+    // Informational only (still % until grid calibration exists)
+    const moaAtDist = 1.047 * (dist / 100);
+
     return [
       `Shots: ${hits.length}`,
-      `POIB vs Anchor (image-space):`,
-      `Horizontal: ${absDx.toFixed(2)}% ${dirH}`,
-      `Vertical:   ${absDy.toFixed(2)}% ${dirV}`,
       ``,
-      `Distance: ${distanceYds} yd`,
-      `Click: ${moaPerClick} MOA per click`,
-      `1 MOA ≈ ${inchesPerMoa.toFixed(3)}" at this distance`,
+      `POIB offset from Anchor (image-space):`,
+      `Horizontal: ${offsetH}`,
+      `Vertical:   ${offsetV}`,
       ``,
-      `Next step: add GRID calibration to convert % → inches → clicks.`
+      `Suggested dial (to move POIB to Anchor):`,
+      `Windage:    ${dialH}`,
+      `Elevation:  ${dialV}`,
+      ``,
+      `Distance: ${dist} yd`,
+      `Click: ${click} MOA per click`,
+      `1 MOA ≈ ${moaAtDist.toFixed(3)}" at this distance`,
+      ``,
+      `Next step: GRID calibration converts % → inches → clicks.`
     ].join("\n");
   }
 
-  function setButtons(clearBtn, undoBtn, resultsBtn) {
-    const hasImg = started;
-    const hasAny = taps.length > 0;
-    const hasEnoughForResults = taps.length >= 2;
+  function openModal(text) {
+    const modal = $("modal");
+    const modalText = $("modalText");
+    if (modalText) modalText.textContent = text;
+    if (modal) modal.classList.remove("hidden");
+  }
 
-    clearBtn.disabled = !(hasImg && hasAny);
-    undoBtn.disabled = !(hasImg && hasAny);
-    resultsBtn.disabled = !(hasImg && hasEnoughForResults);
+  function closeModal() {
+    const modal = $("modal");
+    if (modal) modal.classList.add("hidden");
+  }
+
+  function bindOverlayTaps() {
+    const dotsLayer = $("dotsLayer");
+    const img = $("targetImg");
+    if (!dotsLayer || !img) return;
+
+    dotsLayer.style.pointerEvents = "auto";
+    dotsLayer.style.touchAction = "none";
+
+    dotsLayer.addEventListener("pointerdown", (evt) => {
+      if (!tapMode) return; // gate: must press Start
+      if (evt.cancelable) evt.preventDefault();
+
+      const r = img.getBoundingClientRect();
+      if (r.width < 4 || r.height < 4) return;
+
+      const x = evt.clientX;
+      const y = evt.clientY;
+
+      // Normalize to image rect
+      const nx = clamp01((x - r.left) / r.width);
+      const ny = clamp01((y - r.top) / r.height);
+
+      points.push({ nx, ny });
+      renderDots();
+
+      if (points.length === 1) setHud("Now tap each confirmed hit");
+      else setHud("Now tap each confirmed hit");
+    }, { passive: false });
+
+    dotsLayer.addEventListener("contextmenu", (e) => e.preventDefault());
   }
 
   function init() {
-    showBanner("INDEX.JS LOADED ✅ vTAP-LAYER-LOCK-6a", 2400);
-    log("Loaded v6a");
-
     const input = $("photoInput");
     const chooseBtn = $("chooseBtn");
     const fileName = $("fileName");
-    const thumbBox = $("thumbBox");
-
     const startBtn = $("startBtn");
-    const imgBox = $("imgBox");
     const img = $("targetImg");
-    const dots = $("dotsLayer");
 
     const clearBtn = $("clearBtn");
     const undoBtn = $("undoBtn");
     const resultsBtn = $("resultsBtn");
+    const closeModalBtn = $("closeModalBtn");
+    const modal = $("modal");
 
-    const instructionEl = $("instructionLine");
-    const tapCountEl = $("tapCount");
-
-    const resultsPanel = $("resultsPanel");
-    const resultsBody = $("resultsBody");
-    const closeResultsBtn = $("closeResultsBtn");
-
-    if (!input || !chooseBtn || !startBtn || !imgBox || !img || !dots || !instructionEl || !tapCountEl) {
-      alert("Missing required element IDs. Make sure you replaced /docs/index.html with the provided version.");
+    if (!input || !chooseBtn || !startBtn || !img) {
+      alert("Missing required elements. Check IDs.");
       return;
     }
 
-    // Tap layer should receive taps, not the image
-    dots.style.pointerEvents = "auto";
-    dots.style.touchAction = "none";
+    bindOverlayTaps();
 
-    const onTap = (evt) => {
-      if (!started) return; // must press Start
-      if (evt.cancelable) evt.preventDefault();
-
-      const pt = getClientXY(evt);
-      if (!pt) return;
-
-      const r = imgBox.getBoundingClientRect();
-      if (r.width < 8 || r.height < 8) return;
-
-      const nx = clamp01((pt.x - r.left) / r.width);
-      const ny = clamp01((pt.y - r.top) / r.height);
-
-      taps.push({ nx, ny });
-      renderDots(dots, imgBox, tapCountEl);
-
-      if (taps.length === 1) instructionEl.textContent = "Now tap each confirmed hit";
-      setButtons(clearBtn, undoBtn, resultsBtn);
-    };
-
-    // SINGLE listener (no double count)
-    dots.addEventListener("pointerdown", onTap, { passive: false });
-    dots.addEventListener("contextmenu", (e) => e.preventDefault());
-
+    // Choose Photo button triggers file picker
     chooseBtn.addEventListener("click", () => input.click());
 
     input.addEventListener("change", async () => {
       const file = input.files && input.files[0] ? input.files[0] : null;
       if (!file) return;
 
-      showBanner(`FILE: ${file.name}`, 1400);
-      fileName.textContent = file.name;
+      if (fileName) fileName.textContent = file.name;
 
-      // reset state
-      taps = [];
-      started = false;
-      tapCountEl.textContent = "Taps: 0";
-      instructionEl.textContent = "Photo loaded — press Start";
-      renderDots(dots, imgBox, tapCountEl);
+      // Reset state for new photo
+      points = [];
+      tapMode = false;
+      setTapCount();
+      renderDots();
+      exitTapMode();
+
+      setHud("Loading image…");
+      startBtn.disabled = true;
 
       try {
         await loadFileToImg(file, img);
-        setThumb(thumbBox, img.src);
+        setThumb(img.src);
 
-        // enable start
+        // Once image is loaded, enable Start
         startBtn.disabled = false;
-
-        // keep img box hidden until Start
-        imgBox.classList.add("hidden");
-
-        setButtons(clearBtn, undoBtn, resultsBtn);
+        setHud("Press Start to enter tap mode");
       } catch (e) {
-        log("Load failed:", e);
+        log("Image load failed:", e);
         alert("Couldn’t load image. Try a different photo.");
-        instructionEl.textContent = "Image load failed";
+        setHud("Image load failed");
       } finally {
-        input.value = ""; // allow selecting same file again on iOS
+        // iOS: allow picking same file again
+        input.value = "";
       }
     });
 
     startBtn.addEventListener("click", () => {
-      if (startBtn.disabled) return;
-      started = true;
+      // entering tap mode shows image box + bottom action bar
+      enterTapMode();
 
-      imgBox.classList.remove("hidden");
+      // scroll image into view immediately
+      $("imgBox")?.scrollIntoView({ behavior: "smooth", block: "start" });
 
-      taps = [];
-      tapCountEl.textContent = "Taps: 0";
-      instructionEl.textContent = "Tap bull’s-eye (anchor)";
-      renderDots(dots, imgBox, tapCountEl);
-
-      setButtons(clearBtn, undoBtn, resultsBtn);
+      // make sure dots are aligned
+      requestAnimationFrame(() => renderDots());
     });
 
-    clearBtn.addEventListener("click", () => {
-      if (clearBtn.disabled) return;
-      taps = [];
-      tapCountEl.textContent = "Taps: 0";
-      instructionEl.textContent = "Tap bull’s-eye (anchor)";
-      renderDots(dots, imgBox, tapCountEl);
-      setButtons(clearBtn, undoBtn, resultsBtn);
+    clearBtn?.addEventListener("click", clearAll);
+    undoBtn?.addEventListener("click", undoOne);
+    resultsBtn?.addEventListener("click", () => openModal(computeResults()));
+
+    closeModalBtn?.addEventListener("click", closeModal);
+    modal?.addEventListener("click", (e) => {
+      if (e.target === modal) closeModal();
     });
 
-    undoBtn.addEventListener("click", () => {
-      if (undoBtn.disabled) return;
-      taps.pop();
-      renderDots(dots, imgBox, tapCountEl);
+    // Keep dots aligned on resize/orientation changes
+    window.addEventListener("resize", () => renderDots());
+    window.addEventListener("orientationchange", () => setTimeout(renderDots, 200));
 
-      if (taps.length === 0) instructionEl.textContent = "Tap bull’s-eye (anchor)";
-      else if (taps.length === 1) instructionEl.textContent = "Now tap each confirmed hit";
-      else instructionEl.textContent = "Keep tapping hits (or press Results)";
-
-      setButtons(clearBtn, undoBtn, resultsBtn);
-    });
-
-    resultsBtn.addEventListener("click", () => {
-      if (resultsBtn.disabled) return;
-      const dist = $("distanceYds").value;
-      const click = $("clickValue").value;
-
-      resultsBody.textContent = computeResultsText(dist, click);
-      resultsPanel.classList.remove("hidden");
-    });
-
-    closeResultsBtn.addEventListener("click", () => {
-      resultsPanel.classList.add("hidden");
-    });
-
-    // Initial UI state
-    startBtn.disabled = true;
-    imgBox.classList.add("hidden");
-    tapCountEl.textContent = "Taps: 0";
-    instructionEl.textContent = "Choose a photo to begin";
-    setButtons(clearBtn, undoBtn, resultsBtn);
+    // Initial
+    setTapCount();
+    setHud("Choose a photo to begin");
   }
 
   if (document.readyState === "loading") {
