@@ -1,14 +1,33 @@
 /* ============================================================
-   styles.css (FULL REPLACEMENT) — vSEC-iPHONE-LOCK-1
-   Goals:
-   - iPhone-friendly scaling for SEC + tap flow
-   - Controls (Clear/Undo/Results) hidden until first tap
-   - Controls sized/positioned better on iPhone
+   styles.css (FULL REPLACEMENT) — vCTRL-MOBILE-FIT-1
+   Focus:
+   - Bottom controls bar fits iPhone screens
+   - Buttons scale down on small widths
+   - Respects iOS safe-area
+   - Clean tap targets (no giant blocks)
 ============================================================ */
 
 * { box-sizing: border-box; }
 html, body { height: 100%; }
 
+:root{
+  --maxW: 860px;
+  --edgePad: 12px;
+
+  /* Controls sizing */
+  --ctl-gap: 10px;
+  --ctl-pad: 10px;
+  --btn-radius: 14px;
+
+  /* Button height range (auto scales) */
+  --btnH: clamp(44px, 6.2vh, 58px);
+  --btnFont: clamp(14px, 3.6vw, 18px);
+
+  /* Bottom bar lift for iOS home indicator */
+  --safeBottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* ---------- Page base ---------- */
 body {
   margin: 0;
   font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
@@ -18,19 +37,21 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* page padding leaves space for bottom bar (when shown) */
 .page {
   min-height: 100vh;
-  padding: 18px 14px calc(110px + env(safe-area-inset-bottom));
+  padding: 18px 14px calc(120px + var(--safeBottom)); /* room for bottom bar */
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 18px;
 }
 
+.hiddenFile { display: none !important; }
+.hidden { display: none !important; }
+
 /* ---------- Card (landing) ---------- */
 .card {
-  width: min(860px, 96vw);
+  width: min(var(--maxW), 96vw);
   background: rgba(18, 24, 22, 0.58);
   border: 1px solid rgba(255,255,255,0.10);
   border-radius: 22px;
@@ -48,20 +69,17 @@ body {
   font-size: clamp(26px, 4vw, 44px);
   line-height: 1.05;
 }
-
 .tm { color: rgba(0,235,150,0.95); margin-left: 2px; }
 .sub { opacity: 0.85; font-weight: 700; font-size: 15px; }
 
 .field { margin: 12px 0; }
 .label { font-weight: 800; opacity: 0.92; margin-bottom: 8px; font-size: 15px; }
+
 .hint { opacity: 0.78; margin-top: 8px; font-weight: 600; }
 .hintStrong { margin-top: 10px; font-weight: 900; opacity: 0.92; }
 
 .row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
 @media (max-width: 520px) { .row { grid-template-columns: 1fr; } }
-
-.hiddenFile { display: none !important; }
-.hidden { display: none !important; }
 
 .select {
   width: 100%;
@@ -91,7 +109,6 @@ body {
   cursor: pointer;
   user-select: none;
   -webkit-tap-highlight-color: transparent;
-
   background: linear-gradient(180deg, rgba(0,140,90,0.92), rgba(0,85,55,0.92));
   color: rgba(255,255,255,0.95);
   box-shadow: 0 16px 50px rgba(0,0,0,0.50);
@@ -99,11 +116,7 @@ body {
 }
 .btnPrimary:active { transform: translateY(1px); }
 
-.whatNext { margin-top: 10px; }
-.bullets { margin: 8px 0 0; padding-left: 18px; }
-.bullets li { opacity: 0.9; font-weight: 700; margin: 6px 0; }
-
-/* ---------- Thumbnail (small) ---------- */
+/* ---------- Thumbnail ---------- */
 .thumbBox {
   margin-top: 8px;
   width: 100%;
@@ -112,31 +125,29 @@ body {
   border-radius: 18px;
   padding: 10px;
   overflow: hidden;
-
   display: flex;
   align-items: center;
   justify-content: center;
-
   min-height: 90px;
 }
+
 .thumbBox img {
   display: block;
   width: auto;
   height: auto;
-  max-width: 120px;
-  max-height: 120px;
+  max-width: 140px;
+  max-height: 140px;
   border-radius: 10px;
   border: 1px solid rgba(255,255,255,0.10);
 }
+
 .thumbEmpty { opacity: 0.72; font-weight: 800; padding: 10px 6px; }
 
-/* ============================================================
-   IMAGE BOX (tap surface)
-============================================================ */
+/* ---------- Image box ---------- */
 .imgBox {
   display: inline-block;
   position: relative;
-  width: min(860px, 96vw);
+  width: min(var(--maxW), 96vw);
   border-radius: 22px;
   overflow: hidden;
   border: 1px solid rgba(255,255,255,0.10);
@@ -189,43 +200,59 @@ body {
 .hudRight { right: 12px; }
 
 /* ============================================================
-   Bottom controls bar
-   - Hidden by default
-   - Shown only after first tap via .show
+   MOBILE-FIT CONTROLS BAR (the thing you asked for)
 ============================================================ */
+
+/* default hidden uses .hidden {display:none!important} from above */
+/* when JS adds .show, it appears */
+.controlsBar.show {
+  display: grid !important;
+}
+
+/* fixed bottom, safe-area aware, never too tall */
 .controlsBar {
   position: fixed;
-  left: 12px;
-  right: 12px;
-  bottom: calc(12px + env(safe-area-inset-bottom));
+  left: var(--edgePad);
+  right: var(--edgePad);
+  bottom: calc(var(--edgePad) + var(--safeBottom));
   z-index: 9999;
 
-  width: min(860px, calc(100vw - 24px));
+  width: min(var(--maxW), calc(100vw - (var(--edgePad) * 2)));
   margin: 0 auto;
 
-  display: none;              /* hidden until first tap */
+  display: grid;
   grid-template-columns: 1fr 1fr 1fr;
-  gap: 10px;
+  gap: var(--ctl-gap);
 
-  padding: 10px;
-  border-radius: 20px;
+  padding: var(--ctl-pad);
+  border-radius: 18px;
   border: 1px solid rgba(255,255,255,0.10);
   background: rgba(10,12,11,0.55);
   backdrop-filter: blur(12px);
   box-shadow: 0 20px 60px rgba(0,0,0,0.55);
 }
 
-.controlsBar.show { display: grid; }
-
+/* buttons scale to phone width */
 .btnCtl {
+  height: var(--btnH);
+  min-height: 44px;               /* iOS tap target */
   border: none;
-  border-radius: 16px;
-  padding: 14px 10px;
-  font-size: 18px;
+  border-radius: var(--btn-radius);
+  padding: 0 10px;
+  font-size: var(--btnFont);
   font-weight: 900;
   cursor: pointer;
   user-select: none;
   -webkit-tap-highlight-color: transparent;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 
   background: rgba(255,255,255,0.08);
   color: rgba(255,255,255,0.92);
@@ -233,7 +260,11 @@ body {
 }
 
 .btnCtl:active { transform: translateY(1px); }
-.btnCtl:disabled { opacity: 0.35; cursor: not-allowed; }
+
+.btnCtl:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
 
 .btnCtlPrimary {
   background: linear-gradient(180deg, rgba(0,170,110,0.95), rgba(0,105,70,0.95));
@@ -241,162 +272,77 @@ body {
   box-shadow: 0 16px 50px rgba(0,0,0,0.55);
 }
 
-/* iPhone sizing tweaks */
-@media (max-width: 430px) {
-  .page { padding: 14px 10px calc(96px + env(safe-area-inset-bottom)); gap: 14px; }
-
-  .hudLeft, .hudRight {
-    top: 10px;
-    padding: 9px 12px;
-    font-size: 15px;
+/* iPhone small widths: tighten everything */
+@media (max-width: 420px) {
+  :root {
+    --ctl-gap: 8px;
+    --ctl-pad: 9px;
+    --btn-radius: 13px;
+    --btnH: clamp(44px, 6vh, 54px);
+    --btnFont: clamp(13px, 3.5vw, 16px);
   }
+}
 
-  .controlsBar {
-    left: 10px;
-    right: 10px;
-    width: calc(100vw - 20px);
-    padding: 9px;
-    gap: 8px;
-    border-radius: 18px;
-  }
-
+/* super tight screens: allow 2-line button labels */
+@media (max-width: 360px) {
   .btnCtl {
-    padding: 12px 8px;
-    font-size: 16px;
-    border-radius: 14px;
+    white-space: normal;
+    line-height: 1.05;
+    padding: 8px 8px;
   }
 }
 
 /* ============================================================
-   SEC Modal styling (so it scales on iPhone)
+   SEC modal base (kept simple)
 ============================================================ */
 .secOverlay {
   position: fixed;
   inset: 0;
   z-index: 999999;
   background: rgba(0,0,0,0.55);
-  backdrop-filter: blur(10px);
+  backdrop-filter: blur(8px);
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 14px;
+  padding: 18px;
 }
 
 .secCard {
   width: min(860px, 96vw);
   border-radius: 22px;
   border: 1px solid rgba(255,255,255,0.12);
-  background: rgba(12,14,13,0.75);
+  background: rgba(12,14,13,0.72);
   box-shadow: 0 26px 80px rgba(0,0,0,0.65);
-  padding: 16px 16px 14px;
+  padding: 18px 18px 16px;
   color: rgba(255,255,255,0.92);
 }
 
 .secTitle {
-  font-size: clamp(22px, 5vw, 34px);
-  font-weight: 1000;
-  letter-spacing: 0.6px;
-  margin-bottom: 10px;
-}
-
-.secRow {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  gap: 12px;
-  align-items: center;
-
-  border: 1px solid rgba(255,255,255,0.10);
-  background: rgba(255,255,255,0.05);
-  border-radius: 18px;
-  padding: 14px 14px;
-  margin: 10px 0;
-}
-
-.secLabel {
-  font-size: clamp(16px, 4vw, 22px);
+  font-size: 22px;
   font-weight: 900;
-  opacity: 0.95;
-}
-
-.secValueWrap {
-  display: flex;
-  align-items: baseline;
-  gap: 10px;
-}
-
-.secArrow {
-  font-size: clamp(22px, 6vw, 40px);
-  font-weight: 1000;
-  opacity: 0.95;
-  line-height: 1;
-}
-
-.secValue {
-  font-size: clamp(26px, 8vw, 54px);
-  font-weight: 1100;
   letter-spacing: 0.4px;
-  line-height: 1;
-}
-
-.secDirMini {
-  font-size: clamp(14px, 3.2vw, 18px);
-  font-weight: 1000;
-  opacity: 0.9;
-  margin-left: 2px;
+  margin-bottom: 8px;
 }
 
 .secMeta {
-  margin-top: 4px;
-  font-weight: 900;
-  opacity: 0.92;
-  font-size: clamp(14px, 3.4vw, 18px);
+  font-size: 16px;
+  font-weight: 800;
+  opacity: 0.9;
+  margin-bottom: 12px;
 }
-
-/* action buttons in SEC */
-.secActions {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
-  margin-top: 12px;
-}
-
-.secBtn {
-  border: none;
-  border-radius: 16px;
-  padding: 14px 12px;
-  font-size: 18px;
-  font-weight: 1000;
-  cursor: pointer;
-  user-select: none;
-  -webkit-tap-highlight-color: transparent;
-
-  background: linear-gradient(180deg, rgba(0,170,110,0.95), rgba(0,105,70,0.95));
-  color: rgba(255,255,255,0.96);
-  border: 1px solid rgba(255,255,255,0.12);
-  box-shadow: 0 14px 44px rgba(0,0,0,0.55);
-}
-.secBtn:active { transform: translateY(1px); }
 
 .secClose {
-  margin-top: 12px;
   width: 100%;
   border: none;
   border-radius: 999px;
   padding: 16px 18px;
-  font-size: 20px;
-  font-weight: 1000;
+  font-size: 18px;
+  font-weight: 900;
   cursor: pointer;
+
   background: linear-gradient(180deg, rgba(0,170,110,0.95), rgba(0,105,70,0.95));
   color: rgba(255,255,255,0.96);
   border: 1px solid rgba(255,255,255,0.12);
   box-shadow: 0 18px 60px rgba(0,0,0,0.55);
 }
 .secClose:active { transform: translateY(1px); }
-
-@media (max-width: 430px) {
-  .secCard { padding: 14px 14px 12px; border-radius: 20px; }
-  .secRow { padding: 12px 12px; border-radius: 16px; }
-  .secActions { grid-template-columns: 1fr 1fr; gap: 8px; }
-  .secBtn { padding: 12px 10px; font-size: 16px; border-radius: 14px; }
-  .secClose { padding: 14px 14px; font-size: 18px; }
-}
