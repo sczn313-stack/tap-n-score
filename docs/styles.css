@@ -1,10 +1,8 @@
 /* ============================================================
-   styles.css (FULL REPLACEMENT) — TNS-LOCK-7
-   Goals:
-   - Thumbnail NOT huge
-   - Overlay matches EXACT rendered image box
-   - Clear/Undo/Results visible (fixed bar)
-   - iOS Safari: prevent gesture stealing while tapping
+   styles.css (FULL REPLACEMENT) — TNS-NOSTART-1
+   - Small thumbnail
+   - Overlay lock preserved
+   - Bottom controls preserved
 ============================================================ */
 
 * { box-sizing: border-box; }
@@ -21,7 +19,7 @@ body {
 
 .page {
   min-height: 100vh;
-  padding: 18px 14px 110px; /* room for bottom bar */
+  padding: 18px 14px 110px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -81,8 +79,7 @@ body {
   box-shadow: 0 0 0 3px rgba(0,235,150,0.16);
 }
 
-.btnPrimary,
-.btnStart {
+.btnPrimary {
   width: 100%;
   border: none;
   border-radius: 999px;
@@ -92,9 +89,6 @@ body {
   cursor: pointer;
   user-select: none;
   -webkit-tap-highlight-color: transparent;
-}
-
-.btnPrimary {
   background: linear-gradient(180deg, rgba(0,140,90,0.92), rgba(0,85,55,0.92));
   color: rgba(255,255,255,0.95);
   box-shadow: 0 16px 50px rgba(0,0,0,0.50);
@@ -102,55 +96,39 @@ body {
 }
 .btnPrimary:active { transform: translateY(1px); }
 
-.btnStart {
-  margin-top: 12px;
-  background: linear-gradient(180deg, rgba(0,170,110,0.95), rgba(0,105,70,0.95));
-  color: rgba(255,255,255,0.96);
-  border: 1px solid rgba(255,255,255,0.12);
-  box-shadow: 0 18px 60px rgba(0,0,0,0.55);
-}
-.btnStart:active { transform: translateY(1px); }
-
-.btnStart:disabled {
-  opacity: 0.45;
-  cursor: not-allowed;
-  filter: grayscale(30%);
-}
-
-/* ---------- Steps list ---------- */
-.steps {
-  margin: 0;
-  padding-left: 18px;
-  opacity: 0.92;
-  font-weight: 700;
-}
+/* ---------- Steps ---------- */
+.steps { margin: 0; padding-left: 18px; opacity: 0.92; font-weight: 700; }
 .steps li { margin: 6px 0; }
 
-/* ---------- Thumbnail (cap height) ---------- */
+/* ---------- Thumbnail (SMALL) ---------- */
 .thumbBox {
-  margin-top: 8px;
   width: 100%;
   background: rgba(0,0,0,0.20);
   border: 1px solid rgba(255,255,255,0.10);
   border-radius: 18px;
-  padding: 12px;
+  padding: 10px;
   overflow: hidden;
 }
+
+.thumbSmall {
+  /* makes it feel like a thumbnail, not a second “main image” */
+  max-width: 320px;
+}
+
 .thumbBox img {
   width: 100%;
-  max-height: 220px;         /* FIX: prevents “giant thumbnail” */
-  object-fit: contain;       /* keep aspect */
+  max-height: 120px;     /* SMALL thumbnail */
+  object-fit: contain;
   display: block;
   border-radius: 12px;
   background: rgba(0,0,0,0.18);
 }
+
 .thumbEmpty { opacity: 0.72; font-weight: 800; padding: 10px 6px; }
 
 .hidden { display: none !important; }
 
-/* ============================================================
-   IMAGE BOX (critical lock)
-============================================================ */
+/* ---------- Image Box (lock) ---------- */
 .imgBox {
   display: inline-block;
   position: relative;
@@ -173,17 +151,15 @@ body {
   user-select: none;
 }
 
-/* Overlay EXACTLY on image */
 #dotsLayer {
   position: absolute;
   inset: 0;
   z-index: 5;
-  touch-action: none;   /* iOS: do not let scroll/pinch steal taps */
+  touch-action: none;
   pointer-events: auto;
   background: transparent;
 }
 
-/* Tap dots */
 .tapDot {
   position: absolute;
   transform: translate(-50%, -50%);
