@@ -1,9 +1,8 @@
 /* ============================================================
-   index.js (FULL REPLACEMENT) — vSEC-iPHONE-LOCK-1
-   - NO Start button
-   - Photo loads -> image shows -> tapping works
-   - ControlsBar (Clear/Undo/Results) ONLY appears after first tap
-   - iPhone-friendly SEC modal classes (uses CSS)
+   index.js (FULL REPLACEMENT) — vSEC-iPHONE-LOCK-2
+   FIX:
+   - Clear/Undo/Results appear ONLY after first tap (anchor or hit)
+   - Works even if controlsBar has class="hidden" in HTML
 ============================================================ */
 
 (() => {
@@ -76,7 +75,7 @@
 
     setHUD();
 
-    // Buttons enablement (only matters once controls are visible)
+    // Enable/disable
     elClear.disabled = (!anchor && hits.length === 0);
     elUndo.disabled = (!anchor && hits.length === 0);
     elResults.disabled = (!anchor || hits.length === 0);
@@ -98,40 +97,26 @@
     return { x: clamp01(x), y: clamp01(y) };
   }
 
-  function computePOIB() {
-    if (hits.length === 0) return null;
-    const sum = hits.reduce((acc, p) => ({ x: acc.x + p.x, y: acc.y + p.y }), { x: 0, y: 0 });
-    return { x: sum.x / hits.length, y: sum.y / hits.length };
+  // --- Controls visibility (THIS IS THE FIX)
+  function hideControlsUntilFirstTap() {
+    controlsArmed = false;
+
+    // remove show + force hidden to win
+    elControls.classList.remove("show");
+    elControls.classList.add("hidden");
   }
 
-  // Direction + arrows for SEC display
-  // dx/dy are POIB -> Anchor (bull - poib). screen-space: down is +
-  function computeDirections(anchorPt, poibPt) {
-    const dx = anchorPt.x - poibPt.x;
-    const dy = anchorPt.y - poibPt.y;
+  function showControlsAfterFirstTap() {
+    if (controlsArmed) return;
+    controlsArmed = true;
 
-    const windDir = dx >= 0 ? "R" : "L";
-    const elevDir = dy >= 0 ? "D" : "U";
-
-    const windArrow = dx >= 0 ? "→" : "←";
-    const elevArrow = dy >= 0 ? "↓" : "↑";
-
-    return { windDir, elevDir, windArrow, elevArrow };
+    // remove hidden (it has !important) then show
+    elControls.classList.remove("hidden");
+    elControls.classList.add("show");
   }
 
-  // NOTE: This demo modal uses placeholder click numbers unless your backend is already feeding real clicks.
-  // If you already have real click values in your current build, plug them into windClicks / elevClicks below.
+  // SEC modal placeholder (kept minimal here)
   function showSECModal() {
-    const poib = computePOIB();
-    if (!anchor || !poib) return;
-
-    // Placeholder numbers: replace these with your real computed click outputs if already available
-    // (If your backend returns clicks, put them here.)
-    const windClicks = 33.68;
-    const elevClicks = 35.33;
-
-    const dirs = computeDirections(anchor, poib);
-
     const overlay = document.createElement("div");
     overlay.className = "secOverlay";
 
@@ -146,93 +131,6 @@
     shots.className = "secMeta";
     shots.textContent = `Shots: ${hits.length}`;
 
-    // Windage row
-    const windRow = document.createElement("div");
-    windRow.className = "secRow";
-
-    const windLabel = document.createElement("div");
-    windLabel.className = "secLabel";
-    windLabel.textContent = "Windage Clicks";
-
-    const windValWrap = document.createElement("div");
-    windValWrap.className = "secValueWrap";
-
-    const windArrow = document.createElement("div");
-    windArrow.className = "secArrow";
-    windArrow.textContent = dirs.windArrow;
-
-    const windValue = document.createElement("div");
-    windValue.className = "secValue";
-    windValue.textContent = windClicks.toFixed(2);
-
-    const windMini = document.createElement("div");
-    windMini.className = "secDirMini";
-    windMini.textContent = dirs.windDir;
-
-    windValWrap.appendChild(windArrow);
-    windValWrap.appendChild(windValue);
-    windValWrap.appendChild(windMini);
-
-    windRow.appendChild(windLabel);
-    windRow.appendChild(windValWrap);
-
-    // Elev row
-    const elevRow = document.createElement("div");
-    elevRow.className = "secRow";
-
-    const elevLabel = document.createElement("div");
-    elevLabel.className = "secLabel";
-    elevLabel.textContent = "Elevation Clicks";
-
-    const elevValWrap = document.createElement("div");
-    elevValWrap.className = "secValueWrap";
-
-    const elevArrow = document.createElement("div");
-    elevArrow.className = "secArrow";
-    elevArrow.textContent = dirs.elevArrow;
-
-    const elevValue = document.createElement("div");
-    elevValue.className = "secValue";
-    elevValue.textContent = elevClicks.toFixed(2);
-
-    const elevMini = document.createElement("div");
-    elevMini.className = "secDirMini";
-    elevMini.textContent = dirs.elevDir;
-
-    elevValWrap.appendChild(elevArrow);
-    elevValWrap.appendChild(elevValue);
-    elevValWrap.appendChild(elevMini);
-
-    elevRow.appendChild(elevLabel);
-    elevRow.appendChild(elevValWrap);
-
-    // Actions (two buttons)
-    const actions = document.createElement("div");
-    actions.className = "secActions";
-
-    const btnBuy = document.createElement("button");
-    btnBuy.className = "secBtn";
-    btnBuy.type = "button";
-    btnBuy.textContent = "Buy more targets";
-    btnBuy.addEventListener("click", () => {
-      // TODO: set Baker link here when ready
-      // window.location.href = "https://...";
-      overlay.remove();
-    });
-
-    const btnSurvey = document.createElement("button");
-    btnSurvey.className = "secBtn";
-    btnSurvey.type = "button";
-    btnSurvey.textContent = "Survey";
-    btnSurvey.addEventListener("click", () => {
-      // TODO: set survey link here when ready
-      // window.location.href = "https://...";
-      overlay.remove();
-    });
-
-    actions.appendChild(btnBuy);
-    actions.appendChild(btnSurvey);
-
     const close = document.createElement("button");
     close.className = "secClose";
     close.type = "button";
@@ -245,24 +143,10 @@
 
     card.appendChild(title);
     card.appendChild(shots);
-    card.appendChild(windRow);
-    card.appendChild(elevRow);
-    card.appendChild(actions);
     card.appendChild(close);
 
     overlay.appendChild(card);
     document.body.appendChild(overlay);
-  }
-
-  function hideControlsUntilFirstTap() {
-    controlsArmed = false;
-    elControls.classList.remove("show");
-  }
-
-  function showControlsAfterFirstTap() {
-    if (controlsArmed) return;
-    controlsArmed = true;
-    elControls.classList.add("show");
   }
 
   // Events
@@ -277,36 +161,34 @@
 
     setThumb(f);
 
-    // main image
     if (objectUrl) URL.revokeObjectURL(objectUrl);
     objectUrl = URL.createObjectURL(f);
     elImg.src = objectUrl;
 
-    // reset
+    // reset taps
     anchor = null;
     hits = [];
     redrawAll();
 
-    // show image immediately
+    // show image area
     elImgBox.classList.remove("hidden");
 
-    // IMPORTANT: controls stay hidden until first tap
+    // controls stay hidden until first tap
     hideControlsUntilFirstTap();
 
     setInstruction("Tap bull’s-eye (anchor)");
-
     elImgBox.scrollIntoView({ behavior: "smooth", block: "start" });
   });
 
   // Tap handling
   elDots.addEventListener("pointerdown", (evt) => {
-    if (!selectedFile) return; // only after photo chosen
+    if (!selectedFile) return;
     evt.preventDefault();
 
     const norm = getNormFromEvent(evt);
     if (!norm) return;
 
-    // first tap => show control buttons
+    // FIRST TAP => show controls
     showControlsAfterFirstTap();
 
     if (!anchor) {
@@ -315,6 +197,7 @@
     } else {
       hits.push(norm);
     }
+
     redrawAll();
   }, { passive: false });
 
@@ -323,7 +206,6 @@
     hits = [];
     setInstruction("Tap bull’s-eye (anchor)");
     redrawAll();
-    // controls stay visible after first tap (by design)
   });
 
   elUndo.addEventListener("click", () => {
