@@ -1,17 +1,12 @@
 /* ============================================================
-   index.js (FULL REPLACEMENT) — LOCK-20260130-01
-   Pilot lock:
-   - Photo loads -> tap works immediately (no Start)
-   - Anchor first, then hits
-   - Clear / Undo / Results always available (when appropriate)
-   - Results show:
-       1) HIT POSITION truth (POIB relative to Anchor)
-       2) CORRECTION truth (Dial direction = opposite)
-   - No % shown (no fake "click math" without scale)
+   index.js (FULL REPLACEMENT) — vTAP-NOSTART-2
+   - Thumbnail disappears when target pops up
+   - NO Start button / tap immediately after photo loads
+   - Clear / Undo / Results logic preserved
+   - Direction text preserved (screen truth)
 ============================================================ */
 
 (() => {
-  const BUILD = "LOCK-20260130-01";
   const $ = (id) => document.getElementById(id);
 
   // Elements
@@ -23,6 +18,9 @@
   const elImgBox = $("imgBox");
   const elImg = $("targetImg");
   const elDots = $("dotsLayer");
+
+  const elDistance = $("distanceYds");
+  const elClick = $("clickValue");
 
   const elHUDLeft = $("instructionLine");
   const elHUDRight = $("tapCount");
@@ -39,19 +37,28 @@
   let anchor = null; // {x,y} normalized
   let hits = [];     // [{x,y}...]
 
-  // ---------- Helpers ----------
-  function clamp01(v) { return Math.max(0, Math.min(1, v)); }
-
-  function setInstruction(msg) {
-    elHUDLeft.textContent = `${msg}  •  BUILD ${BUILD}`;
+  // ---------- Thumbnail visibility ----------
+  function hideThumb() {
+    if (!elThumbBox) return;
+    elThumbBox.classList.add("thumbHidden");
   }
+
+  function showThumb() {
+    if (!elThumbBox) return;
+    elThumbBox.classList.remove("thumbHidden");
+  }
+
+  // Helpers
+  function clamp01(v) { return Math.max(0, Math.min(1, v)); }
 
   function setHUD() {
     elHUDRight.textContent = `Taps: ${(anchor ? 1 : 0) + hits.length} (hits: ${hits.length})`;
   }
 
+  function setInstruction(msg) { elHUDLeft.textContent = msg; }
+
   function clearDots() {
-    elDots.innerHTML = "";
+    while (elDots.firstChild) elDots.removeChild(elDots.firstChild);
   }
 
   function drawDot(norm, kind) {
@@ -61,6 +68,7 @@
     const size = kind === "anchor" ? 18 : 16;
     dot.style.width = `${size}px`;
     dot.style.height = `${size}px`;
+
     dot.style.left = `${(norm.x * 100).toFixed(4)}%`;
     dot.style.top  = `${(norm.y * 100).toFixed(4)}%`;
 
@@ -79,37 +87,18 @@
     setHUD();
 
     // Buttons
-    const any = (!!anchor || hits.length > 0);
-    elClear.disabled = !any;
-    elUndo.disabled = !any;
+    elClear.disabled = (!anchor && hits.length === 0);
+    elUndo.disabled = (!anchor && hits.length === 0);
     elResults.disabled = (!anchor || hits.length === 0);
   }
 
-  function computePOIB() {
-    if (hits.length === 0) return null;
-    const sum = hits.reduce((acc, p) => ({ x: acc.x + p.x, y: acc.y + p.y }), { x: 0, y: 0 });
-    return { x: sum.x / hits.length, y: sum.y / hits.length };
-  }
-
-  // HIT POSITION truth: POIB relative to Anchor (what the paper says)
-  function hitTruth(anchorPt, poibPt) {
-    // screen coords: +y is down
-    const dx = poibPt.x - anchorPt.x; // + means hits RIGHT
-    const dy = poibPt.y - anchorPt.y; // + means hits DOWN (low)
-
-    const horiz = dx >= 0 ? "RIGHT" : "LEFT";
-    const vert  = dy >= 0 ? "DOWN" : "UP";
-    return { horiz, vert };
-  }
-
-  // CORRECTION truth: Dial direction (opposite of hit displacement)
-  function correctionTruth(anchorPt, poibPt) {
-    const dxC = anchorPt.x - poibPt.x;
-    const dyC = anchorPt.y - poibPt.y;
-
-    const horiz = dxC >= 0 ? "RIGHT" : "LEFT";
-    const vert  = dyC >= 0 ? "DOWN" : "UP";
-    return { horiz, vert };
+  function setThumb(file) {
+    if (!elThumbBox) return;
+    elThumbBox.innerHTML = "";
+    const img = document.createElement("img");
+    img.alt = "Selected thumbnail";
+    img.src = URL.createObjectURL(file);
+    elThumbBox.appendChild(img);
   }
 
   function getNormFromEvent(evt) {
@@ -120,69 +109,37 @@
     return { x: clamp01(x), y: clamp01(y) };
   }
 
-  function revokeUrl() {
-    if (objectUrl) {
-      try { URL.revokeObjectURL(objectUrl); } catch (_) {}
-      objectUrl = null;
-    }
+  function computePOIB() {
+    if (hits.length === 0) return null;
+    const sum = hits.reduce((acc, p) => ({ x: acc.x + p.x, y: acc.y + p.y }), { x: 0, y: 0 });
+    return { x: sum.x / hits.length, y: sum.y / hits.length };
   }
 
-  async function loadImgSrc(src) {
-    await new Promise((resolve, reject) => {
-      const ok = () => cleanup(resolve);
-      const bad = () => cleanup(() => reject(new Error("Image load error")));
-      const cleanup = (done) => {
-        elImg.removeEventListener("load", ok);
-        elImg.removeEventListener("error", bad);
-        done();
-      };
-      elImg.addEventListener("load", ok, { once: true });
-      elImg.addEventListener("error", bad, { once: true });
-      elImg.src = src;
-    });
+  function directionText(anchorPt, poibPt) {
+    // POIB -> Anchor (bull - poib)
+    const dx = anchorPt.x - poibPt.x;
+    const dy = anchorPt.y - poibPt.y; // screen truth: down is +
 
-    if (elImg.decode) {
-      try { await elImg.decode(); } catch (_) {}
-    }
-  }
+    const horizDir = dx >= 0 ? "RIGHT" : "LEFT";
+    const vertDir  = dy >= 0 ? "DOWN" : "UP";
 
-  async function loadFileToMainImage(file) {
-    revokeUrl();
-
-    // Try ObjectURL first
-    try {
-      objectUrl = URL.createObjectURL(file);
-      await loadImgSrc(objectUrl);
-      return;
-    } catch (_) {
-      revokeUrl();
-    }
-
-    // Fallback to FileReader (iOS reliability)
-    const dataUrl = await new Promise((resolve, reject) => {
-      const r = new FileReader();
-      r.onload = () => resolve(r.result);
-      r.onerror = () => reject(new Error("FileReader failed"));
-      r.readAsDataURL(file);
-    });
-
-    await loadImgSrc(dataUrl);
-  }
-
-  function setThumb(file) {
-    elThumbBox.innerHTML = "";
-    const img = document.createElement("img");
-    img.alt = "Selected thumbnail";
-    img.src = URL.createObjectURL(file);
-    elThumbBox.appendChild(img);
+    return {
+      horizDir,
+      vertDir,
+      horizPct: Math.abs(dx) * 100,
+      vertPct:  Math.abs(dy) * 100
+    };
   }
 
   function showResultsModal() {
     const poib = computePOIB();
     if (!anchor || !poib) return;
 
-    const hit = hitTruth(anchor, poib);
-    const dial = correctionTruth(anchor, poib);
+    const dist = Number(elDistance.value) || 100;
+    const clickVal = Number(elClick.value) || 0.25;
+    const oneMOAin = (dist / 100) * 1.047;
+
+    const dir = directionText(anchor, poib);
 
     const overlay = document.createElement("div");
     overlay.style.position = "fixed";
@@ -219,10 +176,15 @@
     body.textContent =
 `Shots: ${hits.length}
 
-HITS ARE: ${hit.vert} ${hit.horiz}
-DIAL:     ${dial.vert} ${dial.horiz}
+POIB vs Anchor (image-space):
+Horizontal: ${dir.horizPct.toFixed(2)}% ${dir.horizDir}
+Vertical:   ${dir.vertPct.toFixed(2)}% ${dir.vertDir}
 
-(Clicks require scale calibration. This pilot view locks direction truth first.)`;
+Distance: ${dist} yd
+Click: ${clickVal} MOA per click
+1 MOA ≈ ${oneMOAin.toFixed(3)}" at this distance
+
+Next step: add GRID calibration to convert % → inches → clicks.`;
 
     const btn = document.createElement("button");
     btn.textContent = "Close";
@@ -242,40 +204,38 @@ DIAL:     ${dial.vert} ${dial.horiz}
     document.body.appendChild(overlay);
   }
 
-  // ---------- Events ----------
+  // Events
   elChoose.addEventListener("click", () => elFile.click());
 
-  elFile.addEventListener("change", async () => {
+  elFile.addEventListener("change", () => {
     const f = elFile.files && elFile.files[0];
     if (!f) return;
 
     selectedFile = f;
     elFileName.textContent = f.name;
 
-    setInstruction("Loading image…");
+    // Set thumbnail, but we'll hide it once the big target shows
     setThumb(f);
 
-    // reset taps
+    // main image
+    if (objectUrl) URL.revokeObjectURL(objectUrl);
+    objectUrl = URL.createObjectURL(f);
+    elImg.src = objectUrl;
+
+    // reset
     anchor = null;
     hits = [];
     redrawAll();
 
-    try {
-      elImgBox.classList.remove("hidden");
-      elControls.classList.remove("hidden");
+    // show image & controls immediately (NO Start)
+    elImgBox.classList.remove("hidden");
+    elControls.classList.remove("hidden");
 
-      await loadFileToMainImage(f);
+    // ✅ hide thumbnail now that target is live
+    hideThumb();
 
-      setInstruction("Tap bull’s-eye (anchor)");
-      elImgBox.scrollIntoView({ behavior: "smooth", block: "start" });
-
-    } catch (e) {
-      setInstruction("Image load failed");
-      alert("Couldn’t load image. Try a different photo.");
-    } finally {
-      // allow re-selecting the same photo on iOS
-      elFile.value = "";
-    }
+    setInstruction("Tap bull’s-eye (anchor)");
+    elImgBox.scrollIntoView({ behavior: "smooth", block: "start" });
   });
 
   // Tap handling
@@ -300,6 +260,9 @@ DIAL:     ${dial.vert} ${dial.horiz}
     hits = [];
     setInstruction("Tap bull’s-eye (anchor)");
     redrawAll();
+
+    // Optional: bring thumb back when cleared out
+    showThumb();
   });
 
   elUndo.addEventListener("click", () => {
@@ -312,10 +275,9 @@ DIAL:     ${dial.vert} ${dial.horiz}
     redrawAll();
   });
 
-  elResults.addEventListener("click", showResultsModal);
+  elResults.addEventListener("click", () => showResultsModal());
 
   // Initial
-  setInstruction("Choose a photo to begin");
   setHUD();
   redrawAll();
 })();
