@@ -1,19 +1,18 @@
 /* ============================================================
-   index.js (FULL REPLACEMENT) — vSEC-1g
-   Adds:
-   - SEC modal includes:
-     1) Buy more targets like this (primary)
-     2) Survey (primary)
-     3) Download SEC (Image) (secondary, full-width)
-   Includes built-in PNG generator via Canvas (no libraries)
+   index.js (FULL REPLACEMENT) — vSEC-SCORES-1
+   - Results modal IS the SEC
+   - Adds Shooter Score + previous 3 + average (localStorage)
+   - SEC layout: LEFT content, RIGHT intentionally blank
+   - CTAs smaller and kept on LEFT only
+   - Survey (Question A) remains
 ============================================================ */
 
 (() => {
   const $ = (id) => document.getElementById(id);
 
-  // ===== Vendor Hooks (EDIT THESE) =====
-  const VENDOR_BUY_URL = "https://bakertargets.com/";
-  const SURVEY_URL = "https://example.com/survey";
+  // ---------- Vendor hook ----------
+  const VENDOR_NAME = "Baker Printing";
+  const VENDOR_URL = "https://example.com"; // <-- replace with Baker link
 
   // Elements
   const elFile = $("photoInput");
@@ -43,16 +42,13 @@
   let anchor = null; // {x,y} normalized
   let hits = [];     // [{x,y}...]
 
-  // ===== Helpers =====
+  // ---------- Helpers ----------
   function clamp01(v) { return Math.max(0, Math.min(1, v)); }
 
   function setHUD() {
     elHUDRight.textContent = `Taps: ${(anchor ? 1 : 0) + hits.length} (hits: ${hits.length})`;
   }
-
-  function setInstruction(msg) {
-    elHUDLeft.textContent = msg;
-  }
+  function setInstruction(msg) { elHUDLeft.textContent = msg; }
 
   function clearDots() {
     while (elDots.firstChild) elDots.removeChild(elDots.firstChild);
@@ -61,18 +57,14 @@
   function drawDot(norm, kind) {
     const dot = document.createElement("div");
     dot.className = "tapDot";
-
     const size = kind === "anchor" ? 18 : 16;
     dot.style.width = `${size}px`;
     dot.style.height = `${size}px`;
-
     dot.style.left = `${(norm.x * 100).toFixed(4)}%`;
     dot.style.top  = `${(norm.y * 100).toFixed(4)}%`;
-
     dot.style.background = (kind === "anchor")
       ? "rgba(255, 196, 0, 0.95)"
       : "rgba(0, 220, 130, 0.95)";
-
     elDots.appendChild(dot);
   }
 
@@ -84,7 +76,7 @@
     setHUD();
 
     elClear.disabled = (!anchor && hits.length === 0);
-    elUndo.disabled = (!anchor && hits.length === 0);
+    elUndo.disabled  = (!anchor && hits.length === 0);
     elResults.disabled = (!anchor || hits.length === 0);
   }
 
@@ -95,9 +87,6 @@
     img.src = URL.createObjectURL(file);
     elThumbBox.appendChild(img);
   }
-
-  function hideThumb() { elThumbBox.classList.add("thumbHidden"); }
-  function showThumb() { elThumbBox.classList.remove("thumbHidden"); }
 
   function getNormFromEvent(evt) {
     const rect = elDots.getBoundingClientRect();
@@ -113,330 +102,371 @@
     return { x: sum.x / hits.length, y: sum.y / hits.length };
   }
 
-  // Convert normalized delta -> inches (paper-based)
-  function normDeltaToInches(dxNorm, dyNorm) {
-    const PAPER_W_IN = 8.5;
-    const PAPER_H_IN = 11.0;
-    return { xIn: dxNorm * PAPER_W_IN, yIn: dyNorm * PAPER_H_IN };
-  }
-
-  function moaAtDistanceInches(distYds) {
-    return (distYds / 100) * 1.047;
-  }
-
-  function clicksFromInches(inches, oneMOAin, clickVal) {
-    const inchesPerClick = oneMOAin * clickVal;
-    if (!Number.isFinite(inchesPerClick) || inchesPerClick <= 0) return 0;
-    return inches / inchesPerClick;
-  }
-
-  function computeTurretInstructions(anchorPt, poibPt) {
+  function directionText(anchorPt, poibPt) {
     // POIB -> Anchor (bull - poib)
     const dx = anchorPt.x - poibPt.x;
-    const dy = anchorPt.y - poibPt.y; // screen truth: +dy means DOWN
+    const dy = anchorPt.y - poibPt.y; // screen truth: down is +
 
-    const inch = normDeltaToInches(dx, dy);
+    const horizDir = dx >= 0 ? "RIGHT" : "LEFT";
+    const vertDir  = dy >= 0 ? "DOWN" : "UP";
 
-    const dist = Number(elDistance.value) || 100;
-    const clickVal = Number(elClick.value) || 0.25;
-    const oneMOAin = moaAtDistanceInches(dist);
-
-    const windClicks = Math.abs(clicksFromInches(inch.xIn, oneMOAin, clickVal));
-    const elevClicks = Math.abs(clicksFromInches(inch.yIn, oneMOAin, clickVal));
-
-    const windDir = dx >= 0 ? "RIGHT" : "LEFT";
-    const elevDir = dy >= 0 ? "DOWN" : "UP";
-
-    const windArrow = dx >= 0 ? "→" : "←";
-    const elevArrow = dy >= 0 ? "↓" : "↑";
-
-    return { windDir, elevDir, windArrow, elevArrow, windClicks, elevClicks, dist, clickVal };
+    return {
+      horizDir,
+      vertDir,
+      horizPct: Math.abs(dx) * 100,
+      vertPct:  Math.abs(dy) * 100
+    };
   }
 
-  // ===== Performance color logic (LOCKED: 3 / 6) =====
-  const GREEN_MAX = 3.0;
-  const YELLOW_MAX = 6.0;
+  // ---------- Score logic (0..100) ----------
+  // We score "tightness" based on average distance of hits to POIB in normalized image space.
+  // This is NOT "inches" yet — it’s consistent, fast, and stable for the SEC.
+  function computeShooterScore() {
+    if (hits.length < 1) return { score: 0, colorClass: "scoreRed" };
 
-  function perfColor(clicks) {
-    const v = Number(clicks);
-    if (!Number.isFinite(v)) return "rgba(255,255,255,0.94)";
-    if (v <= GREEN_MAX)  return "rgba(0, 235, 150, 0.96)"; // green
-    if (v <= YELLOW_MAX) return "rgba(255, 196, 0, 0.96)"; // yellow
-    return "rgba(255, 90, 90, 0.96)";                      // red
+    const poib = computePOIB();
+    if (!poib) return { score: 0, colorClass: "scoreRed" };
+
+    // avg distance from POIB (normalized 0..~0.7 typically)
+    const avgDist = hits.reduce((acc, h) => {
+      const dx = h.x - poib.x;
+      const dy = h.y - poib.y;
+      return acc + Math.sqrt(dx*dx + dy*dy);
+    }, 0) / hits.length;
+
+    // Map: avgDist 0.00 => 100, avgDist 0.20 => ~0
+    // clamp range so it behaves well.
+    const norm = Math.max(0, Math.min(1, avgDist / 0.20));
+    const score = Math.round((1 - norm) * 100);
+
+    // thresholds you gave: 33/66/100
+    let colorClass = "scoreRed";
+    if (score >= 67) colorClass = "scoreGreen";
+    else if (score >= 34) colorClass = "scoreYellow";
+
+    return { score, colorClass };
   }
 
-  function openUrl(url) {
-    if (!url) return;
+  function loadScoreHistory() {
     try {
-      const w = window.open(url, "_blank", "noopener,noreferrer");
-      if (!w) window.location.href = url;
+      const arr = JSON.parse(localStorage.getItem("sczn3_score_history") || "[]");
+      return Array.isArray(arr) ? arr : [];
     } catch {
-      window.location.href = url;
+      return [];
     }
   }
 
-  // ===== Download SEC as PNG (no libraries) =====
-  function downloadSECPng(sec, shotCount) {
-    // Canvas size: phone-friendly, crisp
-    const W = 1200;
-    const H = 700;
-
-    const c = document.createElement("canvas");
-    c.width = W;
-    c.height = H;
-    const ctx = c.getContext("2d");
-
-    // Background
-    ctx.fillStyle = "rgba(10,12,11,1)";
-    ctx.fillRect(0, 0, W, H);
-
-    // Soft border card
-    const pad = 40;
-    const r = 32;
-    roundRect(ctx, pad, pad, W - pad * 2, H - pad * 2, r);
-    ctx.fillStyle = "rgba(18, 24, 22, 0.95)";
-    ctx.fill();
-    ctx.lineWidth = 4;
-    ctx.strokeStyle = "rgba(255,255,255,0.10)";
-    ctx.stroke();
-
-    // Top label: SHOOTER EXPERIENCE CARD (R/W/B)
-    ctx.font = "900 42px system-ui, -apple-system, Segoe UI, Roboto, Arial";
-    ctx.textBaseline = "top";
-    let x = pad + 36;
-    let y = pad + 28;
-
-    x = drawPill(ctx, x, y, "SHOOTER", "rgba(255, 90, 90, 0.96)");
-    x += 16;
-    x = drawPill(ctx, x, y, "EXPERIENCE", "rgba(255,255,255,0.96)");
-    x += 16;
-    drawPill(ctx, x, y, "CARD", "rgba(120, 170, 255, 0.96)");
-
-    // Title SEC
-    ctx.fillStyle = "rgba(255,255,255,0.96)";
-    ctx.font = "1000 86px system-ui, -apple-system, Segoe UI, Roboto, Arial";
-    ctx.fillText("SEC", pad + 36, y + 92);
-
-    // Meta
-    ctx.font = "800 30px system-ui, -apple-system, Segoe UI, Roboto, Arial";
-    ctx.fillStyle = "rgba(255,255,255,0.78)";
-    ctx.fillText(`Shots: ${shotCount}`, pad + 36, y + 192);
-
-    ctx.font = "900 24px system-ui, -apple-system, Segoe UI, Roboto, Arial";
-    ctx.fillStyle = "rgba(255,255,255,0.62)";
-    ctx.fillText(`Distance: ${sec.dist} yd   •   Click: ${sec.clickVal} MOA`, pad + 36, y + 232);
-
-    // Two rows (Windage / Elevation)
-    const boxW = (W - pad * 2) - 72;
-    const rowH = 170;
-    const rowY1 = y + 290;
-    const rowY2 = rowY1 + rowH + 24;
-
-    drawRow(ctx, pad + 36, rowY1, boxW, rowH, "Windage", sec.windArrow, sec.windClicks.toFixed(2), sec.windDir, perfColor(sec.windClicks));
-    drawRow(ctx, pad + 36, rowY2, boxW, rowH, "Elevation", sec.elevArrow, sec.elevClicks.toFixed(2), sec.elevDir, perfColor(sec.elevClicks));
-
-    // Export
-    const a = document.createElement("a");
-    a.download = `SEC_${sec.dist}yd_${shotCount}shots.png`;
-    a.href = c.toDataURL("image/png");
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
+  function saveScoreHistory(arr) {
+    localStorage.setItem("sczn3_score_history", JSON.stringify(arr.slice(0, 25)));
   }
 
-  function roundRect(ctx, x, y, w, h, r) {
-    ctx.beginPath();
-    ctx.moveTo(x + r, y);
-    ctx.arcTo(x + w, y, x + w, y + h, r);
-    ctx.arcTo(x + w, y + h, x, y + h, r);
-    ctx.arcTo(x, y + h, x, y, r);
-    ctx.arcTo(x, y, x + w, y, r);
-    ctx.closePath();
+  function pushScore(score) {
+    const arr = loadScoreHistory();
+    arr.unshift({ score, ts: Date.now() });
+    saveScoreHistory(arr);
+    return arr;
   }
 
-  function drawPill(ctx, x, y, text, color) {
-    const padX = 18;
-    const padY = 10;
-
-    ctx.font = "1000 34px system-ui, -apple-system, Segoe UI, Roboto, Arial";
-    const m = ctx.measureText(text);
-    const w = m.width + padX * 2;
-    const h = 58;
-
-    roundRect(ctx, x, y, w, h, 999);
-    ctx.fillStyle = "rgba(0,0,0,0.22)";
-    ctx.fill();
-    ctx.lineWidth = 3;
-    ctx.strokeStyle = "rgba(255,255,255,0.12)";
-    ctx.stroke();
-
-    ctx.fillStyle = color;
-    ctx.fillText(text, x + padX, y + padY - 2);
-    return x + w;
+  function getPrevThree(arr) {
+    // prev = before current (index 1..3)
+    const prev = arr.slice(1, 4).map((x) => x.score);
+    while (prev.length < 3) prev.push(null);
+    return prev;
   }
 
-  function drawRow(ctx, x, y, w, h, label, arrow, num, dir, color) {
-    roundRect(ctx, x, y, w, h, 28);
-    ctx.fillStyle = "rgba(0,0,0,0.22)";
-    ctx.fill();
-    ctx.lineWidth = 3;
-    ctx.strokeStyle = "rgba(255,255,255,0.12)";
-    ctx.stroke();
-
-    ctx.textBaseline = "middle";
-
-    // Label
-    ctx.font = "950 34px system-ui, -apple-system, Segoe UI, Roboto, Arial";
-    ctx.fillStyle = "rgba(255,255,255,0.90)";
-    ctx.fillText(label, x + 28, y + h / 2);
-
-    // Right side big number
-    const rightX = x + w - 28;
-
-    ctx.font = "1000 64px system-ui, -apple-system, Segoe UI, Roboto, Arial";
-    ctx.fillStyle = "rgba(255,255,255,0.92)";
-    const arrowW = ctx.measureText(arrow).width;
-
-    ctx.fillStyle = "rgba(255,255,255,0.95)";
-    ctx.fillText(arrow, rightX - 420, y + h / 2);
-
-    ctx.fillStyle = color;
-    ctx.font = "1000 84px system-ui, -apple-system, Segoe UI, Roboto, Arial";
-    ctx.fillText(num, rightX - 360, y + h / 2 + 2);
-
-    // Dir small + close
-    ctx.fillStyle = "rgba(255,255,255,0.78)";
-    ctx.font = "950 28px system-ui, -apple-system, Segoe UI, Roboto, Arial";
-    ctx.fillText(dir, rightX - 120, y + h / 2 + 6);
+  function calcAverage(arr, count = 10) {
+    const sample = arr.slice(0, count).map((x) => x.score).filter((n) => Number.isFinite(n));
+    if (!sample.length) return null;
+    const avg = sample.reduce((a, b) => a + b, 0) / sample.length;
+    return Math.round(avg);
   }
 
-  function showSECModal() {
+  // ---------- Survey logging ----------
+  function getSessionId() {
+    const k = "sczn3_session_id";
+    let v = localStorage.getItem(k);
+    if (!v) {
+      v = `SEC-${Math.random().toString(16).slice(2)}-${Date.now()}`;
+      localStorage.setItem(k, v);
+    }
+    return v;
+  }
+
+  function logSurvey(payload) {
+    const record = {
+      ts: new Date().toISOString(),
+      session: getSessionId(),
+      vendor: VENDOR_NAME,
+      distanceYds: Number(elDistance?.value || 100),
+      clickValue: Number(elClick?.value || 0.25),
+      hits: hits.length,
+      ...payload
+    };
+
+    console.log("[SURVEY]", record);
+
+    const key = "sczn3_survey_log";
+    const arr = JSON.parse(localStorage.getItem(key) || "[]");
+    arr.push(record);
+    localStorage.setItem(key, JSON.stringify(arr));
+  }
+
+  function openSurveyOverlay() {
+    const overlay = document.createElement("div");
+    overlay.className = "surveyOverlay";
+
+    const card = document.createElement("div");
+    card.className = "surveyCard";
+
+    const title = document.createElement("div");
+    title.className = "surveyTitle";
+    title.textContent = "10 seconds";
+
+    const helper = document.createElement("div");
+    helper.className = "surveyHelper";
+    helper.textContent = "This helps improve your shooter experience.";
+
+    const question = document.createElement("div");
+    question.className = "surveyQuestion";
+    question.textContent = "Did this help you understand your next adjustment?";
+
+    const btnRow = document.createElement("div");
+    btnRow.className = "surveyBtnRow";
+
+    const yesBtn = document.createElement("button");
+    yesBtn.className = "surveyBtn surveyBtnYes";
+    yesBtn.type = "button";
+    yesBtn.textContent = "✅ Yes";
+
+    const noBtn = document.createElement("button");
+    noBtn.className = "surveyBtn surveyBtnNo";
+    noBtn.type = "button";
+    noBtn.textContent = "❌ Not yet";
+
+    btnRow.appendChild(yesBtn);
+    btnRow.appendChild(noBtn);
+
+    const notNow = document.createElement("button");
+    notNow.className = "surveyNotNow";
+    notNow.type = "button";
+    notNow.textContent = "Not now";
+
+    const reasonsWrap = document.createElement("div");
+    reasonsWrap.className = "surveyReasons hidden";
+
+    const reasonsTitle = document.createElement("div");
+    reasonsTitle.className = "surveyReasonsTitle";
+    reasonsTitle.textContent = "What was missing? (tap one)";
+
+    const reasonsGrid = document.createElement("div");
+    reasonsGrid.className = "surveyReasonsGrid";
+
+    const reasons = [
+      "Direction felt wrong",
+      "Numbers didn’t make sense",
+      "Tapping was hard / clunky",
+      "The photo didn’t line up",
+      "Other"
+    ];
+
+    reasons.forEach((label) => {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "surveyReasonBtn";
+      b.textContent = label;
+
+      b.addEventListener("click", () => {
+        logSurvey({ q: "helped_next_adjustment", a: "not_yet", reason: label });
+        card.innerHTML = `
+          <div class="surveyTitle">Got it.</div>
+          <div class="surveyHelper">That helps us improve the shooter experience.</div>
+        `;
+        setTimeout(() => overlay.remove(), 900);
+      });
+
+      reasonsGrid.appendChild(b);
+    });
+
+    reasonsWrap.appendChild(reasonsTitle);
+    reasonsWrap.appendChild(reasonsGrid);
+
+    yesBtn.addEventListener("click", () => {
+      logSurvey({ q: "helped_next_adjustment", a: "yes" });
+      card.innerHTML = `
+        <div class="surveyTitle">Perfect.</div>
+        <div class="surveyHelper">Glad it helped. See you next range trip.</div>
+      `;
+      setTimeout(() => overlay.remove(), 900);
+    });
+
+    noBtn.addEventListener("click", () => {
+      reasonsWrap.classList.remove("hidden");
+      btnRow.classList.add("hidden");
+      notNow.classList.remove("hidden");
+    });
+
+    notNow.addEventListener("click", () => {
+      logSurvey({ q: "helped_next_adjustment", a: "skipped" });
+      overlay.remove();
+    });
+
+    overlay.addEventListener("click", (e) => {
+      if (e.target === overlay) overlay.remove();
+    });
+
+    card.appendChild(title);
+    card.appendChild(helper);
+    card.appendChild(question);
+    card.appendChild(btnRow);
+    card.appendChild(reasonsWrap);
+    card.appendChild(notNow);
+
+    overlay.appendChild(card);
+    document.body.appendChild(overlay);
+
+    notNow.classList.remove("hidden");
+  }
+
+  // ---------- SEC modal ----------
+  function showSecModal() {
     const poib = computePOIB();
     if (!anchor || !poib) return;
 
-    const sec = computeTurretInstructions(anchor, poib);
+    const dist = Number(elDistance.value) || 100;
+    const clickVal = Number(elClick.value) || 0.25;
+    const oneMOAin = (dist / 100) * 1.047;
+
+    const dir = directionText(anchor, poib);
+
+    // Score + history
+    const { score, colorClass } = computeShooterScore();
+    const hist = pushScore(score);
+    const prev3 = getPrevThree(hist);
+    const avg = calcAverage(hist, 10);
 
     const overlay = document.createElement("div");
-    overlay.style.position = "fixed";
-    overlay.style.inset = "0";
-    overlay.style.zIndex = "999999";
-    overlay.style.background = "rgba(0,0,0,0.60)";
-    overlay.style.backdropFilter = "blur(10px)";
-    overlay.style.display = "flex";
-    overlay.style.alignItems = "center";
-    overlay.style.justifyContent = "center";
-    overlay.style.padding = "18px";
+    overlay.className = "resultsOverlay";
 
     const card = document.createElement("div");
-    card.className = "secCard";
-    card.style.color = "rgba(255,255,255,0.94)";
+    card.className = "resultsCard";
 
-    // Top label
-    const topLabel = document.createElement("div");
-    topLabel.className = "secTopLabel";
-    topLabel.innerHTML = `
-      <span class="secTri red">SHOOTER</span>
-      <span class="secTri white">EXPERIENCE</span>
-      <span class="secTri blue">CARD</span>
+    // 2-col grid: LEFT content, RIGHT blank
+    const grid = document.createElement("div");
+    grid.className = "secGrid";
+
+    const left = document.createElement("div");
+    left.className = "secLeft";
+
+    const right = document.createElement("div");
+    right.className = "secRight"; // intentionally blank
+
+    // Header: Shooter Experience Card (darker blue)
+    const header = document.createElement("div");
+    header.className = "secHeader";
+    header.innerHTML = `
+      <div class="secHeaderTop">
+        <span class="secWordRed">SHOOTER</span>
+        <span class="secWordWhite"> EXPERIENCE </span>
+        <span class="secWordBlue">CARD</span>
+      </div>
+      <div class="secHeaderSub">Tap-n-Score™</div>
     `;
 
-    const title = document.createElement("div");
-    title.textContent = "SEC";
-    title.className = "secTitle";
+    // Direction block (kept compact)
+    const adjust = document.createElement("div");
+    adjust.className = "secAdjust";
 
-    const sub = document.createElement("div");
-    sub.textContent = `Shots: ${hits.length}`;
-    sub.className = "secSub";
+    adjust.innerHTML = `
+      <div class="secAdjustTitle">Adjust</div>
+      <div class="secAdjustRow">
+        <div class="secAdjustItem">
+          <div class="secAdjustNum">${dir.horizPct.toFixed(2)}</div>
+          <div class="secAdjustLbl">${dir.horizDir}</div>
+        </div>
+        <div class="secAdjustItem">
+          <div class="secAdjustNum">${dir.vertPct.toFixed(2)}</div>
+          <div class="secAdjustLbl">${dir.vertDir}</div>
+        </div>
+      </div>
+      <div class="secAdjustNote">(% until grid calibration converts to inches + clicks)</div>
+    `;
 
-    const meta = document.createElement("div");
-    meta.textContent = `Distance: ${sec.dist} yd  •  Click: ${sec.clickVal} MOA`;
-    meta.className = "secMeta";
+    // Score block
+    const scoreBox = document.createElement("div");
+    scoreBox.className = "secScoreBox";
+    scoreBox.innerHTML = `
+      <div class="secScoreTitle">Shooter Score</div>
+      <div class="secScoreBig ${colorClass}">${score}</div>
+      <div class="secScoreMeta">
+        <div class="secScoreLine">
+          <span class="secScoreKey">Previous 3:</span>
+          <span class="secScoreVal">
+            ${prev3.map((n) => (n === null ? "—" : n)).join("  ·  ")}
+          </span>
+        </div>
+        <div class="secScoreLine">
+          <span class="secScoreKey">Average:</span>
+          <span class="secScoreVal">${avg === null ? "—" : avg}</span>
+        </div>
+      </div>
+    `;
 
-    const rowWrap = document.createElement("div");
-    rowWrap.className = "secRows";
+    // Details (small)
+    const details = document.createElement("div");
+    details.className = "secDetails";
+    details.textContent =
+`Hits: ${hits.length}
+Distance: ${dist} yd
+Click: ${clickVal} MOA
+1 MOA ≈ ${oneMOAin.toFixed(3)}"`;
 
-    function makeRow(label, arrow, valueText, dirText, valueColor) {
-      const row = document.createElement("div");
-      row.className = "secRow";
+    // Small CTAs (left only)
+    const ctaRow = document.createElement("div");
+    ctaRow.className = "resultsCtaRow";
 
-      const left = document.createElement("div");
-      left.textContent = label;
-      left.className = "secRowLabel";
+    const buyBtn = document.createElement("button");
+    buyBtn.type = "button";
+    buyBtn.className = "resultsCtaBtn";
+    buyBtn.innerHTML = `<span class="ctaTop">BUY MORE</span><br/><span class="ctaBottom">Targets Like This</span>`;
+    buyBtn.addEventListener("click", () => window.open(VENDOR_URL, "_blank", "noopener,noreferrer"));
 
-      const right = document.createElement("div");
-      right.className = "secRowRight";
+    const surveyBtn = document.createElement("button");
+    surveyBtn.type = "button";
+    surveyBtn.className = "resultsCtaBtn";
+    surveyBtn.innerHTML = `<span class="ctaTop">SURVEY</span><br/><span class="ctaBottom">10 seconds</span>`;
+    surveyBtn.addEventListener("click", () => openSurveyOverlay());
 
-      const big = document.createElement("div");
-      big.className = "secBig";
-      big.style.color = valueColor;
+    ctaRow.appendChild(buyBtn);
+    ctaRow.appendChild(surveyBtn);
 
-      big.innerHTML = `
-        <span class="secArrow">${arrow}</span>
-        <span class="secNum">${valueText}</span>
-        <span class="secDirInline">${dirText}</span>
-      `;
+    const closeBtn = document.createElement("button");
+    closeBtn.type = "button";
+    closeBtn.className = "btnResults";
+    closeBtn.textContent = "Close";
+    closeBtn.addEventListener("click", () => overlay.remove());
 
-      right.appendChild(big);
-      row.appendChild(left);
-      row.appendChild(right);
-      return row;
-    }
+    overlay.addEventListener("click", (e) => {
+      if (e.target === overlay) overlay.remove();
+    });
 
-    const windVal = sec.windClicks.toFixed(2);
-    const elevVal = sec.elevClicks.toFixed(2);
+    // Compose left
+    left.appendChild(header);
+    left.appendChild(adjust);
+    left.appendChild(scoreBox);
+    left.appendChild(details);
+    left.appendChild(ctaRow);
+    left.appendChild(closeBtn);
 
-    rowWrap.appendChild(makeRow("Windage", sec.windArrow, windVal, sec.windDir, perfColor(sec.windClicks)));
-    rowWrap.appendChild(makeRow("Elevation", sec.elevArrow, elevVal, sec.elevDir, perfColor(sec.elevClicks)));
+    // Compose grid
+    grid.appendChild(left);
+    grid.appendChild(right);
 
-    // Actions (two equal buttons)
-    const actions = document.createElement("div");
-    actions.className = "secActions";
-
-    const btnBuy = document.createElement("button");
-    btnBuy.type = "button";
-    btnBuy.className = "secActionBtn";
-    btnBuy.textContent = "Buy more targets like this";
-    btnBuy.addEventListener("click", () => openUrl(VENDOR_BUY_URL));
-
-    const btnSurvey = document.createElement("button");
-    btnSurvey.type = "button";
-    btnSurvey.className = "secActionBtn";
-    btnSurvey.textContent = "Survey";
-    btnSurvey.addEventListener("click", () => openUrl(SURVEY_URL));
-
-    actions.appendChild(btnBuy);
-    actions.appendChild(btnSurvey);
-
-    // NEW: Download SEC image (secondary, full width)
-    const dl = document.createElement("button");
-    dl.type = "button";
-    dl.className = "secActionBtn secActionBtnSecondary";
-    dl.textContent = "Download SEC (Image)";
-    dl.addEventListener("click", () => downloadSECPng(sec, hits.length));
-
-    const btnClose = document.createElement("button");
-    btnClose.textContent = "Close";
-    btnClose.className = "btnResults";
-    btnClose.style.width = "100%";
-    btnClose.style.marginTop = "12px";
-
-    btnClose.addEventListener("click", () => overlay.remove());
-    overlay.addEventListener("click", (e) => { if (e.target === overlay) overlay.remove(); });
-
-    card.appendChild(topLabel);
-    card.appendChild(title);
-    card.appendChild(sub);
-    card.appendChild(meta);
-    card.appendChild(rowWrap);
-    card.appendChild(actions);
-    card.appendChild(dl);
-    card.appendChild(btnClose);
-
+    card.appendChild(grid);
     overlay.appendChild(card);
     document.body.appendChild(overlay);
   }
 
-  // ===== Events =====
+  // ---------- Events ----------
   elChoose.addEventListener("click", () => elFile.click());
 
   elFile.addEventListener("change", () => {
@@ -447,22 +477,28 @@
     elFileName.textContent = f.name;
 
     setThumb(f);
-    showThumb();
 
     if (objectUrl) URL.revokeObjectURL(objectUrl);
     objectUrl = URL.createObjectURL(f);
     elImg.src = objectUrl;
 
+    // reset taps
     anchor = null;
     hits = [];
     redrawAll();
 
+    // show tap area + controls
     elImgBox.classList.remove("hidden");
     elControls.classList.remove("hidden");
-    hideThumb();
-
     setInstruction("Tap bull’s-eye (anchor)");
+
+    // Hide thumbnail when target is on screen (YOU ASKED)
+    elThumbBox.classList.add("hidden");
+
     elImgBox.scrollIntoView({ behavior: "smooth", block: "start" });
+
+    // allow reselect same file
+    elFile.value = "";
   });
 
   elDots.addEventListener("pointerdown", (evt) => {
@@ -498,8 +534,10 @@
     redrawAll();
   });
 
-  elResults.addEventListener("click", () => showSECModal());
+  // Results button now opens the SEC
+  elResults.addEventListener("click", () => showSecModal());
 
+  // Initial
   setHUD();
   redrawAll();
 })();
