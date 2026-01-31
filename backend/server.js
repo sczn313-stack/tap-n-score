@@ -1,115 +1,142 @@
 /* ============================================================
-   backend/server.js (FULL REPLACEMENT) — vLOCK-SEC-DL-1
-   ALL MATH HERE (truth)
-   Endpoint: POST /api/score
-   Inputs: distanceYds, clickValue, anchor{x,y}, hits[{x,y}]
-   Output: score(0-100), windageClicks, elevClicks, arrows, dir letters, shots
+   server.js (FULL REPLACEMENT) — API-LOCK-ANALYZE-1
+   Purpose:
+   - Provide stable backend endpoints for SEC
+   - Math authority stays backend-only
+   Endpoints:
+   - GET  /api/health   -> sanity check
+   - GET  /api/analyze  -> tells you to POST (prevents confusion)
+   - POST /api/analyze  -> returns score + clicks + shots
 ============================================================ */
 
 const express = require("express");
 const cors = require("cors");
 
 const app = express();
+
+// ---- Middleware
 app.use(cors({ origin: true }));
 app.use(express.json({ limit: "2mb" }));
 
-// --- Tunables (until you add real grid calibration):
-// Treat normalized delta as inches using an assumed printable span.
-// If this is your Baker grid, you can tune these later.
-const ASSUMED_TARGET_SPAN_IN = 23.0;
-
-// Inches per MOA at given distance (yards)
-function moaInchesAt(distanceYds) {
-  return (distanceYds / 100) * 1.047;
+// ---- Helpers
+function clamp01(n) {
+  const x = Number(n);
+  if (!Number.isFinite(x)) return 0;
+  return Math.max(0, Math.min(1, x));
 }
 
-function clamp(n, a, b) {
-  return Math.max(a, Math.min(b, n));
+function normPoint(p) {
+  if (!p || typeof p !== "object") return null;
+  const x = clamp01(p.x);
+  const y = clamp01(p.y);
+  return { x, y };
 }
 
-function isPoint(p) {
-  return p && Number.isFinite(p.x) && Number.isFinite(p.y);
+function safeArray(a) {
+  return Array.isArray(a) ? a : [];
 }
 
-function avgPoints(points) {
-  const s = points.reduce((acc, p) => ({ x: acc.x + p.x, y: acc.y + p.y }), { x: 0, y: 0 });
-  return { x: s.x / points.length, y: s.y / points.length };
+/**
+ * NOTE:
+ * Replace this compute() logic with your real SCZN3 math.
+ * This is only a stable shape contract so frontend can run.
+ *
+ * Contract returned:
+ * {
+ *   sessionId: "SEC-XXXX",
+ *   score: <number>,
+ *   shots: <int>,
+ *   clicks: { up, down, left, right }
+ * }
+ */
+function computeFromAnchorHits(anchor, hits) {
+  // Minimal placeholder that is deterministic and safe.
+  // Uses average hit offset from anchor as a proxy vector.
+  const n = hits.length || 0;
+
+  let dx = 0;
+  let dy = 0;
+
+  for (const h of hits) {
+    dx += (h.x - anchor.x);
+    dy += (h.y - anchor.y);
+  }
+  dx = n ? dx / n : 0;
+  dy = n ? dy / n : 0;
+
+  // Convert normalized dx/dy into "click-ish" numbers (just for shape).
+  // YOUR REAL BACKEND should replace with POIB -> bull etc.
+  const scale = 40; // purely placeholder
+  const horiz = Math.abs(dx * scale);
+  const vert = Math.abs(dy * scale);
+
+  const clicks = {
+    left: dx > 0 ? horiz : 0,
+    right: dx < 0 ? horiz : 0,
+    up: dy > 0 ? vert : 0,
+    down: dy < 0 ? vert : 0,
+  };
+
+  // Placeholder score: closer cluster to anchor -> higher score.
+  // (Replace with real scoring model.)
+  const dist = Math.sqrt(dx * dx + dy * dy);
+  const score = Math.max(0, Math.min(100, Math.round(100 - dist * 220)));
+
+  return {
+    score,
+    shots: n,
+    clicks: {
+      up: Number(clicks.up.toFixed(2)),
+      down: Number(clicks.down.toFixed(2)),
+      left: Number(clicks.left.toFixed(2)),
+      right: Number(clicks.right.toFixed(2)),
+    },
+  };
 }
 
-function toInchesFromNormDelta(dNorm) {
-  return dNorm * ASSUMED_TARGET_SPAN_IN;
-}
+// ---- Routes
+app.get("/api/health", (req, res) => {
+  res.json({
+    ok: true,
+    service: "tap-n-score-backend",
+    time: new Date().toISOString(),
+  });
+});
 
-function clicksFromInches(inches, distanceYds, clickValue) {
-  const moaIn = moaInchesAt(distanceYds);
-  const moa = inches / moaIn;
-  const clicks = moa / clickValue;
-  return Math.abs(clicks);
-}
+app.get("/api/analyze", (req, res) => {
+  res.status(200).send("Use POST /api/analyze with JSON body { anchor:{x,y}, hits:[{x,y}...] }");
+});
 
-// Score model: based on radial error in MOA from POIB to Anchor.
-// This is a simple, consistent starting model (can be replaced later).
-function computeScore(dxIn, dyIn, distanceYds) {
-  const moaIn = moaInchesAt(distanceYds);
-  const errIn = Math.sqrt(dxIn * dxIn + dyIn * dyIn);
-  const errMoa = errIn / moaIn;
-
-  // Map error MOA to score
-  // 0 MOA => 100
-  // ~8.3 MOA => 0 (with this slope)
-  const raw = 100 - (errMoa * 12.0);
-  return Math.round(clamp(raw, 0, 100));
-}
-
-app.post("/api/score", (req, res) => {
+app.post("/api/analyze", (req, res) => {
   try {
-    const distanceYds = Number(req.body.distanceYds) || 100;
-    const clickValue = Number(req.body.clickValue) || 0.25;
-    const anchor = req.body.anchor;
-    const hits = Array.isArray(req.body.hits) ? req.body.hits : [];
+    const anchor = normPoint(req.body?.anchor);
+    const hitsRaw = safeArray(req.body?.hits);
+    const hits = hitsRaw.map(normPoint).filter(Boolean);
 
-    if (!isPoint(anchor)) return res.status(400).json({ error: "Missing/invalid anchor" });
-    if (!hits.length || !hits.every(isPoint)) return res.status(400).json({ error: "Missing/invalid hits" });
+    if (!anchor) {
+      return res.status(400).json({ error: "Missing/invalid anchor" });
+    }
+    if (hits.length < 1) {
+      return res.status(400).json({ error: "Need at least 1 hit" });
+    }
 
-    const poib = avgPoints(hits);
+    const sessionId = `SEC-${Math.random().toString(16).slice(2, 10).toUpperCase()}`;
 
-    // Correction vector: POIB -> Anchor (bull - poib)
-    const dxNorm = anchor.x - poib.x; // + means move RIGHT
-    const dyNorm = anchor.y - poib.y; // + means move DOWN (screen space)
+    const computed = computeFromAnchorHits(anchor, hits);
 
-    // Convert to inches using assumed span
-    const dxIn = toInchesFromNormDelta(dxNorm);
-    const dyIn = toInchesFromNormDelta(dyNorm);
-
-    // Clicks
-    const windageClicks = clicksFromInches(dxIn, distanceYds, clickValue);
-    const elevClicks = clicksFromInches(dyIn, distanceYds, clickValue);
-
-    // Directions as single letters
-    const windageDir = dxNorm >= 0 ? "R" : "L";
-    const elevDir = dyNorm >= 0 ? "D" : "U";
-
-    // Arrows (visual)
-    const windageArrow = dxNorm >= 0 ? "→" : "←";
-    const elevArrow = dyNorm >= 0 ? "↓" : "↑";
-
-    // Score
-    const score = computeScore(dxIn, dyIn, distanceYds);
-
-    res.json({
-      shots: hits.length,
-      score,
-      windageClicks: Number(windageClicks.toFixed(2)),
-      elevClicks: Number(elevClicks.toFixed(2)),
-      windageDir,
-      elevDir,
-      windageArrow,
-      elevArrow
+    return res.json({
+      sessionId,
+      score: computed.score,
+      shots: computed.shots,
+      clicks: computed.clicks,
     });
   } catch (e) {
-    res.status(500).json({ error: e.message || String(e) });
+    return res.status(500).json({ error: "Server error", detail: String(e?.message || e) });
   }
 });
 
+// ---- Start
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log("SCZN3 backend listening on", PORT));
+app.listen(PORT, () => {
+  console.log("Backend listening on", PORT);
+});
