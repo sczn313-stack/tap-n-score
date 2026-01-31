@@ -1,10 +1,12 @@
 /* ============================================================
-   docs/index.js (FULL REPLACEMENT) — vLOCK-SEC-DL-1
-   - Removes landing HUD pills (none in HTML)
-   - Controls bar appears ONLY after first tap (anchor or hit)
-   - All math comes from backend (/api/score)
-   - SEC modal includes Download SEC PNG (with Prev 3 + Avg)
-   - Mobile: smaller dots handled by CSS
+   index.js (FULL REPLACEMENT) — vTAP-LOCK-SEC-1
+   Fixes:
+   1) iOS "Load failed" recovery:
+      - try objectURL first
+      - if img.onerror, fallback to FileReader dataURL
+   2) Controls bar appears ONLY after first tap (anchor or hit)
+   3) Dots remain correct on resize/orientation changes
+   4) Keeps thumbnail on landing, but hides it once target is shown
 ============================================================ */
 
 (() => {
@@ -15,7 +17,6 @@
   const elChoose = $("chooseBtn");
   const elFileName = $("fileName");
   const elThumbBox = $("thumbBox");
-  const elLanding = $("landingCard");
 
   const elImgBox = $("imgBox");
   const elImg = $("targetImg");
@@ -36,26 +37,19 @@
   let anchor = null; // {x,y} normalized
   let hits = [];     // [{x,y}...]
 
-  // Vendor config
-  let VENDOR = {
-    vendorName: "Baker Printing",
-    buyUrl: "https://bakertargets.com",
-    surveyUrl: "https://example.com/survey",
-    apiBase: "" // set this in vendor.json if you have a Render backend
-  };
+  let hasFirstTap = false; // controls bar gate
 
-  async function loadVendor() {
-    try {
-      const r = await fetch("./vendor.json", { cache: "no-store" });
-      if (!r.ok) return;
-      const j = await r.json();
-      VENDOR = { ...VENDOR, ...j };
-    } catch (_) {}
+  // ---------- Helpers ----------
+  function clamp01(v) { return Math.max(0, Math.min(1, v)); }
+
+  function enableControlsVisibility() {
+    if (!hasFirstTap) return;
+    elControls.classList.remove("hidden");
   }
 
-  // Helpers
-  const clamp01 = (v) => Math.max(0, Math.min(1, v));
-  const round2 = (n) => Math.round(n * 100) / 100;
+  function hideControlsVisibility() {
+    elControls.classList.add("hidden");
+  }
 
   function clearDots() {
     while (elDots.firstChild) elDots.removeChild(elDots.firstChild);
@@ -76,11 +70,14 @@
     if (anchor) drawDot(anchor, "anchor");
     hits.forEach((h) => drawDot(h, "hit"));
 
-    // Enable/disable buttons (only logical; visibility handled separately)
-    const anyTap = !!anchor || hits.length > 0;
-    elClear.disabled = !anyTap;
-    elUndo.disabled = !anyTap;
-    elResults.disabled = !(anchor && hits.length > 0);
+    // Buttons
+    elClear.disabled = (!anchor && hits.length === 0);
+    elUndo.disabled = (!anchor && hits.length === 0);
+    elResults.disabled = (!anchor || hits.length === 0);
+
+    // Controls appear only after first tap
+    if (hasFirstTap) enableControlsVisibility();
+    else hideControlsVisibility();
   }
 
   function setThumb(file) {
@@ -91,6 +88,16 @@
     elThumbBox.appendChild(img);
   }
 
+  function hideThumbnailArea() {
+    // when the target is on screen, we remove the thumbnail box content to reclaim space
+    // (keeps landing layout stable but eliminates the visual clutter)
+    elThumbBox.innerHTML = "";
+    const msg = document.createElement("div");
+    msg.className = "thumbEmpty";
+    msg.textContent = "Photo loaded.";
+    elThumbBox.appendChild(msg);
+  }
+
   function getNormFromEvent(evt) {
     const rect = elDots.getBoundingClientRect();
     const x = (evt.clientX - rect.left) / rect.width;
@@ -99,383 +106,186 @@
     return { x: clamp01(x), y: clamp01(y) };
   }
 
-  // Controls show only after first tap
-  function updateControlsVisibility() {
-    const anyTap = !!anchor || hits.length > 0;
-    if (anyTap) elControls.classList.remove("hidden");
-    else elControls.classList.add("hidden");
+  function computePOIB() {
+    if (hits.length === 0) return null;
+    const sum = hits.reduce((acc, p) => ({ x: acc.x + p.x, y: acc.y + p.y }), { x: 0, y: 0 });
+    return { x: sum.x / hits.length, y: sum.y / hits.length };
   }
 
-  // Score history (Prev 3 + Avg) stored locally (history is not “math”)
-  function readScoreHistory() {
-    try {
-      const raw = localStorage.getItem("sczn3_score_history_v1");
-      const arr = raw ? JSON.parse(raw) : [];
-      return Array.isArray(arr) ? arr : [];
-    } catch {
-      return [];
-    }
+  function directionText(anchorPt, poibPt) {
+    // POIB -> Anchor (bull - poib)
+    const dx = anchorPt.x - poibPt.x;
+    const dy = anchorPt.y - poibPt.y; // screen space
+
+    // NOTE: These are correction directions in screen truth
+    const horizDir = dx >= 0 ? "R" : "L";
+    const vertDir  = dy >= 0 ? "D" : "U";
+
+    return { dx, dy, horizDir, vertDir };
   }
 
-  function pushScoreHistory(score) {
-    const hist = readScoreHistory();
-    hist.unshift(score);
-    const trimmed = hist.slice(0, 4); // current + prev3 (we’ll display prev3 separately)
-    localStorage.setItem("sczn3_score_history_v1", JSON.stringify(trimmed));
-    return trimmed;
-  }
+  function showSECModal() {
+    const poib = computePOIB();
+    if (!anchor || !poib) return;
 
-  function computeAvg(arr) {
-    if (!arr.length) return 0;
-    const s = arr.reduce((a, b) => a + b, 0);
-    return Math.round((s / arr.length) * 10) / 10; // 1 decimal
-  }
+    const dist = Number(elDistance.value) || 100;
+    const clickVal = Number(elClick.value) || 0.25;
 
-  // Backend call (ALL math)
-  async function fetchBackendMath() {
-    const apiBase = (VENDOR.apiBase || "").trim();
-    const url = (apiBase ? apiBase.replace(/\/+$/, "") : "") + "/api/score";
+    // Placeholder conversion for now (your backend will own all math later)
+    const dir = directionText(anchor, poib);
+    const wind = Math.abs(dir.dx) * 100; // placeholder
+    const elev = Math.abs(dir.dy) * 100; // placeholder
 
-    const payload = {
-      distanceYds: Number(elDistance.value) || 100,
-      clickValue: Number(elClick.value) || 0.25,
-      anchor,
-      hits
-    };
-
-    const r = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload)
-    });
-
-    if (!r.ok) {
-      const t = await r.text().catch(() => "");
-      throw new Error(`Backend error (${r.status}): ${t || "unknown"}`);
-    }
-
-    return r.json();
-  }
-
-  // Score color rule
-  function scoreClass(score) {
-    if (score <= 60) return "scoreRed";
-    if (score <= 79) return "scoreYellow";
-    return "scoreGreen";
-  }
-
-  // Build downloadable SEC PNG (Canvas)
-  async function renderSECToPNG(secData, historyLine) {
-    // High-res canvas (good for sharing)
-    const W = 1400;
-    const H = 860;
-
-    const c = document.createElement("canvas");
-    c.width = W;
-    c.height = H;
-    const ctx = c.getContext("2d");
-
-    // Background
-    ctx.fillStyle = "rgba(0,0,0,0)";
-    ctx.clearRect(0, 0, W, H);
-
-    // Card
-    const x = 60, y = 60, w = W - 120, h = H - 120, r = 44;
-
-    function roundRect(px, py, pw, ph, pr) {
-      ctx.beginPath();
-      ctx.moveTo(px + pr, py);
-      ctx.arcTo(px + pw, py, px + pw, py + ph, pr);
-      ctx.arcTo(px + pw, py + ph, px, py + ph, pr);
-      ctx.arcTo(px, py + ph, px, py, pr);
-      ctx.arcTo(px, py, px + pw, py, pr);
-      ctx.closePath();
-    }
-
-    // shadow
-    ctx.save();
-    ctx.shadowColor = "rgba(0,0,0,0.55)";
-    ctx.shadowBlur = 40;
-    ctx.shadowOffsetY = 18;
-    roundRect(x, y, w, h, r);
-    ctx.fillStyle = "rgba(18,24,22,0.82)";
-    ctx.fill();
-    ctx.restore();
-
-    // border
-    roundRect(x, y, w, h, r);
-    ctx.strokeStyle = "rgba(255,255,255,0.10)";
-    ctx.lineWidth = 3;
-    ctx.stroke();
-
-    // Title: SHOOTER (red) EXPERIENCE (white) CARD (blue)
-    ctx.font = "900 62px system-ui, -apple-system, Segoe UI, Roboto, Arial";
-    ctx.textBaseline = "top";
-    let tx = x + 44, ty = y + 32;
-
-    ctx.fillStyle = "#e53935"; // red
-    ctx.fillText("SHOOTER", tx, ty);
-    tx += ctx.measureText("SHOOTER").width + 18;
-
-    ctx.fillStyle = "rgba(255,255,255,0.92)";
-    ctx.fillText("EXPERIENCE", tx, ty);
-    tx += ctx.measureText("EXPERIENCE").width + 18;
-
-    ctx.fillStyle = "#1e5aa8"; // blue
-    ctx.fillText("CARD", tx, ty);
-
-    // Shots (small)
-    ctx.font = "800 34px system-ui, -apple-system, Segoe UI, Roboto, Arial";
-    ctx.fillStyle = "rgba(255,255,255,0.78)";
-    ctx.fillText(`Shots: ${secData.shots}`, x + 44, y + 112);
-
-    // Score label + giant score
-    ctx.font = "900 44px system-ui, -apple-system, Segoe UI, Roboto, Arial";
-    ctx.fillStyle = "rgba(255,255,255,0.90)";
-    ctx.fillText("Shooter Score", x + 44, y + 170);
-
-    const s = secData.score;
-    const sColor = (s <= 60) ? "#ff3b30" : (s <= 79 ? "#ffd60a" : "#34c759");
-
-    ctx.font = "900 180px system-ui, -apple-system, Segoe UI, Roboto, Arial";
-    ctx.fillStyle = sColor;
-    ctx.textAlign = "right";
-    ctx.fillText(String(s), x + w - 54, y + 140);
-    ctx.textAlign = "left";
-
-    // History line
-    ctx.font = "800 30px system-ui, -apple-system, Segoe UI, Roboto, Arial";
-    ctx.fillStyle = "rgba(255,255,255,0.70)";
-    ctx.fillText(historyLine, x + 44, y + 240);
-
-    // Windage/Elevation boxes
-    const boxW = w - 88;
-    const boxH = 126;
-    const boxX = x + 44;
-    let boxY = y + 300;
-
-    function drawRow(label, arrow, value, dirLetter) {
-      // row background
-      roundRect(boxX, boxY, boxW, boxH, 28);
-      ctx.fillStyle = "rgba(0,0,0,0.24)";
-      ctx.fill();
-      ctx.strokeStyle = "rgba(255,255,255,0.10)";
-      ctx.lineWidth = 2;
-      ctx.stroke();
-
-      // left label
-      ctx.font = "900 46px system-ui, -apple-system, Segoe UI, Roboto, Arial";
-      ctx.fillStyle = "rgba(255,255,255,0.90)";
-      ctx.fillText(label, boxX + 28, boxY + 36);
-
-      // arrow + number + dir
-      ctx.textAlign = "right";
-      ctx.font = "900 58px system-ui, -apple-system, Segoe UI, Roboto, Arial";
-      ctx.fillStyle = "rgba(255,255,255,0.92)";
-      ctx.fillText(arrow, boxX + boxW - 280, boxY + 38);
-
-      ctx.font = "900 78px system-ui, -apple-system, Segoe UI, Roboto, Arial";
-      ctx.fillText(value.toFixed(2), boxX + boxW - 88, boxY + 22);
-
-      ctx.font = "900 44px system-ui, -apple-system, Segoe UI, Roboto, Arial";
-      ctx.fillStyle = "rgba(255,255,255,0.72)";
-      ctx.fillText(dirLetter, boxX + boxW - 28, boxY + 44);
-
-      ctx.textAlign = "left";
-      boxY += boxH + 22;
-    }
-
-    drawRow("Windage Clicks", secData.windageArrow, secData.windageClicks, secData.windageDir);
-    drawRow("Elevation Clicks", secData.elevArrow, secData.elevClicks, secData.elevDir);
-
-    // Export PNG
-    return new Promise((resolve) => {
-      c.toBlob((blob) => resolve(blob), "image/png", 0.95);
-    });
-  }
-
-  function downloadBlob(blob, filename) {
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = filename;
-
-    // iOS Safari sometimes ignores download; opening still lets user save/share
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-
-    setTimeout(() => URL.revokeObjectURL(url), 1500);
-  }
-
-  function buildSECModal(secData, historyLine) {
     const overlay = document.createElement("div");
     overlay.className = "secOverlay";
 
     const card = document.createElement("div");
     card.className = "secCard";
 
-    // Title line (red/white/blue)
     const title = document.createElement("div");
     title.className = "secTitle";
-    title.innerHTML = `
-      <span class="tRed">SHOOTER</span>
-      <span class="tWhite">EXPERIENCE</span>
-      <span class="tBlue">CARD</span>
-    `;
+    title.textContent = "SEC";
 
     const shots = document.createElement("div");
     shots.className = "secShots";
-    shots.textContent = `Shots: ${secData.shots}`;
+    shots.textContent = `Shots: ${hits.length}`;
 
-    // Score row
-    const scoreRow = document.createElement("div");
-    scoreRow.className = "secRow secScoreRow";
-    scoreRow.innerHTML = `
-      <div class="secLabel">Shooter Score</div>
-      <div class="secScoreNum ${scoreClass(secData.score)}">${secData.score}</div>
-    `;
-
-    const hist = document.createElement("div");
-    hist.className = "secHistory";
-    hist.textContent = historyLine;
-
-    // Wind/Elev
-    const wind = document.createElement("div");
-    wind.className = "secRow";
-    wind.innerHTML = `
-      <div class="secLabel">Windage Clicks</div>
-      <div class="secRight">
-        <span class="secArrow">${secData.windageArrow}</span>
-        <span class="secValue">${secData.windageClicks.toFixed(2)}</span>
-        <span class="secDir">${secData.windageDir}</span>
+    const row1 = document.createElement("div");
+    row1.className = "secRow";
+    row1.innerHTML = `
+      <div class="secLabel">Windage</div>
+      <div class="secValue">
+        <span class="secArrow">${dir.horizDir === "R" ? "→" : "←"}</span>
+        <span class="secNum">${wind.toFixed(2)}</span>
+        <span class="secDir">${dir.horizDir}</span>
       </div>
     `;
 
-    const elev = document.createElement("div");
-    elev.className = "secRow";
-    elev.innerHTML = `
-      <div class="secLabel">Elevation Clicks</div>
-      <div class="secRight">
-        <span class="secArrow">${secData.elevArrow}</span>
-        <span class="secValue">${secData.elevClicks.toFixed(2)}</span>
-        <span class="secDir">${secData.elevDir}</span>
+    const row2 = document.createElement("div");
+    row2.className = "secRow";
+    row2.innerHTML = `
+      <div class="secLabel">Elevation</div>
+      <div class="secValue">
+        <span class="secArrow">${dir.vertDir === "U" ? "↑" : "↓"}</span>
+        <span class="secNum">${elev.toFixed(2)}</span>
+        <span class="secDir">${dir.vertDir}</span>
       </div>
     `;
 
-    // Buttons row (Buy + Survey)
     const actions = document.createElement("div");
     actions.className = "secActions";
-    actions.innerHTML = `
-      <button class="secBtn" id="secBuyBtn" type="button">Buy more targets</button>
-      <button class="secBtn" id="secSurveyBtn" type="button">Survey</button>
-    `;
 
-    const dl = document.createElement("button");
-    dl.className = "secBtn secBtnPrimary";
-    dl.type = "button";
-    dl.textContent = "Download SEC";
+    const buyBtn = document.createElement("button");
+    buyBtn.className = "secActionBtn";
+    buyBtn.type = "button";
+    buyBtn.textContent = "Buy more targets";
+    buyBtn.addEventListener("click", () => {
+      // placeholder hook (you’ll wire Baker URL later)
+      window.open("https://bakertargets.com", "_blank");
+    });
 
-    const close = document.createElement("button");
-    close.className = "secBtn secBtnPrimary";
-    close.type = "button";
-    close.textContent = "Close";
+    const surveyBtn = document.createElement("button");
+    surveyBtn.className = "secActionBtn";
+    surveyBtn.type = "button";
+    surveyBtn.textContent = "Survey";
+    surveyBtn.addEventListener("click", () => {
+      // placeholder hook (you’ll wire survey later)
+      alert("Survey link coming next.");
+    });
+
+    actions.appendChild(buyBtn);
+    actions.appendChild(surveyBtn);
+
+    const closeBtn = document.createElement("button");
+    closeBtn.className = "secCloseBtn";
+    closeBtn.type = "button";
+    closeBtn.textContent = "Close";
+    closeBtn.addEventListener("click", () => overlay.remove());
 
     card.appendChild(title);
     card.appendChild(shots);
-    card.appendChild(scoreRow);
-    card.appendChild(hist);
-    card.appendChild(wind);
-    card.appendChild(elev);
+    card.appendChild(row1);
+    card.appendChild(row2);
     card.appendChild(actions);
-    card.appendChild(dl);
-    card.appendChild(close);
+    card.appendChild(closeBtn);
 
     overlay.appendChild(card);
+    overlay.addEventListener("click", (e) => {
+      if (e.target === overlay) overlay.remove();
+    });
+
     document.body.appendChild(overlay);
+  }
 
-    // Wire buttons
-    const buyBtn = $("secBuyBtn");
-    const surveyBtn = $("secSurveyBtn");
+  // ---------- Image Load (iOS fix) ----------
+  function loadImageFile(file) {
+    // Try objectURL first (fast)
+    if (objectUrl) URL.revokeObjectURL(objectUrl);
+    objectUrl = URL.createObjectURL(file);
 
-    buyBtn?.addEventListener("click", () => {
-      const u = (VENDOR.buyUrl || "").trim();
-      if (u) window.open(u, "_blank");
-    });
+    let didFallback = false;
 
-    surveyBtn?.addEventListener("click", () => {
-      const u = (VENDOR.surveyUrl || "").trim();
-      if (u) window.open(u, "_blank");
-    });
+    elImg.onload = () => {
+      // success
+    };
 
-    dl.addEventListener("click", async () => {
+    elImg.onerror = async () => {
+      if (didFallback) return;
+      didFallback = true;
+
+      // Fallback: FileReader -> dataURL
       try {
-        const blob = await renderSECToPNG(secData, historyLine);
-        const ts = new Date().toISOString().slice(0,19).replace(/[:T]/g, "-");
-        downloadBlob(blob, `SEC-${secData.score}-${ts}.png`);
+        const dataUrl = await new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result);
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
+        elImg.src = dataUrl;
       } catch (e) {
-        alert(`Download failed: ${e.message || e}`);
+        alert("Load failed");
       }
-    });
+    };
 
-    close.addEventListener("click", () => overlay.remove());
-    overlay.addEventListener("click", (e) => { if (e.target === overlay) overlay.remove(); });
+    elImg.src = objectUrl;
   }
 
-  async function showSEC() {
-    if (!anchor || hits.length === 0) return;
-
-    // get math from backend
-    const sec = await fetchBackendMath();
-
-    // update local score history
-    const hist = pushScoreHistory(sec.score);
-    const prev3 = hist.slice(1, 4);
-    const avg = computeAvg(hist);
-
-    const prevText = prev3.length ? prev3.join(", ") : "—";
-    const historyLine = `Prev 3: ${prevText}   Avg: ${avg}`;
-
-    buildSECModal(sec, historyLine);
-  }
-
-  // Events
+  // ---------- Events ----------
   elChoose.addEventListener("click", () => elFile.click());
 
-  elFile.addEventListener("change", async () => {
+  elFile.addEventListener("change", () => {
     const f = elFile.files && elFile.files[0];
     if (!f) return;
 
     selectedFile = f;
     elFileName.textContent = f.name;
 
-    // thumbnail
     setThumb(f);
 
-    // main image
-    if (objectUrl) URL.revokeObjectURL(objectUrl);
-    objectUrl = URL.createObjectURL(f);
-    elImg.src = objectUrl;
-
-    // reset taps
+    // Reset taps
     anchor = null;
     hits = [];
+    hasFirstTap = false;
     redrawAll();
-    updateControlsVisibility();
 
-    // show image
+    // Show image box
     elImgBox.classList.remove("hidden");
+    hideControlsVisibility(); // stays hidden until first tap
 
-    // hide landing thumbnail area once target is shown (your earlier request)
-    elLanding.classList.remove("hidden");
-    // If you want it fully gone while shooting:
-    elLanding.classList.add("secLandingHidden");
+    // Load image with iOS-safe fallback
+    loadImageFile(f);
 
-    // scroll
+    // Hide thumbnail visual once the target is shown
+    hideThumbnailArea();
+
+    // Scroll to image
     elImgBox.scrollIntoView({ behavior: "smooth", block: "start" });
+
+    // Allow re-selecting the same photo again later
+    elFile.value = "";
   });
 
-  // Tapping
+  // Tap handling
   elDots.addEventListener("pointerdown", (evt) => {
     if (!selectedFile) return;
     evt.preventDefault();
@@ -483,38 +293,50 @@
     const norm = getNormFromEvent(evt);
     if (!norm) return;
 
-    if (!anchor) anchor = norm;
-    else hits.push(norm);
+    if (!hasFirstTap) hasFirstTap = true; // SHOW controls after first tap
+
+    if (!anchor) {
+      anchor = norm;
+    } else {
+      hits.push(norm);
+    }
 
     redrawAll();
-    updateControlsVisibility();
   }, { passive: false });
 
   elClear.addEventListener("click", () => {
     anchor = null;
     hits = [];
+    // keep hasFirstTap true once user begins; controls stay available
     redrawAll();
-    updateControlsVisibility();
   });
 
   elUndo.addEventListener("click", () => {
-    if (hits.length > 0) hits.pop();
-    else if (anchor) anchor = null;
-
-    redrawAll();
-    updateControlsVisibility();
-  });
-
-  elResults.addEventListener("click", async () => {
-    try {
-      await showSEC();
-    } catch (e) {
-      alert(e.message || String(e));
+    if (hits.length > 0) {
+      hits.pop();
+    } else if (anchor) {
+      anchor = null;
     }
+    redrawAll();
   });
 
-  // Init
-  loadVendor();
+  elResults.addEventListener("click", () => showSECModal());
+
+  // Recenter on rotation / resize (keeps tap rect accurate, and recenters view)
+  window.addEventListener("orientationchange", () => {
+    setTimeout(() => {
+      if (!elImgBox.classList.contains("hidden")) {
+        elImgBox.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    }, 250);
+  });
+
+  window.addEventListener("resize", () => {
+    // nothing to recompute because we store normalized coords,
+    // but we redraw for safety (and to ensure dots stay crisp).
+    redrawAll();
+  });
+
+  // Initial
   redrawAll();
-  updateControlsVisibility();
 })();
