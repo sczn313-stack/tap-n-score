@@ -1,10 +1,10 @@
 /* ============================================================
-   styles.css (FULL REPLACEMENT) — vSEC-LOCK-1
-   - Thumbnail stays small
-   - SEC modal: darker + slightly blue tint
-   - Title is Red / White / Blue (per word)
-   - Score number color = performance (red/yellow/green)
-   - Wind/Elev value cluster tighter to the number, pushed right
+   styles.css (FULL REPLACEMENT) — vSEC-CENTERPIECE-1
+   SEC focus:
+   - Score is the centerpiece (biggest box)
+   - Shots + wind/elev moved into smaller sub-panel
+   - Two action buttons equal size + same color
+   - Hide thumbnail once target is live
 ============================================================ */
 
 * { box-sizing: border-box; }
@@ -21,7 +21,7 @@ body {
 
 .page {
   min-height: 100vh;
-  padding: 18px 14px 110px; /* room for bottom controls bar */
+  padding: 18px 14px 110px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -48,7 +48,6 @@ body {
   font-size: clamp(26px, 4vw, 44px);
   line-height: 1.05;
 }
-
 .tm { color: rgba(0,235,150,0.95); margin-left: 2px; }
 .sub { opacity: 0.85; font-weight: 700; font-size: 15px; }
 
@@ -92,7 +91,6 @@ body {
   cursor: pointer;
   user-select: none;
   -webkit-tap-highlight-color: transparent;
-
   background: linear-gradient(180deg, rgba(0,140,90,0.92), rgba(0,85,55,0.92));
   color: rgba(255,255,255,0.95);
   box-shadow: 0 16px 50px rgba(0,0,0,0.50);
@@ -100,12 +98,7 @@ body {
 }
 .btnPrimary:active { transform: translateY(1px); }
 
-/* ---------- What next list ---------- */
-.whatNext { margin-top: 10px; }
-.bullets { margin: 8px 0 0; padding-left: 18px; }
-.bullets li { opacity: 0.9; font-weight: 700; margin: 6px 0; }
-
-/* ---------- Thumbnail (SMALL) ---------- */
+/* ---------- Thumbnail ---------- */
 .thumbBox {
   margin-top: 8px;
   width: 100%;
@@ -114,14 +107,11 @@ body {
   border-radius: 18px;
   padding: 10px;
   overflow: hidden;
-
   display: flex;
   align-items: center;
   justify-content: center;
-
   min-height: 90px;
 }
-
 .thumbBox img {
   display: block;
   width: auto;
@@ -131,22 +121,21 @@ body {
   border-radius: 10px;
   border: 1px solid rgba(255,255,255,0.10);
 }
-
 .thumbEmpty { opacity: 0.72; font-weight: 800; padding: 10px 6px; }
 
+/* Hide thumbnail section once target is live (keeps landing clean) */
+body.targetLive .thumbBox { display: none !important; }
+body.targetLive .thumbEmpty { display: none !important; }
+
 /* ============================================================
-   IMAGE BOX (critical lock)
+   IMAGE BOX (tap area)
 ============================================================ */
 .imgBox {
   display: inline-block;
   position: relative;
   width: min(860px, 96vw);
-  padding: 0;
-  margin: 0;
-
   border-radius: 22px;
   overflow: hidden;
-
   border: 1px solid rgba(255,255,255,0.10);
   box-shadow: 0 20px 60px rgba(0,0,0,0.55);
   background: rgba(0,0,0,0.18);
@@ -161,7 +150,6 @@ body {
   user-select: none;
 }
 
-/* overlay matches image box exactly */
 #dotsLayer {
   position: absolute;
   inset: 0;
@@ -171,7 +159,6 @@ body {
   background: transparent;
 }
 
-/* Tap dots */
 .tapDot {
   position: absolute;
   transform: translate(-50%, -50%);
@@ -230,11 +217,11 @@ body {
   cursor: pointer;
   user-select: none;
   -webkit-tap-highlight-color: transparent;
-
   background: rgba(255,255,255,0.08);
   color: rgba(255,255,255,0.92);
   border: 1px solid rgba(255,255,255,0.10);
 }
+
 .btnCtl:active { transform: translateY(1px); }
 .btnCtl:disabled { opacity: 0.35; cursor: not-allowed; }
 
@@ -245,15 +232,14 @@ body {
 }
 
 /* ============================================================
-   SEC MODAL (Shooter Experience Card)
+   SEC MODAL (Shooter’s Score)
 ============================================================ */
-
 .secOverlay {
   position: fixed;
   inset: 0;
   z-index: 999999;
   background: rgba(0,0,0,0.55);
-  backdrop-filter: blur(8px);
+  backdrop-filter: blur(10px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -261,151 +247,168 @@ body {
 }
 
 .secCard {
-  width: min(920px, 96vw);
-  border-radius: 22px;
+  width: min(980px, 96vw);
+  border-radius: 26px;
   border: 1px solid rgba(255,255,255,0.12);
-
-  /* darker + slightly blue tint like you asked */
-  background: rgba(10, 14, 22, 0.78);
-
-  box-shadow: 0 26px 80px rgba(0,0,0,0.65);
-  padding: 18px 18px 16px;
+  background: rgba(14, 16, 16, 0.78);
+  box-shadow: 0 26px 90px rgba(0,0,0,0.70);
+  padding: 18px;
   color: rgba(255,255,255,0.92);
 }
 
-.secTitle {
-  font-size: 34px;
-  font-weight: 1000;
-  letter-spacing: 0.8px;
-  line-height: 1.05;
-  margin-bottom: 8px;
-}
-
-.tRed { color: #e53935; }
-.tWhite { color: rgba(255,255,255,0.92); }
-.tBlue { color: #1e5bb8; } /* darker blue */
-
-.secShots {
-  font-size: 20px;
-  font-weight: 900;
-  opacity: 0.95;
+.secHeader {
+  display: flex;
+  align-items: baseline;
+  justify-content: flex-start;
+  gap: 12px;
   margin-bottom: 12px;
 }
 
-.secRows {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  margin-bottom: 14px;
+.secTitle {
+  font-weight: 1000;
+  letter-spacing: 1px;
+  font-size: clamp(26px, 4vw, 44px);
+  line-height: 1.05;
 }
 
+.tRed { color: #e34b4b; }
+.tWhite { color: rgba(255,255,255,0.94); }
+.tBlue { color: #2c6bff; }
+
+.secMain {
+  margin-bottom: 12px;
+}
+
+/* Main centerpiece score row */
 .secRow {
   display: grid;
-
-  /* LEFT LABEL | RIGHT VALUE (pushed right) */
-  grid-template-columns: 1fr minmax(240px, 320px);
-
-  gap: 12px;
+  grid-template-columns: 1fr auto;
   align-items: center;
-
-  padding: 14px 14px;
+  gap: 14px;
   border-radius: 18px;
   border: 1px solid rgba(255,255,255,0.10);
-  background: rgba(0,0,0,0.22);
+  background: rgba(255,255,255,0.06);
+  padding: 16px 16px;
 }
 
-@media (max-width: 560px) {
-  .secRow {
-    grid-template-columns: 1fr minmax(190px, 240px);
-  }
+.secScoreRow {
+  padding: 18px 18px;
 }
 
 .secLabel {
-  font-size: 22px;
   font-weight: 900;
+  font-size: 20px;
   opacity: 0.92;
 }
 
-/* Score number (ONLY number on right) */
-.secScoreNum {
-  text-align: right;
-  font-size: 56px;
+/* Big score number (centerpiece) */
+.secBigValue {
   font-weight: 1000;
-  letter-spacing: 0.4px;
+  font-size: clamp(56px, 8vw, 92px);
+  line-height: 1;
+  letter-spacing: 1px;
 }
 
-/* performance colors for score number ONLY */
-.scoreRed { color: #e53935; }
-.scoreYellow { color: #f4c20d; }
-.scoreGreen { color: #2ecc71; }
+/* Score colors */
+.scoreRed { color: #e34b4b; }
+.scoreYellow { color: #f0c84b; }
+.scoreGreen { color: #33cc66; }
 
-/* Wind/Elev value cluster: tighter, closer to number */
-.secValueBox {
+.secSub {
+  margin-top: 10px;
+  padding: 14px;
+  border-radius: 18px;
+  border: 1px solid rgba(255,255,255,0.10);
+  background: rgba(0,0,0,0.18);
+}
+
+/* Shots compact line */
+.secShots {
   display: flex;
-  justify-content: flex-end;
   align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+  opacity: 0.92;
+}
+.secShotsLabel { font-weight: 900; }
+.secShotsVal { font-weight: 1000; }
+
+/* Mini grid for wind/elev */
+.secMiniGrid {
+  display: grid;
+  grid-template-columns: 1fr;
   gap: 10px;
 }
 
-.secArrow {
-  font-size: 30px;
+.secMiniRow {
+  padding: 14px 14px;
+}
+
+.secMiniValue {
+  display: inline-flex;
+  align-items: baseline;
+  justify-content: flex-end;
+  gap: 10px;
   font-weight: 1000;
+}
+
+.secArrow {
+  font-size: 26px;
   opacity: 0.95;
 }
 
 .secNum {
-  font-size: 50px;
-  font-weight: 1000;
-  letter-spacing: 0.4px;
+  font-size: clamp(34px, 6vw, 56px);
+  letter-spacing: 0.5px;
 }
 
 .secDir {
-  font-size: 20px;
+  font-size: 18px;
+  opacity: 0.85;
   font-weight: 1000;
-  opacity: 0.9;
-  min-width: 18px;
-  text-align: right;
+  margin-left: 4px;
 }
 
-/* Two action buttons */
-.secCTAs {
+/* Actions (2 equal buttons) */
+.secActions {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 12px;
-  margin-bottom: 12px;
+  margin-top: 14px;
 }
 
 .secActionBtn {
   border: none;
   border-radius: 16px;
-  padding: 14px 12px; /* slightly smaller like you asked */
+  padding: 14px 12px;
   font-size: 18px;
   font-weight: 1000;
   cursor: pointer;
-  user-select: none;
-  -webkit-tap-highlight-color: transparent;
-
-  /* equal same color */
-  background: linear-gradient(180deg, rgba(0,170,110,0.92), rgba(0,105,70,0.92));
+  background: linear-gradient(180deg, rgba(0,170,110,0.95), rgba(0,105,70,0.95));
   color: rgba(255,255,255,0.96);
   border: 1px solid rgba(255,255,255,0.12);
-  box-shadow: 0 14px 46px rgba(0,0,0,0.45);
+  box-shadow: 0 16px 50px rgba(0,0,0,0.55);
 }
 .secActionBtn:active { transform: translateY(1px); }
 
-/* Close button */
+/* Close */
 .secCloseBtn {
   width: 100%;
+  margin-top: 12px;
   border: none;
   border-radius: 999px;
   padding: 16px 18px;
   font-size: 20px;
   font-weight: 1000;
   cursor: pointer;
-
   background: linear-gradient(180deg, rgba(0,170,110,0.95), rgba(0,105,70,0.95));
   color: rgba(255,255,255,0.96);
   border: 1px solid rgba(255,255,255,0.12);
   box-shadow: 0 18px 60px rgba(0,0,0,0.55);
 }
 .secCloseBtn:active { transform: translateY(1px); }
+
+@media (max-width: 520px) {
+  .secRow { grid-template-columns: 1fr auto; }
+  .secActions { grid-template-columns: 1fr; }
+}
