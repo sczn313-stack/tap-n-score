@@ -1,3 +1,11 @@
+/* ============================================================
+   styles.css (FULL REPLACEMENT) — TAP-LAYER-LOCK-6a
+   Goals:
+   - Thumbnail NOT huge
+   - Image overlay locked to rendered image box
+   - Clear/Undo/Results visible and usable
+============================================================ */
+
 * { box-sizing: border-box; }
 html, body { height: 100%; }
 
@@ -13,13 +21,14 @@ body {
 
 .page {
   min-height: 100vh;
-  padding: 18px 14px 44px;
+  padding: 18px 14px 54px;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 18px;
 }
 
+/* ---------- Card ---------- */
 .card {
   width: min(860px, 96vw);
   background: rgba(18, 24, 22, 0.58);
@@ -39,18 +48,21 @@ body {
   font-size: clamp(26px, 4vw, 44px);
   line-height: 1.05;
 }
+
 .tm { color: rgba(0,235,150,0.95); margin-left: 2px; }
 .sub { opacity: 0.85; font-weight: 700; font-size: 15px; }
 
 .field { margin: 12px 0; }
 .label { font-weight: 800; opacity: 0.92; margin-bottom: 8px; font-size: 15px; }
+
 .hint { opacity: 0.78; margin-top: 8px; font-weight: 600; }
-.hintStrong { margin-top: 8px; font-weight: 900; opacity: 0.92; }
+.hintStrong { margin-top: 10px; font-weight: 900; opacity: 0.92; }
 
 .row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
 @media (max-width: 520px) { .row { grid-template-columns: 1fr; } }
 
 .hiddenFile { display: none !important; }
+.hidden { display: none !important; }
 
 .select {
   width: 100%;
@@ -70,7 +82,8 @@ body {
   box-shadow: 0 0 0 3px rgba(0,235,150,0.16);
 }
 
-.btnPrimary {
+.btnPrimary,
+.btnStart {
   width: 100%;
   border: none;
   border-radius: 999px;
@@ -80,6 +93,9 @@ body {
   cursor: pointer;
   user-select: none;
   -webkit-tap-highlight-color: transparent;
+}
+
+.btnPrimary {
   background: linear-gradient(180deg, rgba(0,140,90,0.92), rgba(0,85,55,0.92));
   color: rgba(255,255,255,0.95);
   box-shadow: 0 16px 50px rgba(0,0,0,0.50);
@@ -87,72 +103,41 @@ body {
 }
 .btnPrimary:active { transform: translateY(1px); }
 
-/* ---------- Thumbnail ---------- */
+.btnStart {
+  margin-top: 12px;
+  background: linear-gradient(180deg, rgba(0,170,110,0.95), rgba(0,105,70,0.95));
+  color: rgba(255,255,255,0.96);
+  border: 1px solid rgba(255,255,255,0.12);
+  box-shadow: 0 18px 60px rgba(0,0,0,0.55);
+}
+.btnStart:active { transform: translateY(1px); }
+.btnStart:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  filter: grayscale(30%);
+}
+
+/* ---------- Thumbnail (FIXED SIZE) ---------- */
 .thumbBox {
   margin-top: 8px;
   width: 100%;
   background: rgba(0,0,0,0.20);
   border: 1px solid rgba(255,255,255,0.10);
   border-radius: 18px;
-  padding: 10px;
+  padding: 12px;
   overflow: hidden;
-}
-.thumbEmpty { opacity: 0.72; font-weight: 800; padding: 10px 6px; }
-
-/* Small thumbnail mode */
-.thumbSmall {
-  max-width: 340px;
 }
 .thumbBox img {
   width: 100%;
-  height: auto;
+  height: 160px;        /* <<< KEY FIX */
+  object-fit: cover;    /* <<< KEY FIX */
   display: block;
   border-radius: 12px;
 }
+.thumbEmpty { opacity: 0.72; font-weight: 800; padding: 10px 6px; }
 
-/* ---------- Tool buttons row ---------- */
-.toolsRow {
-  display: grid;
-  grid-template-columns: 1fr 1fr 1.4fr;
-  gap: 12px;
-  margin-top: 10px;
-}
-@media (max-width: 520px) {
-  .toolsRow { grid-template-columns: 1fr; }
-}
-
-.btnTool,
-.btnToolPrimary {
-  border: none;
-  border-radius: 14px;
-  padding: 14px 12px;
-  font-size: 16px;
-  font-weight: 900;
-  cursor: pointer;
-  user-select: none;
-  -webkit-tap-highlight-color: transparent;
-  border: 1px solid rgba(255,255,255,0.12);
-  box-shadow: 0 14px 40px rgba(0,0,0,0.45);
-}
-.btnTool {
-  background: rgba(0,0,0,0.28);
-  color: rgba(255,255,255,0.92);
-}
-.btnToolPrimary {
-  background: linear-gradient(180deg, rgba(0,170,110,0.95), rgba(0,105,70,0.95));
-  color: rgba(255,255,255,0.96);
-}
-.btnTool:disabled,
-.btnToolPrimary:disabled {
-  opacity: 0.45;
-  cursor: not-allowed;
-  filter: grayscale(30%);
-}
-
-/* ---------- Image box lock ---------- */
-.hidden { display: none !important; }
-
-#imgBox.imgBox {
+/* ---------- Image box + overlay lock ---------- */
+.imgBox {
   display: inline-block;
   position: relative;
   width: min(860px, 96vw);
@@ -174,31 +159,55 @@ body {
   user-select: none;
 }
 
+/* Tap overlay sits exactly on image bounds */
 #dotsLayer {
   position: absolute;
   inset: 0;
   z-index: 5;
-  background: transparent;
+  touch-action: none;      /* iOS: stop pinch/scroll stealing taps */
   pointer-events: auto;
-  touch-action: none;
-  -webkit-user-select: none;
-  user-select: none;
+  background: transparent;
 }
 
+/* Tap dots */
 .tapDot {
   position: absolute;
-  width: 14px;
-  height: 14px;
   transform: translate(-50%, -50%);
   border-radius: 999px;
-  background: rgba(0,220,120,0.95);
   border: 2px solid rgba(0,0,0,0.35);
   box-shadow: 0 10px 28px rgba(0,0,0,0.55);
 }
-.tapDotAnchor {
-  width: 18px;
-  height: 18px;
-  background: rgba(255,180,0,0.95);
+
+/* Controls on image */
+.imgControls {
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: 12px;
+  z-index: 10;
+  display: flex;
+  gap: 10px;
+}
+
+.btnMini,
+.btnMiniPrimary {
+  flex: 1;
+  border-radius: 999px;
+  padding: 12px 10px;
+  font-weight: 900;
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(0,0,0,0.35);
+  color: rgba(255,255,255,0.92);
+  -webkit-tap-highlight-color: transparent;
+}
+.btnMini:disabled,
+.btnMiniPrimary:disabled {
+  opacity: 0.45;
+}
+
+.btnMiniPrimary {
+  background: linear-gradient(180deg, rgba(0,170,110,0.95), rgba(0,105,70,0.95));
+  color: rgba(255,255,255,0.96);
 }
 
 /* ---------- HUD ---------- */
@@ -218,3 +227,38 @@ body {
 }
 .hudLeft { left: 12px; }
 .hudRight { right: 12px; }
+
+/* ---------- Results modal ---------- */
+.resultsPanel {
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  background: rgba(0,0,0,0.60);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+}
+
+.resultsCard {
+  width: min(680px, 96vw);
+  border-radius: 18px;
+  background: rgba(18, 24, 22, 0.92);
+  border: 1px solid rgba(255,255,255,0.12);
+  box-shadow: 0 24px 80px rgba(0,0,0,0.65);
+  padding: 16px;
+}
+
+.resultsTitle {
+  font-weight: 1000;
+  font-size: 22px;
+  margin-bottom: 10px;
+}
+
+.resultsBody {
+  font-weight: 800;
+  opacity: 0.92;
+  line-height: 1.35;
+  margin-bottom: 14px;
+  white-space: pre-wrap;
+}
