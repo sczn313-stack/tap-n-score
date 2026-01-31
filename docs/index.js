@@ -1,9 +1,9 @@
 /* ============================================================
-   index.js (FULL REPLACEMENT) — SEC-LOCK-1
-   - Card-contained SEC scoring page
-   - HERO score is centerpiece; numerals only; colored by thresholds
-   - Controls (Clear/Undo/Results) appear ONLY after first tap
-   - All math/results come from backend endpoint
+   index.js (FULL REPLACEMENT) — SEC-LOCK-2
+   Step 2:
+   - Add score history: previous 3 + cumulative avg + count
+   - Backend provides score/clicks/shots
+   - We store ONLY returned scores locally for display
 ============================================================ */
 
 (() => {
@@ -38,6 +38,13 @@
   const clickRight = $("clickRight");
   const shotsCount = $("shotsCount");
 
+  // History (Step 2)
+  const prev1 = $("prev1");
+  const prev2 = $("prev2");
+  const prev3 = $("prev3");
+  const avgScore = $("avgScore");
+  const scoreCount = $("scoreCount");
+
   const downloadSecBtn = $("downloadSecBtn");
   const surveyBtn = $("surveyBtn");
   const secCanvas = $("secCanvas");
@@ -51,6 +58,10 @@
 
   let controlsShown = false;
 
+  // Local score history store
+  const HISTORY_KEY = "sczn3_score_history_v1";
+  const HISTORY_MAX = 50;
+
   // ------------ Helpers ------------
   const clamp01 = (v) => Math.max(0, Math.min(1, v));
 
@@ -60,21 +71,27 @@
     pageSec.classList.add("hidden");
 
     which.classList.remove("hidden");
-
-    // recenter after page change
     requestAnimationFrame(() => {
       which.scrollIntoView({ behavior: "instant", block: "start" });
     });
   }
 
-  function setScoreColor(scoreNum) {
-    // your rules (numbers only colored)
-    scoreHero.style.color = "rgba(255,255,255,0.92)";
-    if (!Number.isFinite(scoreNum)) return;
+  function scoreColorCss(scoreNum) {
+    if (!Number.isFinite(scoreNum)) return "rgba(255,255,255,0.92)";
+    if (scoreNum <= 60) return "rgba(255, 70, 70, 0.98)";
+    if (scoreNum <= 79) return "rgba(255, 208, 70, 0.98)";
+    return "rgba(0, 235, 150, 0.98)";
+  }
 
-    if (scoreNum <= 60) scoreHero.style.color = "rgba(255, 70, 70, 0.98)";
-    else if (scoreNum <= 79) scoreHero.style.color = "rgba(255, 208, 70, 0.98)";
-    else scoreHero.style.color = "rgba(0, 235, 150, 0.98)";
+  function setScore(scoreNum) {
+    if (!Number.isFinite(scoreNum)) {
+      scoreHero.textContent = "—";
+      scoreHero.style.color = "rgba(255,255,255,0.92)";
+      return;
+    }
+    const s = Math.round(scoreNum);
+    scoreHero.textContent = String(s);
+    scoreHero.style.color = scoreColorCss(s);
   }
 
   function setClicks({ up, down, left, right }) {
@@ -92,7 +109,7 @@
     const d = document.createElement("div");
     d.className = "tapDot";
 
-    // smaller dots for iPhone (anchor a touch bigger)
+    // smaller dots for phones
     const size = (kind === "anchor") ? 12 : 10;
     d.style.width = `${size}px`;
     d.style.height = `${size}px`;
@@ -117,7 +134,6 @@
     if (controlsShown) return;
     controlsShown = true;
     controlsBar.classList.remove("hidden");
-    // initial enable states
     clearBtn.disabled = false;
     undoBtn.disabled = false;
     resultsBtn.disabled = false;
@@ -142,14 +158,12 @@
   // Recenter after rotation/pinch changes
   function bindRecenter() {
     const recenter = () => {
+      document.documentElement.scrollTop = 0;
+      document.body.scrollTop = 0;
       if (!pageSec.classList.contains("hidden")) {
-        document.documentElement.scrollTop = 0;
-        document.body.scrollTop = 0;
         $("secCard")?.scrollIntoView({ behavior: "instant", block: "start" });
       }
       if (!pageTap.classList.contains("hidden")) {
-        document.documentElement.scrollTop = 0;
-        document.body.scrollTop = 0;
         imgBox?.scrollIntoView({ behavior: "instant", block: "start" });
       }
     };
@@ -157,28 +171,91 @@
     window.addEventListener("orientationchange", () => setTimeout(recenter, 120));
     window.addEventListener("resize", () => setTimeout(recenter, 120));
 
-    // iOS pinch/visual viewport shifts
     if (window.visualViewport) {
       window.visualViewport.addEventListener("resize", () => setTimeout(recenter, 120));
       window.visualViewport.addEventListener("scroll", () => setTimeout(recenter, 120));
     }
   }
 
+  // ------------ Score history (Step 2) ------------
+  function readHistory() {
+    try {
+      const raw = localStorage.getItem(HISTORY_KEY);
+      const arr = raw ? JSON.parse(raw) : [];
+      if (!Array.isArray(arr)) return [];
+      return arr.filter((n) => Number.isFinite(Number(n))).map((n) => Number(n));
+    } catch {
+      return [];
+    }
+  }
+
+  function writeHistory(arr) {
+    try {
+      localStorage.setItem(HISTORY_KEY, JSON.stringify(arr.slice(-HISTORY_MAX)));
+    } catch {}
+  }
+
+  function pushScoreToHistory(scoreNum) {
+    if (!Number.isFinite(scoreNum)) return;
+    const h = readHistory();
+    h.push(Math.round(scoreNum));
+    writeHistory(h);
+  }
+
+  function updateHistoryUI(currentScore) {
+    const h = readHistory(); // includes current after push
+    const count = h.length;
+    scoreCount.textContent = String(count);
+
+    // avg across all stored scores
+    if (count > 0) {
+      const sum = h.reduce((a, b) => a + b, 0);
+      avgScore.textContent = String(Math.round(sum / count));
+    } else {
+      avgScore.textContent = "—";
+    }
+
+    // Previous 3 = scores BEFORE current
+    // currentScore is last in history (if we pushed it)
+    const prev = h.slice(0, -1).slice(-3).reverse(); // most recent first
+    const p1 = prev[0], p2 = prev[1], p3 = prev[2];
+
+    setHistPill(prev1, p1);
+    setHistPill(prev2, p2);
+    setHistPill(prev3, p3);
+
+    // keep pills neutral background; numerals can be color-coded too (optional)
+    // We'll color numerals only, matching your rule.
+    colorHistPill(prev1, p1);
+    colorHistPill(prev2, p2);
+    colorHistPill(prev3, p3);
+
+    // also color avg number only
+    const avgNum = Number(avgScore.textContent);
+    avgScore.style.color = scoreColorCss(avgNum);
+  }
+
+  function setHistPill(el, val) {
+    if (!el) return;
+    el.textContent = (Number.isFinite(val)) ? String(val) : "—";
+  }
+
+  function colorHistPill(el, val) {
+    if (!el) return;
+    if (!Number.isFinite(val)) {
+      el.style.color = "rgba(255,255,255,0.85)";
+      return;
+    }
+    el.style.color = scoreColorCss(val);
+  }
+
   // ------------ Backend call ------------
   async function fetchBackendResults() {
-    // This endpoint must exist on your backend.
-    // If yours is different, change it here ONLY.
     const endpoint = "/api/analyze";
 
     const payload = {
-      // Backend is authority for ALL math.
       anchor,
-      hits,
-      // We intentionally HIDE distance/MOA on SEC UI,
-      // but backend may still need them internally later.
-      // Keep these in payload if your backend uses them.
-      // distanceYds: Number($("distanceYds")?.value || 100),
-      // clickValue: Number($("clickValue")?.value || 0.25),
+      hits
     };
 
     const res = await fetch(endpoint, {
@@ -195,97 +272,130 @@
   }
 
   function applySecData(data) {
-    // expected shape (example):
-    // {
-    //   sessionId: "SEC-....",
-    //   score: 87,
-    //   shots: 5,
-    //   clicks: {up:0.25, down:0, left:0, right:0},
-    // }
     const session = (data && data.sessionId) ? String(data.sessionId) : newSessionId();
     secSessionId.textContent = session;
 
     const score = Number(data && data.score);
-    scoreHero.textContent = Number.isFinite(score) ? String(Math.round(score)) : "—";
-    setScoreColor(Number.isFinite(score) ? score : NaN);
+    setScore(score);
 
     const shots = Number(data && data.shots);
     shotsCount.textContent = Number.isFinite(shots) ? String(shots) : String(hits.length);
 
     const clicks = (data && data.clicks) ? data.clicks : { up: 0, down: 0, left: 0, right: 0 };
     setClicks(clicks);
+
+    // Step 2: store score + update history strip
+    if (Number.isFinite(score)) {
+      pushScoreToHistory(score);
+    }
+    updateHistoryUI(score);
   }
 
   // ------------ SEC Download ------------
   function downloadSecAsImage() {
-    // Simple v1: render a clean card image with score + clicks + shots.
-    // (We’ll add history strip in Step 2, then enhance this.)
     const ctx = secCanvas.getContext("2d");
     const W = secCanvas.width;
     const H = secCanvas.height;
 
-    // background
     ctx.clearRect(0, 0, W, H);
     ctx.fillStyle = "#0b0f0d";
     ctx.fillRect(0, 0, W, H);
 
-    // card
     const pad = 70;
     const r = 40;
     const x = pad, y = pad, w = W - pad * 2, h = H - pad * 2;
 
-    // rounded rect
     ctx.fillStyle = "rgba(20,26,24,0.90)";
     roundRect(ctx, x, y, w, h, r, true, false);
 
-    // title
+    // Title
     ctx.font = "900 44px system-ui, -apple-system, Segoe UI, Roboto, Arial";
     ctx.fillStyle = "rgba(255,255,255,0.92)";
     ctx.fillText("Shooter Experience Card", x + 56, y + 92);
 
-    // session
+    // Session
     ctx.font = "800 26px system-ui, -apple-system, Segoe UI, Roboto, Arial";
     ctx.fillStyle = "rgba(255,255,255,0.70)";
     ctx.fillText(`Session: ${secSessionId.textContent}`, x + 56, y + 140);
 
-    // score
+    // Score
     const scoreTxt = scoreHero.textContent || "—";
+    const scoreNum = Number(scoreTxt);
     ctx.font = "1000 220px system-ui, -apple-system, Segoe UI, Roboto, Arial";
-    ctx.fillStyle = getScoreColorForCanvas(scoreTxt);
+    ctx.fillStyle = scoreColorCss(Number.isFinite(scoreNum) ? scoreNum : NaN);
     ctx.textAlign = "center";
     ctx.fillText(scoreTxt, x + w / 2, y + 430);
     ctx.textAlign = "left";
 
-    // clicks + shots
+    // History strip
+    const hArr = readHistory();
+    const count = hArr.length;
+    const avg = count ? Math.round(hArr.reduce((a,b)=>a+b,0)/count) : NaN;
+    const prev = hArr.slice(0,-1).slice(-3).reverse();
+    const p1 = prev[0], p2 = prev[1], p3 = prev[2];
+
     ctx.font = "900 34px system-ui, -apple-system, Segoe UI, Roboto, Arial";
     ctx.fillStyle = "rgba(255,255,255,0.88)";
-    ctx.fillText("Target Clicks", x + 56, y + 560);
+    ctx.fillText("Previous 3", x + 56, y + 560);
+
+    // Pills
+    drawPill(ctx, x + 56,  y + 590, 220, 70, p1);
+    drawPill(ctx, x + 296, y + 590, 220, 70, p2);
+    drawPill(ctx, x + 536, y + 590, 220, 70, p3);
+
+    ctx.font = "900 28px system-ui, -apple-system, Segoe UI, Roboto, Arial";
+    ctx.fillStyle = "rgba(255,255,255,0.70)";
+    ctx.fillText(`Avg:`, x + 56, y + 700);
+    ctx.fillStyle = scoreColorCss(avg);
+    ctx.fillText(`${Number.isFinite(avg) ? avg : "—"}`, x + 120, y + 700);
+
+    ctx.fillStyle = "rgba(255,255,255,0.70)";
+    ctx.fillText(`Count: ${count}`, x + 260, y + 700);
+
+    // Clicks
+    ctx.font = "900 34px system-ui, -apple-system, Segoe UI, Roboto, Arial";
+    ctx.fillStyle = "rgba(255,255,255,0.88)";
+    ctx.fillText("Target Clicks", x + 56, y + 780);
 
     ctx.font = "900 40px system-ui, -apple-system, Segoe UI, Roboto, Arial";
     ctx.fillStyle = "rgba(255,255,255,0.92)";
-    ctx.fillText(`↑ U  ${clickUp.textContent}`, x + 56, y + 630);
-    ctx.fillText(`↓ D  ${clickDown.textContent}`, x + 56, y + 690);
-    ctx.fillText(`← L  ${clickLeft.textContent}`, x + 56, y + 750);
-    ctx.fillText(`→ R  ${clickRight.textContent}`, x + 56, y + 810);
+    ctx.fillText(`↑ U  ${clickUp.textContent}`, x + 56, y + 850);
+    ctx.fillText(`↓ D  ${clickDown.textContent}`, x + 56, y + 910);
+    ctx.fillText(`← L  ${clickLeft.textContent}`, x + 56, y + 970);
+    ctx.fillText(`→ R  ${clickRight.textContent}`, x + 56, y + 1030);
 
+    // Shots
     ctx.font = "900 34px system-ui, -apple-system, Segoe UI, Roboto, Arial";
     ctx.fillStyle = "rgba(255,255,255,0.88)";
-    ctx.fillText("Shots", x + 56, y + 900);
+    ctx.fillText("Shots", x + 56, y + 1120);
 
     ctx.font = "1000 72px system-ui, -apple-system, Segoe UI, Roboto, Arial";
     ctx.fillStyle = "rgba(255,255,255,0.92)";
-    ctx.fillText(`${shotsCount.textContent}`, x + 56, y + 980);
+    ctx.fillText(`${shotsCount.textContent}`, x + 56, y + 1200);
 
-    // timestamp
+    // Timestamp
     ctx.font = "800 24px system-ui, -apple-system, Segoe UI, Roboto, Arial";
     ctx.fillStyle = "rgba(255,255,255,0.62)";
     ctx.fillText(new Date().toLocaleString(), x + 56, y + h - 56);
 
-    // download
     const a = document.createElement("a");
     a.download = `${secSessionId.textContent}.png`;
     a.href = secCanvas.toDataURL("image/png");
     a.click();
+  }
+
+  function drawPill(ctx, x, y, w, h, score) {
+    ctx.fillStyle = "rgba(255,255,255,0.08)";
+    roundRect(ctx, x, y, w, h, 18, true, false);
+
+    const s = Number(score);
+    ctx.font = "1000 42px system-ui, -apple-system, Segoe UI, Roboto, Arial";
+    ctx.fillStyle = scoreColorCss(s);
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(Number.isFinite(s) ? String(s) : "—", x + w/2, y + h/2);
+    ctx.textAlign = "left";
+    ctx.textBaseline = "alphabetic";
   }
 
   function roundRect(ctx, x, y, w, h, r, fill, stroke) {
@@ -301,14 +411,6 @@
     if (stroke) ctx.stroke();
   }
 
-  function getScoreColorForCanvas(scoreTxt) {
-    const s = Number(scoreTxt);
-    if (!Number.isFinite(s)) return "rgba(255,255,255,0.92)";
-    if (s <= 60) return "rgba(255, 70, 70, 0.98)";
-    if (s <= 79) return "rgba(255, 208, 70, 0.98)";
-    return "rgba(0, 235, 150, 0.98)";
-  }
-
   // ------------ Events ------------
   elChoose.addEventListener("click", () => elFile.click());
 
@@ -319,12 +421,10 @@
     selectedFile = f;
     elFileName.textContent = f.name;
 
-    // load image
     if (objectUrl) URL.revokeObjectURL(objectUrl);
     objectUrl = URL.createObjectURL(f);
     targetImg.src = objectUrl;
 
-    // reset taps
     anchor = null;
     hits = [];
     controlsShown = false;
@@ -332,11 +432,9 @@
     redraw();
 
     showPage(pageTap);
-    // allow selecting same file again later
     elFile.value = "";
   });
 
-  // taps
   dotsLayer.addEventListener("pointerdown", (evt) => {
     if (!selectedFile) return;
     evt.preventDefault();
@@ -367,13 +465,14 @@
   resultsBtn.addEventListener("click", async () => {
     if (!anchor || hits.length === 0) return;
 
-    // show SEC page even if backend fails, but with safe placeholders
-    const localSession = newSessionId();
-    secSessionId.textContent = localSession;
-    scoreHero.textContent = "—";
-    setScoreColor(NaN);
+    // show SEC immediately (stable), fill after backend responds
+    secSessionId.textContent = newSessionId();
+    setScore(NaN);
     shotsCount.textContent = String(hits.length);
     setClicks({ up: 0, down: 0, left: 0, right: 0 });
+
+    // show history based on current stored state (before pushing new)
+    updateHistoryUI(NaN);
 
     showPage(pageSec);
 
@@ -381,20 +480,21 @@
       const data = await fetchBackendResults();
       applySecData(data);
     } catch (e) {
-      // keep page stable; just show safe text in console
       console.warn("Backend not ready / failed:", e);
-      // optional: you can display a tiny non-intrusive message later
+      // keep UI stable; no fake math
     }
   });
 
   downloadSecBtn.addEventListener("click", () => downloadSecAsImage());
 
   surveyBtn.addEventListener("click", () => {
-    // Placeholder: wire to your survey URL later
     alert("Survey coming next.");
   });
 
   // Init
   bindRecenter();
   showPage(pageLanding);
+
+  // Show history values even before first run (optional)
+  updateHistoryUI(NaN);
 })();
