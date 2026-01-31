@@ -7,14 +7,16 @@
   <meta name="theme-color" content="#07110c" />
   <title>Tap-n-Score™</title>
 
-  <link rel="stylesheet" href="./styles.css?v=vTAP-LOCK-SEC-1" />
+  <link rel="stylesheet" href="./styles.css?v=SEC-LOCK-1" />
 </head>
 
 <body>
   <main class="page">
 
-    <!-- Landing card -->
-    <section class="card">
+    <!-- ==============================
+         PAGE 1 — LANDING
+    =============================== -->
+    <section id="pageLanding" class="card">
       <header class="hero">
         <div class="brandLine">
           <div class="brand">TAP-N-SCORE<span class="tm">™</span></div>
@@ -26,42 +28,13 @@
         <div class="label">Take or Choose Target Photo</div>
 
         <input id="photoInput" class="hiddenFile" type="file" accept="image/*" />
-
         <button id="chooseBtn" class="btnPrimary" type="button">Choose Photo</button>
 
         <div id="fileName" class="hintStrong">No file selected.</div>
         <div class="hint">Tip: Straight-on photos give the most accurate results.</div>
       </div>
 
-      <div class="row">
-        <div class="field">
-          <div class="label">Distance</div>
-          <select id="distanceYds" class="select">
-            <option value="25">25 yd</option>
-            <option value="50">50 yd</option>
-            <option value="100" selected>100 yd</option>
-            <option value="200">200 yd</option>
-          </select>
-        </div>
-
-        <div class="field">
-          <div class="label">Click</div>
-          <select id="clickValue" class="select">
-            <option value="0.25" selected>¼ MOA</option>
-            <option value="0.5">½ MOA</option>
-            <option value="1">1 MOA</option>
-          </select>
-        </div>
-      </div>
-
-      <div class="field">
-        <div class="label">Selected target photo thumbnail</div>
-        <div id="thumbBox" class="thumbBox">
-          <div class="thumbEmpty">No photo selected yet.</div>
-        </div>
-      </div>
-
-      <div class="whatNext">
+      <div class="field whatNext">
         <div class="label">What happens next</div>
         <ul class="bullets">
           <li>Tap bull’s-eye (anchor)</li>
@@ -71,20 +44,100 @@
       </div>
     </section>
 
-    <!-- Tap area -->
-    <section id="imgBox" class="imgBox hidden" aria-label="Target image box">
-      <img id="targetImg" alt="Selected target" />
-      <div id="dotsLayer" aria-label="Tap overlay"></div>
+    <!-- ==============================
+         PAGE 2 — TAP TARGET
+    =============================== -->
+    <section id="pageTap" class="tapPage hidden" aria-label="Tap target page">
+
+      <!-- Thumbnail is hidden once target appears (we keep the container for later if needed) -->
+      <section id="imgBox" class="imgBox" aria-label="Target image box">
+        <img id="targetImg" alt="Selected target" />
+        <div id="dotsLayer" aria-label="Tap overlay"></div>
+      </section>
+
+      <div id="controlsBar" class="controlsBar hidden" aria-label="Controls">
+        <button id="clearBtn" class="btnCtl" type="button">Clear</button>
+        <button id="undoBtn" class="btnCtl" type="button">Undo</button>
+        <button id="resultsBtn" class="btnCtl btnCtlPrimary" type="button">Results</button>
+      </div>
     </section>
 
-    <!-- Bottom controls (hidden until FIRST TAP) -->
-    <div id="controlsBar" class="controlsBar hidden" aria-label="Controls">
-      <button id="clearBtn" class="btnCtl" type="button">Clear</button>
-      <button id="undoBtn" class="btnCtl" type="button">Undo</button>
-      <button id="resultsBtn" class="btnCtl btnCtlPrimary" type="button">Results</button>
-    </div>
+    <!-- ==============================
+         PAGE 3 — SEC (SCORING PAGE)
+    =============================== -->
+    <section id="pageSec" class="secPage hidden" aria-label="Shooter Experience Card">
 
-    <script src="./index.js?v=vTAP-LOCK-SEC-1"></script>
+      <section id="secCard" class="secCard">
+        <header class="secHeader">
+          <div class="secTitle">
+            <span class="secWord">SHOOTER</span>
+            <span class="secWord secWordWhite">EXPERIENCE</span>
+            <span class="secWord secWordBlue">CARD</span>
+          </div>
+
+          <div class="secMeta">
+            Session: <span id="secSessionId">SEC-00000000</span>
+          </div>
+        </header>
+
+        <!-- HERO SCORE BOX -->
+        <section class="scoreHeroBox" aria-label="Shooter score">
+          <div class="scoreHeroTitle">Shooter Score</div>
+          <div id="scoreHero" class="scoreHero">—</div>
+        </section>
+
+        <!-- SMALL SUPPORT ROW (clicks + shots) -->
+        <section class="supportGrid" aria-label="Support info">
+
+          <div class="miniBox" aria-label="Target clicks">
+            <div class="miniTitle">Target Clicks</div>
+
+            <div class="clickRow">
+              <div class="clickPill">
+                <div class="clickDir">↑ U</div>
+                <div id="clickUp" class="clickVal">0.00</div>
+              </div>
+
+              <div class="clickPill">
+                <div class="clickDir">↓ D</div>
+                <div id="clickDown" class="clickVal">0.00</div>
+              </div>
+            </div>
+
+            <div class="clickRow">
+              <div class="clickPill">
+                <div class="clickDir">← L</div>
+                <div id="clickLeft" class="clickVal">0.00</div>
+              </div>
+
+              <div class="clickPill">
+                <div class="clickDir">→ R</div>
+                <div id="clickRight" class="clickVal">0.00</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="miniBox" aria-label="Shot summary">
+            <div class="miniTitle">Shots</div>
+            <div class="shotsBig"><span id="shotsCount">0</span></div>
+            <div class="shotsNote">Confirmed hits tapped</div>
+          </div>
+
+        </section>
+
+        <!-- CTA row (exactly TWO buttons, same size & color) -->
+        <section class="ctaRow" aria-label="Actions">
+          <button id="downloadSecBtn" class="ctaBtn" type="button">Download SEC</button>
+          <button id="surveyBtn" class="ctaBtn" type="button">Survey</button>
+        </section>
+
+        <!-- hidden canvas used to render downloadable SEC image -->
+        <canvas id="secCanvas" class="secCanvas" width="1200" height="1600" aria-hidden="true"></canvas>
+      </section>
+
+    </section>
+
+    <script src="./index.js?v=SEC-LOCK-1"></script>
   </main>
 </body>
 </html>
