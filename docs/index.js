@@ -1,7 +1,11 @@
 /* ============================================================
-   index.js (FULL REPLACEMENT) — vSEC-1b
-   Change from vSEC-1:
-   - SEC modal now shows: Distance + Click under Shots
+   index.js (FULL REPLACEMENT) — vSEC-1c
+   Changes:
+   1) SEC meta line (Distance/Click) is smaller + tighter
+   2) Big numbers are color-coded by performance:
+      - <= GOOD_MAX clicks  => green
+      - <= OK_MAX clicks    => amber
+      - >  OK_MAX clicks    => red
 ============================================================ */
 
 (() => {
@@ -131,6 +135,7 @@
   }
 
   function computeTurretInstructions(anchorPt, poibPt) {
+    // POIB -> Anchor (bull - poib)
     const dx = anchorPt.x - poibPt.x;
     const dy = anchorPt.y - poibPt.y; // screen truth: +dy means DOWN
 
@@ -155,6 +160,20 @@
       windClicks, elevClicks,
       dist, clickVal
     };
+  }
+
+  // ===== Performance color logic =====
+  // Adjust these thresholds to match your “performance” definition.
+  // Right now: <=2 clicks is great, <=6 is okay, >6 is needs work.
+  const GOOD_MAX = 2.0;
+  const OK_MAX = 6.0;
+
+  function perfColor(clicks) {
+    const v = Number(clicks);
+    if (!Number.isFinite(v)) return "rgba(255,255,255,0.94)";
+    if (v <= GOOD_MAX) return "rgba(0, 235, 150, 0.96)";     // green
+    if (v <= OK_MAX) return "rgba(255, 196, 0, 0.96)";      // amber
+    return "rgba(255, 90, 90, 0.96)";                       // red
   }
 
   function showSECModal() {
@@ -187,7 +206,7 @@
     title.textContent = "SEC";
     title.style.fontSize = "34px";
     title.style.fontWeight = "950";
-    title.style.marginBottom = "10px";
+    title.style.marginBottom = "8px";
 
     const sub = document.createElement("div");
     sub.textContent = `Shots: ${hits.length}`;
@@ -195,21 +214,22 @@
     sub.style.fontWeight = "800";
     sub.style.opacity = "0.85";
 
-    // ✅ NEW: distance + click line (compact)
+    // Smaller + tighter meta line
     const meta = document.createElement("div");
     meta.textContent = `Distance: ${sec.dist} yd  •  Click: ${sec.clickVal} MOA`;
-    meta.style.fontSize = "14px";
+    meta.style.fontSize = "12px";
     meta.style.fontWeight = "900";
-    meta.style.opacity = "0.72";
-    meta.style.marginTop = "6px";
-    meta.style.marginBottom = "14px";
+    meta.style.opacity = "0.62";
+    meta.style.marginTop = "4px";
+    meta.style.marginBottom = "10px";
+    meta.style.letterSpacing = "0.25px";
 
     const rowWrap = document.createElement("div");
     rowWrap.style.display = "grid";
     rowWrap.style.gridTemplateColumns = "1fr";
     rowWrap.style.gap = "12px";
 
-    function makeRow(label, arrow, valueText, dirText) {
+    function makeRow(label, arrow, valueText, dirText, valueColor) {
       const row = document.createElement("div");
       row.style.border = "1px solid rgba(255,255,255,0.12)";
       row.style.borderRadius = "18px";
@@ -237,6 +257,8 @@
       big.style.fontSize = "34px";
       big.style.fontWeight = "950";
       big.style.letterSpacing = "0.2px";
+      big.style.color = valueColor;                 // ✅ performance color
+      big.style.textShadow = "0 10px 26px rgba(0,0,0,0.55)";
 
       const small = document.createElement("div");
       small.textContent = dirText;
@@ -256,8 +278,12 @@
     const windVal = sec.windClicks.toFixed(2);
     const elevVal = sec.elevClicks.toFixed(2);
 
-    rowWrap.appendChild(makeRow("Windage", sec.windArrow, windVal, sec.windDir));
-    rowWrap.appendChild(makeRow("Elevation", sec.elevArrow, elevVal, sec.elevDir));
+    rowWrap.appendChild(
+      makeRow("Windage", sec.windArrow, windVal, sec.windDir, perfColor(sec.windClicks))
+    );
+    rowWrap.appendChild(
+      makeRow("Elevation", sec.elevArrow, elevVal, sec.elevDir, perfColor(sec.elevClicks))
+    );
 
     const btn = document.createElement("button");
     btn.textContent = "Close";
@@ -272,7 +298,7 @@
 
     card.appendChild(title);
     card.appendChild(sub);
-    card.appendChild(meta); // ✅ NEW line inserted here
+    card.appendChild(meta);
     card.appendChild(rowWrap);
     card.appendChild(btn);
     overlay.appendChild(card);
