@@ -1,9 +1,10 @@
 /* ============================================================
-   styles.css (FULL REPLACEMENT) — TAP-LAYER-LOCK-6a
-   Goals:
-   - Thumbnail NOT huge
-   - Image overlay locked to rendered image box
-   - Clear/Undo/Results visible and usable
+   styles.css (FULL REPLACEMENT) — TAP-RESET-1
+   Goal:
+   - Thumbnail controlled
+   - Tap mode has Clear/Undo/Results
+   - Overlay locked to IMAGE box only
+   - iOS taps reliable
 ============================================================ */
 
 * { box-sizing: border-box; }
@@ -12,16 +13,15 @@ html, body { height: 100%; }
 body {
   margin: 0;
   font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-  background:
-    radial-gradient(1200px 800px at 30% 20%, rgba(0,120,80,0.28), rgba(0,0,0,0.92)),
-    linear-gradient(180deg, rgba(7,17,12,1), rgba(0,0,0,1));
+  background: radial-gradient(1200px 800px at 30% 20%, rgba(0,120,80,0.28), rgba(0,0,0,0.92)),
+              linear-gradient(180deg, rgba(7,17,12,1), rgba(0,0,0,1));
   color: rgba(255,255,255,0.92);
   -webkit-font-smoothing: antialiased;
 }
 
 .page {
   min-height: 100vh;
-  padding: 18px 14px 54px;
+  padding: 18px 14px 96px; /* extra for bottom bar */
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -56,13 +56,16 @@ body {
 .label { font-weight: 800; opacity: 0.92; margin-bottom: 8px; font-size: 15px; }
 
 .hint { opacity: 0.78; margin-top: 8px; font-weight: 600; }
-.hintStrong { margin-top: 10px; font-weight: 900; opacity: 0.92; }
+.hintStrong { margin-top: 8px; font-weight: 900; opacity: 0.92; }
+
+.bigTitle { font-weight: 900; font-size: 18px; margin-bottom: 8px; }
+.bullets { margin: 0; padding-left: 18px; }
+.bullets li { margin: 8px 0; font-weight: 700; opacity: 0.92; }
 
 .row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
 @media (max-width: 520px) { .row { grid-template-columns: 1fr; } }
 
 .hiddenFile { display: none !important; }
-.hidden { display: none !important; }
 
 .select {
   width: 100%;
@@ -111,32 +114,37 @@ body {
   box-shadow: 0 18px 60px rgba(0,0,0,0.55);
 }
 .btnStart:active { transform: translateY(1px); }
+
 .btnStart:disabled {
   opacity: 0.45;
   cursor: not-allowed;
   filter: grayscale(30%);
 }
 
-/* ---------- Thumbnail (FIXED SIZE) ---------- */
+/* ---------- Thumbnail (CONTROLLED) ---------- */
 .thumbBox {
   margin-top: 8px;
   width: 100%;
   background: rgba(0,0,0,0.20);
   border: 1px solid rgba(255,255,255,0.10);
   border-radius: 18px;
-  padding: 12px;
+  padding: 10px;
   overflow: hidden;
+  min-height: 64px;
 }
 .thumbBox img {
   width: 100%;
-  height: 160px;        /* <<< KEY FIX */
-  object-fit: cover;    /* <<< KEY FIX */
+  max-height: 180px;   /* <<< keeps it from going huge */
+  object-fit: contain;
   display: block;
   border-radius: 12px;
+  background: rgba(0,0,0,0.15);
 }
 .thumbEmpty { opacity: 0.72; font-weight: 800; padding: 10px 6px; }
 
-/* ---------- Image box + overlay lock ---------- */
+/* ============================================================
+   IMAGE BOX (tap lock)
+============================================================ */
 .imgBox {
   display: inline-block;
   position: relative;
@@ -154,19 +162,20 @@ body {
   display: block;
   width: 100%;
   height: auto;
-  object-fit: contain;
   -webkit-user-drag: none;
   user-select: none;
 }
 
-/* Tap overlay sits exactly on image bounds */
+/* Overlay EXACTLY matches the image box */
 #dotsLayer {
   position: absolute;
   inset: 0;
   z-index: 5;
-  touch-action: none;      /* iOS: stop pinch/scroll stealing taps */
-  pointer-events: auto;
   background: transparent;
+
+  /* iOS: don't let gestures steal taps */
+  touch-action: none;
+  pointer-events: auto;
 }
 
 /* Tap dots */
@@ -176,38 +185,6 @@ body {
   border-radius: 999px;
   border: 2px solid rgba(0,0,0,0.35);
   box-shadow: 0 10px 28px rgba(0,0,0,0.55);
-}
-
-/* Controls on image */
-.imgControls {
-  position: absolute;
-  left: 12px;
-  right: 12px;
-  bottom: 12px;
-  z-index: 10;
-  display: flex;
-  gap: 10px;
-}
-
-.btnMini,
-.btnMiniPrimary {
-  flex: 1;
-  border-radius: 999px;
-  padding: 12px 10px;
-  font-weight: 900;
-  border: 1px solid rgba(255,255,255,0.12);
-  background: rgba(0,0,0,0.35);
-  color: rgba(255,255,255,0.92);
-  -webkit-tap-highlight-color: transparent;
-}
-.btnMini:disabled,
-.btnMiniPrimary:disabled {
-  opacity: 0.45;
-}
-
-.btnMiniPrimary {
-  background: linear-gradient(180deg, rgba(0,170,110,0.95), rgba(0,105,70,0.95));
-  color: rgba(255,255,255,0.96);
 }
 
 /* ---------- HUD ---------- */
@@ -225,40 +202,84 @@ body {
   letter-spacing: 0.2px;
   box-shadow: 0 10px 30px rgba(0,0,0,0.42);
 }
-.hudLeft { left: 12px; }
+.hudLeft { left: 12px; max-width: 70vw; }
 .hudRight { right: 12px; }
 
-/* ---------- Results modal ---------- */
-.resultsPanel {
+/* ---------- Bottom Action Bar ---------- */
+.actionBar {
+  position: fixed;
+  left: 12px;
+  right: 12px;
+  bottom: 12px;
+  z-index: 9999;
+  display: grid;
+  grid-template-columns: 1fr 1fr 1.2fr;
+  gap: 10px;
+  padding: 10px;
+  border-radius: 18px;
+  border: 1px solid rgba(255,255,255,0.10);
+  background: rgba(0,0,0,0.42);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 16px 50px rgba(0,0,0,0.55);
+}
+
+.btnGhost, .btnAction {
+  border: none;
+  border-radius: 999px;
+  padding: 14px 14px;
+  font-size: 16px;
+  font-weight: 900;
+  cursor: pointer;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.btnGhost {
+  background: rgba(255,255,255,0.10);
+  color: rgba(255,255,255,0.90);
+  border: 1px solid rgba(255,255,255,0.12);
+}
+.btnGhost:active { transform: translateY(1px); }
+
+.btnAction {
+  background: linear-gradient(180deg, rgba(0,170,110,0.95), rgba(0,105,70,0.95));
+  color: rgba(255,255,255,0.96);
+  border: 1px solid rgba(255,255,255,0.12);
+}
+.btnAction:active { transform: translateY(1px); }
+
+/* ---------- Modal ---------- */
+.modal {
   position: fixed;
   inset: 0;
-  z-index: 99999;
-  background: rgba(0,0,0,0.60);
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  z-index: 10000;
+  display: grid;
+  place-items: center;
   padding: 18px;
+  background: rgba(0,0,0,0.55);
+  backdrop-filter: blur(6px);
 }
-
-.resultsCard {
-  width: min(680px, 96vw);
-  border-radius: 18px;
-  background: rgba(18, 24, 22, 0.92);
+.modalCard {
+  width: min(760px, 96vw);
+  border-radius: 22px;
+  padding: 16px 16px 14px;
   border: 1px solid rgba(255,255,255,0.12);
-  box-shadow: 0 24px 80px rgba(0,0,0,0.65);
-  padding: 16px;
+  background: rgba(18, 24, 22, 0.78);
+  box-shadow: 0 24px 70px rgba(0,0,0,0.65);
 }
-
-.resultsTitle {
-  font-weight: 1000;
-  font-size: 22px;
-  margin-bottom: 10px;
+.modalTitle {
+  font-weight: 950;
+  font-size: 26px;
+  margin-bottom: 8px;
 }
-
-.resultsBody {
-  font-weight: 800;
-  opacity: 0.92;
-  line-height: 1.35;
-  margin-bottom: 14px;
+.modalText {
+  margin: 0;
   white-space: pre-wrap;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  font-weight: 800;
+  font-size: 14px;
+  opacity: 0.92;
 }
+
+/* helpers */
+.hidden { display: none !important; }
