@@ -1,8 +1,10 @@
 /* ============================================================
-   styles.css (FULL REPLACEMENT) — TNS-NOSTART-1
-   - Small thumbnail
-   - Overlay lock preserved
-   - Bottom controls preserved
+   styles.css (FULL REPLACEMENT) — vTAP-NOSTART-1
+   Goals:
+   - Thumbnail SMALL (does not take over the page)
+   - No Start button UX
+   - Image + overlay locked
+   - Bottom bar: Clear / Undo / Results always present in tap flow
 ============================================================ */
 
 * { box-sizing: border-box; }
@@ -19,7 +21,7 @@ body {
 
 .page {
   min-height: 100vh;
-  padding: 18px 14px 110px;
+  padding: 18px 14px 110px; /* room for bottom controls bar */
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -60,6 +62,7 @@ body {
 @media (max-width: 520px) { .row { grid-template-columns: 1fr; } }
 
 .hiddenFile { display: none !important; }
+.hidden { display: none !important; }
 
 .select {
   width: 100%;
@@ -89,6 +92,7 @@ body {
   cursor: pointer;
   user-select: none;
   -webkit-tap-highlight-color: transparent;
+
   background: linear-gradient(180deg, rgba(0,140,90,0.92), rgba(0,85,55,0.92));
   color: rgba(255,255,255,0.95);
   box-shadow: 0 16px 50px rgba(0,0,0,0.50);
@@ -96,47 +100,56 @@ body {
 }
 .btnPrimary:active { transform: translateY(1px); }
 
-/* ---------- Steps ---------- */
-.steps { margin: 0; padding-left: 18px; opacity: 0.92; font-weight: 700; }
-.steps li { margin: 6px 0; }
+/* ---------- What next list ---------- */
+.whatNext { margin-top: 10px; }
+.bullets { margin: 8px 0 0; padding-left: 18px; }
+.bullets li { opacity: 0.9; font-weight: 700; margin: 6px 0; }
 
-/* ---------- Thumbnail (SMALL) ---------- */
+/* ---------- Thumbnail (MAKE IT SMALL) ---------- */
 .thumbBox {
+  margin-top: 8px;
   width: 100%;
   background: rgba(0,0,0,0.20);
   border: 1px solid rgba(255,255,255,0.10);
   border-radius: 18px;
   padding: 10px;
   overflow: hidden;
-}
 
-.thumbSmall {
-  /* makes it feel like a thumbnail, not a second “main image” */
-  max-width: 320px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  min-height: 90px;
 }
 
 .thumbBox img {
-  width: 100%;
-  max-height: 120px;     /* SMALL thumbnail */
-  object-fit: contain;
   display: block;
-  border-radius: 12px;
-  background: rgba(0,0,0,0.18);
+  width: auto;
+  height: auto;
+
+  /* hard cap: thumbnail stays small */
+  max-width: 140px;
+  max-height: 140px;
+
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,0.10);
 }
 
 .thumbEmpty { opacity: 0.72; font-weight: 800; padding: 10px 6px; }
 
-.hidden { display: none !important; }
-
-/* ---------- Image Box (lock) ---------- */
+/* ============================================================
+   IMAGE BOX (critical lock)
+============================================================ */
 .imgBox {
   display: inline-block;
   position: relative;
   width: min(860px, 96vw);
   padding: 0;
   margin: 0;
+
   border-radius: 22px;
   overflow: hidden;
+
   border: 1px solid rgba(255,255,255,0.10);
   box-shadow: 0 20px 60px rgba(0,0,0,0.55);
   background: rgba(0,0,0,0.18);
@@ -151,6 +164,7 @@ body {
   user-select: none;
 }
 
+/* overlay matches image box exactly */
 #dotsLayer {
   position: absolute;
   inset: 0;
@@ -160,6 +174,7 @@ body {
   background: transparent;
 }
 
+/* Tap dots */
 .tapDot {
   position: absolute;
   transform: translate(-50%, -50%);
@@ -186,54 +201,69 @@ body {
 .hudLeft { left: 12px; }
 .hudRight { right: 12px; }
 
-/* ---------- Bottom controls ---------- */
+/* ---------- Bottom controls bar ---------- */
 .controlsBar {
   position: fixed;
-  left: 50%;
-  transform: translateX(-50%);
-  bottom: 16px;
+  left: 12px;
+  right: 12px;
+  bottom: 12px;
   z-index: 9999;
-  width: min(860px, 96vw);
+
+  width: min(860px, calc(100vw - 24px));
+  margin: 0 auto;
+
   display: grid;
-  grid-template-columns: 1fr 1fr 1.4fr;
+  grid-template-columns: 1fr 1fr 1fr;
   gap: 12px;
+
   padding: 12px;
-  border-radius: 22px;
+  border-radius: 20px;
   border: 1px solid rgba(255,255,255,0.10);
-  background: rgba(8, 10, 9, 0.55);
-  backdrop-filter: blur(14px);
-  box-shadow: 0 22px 70px rgba(0,0,0,0.55);
+  background: rgba(10,12,11,0.55);
+  backdrop-filter: blur(12px);
+  box-shadow: 0 20px 60px rgba(0,0,0,0.55);
 }
 
-.btnGhost,
-.btnResults {
+.btnCtl {
   border: none;
-  border-radius: 999px;
-  padding: 14px 16px;
+  border-radius: 16px;
+  padding: 16px 12px;
   font-size: 18px;
   font-weight: 900;
   cursor: pointer;
   user-select: none;
   -webkit-tap-highlight-color: transparent;
-}
 
-.btnGhost {
-  background: rgba(255,255,255,0.10);
+  background: rgba(255,255,255,0.08);
   color: rgba(255,255,255,0.92);
-  border: 1px solid rgba(255,255,255,0.12);
+  border: 1px solid rgba(255,255,255,0.10);
 }
-.btnGhost:active { transform: translateY(1px); }
 
+.btnCtl:active { transform: translateY(1px); }
+
+.btnCtl:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.btnCtlPrimary {
+  background: linear-gradient(180deg, rgba(0,170,110,0.95), rgba(0,105,70,0.95));
+  border: 1px solid rgba(255,255,255,0.12);
+  box-shadow: 0 16px 50px rgba(0,0,0,0.55);
+}
+
+/* Results modal close button uses this class */
 .btnResults {
+  border: none;
+  border-radius: 999px;
+  padding: 16px 18px;
+  font-size: 20px;
+  font-weight: 900;
+  cursor: pointer;
+
   background: linear-gradient(180deg, rgba(0,170,110,0.95), rgba(0,105,70,0.95));
   color: rgba(255,255,255,0.96);
   border: 1px solid rgba(255,255,255,0.12);
-  box-shadow: 0 18px 60px rgba(0,0,0,0.45);
+  box-shadow: 0 18px 60px rgba(0,0,0,0.55);
 }
 .btnResults:active { transform: translateY(1px); }
-
-.btnGhost:disabled,
-.btnResults:disabled {
-  opacity: 0.45;
-  cursor: not-allowed;
-}
