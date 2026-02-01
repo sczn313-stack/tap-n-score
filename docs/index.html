@@ -3,81 +3,66 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <meta name="color-scheme" content="light dark" />
   <title>Tap-n-Score™ (Docs)</title>
 
   <style>
-    :root { --pad: 16px; }
-    body {
-      margin: 0;
-      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-      padding: var(--pad);
-    }
-    .card {
-      max-width: 900px;
-      margin: 0 auto;
-      border: 1px solid rgba(0,0,0,0.12);
-      border-radius: 14px;
-      padding: var(--pad);
-    }
-    .row { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+    :root { color-scheme: light; }
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial; margin: 0; padding: 24px; }
+    h1 { font-size: 48px; margin: 0 0 8px; }
+    .sub { font-size: 18px; opacity: 0.75; margin: 0 0 18px; }
+    .card { border: 2px solid #e5e5e5; border-radius: 18px; padding: 18px; max-width: 880px; }
+    .row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
     button {
-      padding: 12px 14px;
-      border-radius: 12px;
-      border: 1px solid rgba(0,0,0,0.18);
-      background: rgba(0,0,0,0.06);
-      font-size: 16px;
+      font-size: 22px;
+      padding: 14px 22px;
+      border-radius: 14px;
+      border: 2px solid #d9d9d9;
+      background: #f6f6f6;
     }
     button:active { transform: scale(0.99); }
-    #statusLine { margin-top: 10px; font-size: 14px; opacity: 0.85; }
-    #targetImg {
-      width: 100%;
-      height: auto;
-      margin-top: 12px;
-      border-radius: 12px;
-      border: 1px solid rgba(0,0,0,0.12);
-      background: rgba(0,0,0,0.04);
+    #statusLine { margin-top: 10px; font-size: 18px; }
+    #previewWrap { margin-top: 16px; }
+    #preview {
       display: none;
-    }
-    pre {
-      margin-top: 12px;
-      padding: 12px;
+      max-width: 100%;
       border-radius: 12px;
-      border: 1px solid rgba(0,0,0,0.12);
-      background: rgba(0,0,0,0.04);
-      overflow: auto;
-      font-size: 13px;
-      display: none;
+      border: 2px dashed #d9d9d9;
     }
-    .small { font-size: 13px; opacity: 0.75; }
+    .hint { margin-top: 10px; font-size: 14px; opacity: 0.75; }
+    /* Hidden but still clickable via JS */
+    #photoInput {
+      position: absolute;
+      left: -9999px;
+      width: 1px;
+      height: 1px;
+      opacity: 0;
+    }
   </style>
 </head>
 
 <body>
+  <h1>Tap-n-Score™ (Docs)</h1>
+  <p class="sub">iPad/iOS-safe photo picker + preview</p>
+
   <div class="card">
-    <h1 style="margin:0 0 8px 0;">Tap-n-Score™ (Docs)</h1>
-    <div class="small">iPad/iOS-safe photo picker + preview</div>
-
-    <!-- IMPORTANT: keep the input visible (not display:none) on iOS -->
-    <input
-      id="photoInput"
-      type="file"
-      accept="image/*"
-      style="position:absolute; left:-9999px; width:1px; height:1px; opacity:0;"
-    />
-
-    <div class="row" style="margin-top:12px;">
-      <button id="choosePhotoBtn" type="button">Choose Photo</button>
+    <div class="row">
+      <button id="chooseBtn" type="button">Choose Photo</button>
       <button id="clearBtn" type="button">Clear</button>
+      <input id="photoInput" type="file" accept="image/*" />
     </div>
 
-    <div id="statusLine">Loading…</div>
+    <div id="statusLine">Loading...</div>
 
-    <img id="targetImg" alt="Selected photo preview" />
+    <div id="previewWrap">
+      <img id="preview" alt="Preview" />
+    </div>
 
-    <pre id="debugOut"></pre>
+    <div class="hint">
+      If “Loading…” never changes, the JS file isn’t loading (or Safari cached an old version).
+    </div>
   </div>
 
-  <script src="./index.js?v=docs-iosfix-1"></script>
+  <!-- IMPORTANT: cache-bust the JS so iOS Safari can’t cling to an old file -->
+  <script src="./index.js?v=20260201a"></script>
 </body>
 </html>
