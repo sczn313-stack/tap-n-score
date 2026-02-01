@@ -3,280 +3,108 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-  <meta name="color-scheme" content="light dark" />
-  <title>Tap-n-Score™ — Scoring</title>
+  <meta name="color-scheme" content="dark" />
+  <meta name="theme-color" content="#0b0f14" />
+  <title>Tap-n-Score™</title>
 
-  <style>
-    :root{
-      --pad:18px;
-      --card: rgba(25,28,36,.86);
-      --stroke: rgba(255,255,255,.10);
-      --muted: rgba(255,255,255,.70);
-      --muted2: rgba(255,255,255,.55);
-      --good: #7CFFA7;
-    }
-    html,body{margin:0;padding:0}
-    body{
-      font-family: system-ui,-apple-system,Segoe UI,Roboto,Arial;
-      background: #0b0d12;
-      color: #eef0f6;
-    }
-    .wrap{max-width:980px;margin:0 auto;padding:var(--pad)}
-    h1{margin:10px 0 6px;font-size:44px;letter-spacing:-.5px}
-    .sub{margin:0 0 16px;color:var(--muted);font-size:16px}
-
-    .card{
-      border:1px solid var(--stroke);
-      border-radius:18px;
-      padding:16px;
-      background: rgba(255,255,255,.04);
-      backdrop-filter: blur(6px);
-    }
-    .row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
-    button{
-      font-size:20px;
-      padding:14px 18px;
-      border-radius:14px;
-      border:1px solid rgba(255,255,255,.14);
-      background: rgba(255,255,255,.06);
-      color:#eef0f6;
-      cursor:pointer;
-    }
-    button:active{transform: translateY(1px)}
-    button.primary{
-      border-color: rgba(255,255,255,.22);
-      background: rgba(255,255,255,.10);
-      font-weight: 800;
-    }
-
-    .hiddenInput{position:absolute;left:-9999px;width:1px;height:1px;opacity:0}
-    #statusLine{margin-top:10px;font-weight:800}
-    #hintLine{margin-top:6px;color:var(--muted2);font-size:14px;line-height:1.35}
-
-    /* Stage (image + tap layer) */
-    #stage{margin-top:14px;display:none}
-    #targetWrap{
-      position:relative;
-      border-radius:16px;
-      border:1px dashed rgba(255,255,255,.18);
-      overflow:hidden;
-      background: rgba(255,255,255,.03);
-    }
-    #targetImg{
-      width:100%;
-      height:auto;
-      display:block;
-      user-select:none;
-      -webkit-user-drag:none;
-      -webkit-touch-callout:none;
-    }
-    #tapLayer{
-      position:absolute;
-      inset:0;
-      pointer-events:auto;
-      touch-action:none; /* critical: allow us to prevent scroll on tap */
-    }
-    .dot{
-      position:absolute;
-      width:18px;height:18px;
-      border-radius:50%;
-      transform: translate(-50%,-50%);
-      box-shadow: 0 10px 24px rgba(0,0,0,.35);
-      border:2px solid rgba(255,255,255,.65);
-    }
-    .dot.bull{ background:#4aa3ff; }
-    .dot.shot{ background:#ff4a4a; }
-
-    /* Chips */
-    .chips{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
-    .chip{
-      display:flex;gap:8px;align-items:center;
-      padding:10px 12px;border-radius:999px;
-      border:1px solid rgba(255,255,255,.14);
-      background: rgba(255,255,255,.05);
-      font-weight:800;
-      color:#eef0f6;
-    }
-    .chip .dotMini{
-      width:10px;height:10px;border-radius:50%;
-      background: rgba(255,255,255,.25);
-    }
-    .chip.on .dotMini{background: var(--good)}
-    .chip span{color: var(--muted);font-weight:700}
-
-    /* SEC */
-    #secWrap{display:none;margin-top:14px}
-    .secCard{
-      border:1px solid rgba(255,255,255,.12);
-      background: rgba(15,18,24,.86);
-      border-radius:22px;
-      padding:18px;
-    }
-    .secTop{
-      display:flex;
-      justify-content:space-between;
-      align-items:flex-end;
-      gap:12px;
-      flex-wrap:wrap;
-    }
-    .secTitle{
-      font-weight:900;
-      letter-spacing:.6px;
-      font-size:22px;
-      text-transform:uppercase;
-      color:#e9ecf5;
-    }
-    .secMeta{
-      color: var(--muted2);
-      font-size:14px;
-      font-weight:700;
-    }
-    .scoreBox{
-      margin-top:14px;
-      border-radius:18px;
-      border:1px solid rgba(255,255,255,.12);
-      background: rgba(255,255,255,.05);
-      padding:18px;
-      text-align:center;
-    }
-    .scoreNum{
-      font-size:92px;
-      font-weight:900;
-      line-height:1;
-      color: var(--good);
-      letter-spacing:-2px;
-    }
-    .scoreLabel{
-      margin-top:10px;
-      color: var(--muted2);
-      font-weight:800;
-      letter-spacing:.6px;
-    }
-    .corrRow{
-      display:grid;
-      grid-template-columns: 1fr 1fr;
-      gap:12px;
-      margin-top:14px;
-    }
-    .corrBox{
-      border-radius:18px;
-      border:1px solid rgba(255,255,255,.12);
-      background: rgba(255,255,255,.04);
-      padding:14px;
-    }
-    .corrHead{color: var(--muted2); font-weight:900; font-size:14px; text-transform:uppercase; letter-spacing:.8px}
-    .corrMain{
-      margin-top:8px;
-      display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;
-      font-weight:900;
-      font-size:34px;
-    }
-    .corrMain .clicks{font-size:42px;color:#eef0f6}
-    .corrMain .dir{color: var(--good)}
-    .truthRow{
-      margin-top:14px;
-      border-radius:18px;
-      border:1px solid rgba(255,255,255,.12);
-      background: rgba(255,255,255,.03);
-      padding:12px 14px;
-      display:flex;gap:14px;flex-wrap:wrap;
-      color: var(--muted);
-      font-weight:800;
-    }
-    details{
-      margin-top:12px;
-      border-radius:16px;
-      border:1px solid rgba(255,255,255,.10);
-      background: rgba(255,255,255,.03);
-      padding:10px 12px;
-    }
-    summary{cursor:pointer;font-weight:900;color:#e9ecf5}
-    pre{
-      margin:10px 0 0;
-      white-space:pre-wrap;
-      word-break:break-word;
-      color: rgba(255,255,255,.78);
-      font-size:12px;
-      line-height:1.35;
-    }
-  </style>
+  <link rel="stylesheet" href="./styles.css?v=20260201_sec_1" />
 </head>
 
 <body>
-  <div class="wrap">
-    <h1>Tap-n-Score™</h1>
-    <p class="sub">Scoring (bull → shots → results)</p>
-
-    <div class="card">
-      <div class="row">
-        <button id="chooseBtn" type="button">Choose Photo</button>
-        <button id="clearBtn" type="button">Clear</button>
-        <button id="resultsBtn" class="primary" type="button">Show Results</button>
-      </div>
-
-      <input id="photoInput" class="hiddenInput" type="file" accept="image/*" />
-
-      <div id="statusLine">Loading…</div>
-      <div id="hintLine">Pick a photo. Tap the bull (blue) once. Then tap shots (red).</div>
-
-      <div class="chips">
-        <div id="chipBull" class="chip"><div class="dotMini"></div> Bull: <span id="chipBullVal">not set</span></div>
-        <div id="chipShots" class="chip"><div class="dotMini"></div> Shots: <span id="chipShotsVal">0</span></div>
-      </div>
-
-      <div id="stage">
-        <div id="targetWrap">
-          <img id="targetImg" alt="Selected photo preview" />
+  <main class="page">
+    <!-- target image area (whatever you already have above can stay) -->
+    <section class="topStage">
+      <div class="stageWrap" id="stage" style="display:none;">
+        <div class="tapStage">
+          <img id="targetImg" alt="Target photo" />
           <div id="tapLayer" aria-label="Tap layer"></div>
         </div>
       </div>
+    </section>
 
-      <div id="secWrap">
-        <div class="secCard">
-          <div class="secTop">
-            <div class="secTitle">Shooter Experience Card</div>
-            <div class="secMeta" id="secMetaLine">Session • Distance • Click</div>
-          </div>
+    <!-- SEC card -->
+    <section class="secWrap">
+      <div class="secCard" id="secCard" style="display:none;">
+        <div class="secAccent" aria-hidden="true">
+          <span class="red"></span><span class="white"></span><span class="blue"></span>
+        </div>
 
-          <div class="scoreBox">
-            <div class="scoreNum" id="scoreNum">—</div>
-            <div class="scoreLabel">Smart Score (pilot)</div>
-          </div>
+        <div class="secHeader">
+          <div class="secTitle">SHOOTER EXPERIENCE CARD</div>
+        </div>
 
-          <div class="corrRow">
-            <div class="corrBox">
-              <div class="corrHead">Elevation</div>
-              <div class="corrMain">
-                <span class="dir" id="elevDir">—</span>
-                <span class="clicks" id="elevClicks">—</span>
-              </div>
+        <div class="secScorePanel">
+          <div class="secScore" id="smartScore">—</div>
+          <div class="secScoreSub">Smart Score (pilot)</div>
+        </div>
+
+        <div class="secTwo">
+          <div class="secMiniCard">
+            <div class="secMiniTop">
+              <div class="secMiniLabel">ELEVATION</div>
+              <div class="secMiniDir" id="elevDir">—</div>
             </div>
-            <div class="corrBox">
-              <div class="corrHead">Windage</div>
-              <div class="corrMain">
-                <span class="dir" id="windDir">—</span>
-                <span class="clicks" id="windClicks">—</span>
-              </div>
+            <div class="secMiniValue"><span id="elevClicks">—</span></div>
+            <div class="secMiniUnit">clicks</div>
+          </div>
+
+          <div class="secMiniCard">
+            <div class="secMiniTop">
+              <div class="secMiniLabel">WINDAGE</div>
+              <div class="secMiniDir" id="windDir">—</div>
             </div>
+            <div class="secMiniValue"><span id="windClicks">—</span></div>
+            <div class="secMiniUnit">clicks</div>
+          </div>
+        </div>
+
+        <div class="secBottomRow">
+          <div class="secMeta">
+            <div class="secMetaKey">Shots:</div>
+            <div class="secMetaVal" id="shotsCount">0</div>
           </div>
 
-          <div class="truthRow" id="truthRow">
-            <div id="truthPoib">POIB: —</div>
-            <div id="truthDist">Distance: —</div>
-            <div id="truthClick">Click: —</div>
-            <div id="truthShots">Shots: —</div>
+          <div class="secMeta">
+            <div class="secMetaKey">Distance:</div>
+            <div class="secMetaVal" id="distanceOut">—</div>
           </div>
 
-          <details>
-            <summary>Diagnostics</summary>
-            <pre id="diagOut">(none)</pre>
-          </details>
+          <div class="secMeta">
+            <div class="secMetaKey">Click:</div>
+            <div class="secMetaVal" id="clickOut">—</div>
+          </div>
+        </div>
+
+        <details class="diag">
+          <summary>Diagnostics</summary>
+          <pre id="diagOut">(none)</pre>
+        </details>
+      </div>
+    </section>
+
+    <!-- controls -->
+    <section class="controls">
+      <div class="controlsCard">
+        <div class="row">
+          <button id="chooseBtn" type="button">Choose Photo</button>
+          <button id="clearBtn" type="button">Clear</button>
+          <button id="resultsBtn" type="button">Show Results</button>
+        </div>
+
+        <input id="photoInput" class="hiddenInput" type="file" accept="image/*" />
+
+        <div class="status" id="statusLine">Tap-n-Score loaded ✅</div>
+        <div class="hint" id="hintLine">Tap the bull (blue). Then tap shots (red).</div>
+
+        <div class="chips">
+          <div class="chip"><span class="dot" id="chipImgDot"></span><span class="k">Image:</span><span class="v" id="chipImg">not loaded</span></div>
+          <div class="chip"><span class="dot" id="chipBullDot"></span><span class="k">Bull:</span><span class="v" id="chipBull">not set</span></div>
+          <div class="chip"><span class="dot" id="chipShotsDot"></span><span class="k">Shots:</span><span class="v" id="chipShots">0</span></div>
         </div>
       </div>
-    </div>
-  </div>
+    </section>
+  </main>
 
-  <!-- bump v= if iOS caches -->
-  <script defer src="./index.js?v=20260201_scoring_restart_1"></script>
+  <script defer src="./index.js?v=20260201_sec_1"></script>
 </body>
 </html>
