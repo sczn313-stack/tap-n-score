@@ -2,47 +2,46 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <meta name="color-scheme" content="light" />
-  <title>Tap-n-Score™ (Docs)</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <meta name="color-scheme" content="light dark" />
+  <title>Tap-n-Score™</title>
 
   <style>
     :root { --pad: 18px; }
-    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; margin: 0; background: #fff; color: #111; }
-    .wrap { max-width: 980px; margin: 0 auto; padding: 28px var(--pad); }
-    h1 { font-size: 56px; line-height: 1.05; margin: 0 0 8px; letter-spacing: -0.5px; }
-    .sub { font-size: 18px; opacity: 0.7; margin-bottom: 18px; }
-    .card { border: 2px solid #ddd; border-radius: 18px; padding: 18px; }
+    body { margin: 0; font-family: system-ui,-apple-system,Segoe UI,Roboto,Arial; }
+    .wrap { max-width: 980px; margin: 0 auto; padding: var(--pad); }
+    h1 { margin: 0 0 6px; font-size: 42px; letter-spacing: -0.5px; }
+    .sub { margin: 0 0 18px; opacity: .75; font-size: 16px; }
+    .card { border: 1px solid rgba(0,0,0,.12); border-radius: 18px; padding: 18px; }
     .row { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; }
     button {
-      font-size: 22px;
-      padding: 16px 26px;
+      font-size: 20px;
+      padding: 14px 18px;
+      border-radius: 14px;
+      border: 1px solid rgba(0,0,0,.2);
+      background: rgba(0,0,0,.03);
+      cursor: pointer;
+    }
+    button:active { transform: translateY(1px); }
+    #statusLine { margin-top: 12px; font-weight: 700; }
+    .hint { margin-top: 8px; opacity: .7; font-size: 14px; line-height: 1.35; }
+    #targetWrap { margin-top: 14px; }
+    #targetImg {
+      width: 100%;
+      height: auto;
+      display: none;
       border-radius: 16px;
-      border: 2px solid #d8d8d8;
-      background: #f6f6f6;
-      color: #007aff;
-      font-weight: 600;
+      border: 1px dashed rgba(0,0,0,.25);
+      background: rgba(0,0,0,.02);
     }
-    button:active { transform: scale(0.99); }
-    #statusLine { margin-top: 14px; font-size: 22px; font-weight: 700; }
-    #hint { margin-top: 10px; font-size: 16px; opacity: 0.65; }
-    .previewBox { margin-top: 18px; border: 2px dashed #d9d9d9; border-radius: 16px; padding: 14px; }
-    #targetImg { width: 100%; height: auto; display: none; border-radius: 14px; }
-    /* iOS-safe hidden input (avoid display:none) */
-    #photoInput {
-      position: absolute;
-      left: -9999px;
-      width: 1px;
-      height: 1px;
-      opacity: 0;
-    }
+    .hiddenInput { position: absolute; left: -9999px; width: 1px; height: 1px; opacity: 0; }
   </style>
 </head>
 
 <body>
   <div class="wrap">
-    <h1>Tap-n-Score™ (Docs)</h1>
-    <div class="sub">iPad/iOS-safe photo picker + preview</div>
+    <h1>Tap-n-Score™</h1>
+    <p class="sub">iPad/iOS-safe photo picker + preview (frontend)</p>
 
     <div class="card">
       <div class="row">
@@ -50,18 +49,26 @@
         <button id="clearBtn" type="button">Clear</button>
       </div>
 
+      <!-- iOS/Safari likes the input to exist in the DOM but it can be visually hidden -->
+      <input
+        id="photoInput"
+        class="hiddenInput"
+        type="file"
+        accept="image/*"
+      />
+
       <div id="statusLine">Loading…</div>
-      <div id="hint">If “Loading…” never changes, the JS file isn’t loading (or Safari cached an old version).</div>
+      <div class="hint" id="hintLine">
+        If “Loading…” never changes, the JS file isn’t loading (or Safari cached an old version).
+      </div>
 
-      <input id="photoInput" type="file" accept="image/*" />
-
-      <div class="previewBox">
-        <img id="targetImg" alt="Preview" />
+      <div id="targetWrap">
+        <img id="targetImg" alt="Selected photo preview" />
       </div>
     </div>
   </div>
 
-  <!-- IMPORTANT: bump v= when you change index.js -->
-  <script defer src="./index.js?v=20260201_full1"></script>
+  <!-- IMPORTANT: bump the v= whenever iOS seems cached -->
+  <script defer src="./index.js?v=20260201_frontend_iosfix_1"></script>
 </body>
 </html>
