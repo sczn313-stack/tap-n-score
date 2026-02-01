@@ -5,101 +5,62 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
   <meta name="color-scheme" content="dark" />
   <meta name="theme-color" content="#06110c" />
-  <title>Tap-n-Score™ — SEC</title>
+  <title>Tap-n-Score™ — Download SEC</title>
 
-  <link rel="stylesheet" href="./styles.css?v=20260201_sec_ui_2" />
+  <link rel="stylesheet" href="./download.css?v=20260201_dl_1" />
 </head>
 
 <body>
   <main class="page">
-    <section class="secCard" aria-label="Shooter Experience Card">
+    <section class="card" aria-label="SEC Download">
 
-      <header class="secHeader">
-        <h1 class="secTitle">
+      <header class="header">
+        <h1 class="title">
           <span class="tRed">SHOOTER</span>
           <span class="tWhite"> EXPERIENCE </span>
           <span class="tBlue">CARD</span>
         </h1>
+        <div class="sub">Download</div>
       </header>
 
-      <section class="scorePanel" aria-label="Score">
-        <div class="scoreLabel">SHOOTER’S SCORE</div>
-        <div class="scoreBar" aria-hidden="true"></div>
-        <div class="scoreValue" id="scoreValue">—</div>
-        <div class="scoreSub" id="scoreSub">Smart Score (pilot)</div>
-      </section>
-
-      <section class="twoCol" aria-label="Corrections">
-        <!-- LEFT: Elevation + Shots -->
-        <div class="miniCard">
-          <div class="miniHdr">ELEVATION</div>
-
-          <div class="miniRow">
-            <div class="pill" id="elevDirPill">—</div>
-            <div class="miniNum" id="elevClicks">0.00</div>
-            <div class="miniUnit">clicks</div>
-          </div>
-
-          <div class="divider"></div>
-
-          <div class="miniHdr2">SHOTS</div>
-          <div class="shotsRow">
-            <div class="shotsCount" id="shotsCount">0</div>
-          </div>
+      <section class="panel" aria-label="Preview">
+        <div class="panelTop">
+          <div class="label">PREVIEW</div>
+          <div class="meta" id="metaLine">No SEC image loaded.</div>
         </div>
 
-        <!-- RIGHT: Windage -->
-        <div class="miniCard">
-          <div class="miniHdr">WINDAGE</div>
-
-          <div class="miniRow">
-            <div class="pill" id="windDirPill">—</div>
-            <div class="miniNum" id="windClicks">0.00</div>
-            <div class="miniUnit">clicks</div>
-          </div>
-
-          <div class="divider"></div>
-
-          <div class="noteLine" id="noteLine">
-            Tap bull (blue), then shots (red), then “Show Results”.
+        <div class="previewWrap" id="previewWrap">
+          <img id="previewImg" alt="Shooter Experience Card preview" />
+          <div class="previewPlaceholder" id="previewPlaceholder">
+            Your Shooter Experience Card will appear here.
           </div>
         </div>
       </section>
 
-      <section class="ctaRow" aria-label="Actions">
-        <button class="btn" id="chooseBtn" type="button">Choose Photo</button>
-        <button class="btn" id="clearBtn" type="button">Clear</button>
-        <button class="btn btnPrimary" id="resultsBtn" type="button">Show Results</button>
+      <section class="actions" aria-label="Actions">
+        <button class="btnPrimary" id="downloadBtn" type="button" disabled>
+          Download SEC PNG
+        </button>
 
-        <input
-          id="photoInput"
-          class="hiddenInput"
-          type="file"
-          accept="image/*"
-        />
-      </section>
+        <div class="row2">
+          <a class="btn" id="scoreAgainBtn" href="./index.html">Score another</a>
+          <a class="btn" id="backToTargetBtn" href="./index.html">Back to target</a>
+        </div>
 
-      <section class="stage" id="stage" aria-label="Target stage">
-        <div class="imgWrap" id="imgWrap">
-          <img id="targetImg" alt="Selected target photo" />
-          <div id="tapLayer" class="tapLayer" aria-label="Tap overlay"></div>
+        <div class="hint" id="hintLine">
+          Tip: If download doesn’t start on iPad, press-and-hold the image and “Save to Photos.”
         </div>
       </section>
 
-      <section class="lowerCtas" aria-label="Next steps">
-        <a class="btnWide" id="buyBtn" href="#" rel="noopener">Buy more targets like this</a>
-        <a class="btnWide" id="surveyBtn" href="#" rel="noopener">Survey</a>
-      </section>
-
-      <details class="diag" id="diag">
+      <details class="diag">
         <summary>Diagnostics</summary>
         <pre id="diagOut">(none)</pre>
       </details>
 
-      <footer class="secFooter">SCZN3</footer>
+      <footer class="footer">SCZN3</footer>
     </section>
   </main>
 
-  <script defer src="./index.js?v=20260201_sec_logic_2"></script>
+  <script defer src="./download.js?v=20260201_dljs_1"></script>
 </body>
 </html>
