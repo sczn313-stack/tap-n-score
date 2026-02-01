@@ -3,154 +3,81 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <meta name="color-scheme" content="dark" />
-  <meta name="theme-color" content="#07110c" />
-  <title>Tap-n-Score™</title>
+  <meta name="color-scheme" content="light dark" />
+  <title>Tap-n-Score™ (Docs)</title>
 
-  <link rel="stylesheet" href="./styles.css?v=SEC-LOCK-2" />
+  <style>
+    :root { --pad: 16px; }
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      padding: var(--pad);
+    }
+    .card {
+      max-width: 900px;
+      margin: 0 auto;
+      border: 1px solid rgba(0,0,0,0.12);
+      border-radius: 14px;
+      padding: var(--pad);
+    }
+    .row { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+    button {
+      padding: 12px 14px;
+      border-radius: 12px;
+      border: 1px solid rgba(0,0,0,0.18);
+      background: rgba(0,0,0,0.06);
+      font-size: 16px;
+    }
+    button:active { transform: scale(0.99); }
+    #statusLine { margin-top: 10px; font-size: 14px; opacity: 0.85; }
+    #targetImg {
+      width: 100%;
+      height: auto;
+      margin-top: 12px;
+      border-radius: 12px;
+      border: 1px solid rgba(0,0,0,0.12);
+      background: rgba(0,0,0,0.04);
+      display: none;
+    }
+    pre {
+      margin-top: 12px;
+      padding: 12px;
+      border-radius: 12px;
+      border: 1px solid rgba(0,0,0,0.12);
+      background: rgba(0,0,0,0.04);
+      overflow: auto;
+      font-size: 13px;
+      display: none;
+    }
+    .small { font-size: 13px; opacity: 0.75; }
+  </style>
 </head>
 
 <body>
-  <main class="page">
+  <div class="card">
+    <h1 style="margin:0 0 8px 0;">Tap-n-Score™ (Docs)</h1>
+    <div class="small">iPad/iOS-safe photo picker + preview</div>
 
-    <!-- ==============================
-         PAGE 1 — LANDING
-    =============================== -->
-    <section id="pageLanding" class="card">
-      <header class="hero">
-        <div class="brandLine">
-          <div class="brand">TAP-N-SCORE<span class="tm">™</span></div>
-          <div class="sub">After-Shot Intelligence</div>
-        </div>
-      </header>
+    <!-- IMPORTANT: keep the input visible (not display:none) on iOS -->
+    <input
+      id="photoInput"
+      type="file"
+      accept="image/*"
+      style="position:absolute; left:-9999px; width:1px; height:1px; opacity:0;"
+    />
 
-      <div class="field">
-        <div class="label">Take or Choose Target Photo</div>
+    <div class="row" style="margin-top:12px;">
+      <button id="choosePhotoBtn" type="button">Choose Photo</button>
+      <button id="clearBtn" type="button">Clear</button>
+    </div>
 
-        <input id="photoInput" class="hiddenFile" type="file" accept="image/*" />
-        <button id="chooseBtn" class="btnPrimary" type="button">Choose Photo</button>
+    <div id="statusLine">Loading…</div>
 
-        <div id="fileName" class="hintStrong">No file selected.</div>
-        <div class="hint">Tip: Straight-on photos give the most accurate results.</div>
-      </div>
+    <img id="targetImg" alt="Selected photo preview" />
 
-      <div class="field whatNext">
-        <div class="label">What happens next</div>
-        <ul class="bullets">
-          <li>Tap bull’s-eye (anchor)</li>
-          <li>Tap each confirmed hit</li>
-          <li>Press Results</li>
-        </ul>
-      </div>
-    </section>
+    <pre id="debugOut"></pre>
+  </div>
 
-    <!-- ==============================
-         PAGE 2 — TAP TARGET
-    =============================== -->
-    <section id="pageTap" class="tapPage hidden" aria-label="Tap target page">
-      <section id="imgBox" class="imgBox" aria-label="Target image box">
-        <img id="targetImg" alt="Selected target" />
-        <div id="dotsLayer" aria-label="Tap overlay"></div>
-      </section>
-
-      <div id="controlsBar" class="controlsBar hidden" aria-label="Controls">
-        <button id="clearBtn" class="btnCtl" type="button">Clear</button>
-        <button id="undoBtn" class="btnCtl" type="button">Undo</button>
-        <button id="resultsBtn" class="btnCtl btnCtlPrimary" type="button">Results</button>
-      </div>
-    </section>
-
-    <!-- ==============================
-         PAGE 3 — SEC (SCORING PAGE)
-    =============================== -->
-    <section id="pageSec" class="secPage hidden" aria-label="Shooter Experience Card">
-      <section id="secCard" class="secCard">
-
-        <header class="secHeader">
-          <div class="secTitle">
-            <span class="secWord">SHOOTER</span>
-            <span class="secWord secWordWhite">EXPERIENCE</span>
-            <span class="secWord secWordBlue">CARD</span>
-          </div>
-          <div class="secMeta">
-            Session: <span id="secSessionId">SEC-00000000</span>
-          </div>
-        </header>
-
-        <!-- HERO SCORE BOX -->
-        <section class="scoreHeroBox" aria-label="Shooter score">
-          <div class="scoreHeroTitle">Shooter Score</div>
-          <div id="scoreHero" class="scoreHero">—</div>
-        </section>
-
-        <!-- STEP 2: HISTORY STRIP -->
-        <section class="historyStrip" aria-label="Score history">
-          <div class="historyTitle">Previous 3</div>
-
-          <div class="historyRow">
-            <div id="prev1" class="histPill">—</div>
-            <div id="prev2" class="histPill">—</div>
-            <div id="prev3" class="histPill">—</div>
-          </div>
-
-          <div class="historyFooter">
-            <div class="histMeta">
-              Avg: <span id="avgScore">—</span>
-            </div>
-            <div class="histMeta">
-              Count: <span id="scoreCount">0</span>
-            </div>
-          </div>
-        </section>
-
-        <!-- SUPPORT ROW (clicks + shots) -->
-        <section class="supportGrid" aria-label="Support info">
-          <div class="miniBox" aria-label="Target clicks">
-            <div class="miniTitle">Target Clicks</div>
-
-            <div class="clickRow">
-              <div class="clickPill">
-                <div class="clickDir">↑ U</div>
-                <div id="clickUp" class="clickVal">0.00</div>
-              </div>
-
-              <div class="clickPill">
-                <div class="clickDir">↓ D</div>
-                <div id="clickDown" class="clickVal">0.00</div>
-              </div>
-            </div>
-
-            <div class="clickRow">
-              <div class="clickPill">
-                <div class="clickDir">← L</div>
-                <div id="clickLeft" class="clickVal">0.00</div>
-              </div>
-
-              <div class="clickPill">
-                <div class="clickDir">→ R</div>
-                <div id="clickRight" class="clickVal">0.00</div>
-              </div>
-            </div>
-          </div>
-
-          <div class="miniBox" aria-label="Shot summary">
-            <div class="miniTitle">Shots</div>
-            <div class="shotsBig"><span id="shotsCount">0</span></div>
-            <div class="shotsNote">Confirmed hits tapped</div>
-          </div>
-        </section>
-
-        <!-- TWO equal CTA buttons -->
-        <section class="ctaRow" aria-label="Actions">
-          <button id="downloadSecBtn" class="ctaBtn" type="button">Download SEC</button>
-          <button id="surveyBtn" class="ctaBtn" type="button">Survey</button>
-        </section>
-
-        <canvas id="secCanvas" class="secCanvas" width="1200" height="1600" aria-hidden="true"></canvas>
-      </section>
-    </section>
-
-    <script src="./index.js?v=SEC-LOCK-2"></script>
-  </main>
+  <script src="./index.js?v=docs-iosfix-1"></script>
 </body>
 </html>
