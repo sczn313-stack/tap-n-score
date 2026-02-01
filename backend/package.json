@@ -1,13 +1,11 @@
 {
-  "name": "tap-n-score-backend",
+  "name": "sczn3-sec-backend",
   "version": "1.0.0",
   "private": true,
-  "description": "Tap-n-Score backend API (health + analyze)",
-  "main": "server.js",
   "type": "commonjs",
+  "main": "server.js",
   "scripts": {
-    "start": "node server.js",
-    "dev": "node --watch server.js"
+    "start": "node server.js"
   },
   "dependencies": {
     "cors": "^2.8.5",
