@@ -1,9 +1,10 @@
 /* ============================================================
-   docs/index.js — iPad/iOS-safe photo picker + preview (Docs)
-   Goals:
-   - Prove JS is actually running (status changes immediately)
-   - iOS Safari: file selection "sticks" and preview reliably
-   - Clear resets state cleanly
+   docs/index.js — iPad/iOS photo picker hardening (Docs)
+   Fixes:
+   - Force iOS to always fire change by resetting input before click
+   - Add "capture" attr to encourage camera/gallery chooser
+   - Add a visible debug line showing whether files[0] exists
+   - Preview via objectURL first, FileReader fallback
 ============================================================ */
 
 (() => {
@@ -18,13 +19,13 @@
   let objectUrl = null;
 
   function setStatus(msg) {
-    if (statusEl) statusEl.textContent = msg;
+    statusEl.textContent = msg;
   }
 
-  // Show JS is alive ASAP
+  // Prove JS is running
   setStatus("DOCS IOS FIX LOADED ✅");
 
-  // If there is a JS error, show it on-screen (iOS Safari hides console too often)
+  // If any JS error happens, show it
   window.addEventListener("error", (e) => {
     setStatus(`JS ERROR: ${e.message || "unknown"}`);
   });
@@ -40,7 +41,6 @@
     revokeObjectUrl();
     preview.removeAttribute("src");
     preview.style.display = "none";
-    // Reset input (Safari-friendly)
     input.value = "";
     setStatus("Cleared ✅");
   }
@@ -56,28 +56,26 @@
 
   async function handlePickedFile(file) {
     if (!file) {
-      setStatus("No file picked.");
+      setStatus("Picked nothing (no file received).");
       return;
     }
 
     setStatus(`Picked: ${file.name} (${Math.round(file.size / 1024)} KB)`);
 
-    // Try object URL first (fast)
+    // Fast path: object URL
     try {
       revokeObjectUrl();
       objectUrl = URL.createObjectURL(file);
       preview.src = objectUrl;
       preview.style.display = "block";
-
-      // iOS sometimes delays image load; wait a beat then confirm
       await new Promise((r) => setTimeout(r, 50));
       setStatus("Preview ready ✅");
       return;
     } catch (_) {
-      // Fall through to FileReader
+      // fallback
     }
 
-    // Fallback: FileReader DataURL (most compatible)
+    // Fallback: FileReader
     try {
       revokeObjectUrl();
       const dataUrl = await fileToDataUrl(file);
@@ -89,16 +87,35 @@
     }
   }
 
-  // Button -> open picker
+  // IMPORTANT iOS hardening:
+  // - Reset input.value BEFORE opening picker (so selecting same photo still triggers change)
+  // - Set capture to hint camera/gallery chooser
   chooseBtn.addEventListener("click", () => {
-    setStatus("Opening photo picker…");
-    input.click();
+    try {
+      input.value = ""; // forces change event even if same file chosen
+      input.setAttribute("capture", "environment"); // harmless if ignored
+      setStatus("Opening photo picker…");
+      input.click();
+    } catch (e) {
+      setStatus(`Picker error: ${e.message || e}`);
+    }
   });
 
-  // iOS Safari: store file immediately on change
-  input.addEventListener("change", async () => {
-    const file = input.files && input.files[0] ? input.files[0] : null;
-    await handlePickedFile(file);
+  // iOS: change fires, but sometimes files is empty for a moment.
+  // So we do a tiny delayed read too.
+  input.addEventListener("change", () => {
+    setStatus("Picker returned… reading file…");
+
+    const readNow = async () => {
+      const f = input.files && input.files[0] ? input.files[0] : null;
+      await handlePickedFile(f);
+    };
+
+    // Try immediately
+    readNow();
+
+    // And try again after a beat (covers iOS timing weirdness)
+    setTimeout(readNow, 150);
   });
 
   clearBtn.addEventListener("click", clearAll);
