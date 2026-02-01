@@ -1,16 +1,16 @@
 /* ============================================================
-   server.js (FULL REPLACEMENT) — Tap-n-Score Backend (Render)
-   What you get:
-   - GET  /api/health         (simple “am I live?”)
-   - GET  /api/test-analyze   (proves the route exists)
-   - POST /api/analyze        (expects { anchor:{x,y}, hits:[{x,y},...] })
+   backend/server.js (FULL REPLACEMENT) — Tap-n-Score Backend
+   What this gives you:
+   - GET  /                 : simple “backend is running” message
+   - GET  /api/health       : health JSON
+   - GET  /api/test-analyze : deterministic sample output (no POST tool needed)
+   - POST /api/analyze      : accepts { anchor:{x,y}, hits:[{x,y}...] } and returns POIB + directions
+   - GET  /api/poster       : iPad-friendly in-browser POST tester for /api/analyze
+
    Notes:
-   - Backend is the ONLY authority for direction labels.
-   - Screen-space Y is used (down = +Y).
-     • UP   when (bull.y - poib.y) < 0
-     • DOWN when (bull.y - poib.y) > 0
-     • RIGHT when (bull.x - poib.x) > 0
-     • LEFT  when (bull.x - poib.x) < 0
+   - Directions are derived ONLY from signed deltas (bull - poib).
+   - Coordinate convention: x increases to the RIGHT, y increases DOWN (screen space).
+     So: deltaY > 0 means "DOWN"; deltaY < 0 means "UP".
    ============================================================ */
 
 const express = require("express");
@@ -23,37 +23,64 @@ app.use(cors({ origin: true }));
 app.use(express.json({ limit: "2mb" }));
 
 // ---- Helpers
-function clampNum(n, fallback = null) {
+function isNum(v) {
+  return Number.isFinite(Number(v));
+}
+
+function clamp01(n) {
   const x = Number(n);
-  return Number.isFinite(x) ? x : fallback;
+  if (!Number.isFinite(x)) return 0;
+  return Math.max(0, Math.min(1, x));
 }
 
-function isPoint(p) {
-  if (!p || typeof p !== "object") return false;
-  const x = clampNum(p.x, null);
-  const y = clampNum(p.y, null);
-  return x !== null && y !== null;
+function pickDirX(dx) {
+  if (dx > 0) return "RIGHT";
+  if (dx < 0) return "LEFT";
+  return "CENTER";
 }
 
-function avgPoint(points) {
-  let sx = 0, sy = 0, c = 0;
+function pickDirY(dy) {
+  // screen-space Y: down is +
+  if (dy > 0) return "DOWN";
+  if (dy < 0) return "UP";
+  return "CENTER";
+}
+
+function meanXY(points) {
+  const n = points.length;
+  let sx = 0,
+    sy = 0;
   for (const p of points) {
-    if (!isPoint(p)) continue;
-    sx += Number(p.x);
-    sy += Number(p.y);
-    c++;
+    sx += p.x;
+    sy += p.y;
   }
-  if (!c) return null;
-  return { x: sx / c, y: sy / c };
+  return { x: sx / n, y: sy / n };
 }
 
-function directionFromDelta(deltaX, deltaY) {
-  // delta = bull - poib (vector from POIB to Bull)
-  // Screen-space Y: down = +. Therefore:
-  // bull above poib => deltaY < 0 => UP
-  const horiz = deltaX > 0 ? "RIGHT" : deltaX < 0 ? "LEFT" : "NONE";
-  const vert  = deltaY > 0 ? "DOWN"  : deltaY < 0 ? "UP"   : "NONE";
-  return { horiz, vert };
+function validatePayload(body) {
+  const err = (msg) => ({ ok: false, error: msg });
+
+  if (!body || typeof body !== "object") return err("Body must be JSON.");
+
+  const anchor = body.anchor;
+  const hits = body.hits;
+
+  if (!anchor || typeof anchor !== "object") return err("Missing anchor {x,y}.");
+  if (!isNum(anchor.x) || !isNum(anchor.y)) return err("anchor.x and anchor.y must be numbers.");
+  if (!Array.isArray(hits) || hits.length < 1) return err("hits must be an array with at least 1 point.");
+
+  const cleanedHits = [];
+  for (const h of hits) {
+    if (!h || typeof h !== "object") return err("Each hit must be an object {x,y}.");
+    if (!isNum(h.x) || !isNum(h.y)) return err("Each hit must have numeric x and y.");
+    cleanedHits.push({ x: clamp01(h.x), y: clamp01(h.y) });
+  }
+
+  return {
+    ok: true,
+    anchor: { x: clamp01(anchor.x), y: clamp01(anchor.y) },
+    hits: cleanedHits,
+  };
 }
 
 // ---- Routes
@@ -62,15 +89,10 @@ app.get("/", (req, res) => {
 });
 
 app.get("/api/health", (req, res) => {
-  res.json({
-    ok: true,
-    service: "tap-n-score-backend",
-    fingerprint: process.env.FINGERPRINT || "no-fingerprint-set",
-    time: new Date().toISOString(),
-  });
+  res.json({ ok: true, service: "tap-n-score-backend", time: new Date().toISOString() });
 });
 
-// Simple “does the route exist?” test
+// Deterministic test so you can verify the backend quickly in Safari
 app.get("/api/test-analyze", (req, res) => {
   res.json({
     ok: true,
@@ -78,64 +100,131 @@ app.get("/api/test-analyze", (req, res) => {
     anchor: { x: 0.5, y: 0.5 },
     hits: [
       { x: 0.55, y: 0.48 },
-      { x: 0.52, y: 0.50 },
+      { x: 0.52, y: 0.5 },
       { x: 0.58, y: 0.46 },
     ],
     note: "POST /api/analyze with {anchor:{x,y}, hits:[{x,y}...]}",
   });
 });
 
+// Main analyze endpoint (JSON)
 app.post("/api/analyze", (req, res) => {
-  try {
-    const body = req.body || {};
-    const anchor = body.anchor;
-    const hits = Array.isArray(body.hits) ? body.hits : [];
+  const v = validatePayload(req.body);
+  if (!v.ok) return res.status(400).json(v);
 
-    if (!isPoint(anchor)) {
-      return res.status(400).json({ error: "Missing/invalid anchor" });
+  const { anchor, hits } = v;
+
+  // POIB = mean of hits (normalized 0..1)
+  const poib = meanXY(hits);
+
+  // Correction vector = bull(anchor) - poib
+  const dx = anchor.x - poib.x; // + => move RIGHT
+  const dy = anchor.y - poib.y; // + => move DOWN (screen-space)
+
+  // Magnitudes (absolute)
+  const ax = Math.abs(dx);
+  const ay = Math.abs(dy);
+
+  // Directions
+  const dirX = pickDirX(dx);
+  const dirY = pickDirY(dy);
+
+  res.json({
+    ok: true,
+    anchor,
+    hits,
+    poib: {
+      x: Number(poib.x.toFixed(6)),
+      y: Number(poib.y.toFixed(6)),
+    },
+    delta: {
+      dx: Number(dx.toFixed(6)),
+      dy: Number(dy.toFixed(6)),
+    },
+    directions: {
+      x: dirX,
+      y: dirY,
+    },
+    magnitude: {
+      x: Number(ax.toFixed(6)),
+      y: Number(ay.toFixed(6)),
+    },
+    debug: {
+      convention: "x:right+, y:down+ (screen space)",
+      meaning: "directions derived ONLY from signed deltas (anchor - poib)",
+    },
+  });
+});
+
+// iPad-friendly POST tester page (no ReqBin/Hoppscotch needed)
+app.get("/api/poster", (req, res) => {
+  res.type("html").send(`
+<!doctype html>
+<html>
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Tap-n-Score API Poster</title>
+  <style>
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial; padding: 14px; }
+    textarea { width: 100%; height: 220px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; }
+    button { padding: 12px 14px; font-size: 16px; margin-top: 10px; }
+    pre { white-space: pre-wrap; background: #111; color: #0f0; padding: 12px; border-radius: 10px; }
+    .row { display:flex; gap:10px; flex-wrap:wrap; }
+    a { color: #0a84ff; }
+  </style>
+</head>
+<body>
+  <h2>POST /api/analyze</h2>
+  <p>
+    Health: <a href="/api/health">/api/health</a> |
+    Test: <a href="/api/test-analyze">/api/test-analyze</a>
+  </p>
+
+  <p>Paste JSON below, then tap <b>Send</b>.</p>
+
+  <textarea id="payload">{
+  "anchor": { "x": 0.5, "y": 0.5 },
+  "hits": [
+    { "x": 0.55, "y": 0.48 },
+    { "x": 0.52, "y": 0.50 },
+    { "x": 0.58, "y": 0.46 }
+  ]
+}</textarea>
+
+  <div class="row">
+    <button id="sendBtn">Send</button>
+    <button id="clearBtn" type="button">Clear Output</button>
+  </div>
+
+  <h3>Response</h3>
+  <pre id="out">(nothing yet)</pre>
+
+<script>
+  const out = document.getElementById("out");
+  document.getElementById("clearBtn").onclick = () => out.textContent = "(cleared)";
+  document.getElementById("sendBtn").onclick = async () => {
+    out.textContent = "Sending...";
+    try {
+      const payload = JSON.parse(document.getElementById("payload").value);
+      const r = await fetch("/api/analyze", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+      const text = await r.text();
+      out.textContent = "HTTP " + r.status + "\\n\\n" + text;
+    } catch (e) {
+      out.textContent = "ERROR: " + (e && e.message ? e.message : String(e));
     }
-    if (!hits.length) {
-      return res.status(400).json({ error: "Missing/invalid hits" });
-    }
-    for (const h of hits) {
-      if (!isPoint(h)) {
-        return res.status(400).json({ error: "One or more hits are invalid" });
-      }
-    }
-
-    // POIB = average of hits
-    const poib = avgPoint(hits);
-    if (!poib) {
-      return res.status(400).json({ error: "Could not compute POIB" });
-    }
-
-    // Correction vector: POIB -> Bull (bull - poib)
-    const deltaX = Number(anchor.x) - Number(poib.x);
-    const deltaY = Number(anchor.y) - Number(poib.y);
-
-    const { horiz, vert } = directionFromDelta(deltaX, deltaY);
-
-    res.json({
-      ok: true,
-      anchor: { x: Number(anchor.x), y: Number(anchor.y) },
-      poib: { x: poib.x, y: poib.y },
-      delta: { x: deltaX, y: deltaY }, // signed; screen-space
-      direction: {
-        windage: horiz,
-        elevation: vert,
-      },
-      meta: {
-        hitsCount: hits.length,
-        basis: "delta = bull - poib (screen-space y down = +)",
-      },
-    });
-  } catch (err) {
-    res.status(500).json({ error: "Server error", detail: String(err?.message || err) });
-  }
+  };
+</script>
+</body>
+</html>
+  `);
 });
 
 // ---- Start
-const PORT = Number(process.env.PORT) || 10000;
+const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => {
-  console.log(`Backend listening on ${PORT}`);
+  console.log("tap-n-score-backend listening on", PORT);
 });
