@@ -1,167 +1,276 @@
+/* ============================================================
+   docs/index.js (FULL REPLACEMENT)
+   - iPad/iOS-safe photo picker (store File immediately)
+   - Tap bull (blue) then shots (red)
+   - POIB = MEAN of shots (dx,dy in inches relative to bull)
+   - POST https://sczn3-backend-new.onrender.com/api/calc
+   - y axis: down is +, up is -  (top=up)
+============================================================ */
+
 (() => {
   const $ = (id) => document.getElementById(id);
 
-  const chooseBtn  = $("chooseBtn");
-  const clearBtn   = $("clearBtn");
-  const undoBtn    = $("undoBtn");
-  const input      = $("photoInput");
+  // --- Elements
+  const chooseBtn   = $("chooseBtn");
+  const clearBtn    = $("clearBtn");
+  const resultsBtn  = $("resultsBtn");
 
-  const statusLine = $("statusLine");
-  const bullStatus = $("bullStatus");
-  const shotCount  = $("shotCount");
+  const photoInput  = $("photoInput");
+  const statusLine  = $("statusLine");
+  const outBox      = $("outBox");
 
-  const targetWrap = $("targetWrap");
-  const img        = $("targetImg");
-  const tapLayer   = $("tapLayer");
+  const stage       = $("stage");
+  const targetImg   = $("targetImg");
+  const tapLayer    = $("tapLayer");
 
-  // State
+  const bullPill    = $("bullPill");
+  const shotsPill   = $("shotsPill");
+
+  const distanceYds = $("distanceYds");
+  const moaPerClick = $("moaPerClick");
+  const gridAcross  = $("gridAcross");
+  const inPerSquare = $("inPerSquare");
+
+  // --- Config
+  const API_BASE = "https://sczn3-backend-new.onrender.com";
+
+  // --- State
   let selectedFile = null;
   let objectUrl = null;
 
-  // Tap model:
-  // bull = {xPct,yPct} (single)
-  // shots = array of {xPct,yPct}
-  let bull = null;
-  let shots = [];
+  // bull + shots stored as DISPLAY-PIXEL coordinates inside the stage
+  let bull = null;      // {x,y}
+  let shots = [];       // [{x,y}, ...]
+  let dots = [];        // DOM elements for shots
+  let bullDot = null;
 
-  function setStatus(msg) { statusLine.textContent = msg; }
+  function setStatus(msg) {
+    statusLine.textContent = msg;
+  }
 
-  function revokeUrl() {
-    if (objectUrl) {
-      URL.revokeObjectURL(objectUrl);
-      objectUrl = null;
-    }
+  function setOut(obj) {
+    outBox.style.display = "block";
+    outBox.textContent = typeof obj === "string" ? obj : JSON.stringify(obj, null, 2);
+  }
+
+  function clearOut() {
+    outBox.style.display = "none";
+    outBox.textContent = "";
+  }
+
+  function updatePills() {
+    bullPill.innerHTML = `Bull: <b>${bull ? "set ✅" : "not set"}</b>`;
+    shotsPill.innerHTML = `Shots: <b>${shots.length}</b>`;
+    resultsBtn.disabled = !(bull && shots.length > 0);
   }
 
   function clearDots() {
-    tapLayer.querySelectorAll(".dot").forEach((n) => n.remove());
+    if (bullDot) bullDot.remove();
+    bullDot = null;
+
+    dots.forEach((d) => d.remove());
+    dots = [];
+
+    bull = null;
+    shots = [];
+    updatePills();
   }
 
-  function redraw() {
+  function clearAll() {
     clearDots();
+    clearOut();
 
-    // bull first
-    if (bull) addDot(bull.xPct, bull.yPct, "dotBull");
-
-    // then shots
-    for (const s of shots) addDot(s.xPct, s.yPct, "dotShot");
-
-    bullStatus.textContent = bull ? "set ✅" : "not set";
-    shotCount.textContent = String(shots.length);
-  }
-
-  function addDot(xPct, yPct, cls) {
-    const dot = document.createElement("div");
-    dot.className = `dot ${cls}`;
-    dot.style.left = (xPct * 100).toFixed(4) + "%";
-    dot.style.top  = (yPct * 100).toFixed(4) + "%";
-    tapLayer.appendChild(dot);
-  }
-
-  function resetAll() {
-    revokeUrl();
-    img.removeAttribute("src");
-    targetWrap.style.display = "none";
     selectedFile = null;
-    input.value = "";
+    if (objectUrl) URL.revokeObjectURL(objectUrl);
+    objectUrl = null;
 
-    bull = null;
-    shots = [];
-    redraw();
-
-    setStatus("Ready ✅ Tap Choose Photo.");
+    targetImg.removeAttribute("src");
+    stage.style.display = "none";
+    setStatus("Cleared ✅");
   }
 
-  function clearTapsOnly() {
-    bull = null;
-    shots = [];
-    redraw();
-    setStatus("Cleared taps ✅ Next tap sets bull.");
+  // Create a dot on the stage (relative positioning)
+  function addDot(x, y, kind) {
+    const d = document.createElement("div");
+    d.className = `dot ${kind}`;
+    d.style.left = `${x}px`;
+    d.style.top = `${y}px`;
+    stage.appendChild(d);
+    return d;
   }
 
-  function onPickFile(file) {
-    if (!file) return;
+  function stagePointFromEvent(ev) {
+    const rect = stage.getBoundingClientRect();
 
-    selectedFile = file;
+    // Use clientX/clientY for touch + mouse + pointer
+    const x = ev.clientX - rect.left;
+    const y = ev.clientY - rect.top;
 
-    revokeUrl();
-    objectUrl = URL.createObjectURL(file);
-
-    img.onload = () => {
-      targetWrap.style.display = "block";
-      clearTapsOnly();
-      setStatus(`Loaded ✅ ${file.name || "photo"} — tap bull first, then tap shots.`);
-    };
-
-    img.onerror = () => {
-      setStatus("Image failed to load ❌ Try a different photo.");
-    };
-
-    img.src = objectUrl;
+    // Clamp inside stage
+    const cx = Math.max(0, Math.min(rect.width, x));
+    const cy = Math.max(0, Math.min(rect.height, y));
+    return { x: cx, y: cy };
   }
 
-  function pctFromEvent(e) {
-    const r = tapLayer.getBoundingClientRect();
-    const x = (e.clientX - r.left);
-    const y = (e.clientY - r.top);
+  function inchesPerPixel() {
+    // inchesPerPx = (gridAcross * inchesPerSquare) / displayedWidthPx
+    const squares = Number(gridAcross.value);
+    const inSq = Number(inPerSquare.value);
 
-    const xClamped = Math.max(0, Math.min(r.width,  x));
-    const yClamped = Math.max(0, Math.min(r.height, y));
+    const rect = stage.getBoundingClientRect();
+    const w = rect.width;
+
+    if (!Number.isFinite(squares) || squares <= 0) return null;
+    if (!Number.isFinite(inSq) || inSq <= 0) return null;
+    if (!Number.isFinite(w) || w <= 0) return null;
+
+    const totalInchesAcross = squares * inSq;
+    return totalInchesAcross / w;
+  }
+
+  function computeMeanPOIBInches() {
+    // Returns {x,y} where x right is +, y down is +
+    // bull is the origin {0,0}
+    const ipp = inchesPerPixel();
+    if (!ipp) return null;
+
+    let sumX = 0;
+    let sumY = 0;
+
+    for (const s of shots) {
+      const dxPx = s.x - bull.x;
+      const dyPx = s.y - bull.y;
+      sumX += dxPx * ipp;
+      sumY += dyPx * ipp;
+    }
 
     return {
-      xPct: r.width  ? (xClamped / r.width)  : 0,
-      yPct: r.height ? (yClamped / r.height) : 0,
+      x: sumX / shots.length,
+      y: sumY / shots.length,
     };
   }
 
-  // Buttons
-  chooseBtn.addEventListener("click", () => input.click());
+  async function postCalc() {
+    clearOut();
 
-  input.addEventListener("change", () => {
-    const file = input.files && input.files[0];
-    onPickFile(file);
-  });
-
-  clearBtn.addEventListener("click", () => {
-    if (targetWrap.style.display === "block") clearTapsOnly();
-    else resetAll();
-  });
-
-  undoBtn.addEventListener("click", () => {
-    if (shots.length > 0) {
-      shots.pop();
-      redraw();
-      setStatus("Undid last shot ✅");
+    if (!bull || shots.length === 0) {
+      setStatus("Set bull + add at least 1 shot.");
       return;
     }
-    if (bull) {
-      bull = null;
-      redraw();
-      setStatus("Removed bull ✅ Next tap sets bull.");
+
+    const poib = computeMeanPOIBInches();
+    if (!poib) {
+      setStatus("Calibration missing. Check Grid squares across + Inches/square.");
       return;
     }
-    setStatus("Nothing to undo.");
+
+    const dist = Number(distanceYds.value);
+    const mpc = Number(moaPerClick.value);
+
+    if (!Number.isFinite(dist) || dist <= 0) {
+      setStatus("Distance must be a positive number.");
+      return;
+    }
+    if (!Number.isFinite(mpc) || mpc <= 0) {
+      setStatus("MOA/click must be a positive number.");
+      return;
+    }
+
+    const body = {
+      distanceYds: dist,
+      moaPerClick: mpc,
+      bull: { x: 0, y: 0 },
+      poib: { x: poib.x, y: poib.y },
+    };
+
+    setStatus("Posting to backend…");
+
+    try {
+      const res = await fetch(`${API_BASE}/api/calc`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+
+      const json = await res.json().catch(() => null);
+
+      if (!res.ok) {
+        setStatus(`Backend error (${res.status})`);
+        setOut({ status: res.status, bodySent: body, response: json ?? "No JSON body" });
+        return;
+      }
+
+      setStatus("Results ✅");
+      setOut({ bodySent: body, backendResponse: json });
+    } catch (err) {
+      setStatus("Network error talking to backend.");
+      setOut(String(err?.message || err));
+    }
+  }
+
+  // ---- iOS-safe Choose Photo
+  chooseBtn.addEventListener("click", () => {
+    // Must be called directly inside a user gesture
+    photoInput.click();
   });
 
-  // Tap capture
-  tapLayer.addEventListener("pointerdown", (e) => {
-    e.preventDefault();
-    if (targetWrap.style.display !== "block") return;
+  // IMPORTANT: store File immediately on change (iOS Safari quirk)
+  photoInput.addEventListener("change", () => {
+    const f = photoInput.files && photoInput.files[0];
+    if (!f) return;
 
-    const { xPct, yPct } = pctFromEvent(e);
+    selectedFile = f;
+
+    if (objectUrl) URL.revokeObjectURL(objectUrl);
+    objectUrl = URL.createObjectURL(f);
+
+    // Reset taps whenever a new image loads
+    clearDots();
+    clearOut();
+
+    // Show image
+    targetImg.onload = () => {
+      stage.style.display = "block";
+      setStatus(`Loaded ✅ ${f.name}`);
+      updatePills();
+    };
+
+    targetImg.src = objectUrl;
+  });
+
+  clearBtn.addEventListener("click", clearAll);
+  resultsBtn.addEventListener("click", postCalc);
+
+  // ---- Tap handling (bull first, then shots)
+  // Use pointerdown so iPad + mouse both work
+  tapLayer.addEventListener("pointerdown", (ev) => {
+    if (!targetImg.src) {
+      setStatus("Choose a photo first.");
+      return;
+    }
+
+    // prevent iOS double events / scroll weirdness
+    ev.preventDefault();
+
+    const pt = stagePointFromEvent(ev);
 
     if (!bull) {
-      bull = { xPct, yPct };
-      redraw();
-      setStatus("Bull set ✅ Now tap shots.");
+      bull = pt;
+      bullDot = addDot(pt.x, pt.y, "bull");
+      setStatus("Bull: set ✅  Now tap shots.");
+      updatePills();
       return;
     }
 
-    shots.push({ xPct, yPct });
-    redraw();
+    shots.push(pt);
+    const d = addDot(pt.x, pt.y, "shot");
+    dots.push(d);
+
     setStatus(`Shot added ✅ (${shots.length})`);
+    updatePills();
   }, { passive: false });
 
-  // boot
-  setStatus("DOCS IOS FIX LOADED ✅ Tap Choose Photo.");
+  // ---- Boot
+  setStatus("FRONTEND IOS FIX LOADED ✅");
+  updatePills();
 })();
