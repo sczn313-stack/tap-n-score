@@ -4,101 +4,88 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
   <meta name="color-scheme" content="dark" />
-  <meta name="theme-color" content="#0b0f14" />
-  <title>Tap-n-Score™</title>
+  <meta name="theme-color" content="#0b0d10" />
+  <title>Tap-n-Score™ — SEC</title>
 
-  <link rel="stylesheet" href="./styles.css?v=20260201_sec_fixA_1" />
+  <link rel="stylesheet" href="./styles.css?v=20260201_sec_rwb_1" />
 </head>
 
 <body>
   <main class="page">
-
-    <!-- TOP BAR (NO RED/WHITE/BLUE LINE) -->
-    <header class="top">
-      <div class="titleRow">
-        <div class="title">SHOOTER EXPERIENCE CARD</div>
-      </div>
+    <header class="header">
+      <h1 class="secTitle" aria-label="Shooter Experience Card">
+        <span class="secTitleRed">SHOOTER</span>
+        <span class="secTitleWhite">EXPERIENCE</span>
+        <span class="secTitleBlue">CARD</span>
+      </h1>
     </header>
 
-    <!-- STAGE -->
-    <section class="stageCard">
+    <section class="card">
       <div class="controls">
-        <button id="chooseBtn" type="button" class="btn primary">Choose Photo</button>
-        <button id="clearBtn" type="button" class="btn">Clear</button>
-        <button id="resultsBtn" type="button" class="btn cta">Show Results</button>
+        <button id="chooseBtn" class="btn" type="button">Choose Photo</button>
+        <button id="clearBtn" class="btn" type="button">Clear</button>
+        <button id="resultsBtn" class="btn btnPrimary" type="button">Show Results</button>
 
-        <input id="photoInput" class="hiddenInput" type="file" accept="image/*" />
+        <!-- iOS/Safari wants the input in the DOM; keep it hidden but real -->
+        <input
+          id="photoInput"
+          class="hiddenInput"
+          type="file"
+          accept="image/*"
+        />
       </div>
 
       <div id="statusLine" class="status">Loading…</div>
-      <div id="hintLine" class="hint">
-        If “Loading…” never changes, Safari cached an old file. Bump the v= on index.js.
+      <div id="hintLine" class="hint">Tap the bull (blue). Then tap shots (red).</div>
+
+      <div class="chips" aria-label="status chips">
+        <div class="chip">
+          <span id="chipImgDot" class="dotChip"></span>
+          <span class="chipLabel">Image:</span>
+          <span id="chipImg" class="chipValue">not loaded</span>
+        </div>
+        <div class="chip">
+          <span id="chipBullDot" class="dotChip"></span>
+          <span class="chipLabel">Bull:</span>
+          <span id="chipBull" class="chipValue">not set</span>
+        </div>
+        <div class="chip">
+          <span id="chipShotsDot" class="dotChip"></span>
+          <span class="chipLabel">Shots:</span>
+          <span id="chipShots" class="chipValue">0</span>
+        </div>
       </div>
 
-      <div id="stage" class="tapStage" aria-label="Tap stage" style="display:none;">
-        <img id="targetImg" alt="Selected target" />
-        <div id="tapLayer" class="tapLayer" aria-label="Tap layer"></div>
+      <!-- Stage -->
+      <div id="stage" class="stage" style="display:none;">
+        <div class="imgFrame">
+          <img id="targetImg" alt="Selected target" />
+          <div id="tapLayer" class="tapLayer" aria-label="tap layer"></div>
+        </div>
       </div>
+
+      <!-- Results -->
+      <section id="results" class="results" style="display:none;">
+        <div class="scorePanel">
+          <div class="scoreBar"></div>
+          <div class="scoreLabel">Smart Score (pilot)</div>
+        </div>
+
+        <div id="resultGrid" class="resultGrid"></div>
+
+        <details class="diag">
+          <summary>Diagnostics</summary>
+          <pre id="diagOut">(none)</pre>
+        </details>
+      </section>
     </section>
 
-    <!-- SEC -->
-    <section id="sec" class="secCard" style="display:none;">
-
-      <div class="scoreCard">
-        <div id="smartScore" class="scoreValue">—</div>
-        <div class="scoreLabel">Smart Score (pilot)</div>
-      </div>
-
-      <div class="twoCol">
-
-        <div class="miniCard">
-          <div class="miniLabel">ELEVATION</div>
-          <div class="miniDir">
-            <span id="elevWord" class="dirWord">—</span>
-          </div>
-          <div class="miniClicks">
-            <span id="elevClicks" class="clickNum">—</span>
-            <span class="clickText">clicks</span>
-          </div>
-        </div>
-
-        <div class="miniCard">
-          <div class="miniLabel">WINDAGE</div>
-          <div class="miniDir">
-            <span id="windWord" class="dirWord">—</span>
-          </div>
-          <div class="miniClicks">
-            <span id="windClicks" class="clickNum">—</span>
-            <span class="clickText">clicks</span>
-          </div>
-        </div>
-
-      </div>
-
-      <!-- POIB REMOVED -->
-      <div class="metaRow">
-        <div class="metaLeft">
-          <span id="shotsLine" class="metaText">Shots: —</span>
-        </div>
-
-        <div class="metaRight">
-          <span id="distLine" class="metaText">Distance: 100 yds</span>
-          <span class="metaSep">•</span>
-          <span id="clickLine" class="metaText">Click: 0.25 MOA</span>
-        </div>
-      </div>
-
-      <details class="diag">
-        <summary>Diagnostics</summary>
-        <pre id="diagOut">(none)</pre>
-      </details>
-
-    </section>
-
-    <footer class="footer">SCZN3</footer>
+    <footer class="footer">
+      <div class="brand">SCZN3</div>
+    </footer>
   </main>
 
-  <!-- bump v= when iOS caches -->
-  <script defer src="./index.js?v=20260201_sec_fixA_2"></script>
+  <!-- IMPORTANT: bump the v= when iOS caches -->
+  <script defer src="./index.js?v=20260201_sec_rwb_1"></script>
 </body>
 </html>
