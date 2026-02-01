@@ -140,3 +140,18 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log("Backend listening on", PORT);
 });
+app.get("/api/test-analyze", (req, res) => {
+  const anchor = { x: 0.5, y: 0.5 };
+  const hits = [
+    { x: 0.55, y: 0.48 },
+    { x: 0.52, y: 0.50 },
+    { x: 0.58, y: 0.46 },
+  ];
+
+  const computed = computeFromAnchorHits(anchor, hits);
+
+  res.json({
+    sessionId: "SEC-TEST",
+    ...computed
+  });
+});
