@@ -1,13 +1,17 @@
 /* ============================================================
-   server.js (FULL REPLACEMENT) — API-LOCK-ANALYZE-1
-   Purpose:
-   - Provide stable backend endpoints for SEC
-   - Math authority stays backend-only
-   Endpoints:
-   - GET  /api/health   -> sanity check
-   - GET  /api/analyze  -> tells you to POST (prevents confusion)
-   - POST /api/analyze  -> returns score + clicks + shots
-============================================================ */
+   server.js (FULL REPLACEMENT) — Tap-n-Score Backend (Render)
+   What you get:
+   - GET  /api/health         (simple “am I live?”)
+   - GET  /api/test-analyze   (proves the route exists)
+   - POST /api/analyze        (expects { anchor:{x,y}, hits:[{x,y},...] })
+   Notes:
+   - Backend is the ONLY authority for direction labels.
+   - Screen-space Y is used (down = +Y).
+     • UP   when (bull.y - poib.y) < 0
+     • DOWN when (bull.y - poib.y) > 0
+     • RIGHT when (bull.x - poib.x) > 0
+     • LEFT  when (bull.x - poib.x) < 0
+   ============================================================ */
 
 const express = require("express");
 const cors = require("cors");
@@ -19,139 +23,119 @@ app.use(cors({ origin: true }));
 app.use(express.json({ limit: "2mb" }));
 
 // ---- Helpers
-function clamp01(n) {
+function clampNum(n, fallback = null) {
   const x = Number(n);
-  if (!Number.isFinite(x)) return 0;
-  return Math.max(0, Math.min(1, x));
+  return Number.isFinite(x) ? x : fallback;
 }
 
-function normPoint(p) {
-  if (!p || typeof p !== "object") return null;
-  const x = clamp01(p.x);
-  const y = clamp01(p.y);
-  return { x, y };
+function isPoint(p) {
+  if (!p || typeof p !== "object") return false;
+  const x = clampNum(p.x, null);
+  const y = clampNum(p.y, null);
+  return x !== null && y !== null;
 }
 
-function safeArray(a) {
-  return Array.isArray(a) ? a : [];
-}
-
-/**
- * NOTE:
- * Replace this compute() logic with your real SCZN3 math.
- * This is only a stable shape contract so frontend can run.
- *
- * Contract returned:
- * {
- *   sessionId: "SEC-XXXX",
- *   score: <number>,
- *   shots: <int>,
- *   clicks: { up, down, left, right }
- * }
- */
-function computeFromAnchorHits(anchor, hits) {
-  // Minimal placeholder that is deterministic and safe.
-  // Uses average hit offset from anchor as a proxy vector.
-  const n = hits.length || 0;
-
-  let dx = 0;
-  let dy = 0;
-
-  for (const h of hits) {
-    dx += (h.x - anchor.x);
-    dy += (h.y - anchor.y);
+function avgPoint(points) {
+  let sx = 0, sy = 0, c = 0;
+  for (const p of points) {
+    if (!isPoint(p)) continue;
+    sx += Number(p.x);
+    sy += Number(p.y);
+    c++;
   }
-  dx = n ? dx / n : 0;
-  dy = n ? dy / n : 0;
+  if (!c) return null;
+  return { x: sx / c, y: sy / c };
+}
 
-  // Convert normalized dx/dy into "click-ish" numbers (just for shape).
-  // YOUR REAL BACKEND should replace with POIB -> bull etc.
-  const scale = 40; // purely placeholder
-  const horiz = Math.abs(dx * scale);
-  const vert = Math.abs(dy * scale);
-
-  const clicks = {
-    left: dx > 0 ? horiz : 0,
-    right: dx < 0 ? horiz : 0,
-    up: dy > 0 ? vert : 0,
-    down: dy < 0 ? vert : 0,
-  };
-
-  // Placeholder score: closer cluster to anchor -> higher score.
-  // (Replace with real scoring model.)
-  const dist = Math.sqrt(dx * dx + dy * dy);
-  const score = Math.max(0, Math.min(100, Math.round(100 - dist * 220)));
-
-  return {
-    score,
-    shots: n,
-    clicks: {
-      up: Number(clicks.up.toFixed(2)),
-      down: Number(clicks.down.toFixed(2)),
-      left: Number(clicks.left.toFixed(2)),
-      right: Number(clicks.right.toFixed(2)),
-    },
-  };
+function directionFromDelta(deltaX, deltaY) {
+  // delta = bull - poib (vector from POIB to Bull)
+  // Screen-space Y: down = +. Therefore:
+  // bull above poib => deltaY < 0 => UP
+  const horiz = deltaX > 0 ? "RIGHT" : deltaX < 0 ? "LEFT" : "NONE";
+  const vert  = deltaY > 0 ? "DOWN"  : deltaY < 0 ? "UP"   : "NONE";
+  return { horiz, vert };
 }
 
 // ---- Routes
+app.get("/", (req, res) => {
+  res.type("text").send("Tap-n-Score backend is running. Try /api/health");
+});
+
 app.get("/api/health", (req, res) => {
   res.json({
     ok: true,
     service: "tap-n-score-backend",
+    fingerprint: process.env.FINGERPRINT || "no-fingerprint-set",
     time: new Date().toISOString(),
   });
 });
 
-app.get("/api/analyze", (req, res) => {
-  res.status(200).send("Use POST /api/analyze with JSON body { anchor:{x,y}, hits:[{x,y}...] }");
+// Simple “does the route exist?” test
+app.get("/api/test-analyze", (req, res) => {
+  res.json({
+    ok: true,
+    route: "/api/test-analyze",
+    anchor: { x: 0.5, y: 0.5 },
+    hits: [
+      { x: 0.55, y: 0.48 },
+      { x: 0.52, y: 0.50 },
+      { x: 0.58, y: 0.46 },
+    ],
+    note: "POST /api/analyze with {anchor:{x,y}, hits:[{x,y}...]}",
+  });
 });
 
 app.post("/api/analyze", (req, res) => {
   try {
-    const anchor = normPoint(req.body?.anchor);
-    const hitsRaw = safeArray(req.body?.hits);
-    const hits = hitsRaw.map(normPoint).filter(Boolean);
+    const body = req.body || {};
+    const anchor = body.anchor;
+    const hits = Array.isArray(body.hits) ? body.hits : [];
 
-    if (!anchor) {
+    if (!isPoint(anchor)) {
       return res.status(400).json({ error: "Missing/invalid anchor" });
     }
-    if (hits.length < 1) {
-      return res.status(400).json({ error: "Need at least 1 hit" });
+    if (!hits.length) {
+      return res.status(400).json({ error: "Missing/invalid hits" });
+    }
+    for (const h of hits) {
+      if (!isPoint(h)) {
+        return res.status(400).json({ error: "One or more hits are invalid" });
+      }
     }
 
-    const sessionId = `SEC-${Math.random().toString(16).slice(2, 10).toUpperCase()}`;
+    // POIB = average of hits
+    const poib = avgPoint(hits);
+    if (!poib) {
+      return res.status(400).json({ error: "Could not compute POIB" });
+    }
 
-    const computed = computeFromAnchorHits(anchor, hits);
+    // Correction vector: POIB -> Bull (bull - poib)
+    const deltaX = Number(anchor.x) - Number(poib.x);
+    const deltaY = Number(anchor.y) - Number(poib.y);
 
-    return res.json({
-      sessionId,
-      score: computed.score,
-      shots: computed.shots,
-      clicks: computed.clicks,
+    const { horiz, vert } = directionFromDelta(deltaX, deltaY);
+
+    res.json({
+      ok: true,
+      anchor: { x: Number(anchor.x), y: Number(anchor.y) },
+      poib: { x: poib.x, y: poib.y },
+      delta: { x: deltaX, y: deltaY }, // signed; screen-space
+      direction: {
+        windage: horiz,
+        elevation: vert,
+      },
+      meta: {
+        hitsCount: hits.length,
+        basis: "delta = bull - poib (screen-space y down = +)",
+      },
     });
-  } catch (e) {
-    return res.status(500).json({ error: "Server error", detail: String(e?.message || e) });
+  } catch (err) {
+    res.status(500).json({ error: "Server error", detail: String(err?.message || err) });
   }
 });
 
 // ---- Start
-const PORT = process.env.PORT || 3000;
+const PORT = Number(process.env.PORT) || 10000;
 app.listen(PORT, () => {
-  console.log("Backend listening on", PORT);
-});
-app.get("/api/test-analyze", (req, res) => {
-  const anchor = { x: 0.5, y: 0.5 };
-  const hits = [
-    { x: 0.55, y: 0.48 },
-    { x: 0.52, y: 0.50 },
-    { x: 0.58, y: 0.46 },
-  ];
-
-  const computed = computeFromAnchorHits(anchor, hits);
-
-  res.json({
-    sessionId: "SEC-TEST",
-    ...computed
-  });
+  console.log(`Backend listening on ${PORT}`);
 });
