@@ -1,75 +1,117 @@
-// ------------------------------------------------------------
-// SEC (Shooter Experience Card) — demo payload endpoint
-// Purpose: give the frontend ONE stable object to render as SEC.
-// Later we can swap this to return a PNG/PDF, but the shape stays.
-// ------------------------------------------------------------
-app.get("/api/sec-demo", (req, res) => {
-  // SCZN3 defaults (v1.2)
-  const distanceYds = 100;
-  const moaPerClick = 0.25;
+/* ============================================================
+   server.js (FULL REPLACEMENT) — SEC-CONTRACT-LOCK-1
+   Goal:
+   - Stable API you control
+   - Frontend does ZERO math
+   Endpoints:
+   - GET  /api/health
+   - POST /api/analyze  { anchor:{x,y}, hits:[{x,y}...] }
+============================================================ */
 
-  // Demo inputs (normalized 0..1)
-  const anchor = { x: 0.5, y: 0.5 };
-  const hits = [
-    { x: 0.55, y: 0.48 },
-    { x: 0.52, y: 0.50 },
-    { x: 0.58, y: 0.46 },
-  ];
+const express = require("express");
+const cors = require("cors");
 
-  // Compute POIB (mean)
-  const poib = {
-    x: hits.reduce((s, p) => s + p.x, 0) / hits.length,
-    y: hits.reduce((s, p) => s + p.y, 0) / hits.length,
+const app = express();
+
+// ---- Middleware
+app.use(cors({ origin: true }));
+app.use(express.json({ limit: "2mb" }));
+
+// ---- Helpers
+function isNum(n) {
+  const x = Number(n);
+  return Number.isFinite(x);
+}
+function clamp01(n) {
+  const x = Number(n);
+  if (!Number.isFinite(x)) return null;
+  if (x < 0 || x > 1) return null;
+  return x;
+}
+function normPoint(p) {
+  if (!p || typeof p !== "object") return null;
+  const x = clamp01(p.x);
+  const y = clamp01(p.y);
+  if (x === null || y === null) return null;
+  return { x, y };
+}
+function asArray(a) {
+  return Array.isArray(a) ? a : [];
+}
+function sessionId() {
+  return `SEC-${Math.random().toString(16).slice(2, 10).toUpperCase()}`;
+}
+
+// ---- Replace this with SCZN3 real math later.
+// For now: return deterministic numbers so wiring can be locked.
+function compute(anchor, hits) {
+  const shots = hits.length;
+
+  // simple average delta (HIT - ANCHOR)
+  let dx = 0, dy = 0;
+  for (const h of hits) {
+    dx += (h.x - anchor.x);
+    dy += (h.y - anchor.y);
+  }
+  dx = dx / shots;
+  dy = dy / shots;
+
+  // Direction convention (screen truth):
+  // dx > 0 means POI is to the RIGHT of anchor -> correction should go LEFT
+  // dy > 0 means POI is BELOW anchor (screen down) -> correction should go UP
+  // But backend returns explicit up/down/left/right magnitudes, never labels.
+  const magX = Math.abs(dx) * 40;
+  const magY = Math.abs(dy) * 40;
+
+  const clicks = {
+    up:    dy > 0 ? magY : 0,
+    down:  dy < 0 ? magY : 0,
+    left:  dx > 0 ? magX : 0,
+    right: dx < 0 ? magX : 0,
   };
 
-  // Vector from POIB -> bull/anchor (bull - poib)
-  const dx = anchor.x - poib.x;
-  const dy = anchor.y - poib.y;
+  // placeholder score based on distance from anchor
+  const dist = Math.sqrt(dx * dx + dy * dy);
+  const score = Math.max(0, Math.min(100, Math.round(100 - dist * 220)));
 
-  // Direction labels (screen-space): +x = right, +y = down
-  // If dy is positive (POIB is above bull in screen-space), correction is DOWN? No:
-  // We’re moving POI to the bull: if bull is BELOW POIB (dy>0), shooter must move impact DOWN.
-  const windage = dx >= 0 ? "RIGHT" : "LEFT";
-  const elevation = dy >= 0 ? "DOWN" : "UP";
+  return {
+    score,
+    shots,
+    clicks: {
+      up: Number(clicks.up.toFixed(2)),
+      down: Number(clicks.down.toFixed(2)),
+      left: Number(clicks.left.toFixed(2)),
+      right: Number(clicks.right.toFixed(2)),
+    },
+  };
+}
 
-  // Placeholder inches conversion (we’ll replace with real scale from target profile)
-  // For now, treat normalized delta as “inches” just so the card wiring works end-to-end.
-  const dxIn = Math.abs(dx).toFixed(4);
-  const dyIn = Math.abs(dy).toFixed(4);
-
-  // Convert inches -> MOA -> clicks (placeholder math until scale is real)
-  // 1 MOA ~ 1.047" at 100 yards (general)
-  const inchesPerMOA = (1.047 * distanceYds) / 100;
-  const moaX = Math.abs(dx) / inchesPerMOA;
-  const moaY = Math.abs(dy) / inchesPerMOA;
-  const clicksX = (moaX / moaPerClick).toFixed(2);
-  const clicksY = (moaY / moaPerClick).toFixed(2);
-
+// ---- Routes
+app.get("/api/health", (req, res) => {
   res.json({
     ok: true,
-    sec: {
-      version: "sec-payload-v1",
-      defaults: { distanceYds, moaPerClick },
-      input: { anchor, hits },
-      poib,
-      delta: {
-        dx, dy,
-        dxAbs: Number(Math.abs(dx).toFixed(6)),
-        dyAbs: Number(Math.abs(dy).toFixed(6)),
-        dxIn: Number(dxIn),
-        dyIn: Number(dyIn),
-      },
-      correction: {
-        windage,
-        elevation,
-        clicks: {
-          windage: Number(clicksX),
-          elevation: Number(clicksY),
-        },
-      },
-      next: {
-        prompt: "Run the Next 5-Shot Challenge after applying the correction.",
-      },
-    },
+    service: "sczn3-sec-backend",
+    time: new Date().toISOString(),
   });
 });
+
+app.post("/api/analyze", (req, res) => {
+  const anchor = normPoint(req.body?.anchor);
+  const hits = asArray(req.body?.hits).map(normPoint).filter(Boolean);
+
+  if (!anchor) return res.status(400).json({ error: "Invalid anchor. Need {x,y} between 0..1" });
+  if (hits.length < 1) return res.status(400).json({ error: "Need at least 1 hit." });
+
+  const out = compute(anchor, hits);
+
+  return res.json({
+    sessionId: sessionId(),
+    score: out.score,
+    shots: out.shots,
+    clicks: out.clicks,
+  });
+});
+
+// ---- Start
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log("SEC backend listening on", PORT));
