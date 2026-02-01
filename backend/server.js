@@ -1,11 +1,12 @@
 /* ============================================================
-   server.js (FULL REPLACEMENT) — SEC-CONTRACT-LOCK-1
-   Goal:
-   - Stable API you control
-   - Frontend does ZERO math
+   server.js (FULL REPLACEMENT) — SCZN3 BACKEND LOCK v1
    Endpoints:
    - GET  /api/health
-   - POST /api/analyze  { anchor:{x,y}, hits:[{x,y}...] }
+   - GET  /api/analyze   (instructions only)
+   - POST /api/analyze   (returns score + clicks + shots)
+   Notes:
+   - Backend is math authority.
+   - Frontend sends normalized points: anchor {x,y} and hits [{x,y}...]
 ============================================================ */
 
 const express = require("express");
@@ -13,21 +14,37 @@ const cors = require("cors");
 
 const app = express();
 
-// ---- Middleware
-app.use(cors({ origin: true }));
+// ---------- Config ----------
+const PORT = process.env.PORT || 3000;
+
+// If you want to lock CORS to your frontend later:
+// set Render env var: CORS_ORIGIN = https://YOUR-FRONTEND.onrender.com
+const CORS_ORIGIN = process.env.CORS_ORIGIN || "*";
+
+// ---------- Middleware ----------
+app.use(
+  cors({
+    origin: CORS_ORIGIN === "*" ? true : CORS_ORIGIN,
+    methods: ["GET", "POST", "OPTIONS"],
+    allowedHeaders: ["Content-Type"],
+  })
+);
+
 app.use(express.json({ limit: "2mb" }));
 
-// ---- Helpers
-function isNum(n) {
-  const x = Number(n);
-  return Number.isFinite(x);
+// ---------- Helpers ----------
+function isFiniteNumber(n) {
+  return typeof n === "number" && Number.isFinite(n);
 }
+
 function clamp01(n) {
   const x = Number(n);
   if (!Number.isFinite(x)) return null;
-  if (x < 0 || x > 1) return null;
+  if (x < 0) return 0;
+  if (x > 1) return 1;
   return x;
 }
+
 function normPoint(p) {
   if (!p || typeof p !== "object") return null;
   const x = clamp01(p.x);
@@ -35,48 +52,65 @@ function normPoint(p) {
   if (x === null || y === null) return null;
   return { x, y };
 }
-function asArray(a) {
+
+function safeArray(a) {
   return Array.isArray(a) ? a : [];
 }
-function sessionId() {
+
+function newSessionId() {
   return `SEC-${Math.random().toString(16).slice(2, 10).toUpperCase()}`;
 }
 
-// ---- Replace this with SCZN3 real math later.
-// For now: return deterministic numbers so wiring can be locked.
+/**
+ * ------------------------------------------------------------
+ * PLACEHOLDER MATH (stable contract)
+ * Replace this with your real SCZN3 math later.
+ * ------------------------------------------------------------
+ * This returns:
+ *  - shots: hits.length
+ *  - score: 0..100 based on average distance to anchor (proxy)
+ *  - clicks: four numbers with 2 decimals (proxy)
+ */
 function compute(anchor, hits) {
-  const shots = hits.length;
+  const n = hits.length;
 
-  // simple average delta (HIT - ANCHOR)
-  let dx = 0, dy = 0;
+  // Average delta: hit - anchor
+  let dx = 0;
+  let dy = 0;
+
   for (const h of hits) {
     dx += (h.x - anchor.x);
     dy += (h.y - anchor.y);
   }
-  dx = dx / shots;
-  dy = dy / shots;
+  dx /= n;
+  dy /= n;
 
-  // Direction convention (screen truth):
-  // dx > 0 means POI is to the RIGHT of anchor -> correction should go LEFT
-  // dy > 0 means POI is BELOW anchor (screen down) -> correction should go UP
-  // But backend returns explicit up/down/left/right magnitudes, never labels.
-  const magX = Math.abs(dx) * 40;
-  const magY = Math.abs(dy) * 40;
+  // Score proxy: smaller distance = higher score
+  const dist = Math.sqrt(dx * dx + dy * dy);
+  const score = Math.max(0, Math.min(100, Math.round(100 - dist * 240)));
 
+  // Click proxy: directional magnitudes
+  // NOTE: This is NOT your real click math. It’s only a contract shape.
+  const scale = 40;
+  const horiz = Math.abs(dx * scale);
+  const vert = Math.abs(dy * scale);
+
+  // IMPORTANT:
+  // screen-space y is down-positive.
+  // But these are just placeholders anyway.
   const clicks = {
-    up:    dy > 0 ? magY : 0,
-    down:  dy < 0 ? magY : 0,
-    left:  dx > 0 ? magX : 0,
-    right: dx < 0 ? magX : 0,
+    // if average hit is RIGHT of anchor -> you need LEFT correction (placeholder)
+    left: dx > 0 ? horiz : 0,
+    right: dx < 0 ? horiz : 0,
+
+    // if average hit is BELOW anchor -> you need UP correction (placeholder)
+    up: dy > 0 ? vert : 0,
+    down: dy < 0 ? vert : 0,
   };
 
-  // placeholder score based on distance from anchor
-  const dist = Math.sqrt(dx * dx + dy * dy);
-  const score = Math.max(0, Math.min(100, Math.round(100 - dist * 220)));
-
   return {
+    shots: n,
     score,
-    shots,
     clicks: {
       up: Number(clicks.up.toFixed(2)),
       down: Number(clicks.down.toFixed(2)),
@@ -86,7 +120,7 @@ function compute(anchor, hits) {
   };
 }
 
-// ---- Routes
+// ---------- Routes ----------
 app.get("/api/health", (req, res) => {
   res.json({
     ok: true,
@@ -95,23 +129,42 @@ app.get("/api/health", (req, res) => {
   });
 });
 
-app.post("/api/analyze", (req, res) => {
-  const anchor = normPoint(req.body?.anchor);
-  const hits = asArray(req.body?.hits).map(normPoint).filter(Boolean);
-
-  if (!anchor) return res.status(400).json({ error: "Invalid anchor. Need {x,y} between 0..1" });
-  if (hits.length < 1) return res.status(400).json({ error: "Need at least 1 hit." });
-
-  const out = compute(anchor, hits);
-
-  return res.json({
-    sessionId: sessionId(),
-    score: out.score,
-    shots: out.shots,
-    clicks: out.clicks,
-  });
+app.get("/api/analyze", (req, res) => {
+  res.status(200).send(
+    "Use POST /api/analyze with JSON body: { anchor:{x,y}, hits:[{x,y}...] }"
+  );
 });
 
-// ---- Start
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log("SEC backend listening on", PORT));
+app.post("/api/analyze", (req, res) => {
+  try {
+    const anchor = normPoint(req.body?.anchor);
+    const hitsRaw = safeArray(req.body?.hits);
+    const hits = hitsRaw.map(normPoint).filter(Boolean);
+
+    if (!anchor) {
+      return res.status(400).json({ error: "Missing/invalid anchor" });
+    }
+    if (hits.length < 1) {
+      return res.status(400).json({ error: "Need at least 1 hit" });
+    }
+
+    const out = compute(anchor, hits);
+
+    // Final contract
+    return res.json({
+      sessionId: newSessionId(),
+      score: out.score,
+      shots: out.shots,
+      clicks: out.clicks,
+    });
+  } catch (e) {
+    return res
+      .status(500)
+      .json({ error: "Server error", detail: String(e?.message || e) });
+  }
+});
+
+// ---------- Start ----------
+app.listen(PORT, () => {
+  console.log(`SCZN3 backend listening on port ${PORT}`);
+});
