@@ -14,6 +14,7 @@
     .sub { margin: 0 0 18px; opacity: .75; font-size: 16px; }
     .card { border: 1px solid rgba(0,0,0,.12); border-radius: 18px; padding: 18px; }
     .row { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; }
+
     button {
       font-size: 20px;
       padding: 14px 18px;
@@ -23,8 +24,10 @@
       cursor: pointer;
     }
     button:active { transform: translateY(1px); }
-    #statusLine { margin-top: 12px; font-weight: 700; }
+
+    #statusLine { margin-top: 12px; font-weight: 800; }
     .hint { margin-top: 8px; opacity: .7; font-size: 14px; line-height: 1.35; }
+
     #targetWrap { margin-top: 14px; }
     #targetImg {
       width: 100%;
@@ -34,7 +37,19 @@
       border: 1px dashed rgba(0,0,0,.25);
       background: rgba(0,0,0,.02);
     }
-    .hiddenInput { position: absolute; left: -9999px; width: 1px; height: 1px; opacity: 0; }
+
+    /* IMPORTANT:
+       Do NOT use display:none on the file input.
+       iOS Safari can get weird if the input is not “real” in the DOM. */
+    .hiddenInput {
+      position: fixed;
+      left: -9999px;
+      top: 0;
+      width: 1px;
+      height: 1px;
+      opacity: 0.001;
+      pointer-events: none;
+    }
   </style>
 </head>
 
@@ -49,7 +64,6 @@
         <button id="clearBtn" type="button">Clear</button>
       </div>
 
-      <!-- iOS/Safari likes the input to exist in the DOM but it can be visually hidden -->
       <input
         id="photoInput"
         class="hiddenInput"
@@ -68,7 +82,7 @@
     </div>
   </div>
 
-  <!-- IMPORTANT: bump the v= whenever iOS seems cached -->
-  <script defer src="./index.js?v=20260201_frontend_iosfix_1"></script>
+  <!-- IMPORTANT: bump v= any time iOS seems cached -->
+  <script src="./index.js?v=20260201_frontend_iosfix_2"></script>
 </body>
 </html>
