@@ -12,99 +12,100 @@
 
 <body>
   <main class="page">
-    <!-- target image area (whatever you already have above can stay) -->
-    <section class="topStage">
-      <div class="stageWrap" id="stage" style="display:none;">
-        <div class="tapStage">
-          <img id="targetImg" alt="Target photo" />
-          <div id="tapLayer" aria-label="Tap layer"></div>
-        </div>
+
+    <!-- TOP BAR -->
+    <header class="top">
+      <div class="flagLine">
+        <span class="seg red"></span>
+        <span class="seg white"></span>
+        <span class="seg blue"></span>
       </div>
-    </section>
 
-    <!-- SEC card -->
-    <section class="secWrap">
-      <div class="secCard" id="secCard" style="display:none;">
-        <div class="secAccent" aria-hidden="true">
-          <span class="red"></span><span class="white"></span><span class="blue"></span>
-        </div>
-
-        <div class="secHeader">
-          <div class="secTitle">SHOOTER EXPERIENCE CARD</div>
-        </div>
-
-        <div class="secScorePanel">
-          <div class="secScore" id="smartScore">—</div>
-          <div class="secScoreSub">Smart Score (pilot)</div>
-        </div>
-
-        <div class="secTwo">
-          <div class="secMiniCard">
-            <div class="secMiniTop">
-              <div class="secMiniLabel">ELEVATION</div>
-              <div class="secMiniDir" id="elevDir">—</div>
-            </div>
-            <div class="secMiniValue"><span id="elevClicks">—</span></div>
-            <div class="secMiniUnit">clicks</div>
-          </div>
-
-          <div class="secMiniCard">
-            <div class="secMiniTop">
-              <div class="secMiniLabel">WINDAGE</div>
-              <div class="secMiniDir" id="windDir">—</div>
-            </div>
-            <div class="secMiniValue"><span id="windClicks">—</span></div>
-            <div class="secMiniUnit">clicks</div>
-          </div>
-        </div>
-
-        <div class="secBottomRow">
-          <div class="secMeta">
-            <div class="secMetaKey">Shots:</div>
-            <div class="secMetaVal" id="shotsCount">0</div>
-          </div>
-
-          <div class="secMeta">
-            <div class="secMetaKey">Distance:</div>
-            <div class="secMetaVal" id="distanceOut">—</div>
-          </div>
-
-          <div class="secMeta">
-            <div class="secMetaKey">Click:</div>
-            <div class="secMetaVal" id="clickOut">—</div>
-          </div>
-        </div>
-
-        <details class="diag">
-          <summary>Diagnostics</summary>
-          <pre id="diagOut">(none)</pre>
-        </details>
+      <div class="titleRow">
+        <div class="title">SHOOTER EXPERIENCE CARD</div>
       </div>
-    </section>
+    </header>
 
-    <!-- controls -->
-    <section class="controls">
-      <div class="controlsCard">
-        <div class="row">
-          <button id="chooseBtn" type="button">Choose Photo</button>
-          <button id="clearBtn" type="button">Clear</button>
-          <button id="resultsBtn" type="button">Show Results</button>
-        </div>
+    <!-- STAGE -->
+    <section class="stageCard">
+      <div class="controls">
+        <button id="chooseBtn" type="button" class="btn primary">Choose Photo</button>
+        <button id="clearBtn" type="button" class="btn">Clear</button>
+        <button id="resultsBtn" type="button" class="btn cta">Show Results</button>
 
         <input id="photoInput" class="hiddenInput" type="file" accept="image/*" />
+      </div>
 
-        <div class="status" id="statusLine">Tap-n-Score loaded ✅</div>
-        <div class="hint" id="hintLine">Tap the bull (blue). Then tap shots (red).</div>
+      <div id="statusLine" class="status">Loading…</div>
+      <div id="hintLine" class="hint">
+        If “Loading…” never changes, Safari cached an old file. Bump the v= on index.js.
+      </div>
 
-        <div class="chips">
-          <div class="chip"><span class="dot" id="chipImgDot"></span><span class="k">Image:</span><span class="v" id="chipImg">not loaded</span></div>
-          <div class="chip"><span class="dot" id="chipBullDot"></span><span class="k">Bull:</span><span class="v" id="chipBull">not set</span></div>
-          <div class="chip"><span class="dot" id="chipShotsDot"></span><span class="k">Shots:</span><span class="v" id="chipShots">0</span></div>
-        </div>
+      <div id="stage" class="tapStage" aria-label="Tap stage" style="display:none;">
+        <img id="targetImg" alt="Selected target" />
+        <div id="tapLayer" class="tapLayer" aria-label="Tap layer"></div>
       </div>
     </section>
+
+    <!-- SEC -->
+    <section id="sec" class="secCard" style="display:none;">
+
+      <div class="scoreCard">
+        <div id="smartScore" class="scoreValue">—</div>
+        <div class="scoreLabel">Smart Score (pilot)</div>
+      </div>
+
+      <div class="twoCol">
+
+        <div class="miniCard">
+          <div class="miniLabel">ELEVATION</div>
+          <div class="miniDir">
+            <span id="elevWord" class="dirWord">—</span>
+          </div>
+          <div class="miniClicks">
+            <span id="elevClicks" class="clickNum">—</span>
+            <span class="clickText">clicks</span>
+          </div>
+        </div>
+
+        <div class="miniCard">
+          <div class="miniLabel">WINDAGE</div>
+          <div class="miniDir">
+            <span id="windWord" class="dirWord">—</span>
+          </div>
+          <div class="miniClicks">
+            <span id="windClicks" class="clickNum">—</span>
+            <span class="clickText">clicks</span>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="metaRow">
+        <div class="metaLeft">
+          <span id="poibLine" class="metaText">x — in, y — in</span>
+          <span class="metaSep">•</span>
+          <span id="shotsLine" class="metaText">Shots: —</span>
+        </div>
+
+        <div class="metaRight">
+          <span id="distLine" class="metaText">Distance: 100 yds</span>
+          <span class="metaSep">•</span>
+          <span id="clickLine" class="metaText">Click: 0.25 MOA</span>
+        </div>
+      </div>
+
+      <details class="diag">
+        <summary>Diagnostics</summary>
+        <pre id="diagOut">(none)</pre>
+      </details>
+
+    </section>
+
+    <footer class="footer">SCZN3</footer>
   </main>
 
-  <script defer src="./index.js?v=20260201_sec_1"></script>
+  <!-- bump v= when iOS caches -->
+  <script defer src="./index.js?v=20260201_sec_2"></script>
 </body>
 </html>
