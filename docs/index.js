@@ -1,125 +1,123 @@
-/* ============================================================
-   docs/index.js (FULL REPLACEMENT) — IOS-PICKER-FIX-2
-   Goals:
-   - Choose Photo ALWAYS opens picker on iPad/iOS
-   - Status line proves JS is running
-   - Preview loads via ObjectURL, fallback to FileReader
-   - Clear resets cleanly
-============================================================ */
-
 (() => {
   const $ = (id) => document.getElementById(id);
 
-  const chooseBtn = $("chooseBtn");
-  const clearBtn = $("clearBtn");
-  const input = $("photoInput");
-  const img = $("targetImg");
+  const chooseBtn  = $("chooseBtn");
+  const clearBtn   = $("clearBtn");
+  const input      = $("photoInput");
   const statusLine = $("statusLine");
+  const tapCountEl = $("tapCount");
 
+  const targetWrap = $("targetWrap");
+  const img        = $("targetImg");
+  const tapLayer   = $("tapLayer");
+
+  // State
+  let selectedFile = null;
   let objectUrl = null;
+  let taps = []; // {xPct, yPct}
 
   function setStatus(msg) {
     statusLine.textContent = msg;
-    console.log("[DOCS]", msg);
   }
 
-  function revokeObjectUrl() {
+  function resetImage() {
+    // revoke URL if we used it
     if (objectUrl) {
-      try { URL.revokeObjectURL(objectUrl); } catch (_) {}
+      URL.revokeObjectURL(objectUrl);
       objectUrl = null;
     }
-  }
-
-  async function setImageFromFile(file) {
-    revokeObjectUrl();
-
-    // Try Object URL first (fast)
-    try {
-      objectUrl = URL.createObjectURL(file);
-      img.onload = () => {
-        img.style.display = "block";
-        setStatus(`Loaded ✅ ${file.name}`);
-      };
-      img.onerror = () => {
-        setStatus("ObjectURL failed… trying FileReader fallback");
-        revokeObjectUrl();
-        fileReaderFallback(file);
-      };
-      img.src = objectUrl;
-      return;
-    } catch (e) {
-      setStatus("ObjectURL exception… trying FileReader fallback");
-      fileReaderFallback(file);
-    }
-  }
-
-  function fileReaderFallback(file) {
-    try {
-      const r = new FileReader();
-      r.onload = () => {
-        img.onload = () => {
-          img.style.display = "block";
-          setStatus(`Loaded ✅ ${file.name}`);
-        };
-        img.onerror = () => setStatus("Image load failed ❌ (FileReader)");
-        img.src = r.result;
-      };
-      r.onerror = () => setStatus("FileReader failed ❌");
-      r.readAsDataURL(file);
-    } catch (e) {
-      setStatus("FileReader exception ❌");
-    }
-  }
-
-  function clearAll() {
-    revokeObjectUrl();
     img.removeAttribute("src");
-    img.style.display = "none";
-    // reset input so picking the SAME photo again works on iOS
+    targetWrap.style.display = "none";
+    selectedFile = null;
     input.value = "";
-    setStatus("Cleared. Tap Choose Photo.");
+    clearTaps();
+    setStatus("Ready ✅ Tap Choose Photo.");
   }
 
-  function openPicker() {
-    // iOS requires this to be inside a direct user gesture
-    // Also reset input first so the same file can be picked again
-    input.value = "";
-    setStatus("Opening picker…");
+  function clearTaps() {
+    taps = [];
+    tapCountEl.textContent = "0";
+    // remove dots
+    tapLayer.querySelectorAll(".dot").forEach((n) => n.remove());
+  }
 
-    // IMPORTANT: call click() on the real input
+  function addDotAtPct(xPct, yPct) {
+    const dot = document.createElement("div");
+    dot.className = "dot";
+    dot.style.left = (xPct * 100).toFixed(4) + "%";
+    dot.style.top  = (yPct * 100).toFixed(4) + "%";
+    tapLayer.appendChild(dot);
+  }
+
+  function onPickFile(file) {
+    if (!file) return;
+
+    selectedFile = file;
+
+    // Use object URL for speed + iOS stability
+    if (objectUrl) URL.revokeObjectURL(objectUrl);
+    objectUrl = URL.createObjectURL(file);
+
+    img.onload = () => {
+      targetWrap.style.display = "block";
+      clearTaps();
+      setStatus(`Loaded ✅ ${file.name || "photo"} — tap to mark hits.`);
+    };
+
+    img.onerror = () => {
+      setStatus("Image failed to load ❌ Try a different photo.");
+    };
+
+    img.src = objectUrl;
+  }
+
+  // --- iOS-safe choose flow: button click triggers input click (user gesture)
+  chooseBtn.addEventListener("click", () => {
+    // ensure the input exists + is clickable
     input.click();
-  }
+  });
 
-  function bind() {
-    if (!chooseBtn || !clearBtn || !input || !img || !statusLine) {
-      alert("Missing required elements. Check IDs in index.html.");
-      return;
+  // store file immediately on change
+  input.addEventListener("change", () => {
+    const file = input.files && input.files[0];
+    onPickFile(file);
+  });
+
+  clearBtn.addEventListener("click", () => {
+    // If image exists, clear taps first, else reset everything
+    if (targetWrap.style.display === "block") {
+      clearTaps();
+      setStatus("Cleared taps ✅");
+    } else {
+      resetImage();
     }
+  });
 
-    // Button handlers
-    chooseBtn.addEventListener("click", openPicker);
-    clearBtn.addEventListener("click", clearAll);
+  // --- Tap capture (single-source): pointerdown ONLY (prevents iOS double-firing click+touch)
+  tapLayer.addEventListener("pointerdown", (e) => {
+    // don’t allow browser gestures to steal taps
+    e.preventDefault();
 
-    // When user selects a file
-    input.addEventListener("change", async () => {
-      const file = input.files && input.files[0] ? input.files[0] : null;
-      if (!file) {
-        setStatus("No file selected.");
-        return;
-      }
+    // must have image displayed
+    if (targetWrap.style.display !== "block") return;
 
-      setStatus(`Selected: ${file.name}`);
-      await setImageFromFile(file);
-    });
+    const r = tapLayer.getBoundingClientRect();
+    const x = (e.clientX - r.left);
+    const y = (e.clientY - r.top);
 
-    setStatus("DOCS IOS FIX LOADED ✅ Tap Choose Photo.");
-  }
+    // Clamp inside layer
+    const xClamped = Math.max(0, Math.min(r.width,  x));
+    const yClamped = Math.max(0, Math.min(r.height, y));
 
-  // Boot
-  try {
-    bind();
-  } catch (e) {
-    console.error(e);
-    setStatus("JS crashed ❌ (check console)");
-  }
+    const xPct = r.width  ? (xClamped / r.width)  : 0;
+    const yPct = r.height ? (yClamped / r.height) : 0;
+
+    taps.push({ xPct, yPct });
+    tapCountEl.textContent = String(taps.length);
+
+    addDotAtPct(xPct, yPct);
+  }, { passive: false });
+
+  // boot
+  setStatus("DOCS IOS FIX LOADED ✅ Tap Choose Photo.");
 })();
