@@ -1,4 +1,4 @@
-/* ============================================================
+setStatus("DOCS IOS FIX LOADED ✅");/* ============================================================
    docs/index.js  (FULL REPLACEMENT)
    Fix: iOS/iPadOS photo picker selection not sticking
    - Uses a real <input type="file">
