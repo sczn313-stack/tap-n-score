@@ -1,111 +1,105 @@
-setStatus("DOCS IOS FIX LOADED ✅");/* ============================================================
-   docs/index.js  (FULL REPLACEMENT)
-   Fix: iOS/iPadOS photo picker selection not sticking
-   - Uses a real <input type="file">
-   - Triggers it via a button
-   - Stores File immediately on change
-   - Creates objectURL immediately
-   - Resets input value so same photo can be re-picked
-   - Guards against double-fire
+/* ============================================================
+   docs/index.js — iPad/iOS-safe photo picker + preview (Docs)
+   Goals:
+   - Prove JS is actually running (status changes immediately)
+   - iOS Safari: file selection "sticks" and preview reliably
+   - Clear resets state cleanly
 ============================================================ */
 
 (() => {
   const $ = (id) => document.getElementById(id);
 
-  const elFile   = $("photoInput");
-  const elChoose = $("choosePhotoBtn");
-  const elClear  = $("clearBtn");
-  const elImg    = $("targetImg");
-  const elStatus = $("statusLine");
-  const elDebug  = $("debugOut");
+  const chooseBtn = $("chooseBtn");
+  const clearBtn  = $("clearBtn");
+  const input     = $("photoInput");
+  const statusEl  = $("statusLine");
+  const preview   = $("preview");
 
-  if (!elFile || !elChoose || !elClear || !elImg || !elStatus) {
-    console.log("Docs: missing required elements.");
-    return;
-  }
-
-  let selectedFile = null;
   let objectUrl = null;
-  let lastChangeAt = 0;
 
   function setStatus(msg) {
-    elStatus.textContent = msg;
-    console.log("[STATUS]", msg);
+    if (statusEl) statusEl.textContent = msg;
   }
 
-  function showDebug(obj) {
-    if (!elDebug) return;
-    elDebug.style.display = "block";
-    elDebug.textContent = JSON.stringify(obj, null, 2);
-  }
+  // Show JS is alive ASAP
+  setStatus("DOCS IOS FIX LOADED ✅");
 
-  function hideDebug() {
-    if (!elDebug) return;
-    elDebug.style.display = "none";
-    elDebug.textContent = "";
-  }
+  // If there is a JS error, show it on-screen (iOS Safari hides console too often)
+  window.addEventListener("error", (e) => {
+    setStatus(`JS ERROR: ${e.message || "unknown"}`);
+  });
 
-  function cleanupObjectUrl() {
+  function revokeObjectUrl() {
     if (objectUrl) {
-      try { URL.revokeObjectURL(objectUrl); } catch {}
+      URL.revokeObjectURL(objectUrl);
       objectUrl = null;
     }
   }
 
   function clearAll() {
-    selectedFile = null;
-    cleanupObjectUrl();
-    elImg.removeAttribute("src");
-    elImg.style.display = "none";
-    hideDebug();
-    setStatus("Cleared. Tap Choose Photo.");
+    revokeObjectUrl();
+    preview.removeAttribute("src");
+    preview.style.display = "none";
+    // Reset input (Safari-friendly)
+    input.value = "";
+    setStatus("Cleared ✅");
   }
 
-  elChoose.addEventListener("click", () => {
-    // must be directly in user gesture for iOS
-    elFile.click();
-  });
+  async function fileToDataUrl(file) {
+    return new Promise((resolve, reject) => {
+      const r = new FileReader();
+      r.onload = () => resolve(String(r.result || ""));
+      r.onerror = () => reject(new Error("FileReader failed"));
+      r.readAsDataURL(file);
+    });
+  }
 
-  elClear.addEventListener("click", clearAll);
-
-  elFile.addEventListener("change", () => {
-    const now = Date.now();
-
-    // iOS sometimes fires change twice
-    if (now - lastChangeAt < 250) return;
-    lastChangeAt = now;
-
-    const file = elFile.files && elFile.files[0] ? elFile.files[0] : null;
-
+  async function handlePickedFile(file) {
     if (!file) {
-      setStatus("No photo selected (cancelled).");
+      setStatus("No file picked.");
       return;
     }
 
-    // IMPORTANT: grab immediately (iOS can drop it if delayed)
-    selectedFile = file;
+    setStatus(`Picked: ${file.name} (${Math.round(file.size / 1024)} KB)`);
 
-    cleanupObjectUrl();
-    objectUrl = URL.createObjectURL(file);
+    // Try object URL first (fast)
+    try {
+      revokeObjectUrl();
+      objectUrl = URL.createObjectURL(file);
+      preview.src = objectUrl;
+      preview.style.display = "block";
 
-    showDebug({
-      name: file.name,
-      type: file.type,
-      size: file.size,
-      lastModified: file.lastModified
-    });
+      // iOS sometimes delays image load; wait a beat then confirm
+      await new Promise((r) => setTimeout(r, 50));
+      setStatus("Preview ready ✅");
+      return;
+    } catch (_) {
+      // Fall through to FileReader
+    }
 
-    setStatus(`Photo selected ✅ (${file.type || "unknown"}, ${file.size || 0} bytes)`);
+    // Fallback: FileReader DataURL (most compatible)
+    try {
+      revokeObjectUrl();
+      const dataUrl = await fileToDataUrl(file);
+      preview.src = dataUrl;
+      preview.style.display = "block";
+      setStatus("Preview ready ✅ (FileReader)");
+    } catch (err) {
+      setStatus(`Could not preview image: ${err.message || err}`);
+    }
+  }
 
-    elImg.onload = () => setStatus("Photo loaded into preview ✅");
-    elImg.onerror = () => setStatus("Preview failed to load ❌");
-
-    elImg.src = objectUrl;
-    elImg.style.display = "block";
-
-    // IMPORTANT: allow picking same photo again
-    elFile.value = "";
+  // Button -> open picker
+  chooseBtn.addEventListener("click", () => {
+    setStatus("Opening photo picker…");
+    input.click();
   });
 
-  setStatus("Ready. Tap Choose Photo.");
+  // iOS Safari: store file immediately on change
+  input.addEventListener("change", async () => {
+    const file = input.files && input.files[0] ? input.files[0] : null;
+    await handlePickedFile(file);
+  });
+
+  clearBtn.addEventListener("click", clearAll);
 })();
