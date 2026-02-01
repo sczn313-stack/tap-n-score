@@ -1,76 +1,117 @@
+<!-- docs/index.html (FULL REPLACEMENT) -->
 <!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
   <meta name="color-scheme" content="dark" />
-  <meta name="theme-color" content="#07110c" />
+  <meta name="theme-color" content="#000000" />
   <title>Tap-n-Score™ — SEC</title>
 
-  <!-- bump v= if iOS caches -->
-  <link rel="stylesheet" href="./styles.css?v=SEC-RWB-1" />
+  <!-- IMPORTANT: bump v= when Safari caches -->
+  <link rel="stylesheet" href="./styles.css?v=20260201_sec_fullreplace_1" />
 </head>
 
 <body>
   <main class="page">
-    <section class="secCard" id="secCard" aria-label="Shooter Experience Card">
 
-      <!-- RWB TITLE (NO STRIPE) -->
-      <div class="secTitle" aria-label="Shooter Experience Card">
-        <span class="secRed">SHOOTER</span>
-        <span class="secWhite"> EXPERIENCE </span>
-        <span class="secBlue">CARD</span>
+    <!-- SEC Card -->
+    <section class="secCard">
+
+      <!-- Title (no top red/white/blue line) -->
+      <header class="secHeader">
+        <h1 class="secTitle">
+          <span class="tRed">SHOOTER</span>
+          <span class="tWhite"> EXPERIENCE</span>
+          <span class="tBlue"> CARD</span>
+        </h1>
+      </header>
+
+      <!-- Controls -->
+      <div class="controls">
+        <button id="chooseBtn" class="btn" type="button">Choose Photo</button>
+        <button id="clearBtn" class="btn" type="button">Clear</button>
+        <button id="resultsBtn" class="btn btnPrimary" type="button">Show Results</button>
+
+        <input id="photoInput" class="hiddenInput" type="file" accept="image/*" />
       </div>
 
-      <!-- SCORE CENTERPIECE -->
-      <div class="scoreWrap" aria-label="Shooter Score">
-        <div class="scoreLabel">Shooter’s Score</div>
-        <div id="scoreHero" class="scoreHero">—</div>
+      <!-- Status -->
+      <div class="statusRow">
+        <div id="statusLine" class="statusLine">Tap-n-Score loaded ✅</div>
+        <div id="hintLine" class="hintLine">Choose a photo to begin.</div>
       </div>
 
-      <!-- CLICK BARS (SMALLER) -->
-      <div class="clickGrid" aria-label="Clicks">
-        <div class="clickBox">
-          <div class="clickHdr">Elevation</div>
-          <div class="clickRow">
-            <span class="dirTag">U</span>
-            <span id="clickUp" class="clickNum">0.00</span>
-          </div>
-          <div class="clickRow">
-            <span class="dirTag">D</span>
-            <span id="clickDown" class="clickNum">0.00</span>
+      <!-- Target stage -->
+      <section id="stage" class="stage" style="display:none;">
+        <div class="stageFrame">
+          <img id="targetImg" alt="Selected target photo" />
+          <div id="tapLayer" class="tapLayer" aria-label="Tap layer"></div>
+        </div>
+      </section>
+
+      <!-- SCORE -->
+      <section class="scoreBox">
+        <div class="scoreLabel">SHOOTER’S SCORE</div>
+        <div class="scoreValue" id="scoreValue">—</div>
+        <div class="scoreSub">Smart Score (pilot)</div>
+      </section>
+
+      <!-- CORRECTION STRIP (Elevation + Windage + Shots) -->
+      <section class="corrStrip" aria-label="Corrections">
+        <div class="corrCol">
+          <div class="corrHdr">ELEVATION</div>
+          <div class="corrBody">
+            <span class="corrDir" id="elevDir">—</span>
+            <span class="corrVal" id="elevVal">0.00</span>
+            <span class="corrUnit">clicks</span>
           </div>
         </div>
 
-        <div class="clickBox">
-          <div class="clickHdr">Windage</div>
-          <div class="clickRow">
-            <span class="dirTag">L</span>
-            <span id="clickLeft" class="clickNum">0.00</span>
-          </div>
-          <div class="clickRow">
-            <span class="dirTag">R</span>
-            <span id="clickRight" class="clickNum">0.00</span>
+        <div class="corrCol">
+          <div class="corrHdr">WINDAGE</div>
+          <div class="corrBody">
+            <span class="corrDir" id="windDir">—</span>
+            <span class="corrVal" id="windVal">0.00</span>
+            <span class="corrUnit">clicks</span>
           </div>
         </div>
-      </div>
 
-      <!-- SHOTS ONLY (NO POIB / NO DISTANCE / NO MOA) -->
-      <div class="shotsStrip" aria-label="Shots">
-        <div class="shotsLabel">Shots</div>
-        <div id="shotsCount" class="shotsNum">0</div>
-      </div>
+        <div class="corrShots">
+          <div class="corrHdr">SHOTS</div>
+          <div class="corrBody corrBodyShots">
+            <span class="corrVal" id="shotsVal">0</span>
+          </div>
+        </div>
+      </section>
 
-      <!-- TWO ACTION BUTTONS (EQUAL SIZE / SAME COLOR) -->
-      <div class="ctaRow" aria-label="Actions">
-        <button id="buyBtn" class="ctaBtn" type="button">Buy more targets like this</button>
-        <button id="surveyBtn" class="ctaBtn" type="button">Survey</button>
-      </div>
+      <!-- Meta row (NO POIB) -->
+      <section class="metaRow" aria-label="Meta">
+        <div class="metaLeft">
+          <span class="metaK">Distance:</span> <span id="distanceOut">100 yds</span>
+        </div>
+        <div class="metaRight">
+          <span class="metaK">Click:</span> <span id="clickOut">0.25 MOA</span>
+        </div>
+      </section>
 
+      <!-- CTAs -->
+      <section class="ctaRow">
+        <button class="btnCta" id="buyBtn" type="button">Buy more targets like this</button>
+        <button class="btnCta" id="surveyBtn" type="button">Survey</button>
+      </section>
+
+      <!-- Diagnostics -->
+      <details class="diag">
+        <summary>Diagnostics</summary>
+        <pre id="diagOut">(none)</pre>
+      </details>
+
+      <footer class="secFooter">SCZN3</footer>
     </section>
-
-    <!-- Your JS can stay the same; just bump version if needed -->
-    <script defer src="./index.js?v=SEC-RWB-1"></script>
   </main>
+
+  <!-- IMPORTANT: bump v= when Safari caches -->
+  <script defer src="./index.js?v=20260201_sec_fullreplace_1"></script>
 </body>
 </html>
