@@ -2,35 +2,30 @@
   const $ = (id) => document.getElementById(id);
 
   // UI
-  const chooseBtn = $("chooseBtn");
-  const clearBtn = $("clearBtn");
+  const chooseBtn  = $("chooseBtn");
+  const clearBtn   = $("clearBtn");
   const resultsBtn = $("resultsBtn");
-  const fileInput = $("photoInput");
+  const fileInput  = $("photoInput");
 
   const statusLine = $("statusLine");
-  const hintLine = $("hintLine");
-
-  const chipImgDot = $("chipImgDot");
-  const chipBullDot = $("chipBullDot");
-  const chipShotsDot = $("chipShotsDot");
-  const chipImg = $("chipImg");
-  const chipBull = $("chipBull");
-  const chipShots = $("chipShots");
+  const hintLine   = $("hintLine");
 
   const stage = $("stage");
-  const img = $("targetImg");
-  const tapLayer = $("tapLayer");
+  const img   = $("targetImg");
+  const layer = $("tapLayer");
 
-  // SEC outputs
-  const secCard = $("secCard");
+  const sec        = $("sec");
   const smartScore = $("smartScore");
-  const elevDir = $("elevDir");
-  const windDir = $("windDir");
+
+  const elevWord   = $("elevWord");
+  const windWord   = $("windWord");
   const elevClicks = $("elevClicks");
   const windClicks = $("windClicks");
-  const shotsCount = $("shotsCount");
-  const distanceOut = $("distanceOut");
-  const clickOut = $("clickOut");
+
+  const poibLine  = $("poibLine");
+  const shotsLine = $("shotsLine");
+  const distLine  = $("distLine");
+  const clickLine = $("clickLine");
 
   const diagOut = $("diagOut");
 
@@ -38,31 +33,26 @@
   const API_BASE = "https://sczn3-backend-new.onrender.com";
   const CALC_URL = `${API_BASE}/api/calc`;
 
+  // Fixed pilot constants (we can wire these later)
+  const DIST_YDS = 100;
+  const MOA_PER_CLICK = 0.25;
+
   // State
   let objectUrl = null;
+  let bull = null;   // {nx, ny}
+  let shots = [];    // [{nx, ny}, ...]
 
-  // Tap coords normalized to displayed image box (0..1)
-  let bull = null;   // { nx, ny }
-  let shots = [];    // [{ nx, ny }...]
+  function setStatus(msg) { statusLine.textContent = msg; }
+  function showSec(show) { sec.style.display = show ? "block" : "none"; }
 
-  // ---- Helpers
-  function setStatus(msg) {
-    statusLine.textContent = msg;
-  }
-
-  function setChip(dotEl, valueEl, ok, text) {
-    dotEl.style.opacity = ok ? "1" : ".25";
-    valueEl.textContent = text;
-  }
-
-  function clearDots() { tapLayer.innerHTML = ""; }
+  function clearDots() { layer.innerHTML = ""; }
 
   function addDot(nx, ny, kind) {
     const d = document.createElement("div");
     d.className = `dot ${kind}`;
     d.style.left = `${nx * 100}%`;
     d.style.top  = `${ny * 100}%`;
-    tapLayer.appendChild(d);
+    layer.appendChild(d);
   }
 
   function redraw() {
@@ -77,32 +67,32 @@
     return { nx: sx / list.length, ny: sy / list.length };
   }
 
-  // ✅ IMPORTANT: This is still your placeholder “inches mapping”.
-  // Swap this later with your true mapping layer.
-  function normalizedToInches(deltaNx, deltaNy) {
-    const ASSUMED_INCHES_W = 20;
-    const ASSUMED_INCHES_H = 20;
-    return {
-      x: deltaNx * ASSUMED_INCHES_W,
-      y: deltaNy * ASSUMED_INCHES_H
-    };
-  }
-
-  // ✅ Your rule: NO negatives shown + Elevation fixed
-  function directionFromDelta(delta) {
-    // delta is correction vector bull - poib (inches)
-    const wind = delta.x === 0 ? "—" : (delta.x < 0 ? "LEFT" : "RIGHT");
-    const elev = delta.y === 0 ? "—" : (delta.y > 0 ? "UP" : "DOWN"); // FIXED
-    return { wind, elev };
+  // IMPORTANT:
+  // This stays “display-normalized” for the pilot scoring page.
+  // You can swap in your real inches mapping later (UGEO/grid mapping).
+  function normalizedToInches(dxN, dyN) {
+    // Reasonable pilot assumption: 20" visible width/height
+    // (keeps click magnitude in a sane range for your test loop)
+    const W_IN = 20;
+    const H_IN = 20;
+    return { x: dxN * W_IN, y: dyN * H_IN };
   }
 
   function fmt2(n) {
     const x = Number(n);
     if (!Number.isFinite(x)) return "—";
-    return Math.abs(x).toFixed(2); // NO negatives
+    return Math.abs(x).toFixed(2); // ✅ no negatives ever
   }
 
-  // ---- iOS-safe file open
+  function dirWordsFromDelta(delta) {
+    // Backend delta = (bull - poib) in inches
+    // Per your backend convention: screen-space y, down = +
+    const wind = delta.x === 0 ? "—" : (delta.x > 0 ? "RIGHT" : "LEFT");
+    const elev = delta.y === 0 ? "—" : (delta.y > 0 ? "DOWN" : "UP");
+    return { wind, elev };
+  }
+
+  // --- iOS-safe photo open
   chooseBtn.addEventListener("click", () => fileInput.click());
 
   fileInput.addEventListener("change", () => {
@@ -114,36 +104,36 @@
 
     img.onload = () => {
       stage.style.display = "block";
-      secCard.style.display = "none";
+      showSec(false);
+
+      bull = null;
+      shots = [];
+      redraw();
 
       setStatus(`Loaded ✅ ${f.name}`);
-      setChip(chipImgDot, chipImg, true, f.name);
-
       hintLine.textContent = "Tap the bull (blue). Then tap shots (red).";
-      redraw();
     };
 
     img.onerror = () => {
       setStatus("Could not load image ❌");
-      setChip(chipImgDot, chipImg, false, "error");
     };
 
     img.src = objectUrl;
   });
 
-  // ---- Tap handling
+  // --- Tap math
   function getTapNormalized(ev) {
-    const rect = tapLayer.getBoundingClientRect();
+    const rect = layer.getBoundingClientRect();
     const touch = ev.touches && ev.touches[0];
     const clientX = touch ? touch.clientX : ev.clientX;
     const clientY = touch ? touch.clientY : ev.clientY;
 
     const x = (clientX - rect.left) / rect.width;
-    const y = (clientY - rect.top) / rect.height;
+    const y = (clientY - rect.top)  / rect.height;
 
     return {
       nx: Math.max(0, Math.min(1, x)),
-      ny: Math.max(0, Math.min(1, y)),
+      ny: Math.max(0, Math.min(1, y))
     };
   }
 
@@ -156,54 +146,52 @@
     if (!bull) {
       bull = p;
       setStatus("Bull set ✅");
-      setChip(chipBullDot, chipBull, true, "set");
       redraw();
       return;
     }
 
     shots.push(p);
     setStatus(`Shot added ✅ (${shots.length})`);
-    setChip(chipShotsDot, chipShots, true, String(shots.length));
     redraw();
   }
 
-  tapLayer.addEventListener("touchstart", onTap, { passive: false });
-  tapLayer.addEventListener("click", (ev) => onTap(ev));
+  layer.addEventListener("touchstart", onTap, { passive:false });
+  layer.addEventListener("click", onTap);
 
-  // ---- Clear
+  // --- Clear
   clearBtn.addEventListener("click", () => {
     bull = null;
     shots = [];
-    secCard.style.display = "none";
     redraw();
-
-    setStatus("Cleared ✅");
-    setChip(chipBullDot, chipBull, false, "not set");
-    setChip(chipShotsDot, chipShots, false, "0");
+    showSec(false);
     diagOut.textContent = "(none)";
+    setStatus("Cleared ✅");
+    hintLine.textContent = "Tap the bull (blue). Then tap shots (red).";
   });
 
-  // ---- Results
+  // --- Results
   resultsBtn.addEventListener("click", async () => {
     if (!img.src) { setStatus("Choose a photo first."); return; }
     if (!bull) { setStatus("Tap the bull first (blue)."); return; }
     if (shots.length < 1) { setStatus("Tap at least 1 shot (red)."); return; }
 
     setStatus("Calculating…");
+    showSec(false);
 
+    // POIB as mean of shots (normalized)
     const poibN = meanPoint(shots);
 
-    // POIB relative to bull in normalized:
-    const poibRelN = { nx: (poibN.nx - bull.nx), ny: (poibN.ny - bull.ny) };
+    // POIB relative to bull (normalized)
+    const dxN = (poibN.nx - bull.nx); // right = +
+    const dyN = (poibN.ny - bull.ny); // down = +
 
-    // Convert to inches (placeholder) then convert to SCZN3-style:
-    // screen y down => “up” is negative, so invert y for inches coord system
-    const poibRelIn = normalizedToInches(poibRelN.nx, poibRelN.ny);
-    const poib = { x: poibRelIn.x, y: -poibRelIn.y };
+    // Convert to inches. Then convert to your POIB convention: y up = +
+    const poibInScreen = normalizedToInches(dxN, dyN);
+    const poib = { x: poibInScreen.x, y: -poibInScreen.y }; // ✅ y up positive
 
     const body = {
-      distanceYds: 100,
-      moaPerClick: 0.25,
+      distanceYds: DIST_YDS,
+      moaPerClick: MOA_PER_CLICK,
       bull: { x: 0, y: 0 },
       poib
     };
@@ -223,28 +211,30 @@
         return;
       }
 
-      // Backend is authority
+      // Backend authority
       const delta = data.delta; // correction vector bull - poib (inches)
-      const dir = directionFromDelta(delta);
+      const dir = dirWordsFromDelta(delta);
 
-      // Prefer backend clicks (whatever your backend returns)
-      const wind = (data.clicks?.windage ?? data.windageClicks ?? null);
-      const elev = (data.clicks?.elevation ?? data.elevationClicks ?? null);
+      // Click extraction (supports either shape)
+      const w = (data.clicks && (data.clicks.windage ?? data.clicks.x)) ?? data.windageClicks ?? data.clickX ?? null;
+      const e = (data.clicks && (data.clicks.elevation ?? data.clicks.y)) ?? data.elevationClicks ?? data.clickY ?? null;
 
-      // Fill SEC
-      secCard.style.display = "block";
-      smartScore.textContent = "92"; // pilot placeholder, swap to your real score when ready
+      windWord.textContent = dir.wind;
+      elevWord.textContent = dir.elev;
 
-      elevDir.textContent = dir.elev;
-      windDir.textContent = dir.wind;
+      windClicks.textContent = w == null ? "—" : fmt2(w);
+      elevClicks.textContent = e == null ? "—" : fmt2(e);
 
-      elevClicks.textContent = elev !== null ? fmt2(elev) : "—";
-      windClicks.textContent = wind !== null ? fmt2(wind) : "—";
+      // Remove “POIB:” label — just show values
+      poibLine.textContent = `x ${Number(data.poib.x).toFixed(2)} in, y ${Number(data.poib.y).toFixed(2)} in`;
+      shotsLine.textContent = `Shots: ${shots.length}`;
+      distLine.textContent = `Distance: ${data.distanceYds} yds`;
+      clickLine.textContent = `Click: ${data.moaPerClick} MOA`;
 
-      shotsCount.textContent = String(shots.length);
-      distanceOut.textContent = `${Number(data.distanceYds).toFixed(0)} yds`;
-      clickOut.textContent = `${Number(data.moaPerClick).toFixed(2)} MOA`;
+      // Score placeholder for now (no lying)
+      smartScore.textContent = "—";
 
+      showSec(true);
       setStatus("Results ready ✅");
 
     } catch (err) {
@@ -253,9 +243,7 @@
     }
   });
 
-  // ---- Boot
+  // Boot
   setStatus("Tap-n-Score loaded ✅");
-  setChip(chipImgDot, chipImg, false, "not loaded");
-  setChip(chipBullDot, chipBull, false, "not set");
-  setChip(chipShotsDot, chipShots, false, "0");
+  showSec(false);
 })();
