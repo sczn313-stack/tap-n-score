@@ -1,105 +1,125 @@
 /* ============================================================
-   Tap-n-Score™ Frontend (FULL REPLACEMENT)
-   Purpose:
-   - iPad/iOS-safe "Choose Photo" behavior
-   - Reliable preview (no FileReader-first)
-   - Clear resets iOS file input state
-   - Simple status line so you can SEE JS is loaded
+   docs/index.js (FULL REPLACEMENT) — IOS-PICKER-FIX-2
+   Goals:
+   - Choose Photo ALWAYS opens picker on iPad/iOS
+   - Status line proves JS is running
+   - Preview loads via ObjectURL, fallback to FileReader
+   - Clear resets cleanly
 ============================================================ */
 
 (() => {
   const $ = (id) => document.getElementById(id);
 
-  // --- Elements
-  const elChoose = $("chooseBtn");
-  const elClear = $("clearBtn");
-  const elInput = $("photoInput");
-  const elImg = $("targetImg");
-  const elStatus = $("statusLine");
-  const elHint = $("hintLine");
+  const chooseBtn = $("chooseBtn");
+  const clearBtn = $("clearBtn");
+  const input = $("photoInput");
+  const img = $("targetImg");
+  const statusLine = $("statusLine");
 
-  // --- State
-  let selectedFile = null;
   let objectUrl = null;
 
   function setStatus(msg) {
-    if (elStatus) elStatus.textContent = msg;
+    statusLine.textContent = msg;
+    console.log("[DOCS]", msg);
   }
 
-  function revokePreviewUrl() {
+  function revokeObjectUrl() {
     if (objectUrl) {
-      try { URL.revokeObjectURL(objectUrl); } catch {}
+      try { URL.revokeObjectURL(objectUrl); } catch (_) {}
       objectUrl = null;
     }
   }
 
-  function resetPreview() {
-    revokePreviewUrl();
-    selectedFile = null;
+  async function setImageFromFile(file) {
+    revokeObjectUrl();
 
-    if (elImg) {
-      elImg.removeAttribute("src");
-      elImg.style.display = "none";
+    // Try Object URL first (fast)
+    try {
+      objectUrl = URL.createObjectURL(file);
+      img.onload = () => {
+        img.style.display = "block";
+        setStatus(`Loaded ✅ ${file.name}`);
+      };
+      img.onerror = () => {
+        setStatus("ObjectURL failed… trying FileReader fallback");
+        revokeObjectUrl();
+        fileReaderFallback(file);
+      };
+      img.src = objectUrl;
+      return;
+    } catch (e) {
+      setStatus("ObjectURL exception… trying FileReader fallback");
+      fileReaderFallback(file);
     }
-
-    // iOS needs this to re-open / re-select the same image
-    try { elInput.value = ""; } catch {}
-
-    setStatus("Cleared ✅");
   }
 
-  function loadPreviewFromFile(file) {
-    if (!file) return;
-
-    selectedFile = file;
-
-    revokePreviewUrl();
-    objectUrl = URL.createObjectURL(file);
-
-    elImg.src = objectUrl;
-    elImg.style.display = "block";
-
-    setStatus("Preview ready ✅");
+  function fileReaderFallback(file) {
+    try {
+      const r = new FileReader();
+      r.onload = () => {
+        img.onload = () => {
+          img.style.display = "block";
+          setStatus(`Loaded ✅ ${file.name}`);
+        };
+        img.onerror = () => setStatus("Image load failed ❌ (FileReader)");
+        img.src = r.result;
+      };
+      r.onerror = () => setStatus("FileReader failed ❌");
+      r.readAsDataURL(file);
+    } catch (e) {
+      setStatus("FileReader exception ❌");
+    }
   }
 
-  function openPickerIOSSafe() {
-    // KEY iOS SAFARI FIX:
-    // Clear value BEFORE click, so "same image" selections fire change.
-    try { elInput.value = ""; } catch {}
-
-    // Must be in direct user gesture stack
-    elInput.click();
-
-    // iOS sometimes populates files slightly later; check again
-    setTimeout(() => {
-      const f = elInput.files && elInput.files[0];
-      if (f) loadPreviewFromFile(f);
-    }, 250);
+  function clearAll() {
+    revokeObjectUrl();
+    img.removeAttribute("src");
+    img.style.display = "none";
+    // reset input so picking the SAME photo again works on iOS
+    input.value = "";
+    setStatus("Cleared. Tap Choose Photo.");
   }
 
-  // ---- Events
-  elChoose.addEventListener("click", () => {
+  function openPicker() {
+    // iOS requires this to be inside a direct user gesture
+    // Also reset input first so the same file can be picked again
+    input.value = "";
     setStatus("Opening picker…");
-    openPickerIOSSafe();
-  });
 
-  elClear.addEventListener("click", () => {
-    resetPreview();
-  });
+    // IMPORTANT: call click() on the real input
+    input.click();
+  }
 
-  elInput.addEventListener("change", () => {
-    const f = elInput.files && elInput.files[0];
-    if (!f) {
-      setStatus("No file selected");
+  function bind() {
+    if (!chooseBtn || !clearBtn || !input || !img || !statusLine) {
+      alert("Missing required elements. Check IDs in index.html.");
       return;
     }
-    loadPreviewFromFile(f);
-  });
 
-  // ---- Boot
-  setStatus("FRONTEND IOS FIX LOADED ✅");
-  if (elHint) {
-    elHint.textContent =
-      "If the picker opens but selection doesn’t stick, Safari cached old JS. Bump the ?v= in index.html and reload.";
+    // Button handlers
+    chooseBtn.addEventListener("click", openPicker);
+    clearBtn.addEventListener("click", clearAll);
+
+    // When user selects a file
+    input.addEventListener("change", async () => {
+      const file = input.files && input.files[0] ? input.files[0] : null;
+      if (!file) {
+        setStatus("No file selected.");
+        return;
+      }
+
+      setStatus(`Selected: ${file.name}`);
+      await setImageFromFile(file);
+    });
+
+    setStatus("DOCS IOS FIX LOADED ✅ Tap Choose Photo.");
+  }
+
+  // Boot
+  try {
+    bind();
+  } catch (e) {
+    console.error(e);
+    setStatus("JS crashed ❌ (check console)");
   }
 })();
