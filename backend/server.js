@@ -1,170 +1,192 @@
 /* ============================================================
-   server.js (FULL REPLACEMENT) — SCZN3 BACKEND LOCK v1
-   Endpoints:
-   - GET  /api/health
-   - GET  /api/analyze   (instructions only)
-   - POST /api/analyze   (returns score + clicks + shots)
+   server.js — SCZN3 / Tap-n-Score SEC Backend (Clean Bridge)
+
+   Goals:
+   - Always-available health check: GET /api/health
+   - Fix "Cannot GET /api/poster": GET /api/poster
+   - Authoritative math endpoint: POST /api/calc
+     (backend is the ONLY authority for directions)
+   - Screen-space convention:
+       x increases to the RIGHT
+       y increases DOWN (like canvas / DOM)
+     delta = bull - poib
+       deltaX < 0 => move LEFT,  deltaX > 0 => move RIGHT
+       deltaY < 0 => move UP,    deltaY > 0 => move DOWN
+
    Notes:
-   - Backend is math authority.
-   - Frontend sends normalized points: anchor {x,y} and hits [{x,y}...]
-============================================================ */
+   - Inputs are assumed to already be in INCHES (per your system).
+   - Click outputs are two decimals.
+   ============================================================ */
 
 const express = require("express");
 const cors = require("cors");
 
 const app = express();
 
-// ---------- Config ----------
-const PORT = process.env.PORT || 3000;
-
-// If you want to lock CORS to your frontend later:
-// set Render env var: CORS_ORIGIN = https://YOUR-FRONTEND.onrender.com
-const CORS_ORIGIN = process.env.CORS_ORIGIN || "*";
-
-// ---------- Middleware ----------
-app.use(
-  cors({
-    origin: CORS_ORIGIN === "*" ? true : CORS_ORIGIN,
-    methods: ["GET", "POST", "OPTIONS"],
-    allowedHeaders: ["Content-Type"],
-  })
-);
-
+// ---- Middleware
+app.use(cors({ origin: true }));
 app.use(express.json({ limit: "2mb" }));
 
-// ---------- Helpers ----------
-function isFiniteNumber(n) {
-  return typeof n === "number" && Number.isFinite(n);
-}
-
-function clamp01(n) {
+// ---- Helpers
+function clampNum(n, fallback = 0) {
   const x = Number(n);
-  if (!Number.isFinite(x)) return null;
-  if (x < 0) return 0;
-  if (x > 1) return 1;
-  return x;
+  return Number.isFinite(x) ? x : fallback;
 }
 
-function normPoint(p) {
-  if (!p || typeof p !== "object") return null;
-  const x = clamp01(p.x);
-  const y = clamp01(p.y);
-  if (x === null || y === null) return null;
-  return { x, y };
+function round2(n) {
+  return Math.round(n * 100) / 100;
 }
 
-function safeArray(a) {
-  return Array.isArray(a) ? a : [];
+// Inches per MOA at a given distance (yards)
+function inchesPerMoa(distanceYds) {
+  const d = clampNum(distanceYds, 0);
+  // 1 MOA ≈ 1.047" at 100 yards
+  return 1.047 * (d / 100);
 }
 
-function newSessionId() {
-  return `SEC-${Math.random().toString(16).slice(2, 10).toUpperCase()}`;
+function directionFromDelta(deltaX, deltaY) {
+  // Screen-space: y down is positive
+  const windage =
+    deltaX === 0 ? "NONE" : deltaX < 0 ? "LEFT" : "RIGHT";
+  const elevation =
+    deltaY === 0 ? "NONE" : deltaY < 0 ? "UP" : "DOWN";
+  return { windage, elevation };
 }
 
-/**
- * ------------------------------------------------------------
- * PLACEHOLDER MATH (stable contract)
- * Replace this with your real SCZN3 math later.
- * ------------------------------------------------------------
- * This returns:
- *  - shots: hits.length
- *  - score: 0..100 based on average distance to anchor (proxy)
- *  - clicks: four numbers with 2 decimals (proxy)
- */
-function compute(anchor, hits) {
-  const n = hits.length;
-
-  // Average delta: hit - anchor
-  let dx = 0;
-  let dy = 0;
-
-  for (const h of hits) {
-    dx += (h.x - anchor.x);
-    dy += (h.y - anchor.y);
+function meanPoint(points) {
+  if (!Array.isArray(points) || points.length === 0) return null;
+  let sx = 0, sy = 0, n = 0;
+  for (const p of points) {
+    const x = clampNum(p?.x, NaN);
+    const y = clampNum(p?.y, NaN);
+    if (Number.isFinite(x) && Number.isFinite(y)) {
+      sx += x; sy += y; n += 1;
+    }
   }
-  dx /= n;
-  dy /= n;
-
-  // Score proxy: smaller distance = higher score
-  const dist = Math.sqrt(dx * dx + dy * dy);
-  const score = Math.max(0, Math.min(100, Math.round(100 - dist * 240)));
-
-  // Click proxy: directional magnitudes
-  // NOTE: This is NOT your real click math. It’s only a contract shape.
-  const scale = 40;
-  const horiz = Math.abs(dx * scale);
-  const vert = Math.abs(dy * scale);
-
-  // IMPORTANT:
-  // screen-space y is down-positive.
-  // But these are just placeholders anyway.
-  const clicks = {
-    // if average hit is RIGHT of anchor -> you need LEFT correction (placeholder)
-    left: dx > 0 ? horiz : 0,
-    right: dx < 0 ? horiz : 0,
-
-    // if average hit is BELOW anchor -> you need UP correction (placeholder)
-    up: dy > 0 ? vert : 0,
-    down: dy < 0 ? vert : 0,
-  };
-
-  return {
-    shots: n,
-    score,
-    clicks: {
-      up: Number(clicks.up.toFixed(2)),
-      down: Number(clicks.down.toFixed(2)),
-      left: Number(clicks.left.toFixed(2)),
-      right: Number(clicks.right.toFixed(2)),
-    },
-  };
+  if (n === 0) return null;
+  return { x: sx / n, y: sy / n };
 }
 
-// ---------- Routes ----------
+// ---- Routes
+app.get("/", (req, res) => {
+  res.type("text").send("SCZN3 SEC backend is running. Try /api/health");
+});
+
 app.get("/api/health", (req, res) => {
   res.json({
     ok: true,
     service: "sczn3-sec-backend",
-    time: new Date().toISOString(),
+    time: new Date().toISOString()
   });
 });
 
-app.get("/api/analyze", (req, res) => {
-  res.status(200).send(
-    "Use POST /api/analyze with JSON body: { anchor:{x,y}, hits:[{x,y}...] }"
-  );
+/**
+ * Fixes the exact browser error: "Cannot GET /api/poster"
+ * You can later expand this into real SEC “poster” metadata.
+ */
+app.get("/api/poster", (req, res) => {
+  res.json({
+    ok: true,
+    poster: {
+      name: "Tap-n-Score™",
+      mode: "SEC",
+      message: "Backend poster endpoint is live."
+    },
+    time: new Date().toISOString()
+  });
 });
 
-app.post("/api/analyze", (req, res) => {
+/**
+ * POST /api/calc
+ * Body (recommended):
+ * {
+ *   "bull": {"x": 10.5, "y": 12.25},
+ *   "shots": [{"x": 9.8, "y": 13.1}, {"x": 10.2, "y": 12.9}],
+ *   "distanceYds": 100,
+ *   "clickMoa": 0.25
+ * }
+ *
+ * All x/y are in INCHES.
+ */
+app.post("/api/calc", (req, res) => {
   try {
-    const anchor = normPoint(req.body?.anchor);
-    const hitsRaw = safeArray(req.body?.hits);
-    const hits = hitsRaw.map(normPoint).filter(Boolean);
+    const bull = req.body?.bull;
+    const shots = req.body?.shots;
 
-    if (!anchor) {
-      return res.status(400).json({ error: "Missing/invalid anchor" });
+    const bullX = clampNum(bull?.x, NaN);
+    const bullY = clampNum(bull?.y, NaN);
+
+    if (!Number.isFinite(bullX) || !Number.isFinite(bullY)) {
+      return res.status(400).json({
+        ok: false,
+        error: "bull.x and bull.y are required numbers (in inches)."
+      });
     }
-    if (hits.length < 1) {
-      return res.status(400).json({ error: "Need at least 1 hit" });
+
+    const poib = meanPoint(shots);
+    if (!poib) {
+      return res.status(400).json({
+        ok: false,
+        error: "shots must be a non-empty array of {x,y} numbers (in inches)."
+      });
     }
 
-    const out = compute(anchor, hits);
+    const distanceYds = clampNum(req.body?.distanceYds, 100);
+    const clickMoa = clampNum(req.body?.clickMoa, 0.25);
 
-    // Final contract
-    return res.json({
-      sessionId: newSessionId(),
-      score: out.score,
-      shots: out.shots,
-      clicks: out.clicks,
+    const ipm = inchesPerMoa(distanceYds);
+    if (!(ipm > 0) || !(clickMoa > 0)) {
+      return res.status(400).json({
+        ok: false,
+        error: "distanceYds and clickMoa must be > 0."
+      });
+    }
+
+    // delta = bull - poib (screen-space)
+    const deltaX = bullX - poib.x;
+    const deltaY = bullY - poib.y;
+
+    const { windage, elevation } = directionFromDelta(deltaX, deltaY);
+
+    // Convert inches -> MOA -> clicks
+    const moaX = Math.abs(deltaX) / ipm;
+    const moaY = Math.abs(deltaY) / ipm;
+
+    const clicksX = moaX / clickMoa;
+    const clicksY = moaY / clickMoa;
+
+    res.json({
+      ok: true,
+      inputs: {
+        distanceYds,
+        clickMoa
+      },
+      bull: { x: bullX, y: bullY },
+      poib: { x: round2(poib.x), y: round2(poib.y) },
+      delta: {
+        x: round2(deltaX),
+        y: round2(deltaY)
+      },
+      directions: {
+        windage,
+        elevation
+      },
+      clicks: {
+        windage: round2(clicksX),
+        elevation: round2(clicksY)
+      }
     });
-  } catch (e) {
-    return res
-      .status(500)
-      .json({ error: "Server error", detail: String(e?.message || e) });
+  } catch (err) {
+    res.status(500).json({
+      ok: false,
+      error: "Server error",
+      detail: String(err?.message || err)
+    });
   }
 });
 
-// ---------- Start ----------
-app.listen(PORT, () => {
-  console.log(`SCZN3 backend listening on port ${PORT}`);
+// ---- Start
+const port = Number(process.env.PORT) || 3000;
+app.listen(port, () => {
+  console.log(`SEC backend listening on port ${port}`);
 });
