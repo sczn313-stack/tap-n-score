@@ -1,108 +1,97 @@
-<!-- docs/index.html (FULL REPLACEMENT) -->
 <!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
   <meta name="color-scheme" content="dark" />
-  <meta name="theme-color" content="#000000" />
+  <meta name="theme-color" content="#06110c" />
   <title>Tap-n-Score™ — SEC</title>
 
-  <!-- IMPORTANT: bump v= when Safari caches -->
-  <link rel="stylesheet" href="./styles.css?v=20260201_sec_fullreplace_1" />
+  <link rel="stylesheet" href="./styles.css?v=20260201_sec_ui_2" />
 </head>
 
 <body>
   <main class="page">
+    <section class="secCard" aria-label="Shooter Experience Card">
 
-    <!-- SEC Card -->
-    <section class="secCard">
-
-      <!-- Title (no top red/white/blue line) -->
       <header class="secHeader">
         <h1 class="secTitle">
           <span class="tRed">SHOOTER</span>
-          <span class="tWhite"> EXPERIENCE</span>
-          <span class="tBlue"> CARD</span>
+          <span class="tWhite"> EXPERIENCE </span>
+          <span class="tBlue">CARD</span>
         </h1>
       </header>
 
-      <!-- Controls -->
-      <div class="controls">
-        <button id="chooseBtn" class="btn" type="button">Choose Photo</button>
-        <button id="clearBtn" class="btn" type="button">Clear</button>
-        <button id="resultsBtn" class="btn btnPrimary" type="button">Show Results</button>
-
-        <input id="photoInput" class="hiddenInput" type="file" accept="image/*" />
-      </div>
-
-      <!-- Status -->
-      <div class="statusRow">
-        <div id="statusLine" class="statusLine">Tap-n-Score loaded ✅</div>
-        <div id="hintLine" class="hintLine">Choose a photo to begin.</div>
-      </div>
-
-      <!-- Target stage -->
-      <section id="stage" class="stage" style="display:none;">
-        <div class="stageFrame">
-          <img id="targetImg" alt="Selected target photo" />
-          <div id="tapLayer" class="tapLayer" aria-label="Tap layer"></div>
-        </div>
-      </section>
-
-      <!-- SCORE -->
-      <section class="scoreBox">
+      <section class="scorePanel" aria-label="Score">
         <div class="scoreLabel">SHOOTER’S SCORE</div>
+        <div class="scoreBar" aria-hidden="true"></div>
         <div class="scoreValue" id="scoreValue">—</div>
-        <div class="scoreSub">Smart Score (pilot)</div>
+        <div class="scoreSub" id="scoreSub">Smart Score (pilot)</div>
       </section>
 
-      <!-- CORRECTION STRIP (Elevation + Windage + Shots) -->
-      <section class="corrStrip" aria-label="Corrections">
-        <div class="corrCol">
-          <div class="corrHdr">ELEVATION</div>
-          <div class="corrBody">
-            <span class="corrDir" id="elevDir">—</span>
-            <span class="corrVal" id="elevVal">0.00</span>
-            <span class="corrUnit">clicks</span>
+      <section class="twoCol" aria-label="Corrections">
+        <!-- LEFT: Elevation + Shots -->
+        <div class="miniCard">
+          <div class="miniHdr">ELEVATION</div>
+
+          <div class="miniRow">
+            <div class="pill" id="elevDirPill">—</div>
+            <div class="miniNum" id="elevClicks">0.00</div>
+            <div class="miniUnit">clicks</div>
+          </div>
+
+          <div class="divider"></div>
+
+          <div class="miniHdr2">SHOTS</div>
+          <div class="shotsRow">
+            <div class="shotsCount" id="shotsCount">0</div>
           </div>
         </div>
 
-        <div class="corrCol">
-          <div class="corrHdr">WINDAGE</div>
-          <div class="corrBody">
-            <span class="corrDir" id="windDir">—</span>
-            <span class="corrVal" id="windVal">0.00</span>
-            <span class="corrUnit">clicks</span>
+        <!-- RIGHT: Windage -->
+        <div class="miniCard">
+          <div class="miniHdr">WINDAGE</div>
+
+          <div class="miniRow">
+            <div class="pill" id="windDirPill">—</div>
+            <div class="miniNum" id="windClicks">0.00</div>
+            <div class="miniUnit">clicks</div>
+          </div>
+
+          <div class="divider"></div>
+
+          <div class="noteLine" id="noteLine">
+            Tap bull (blue), then shots (red), then “Show Results”.
           </div>
         </div>
+      </section>
 
-        <div class="corrShots">
-          <div class="corrHdr">SHOTS</div>
-          <div class="corrBody corrBodyShots">
-            <span class="corrVal" id="shotsVal">0</span>
-          </div>
+      <section class="ctaRow" aria-label="Actions">
+        <button class="btn" id="chooseBtn" type="button">Choose Photo</button>
+        <button class="btn" id="clearBtn" type="button">Clear</button>
+        <button class="btn btnPrimary" id="resultsBtn" type="button">Show Results</button>
+
+        <input
+          id="photoInput"
+          class="hiddenInput"
+          type="file"
+          accept="image/*"
+        />
+      </section>
+
+      <section class="stage" id="stage" aria-label="Target stage">
+        <div class="imgWrap" id="imgWrap">
+          <img id="targetImg" alt="Selected target photo" />
+          <div id="tapLayer" class="tapLayer" aria-label="Tap overlay"></div>
         </div>
       </section>
 
-      <!-- Meta row (NO POIB) -->
-      <section class="metaRow" aria-label="Meta">
-        <div class="metaLeft">
-          <span class="metaK">Distance:</span> <span id="distanceOut">100 yds</span>
-        </div>
-        <div class="metaRight">
-          <span class="metaK">Click:</span> <span id="clickOut">0.25 MOA</span>
-        </div>
+      <section class="lowerCtas" aria-label="Next steps">
+        <a class="btnWide" id="buyBtn" href="#" rel="noopener">Buy more targets like this</a>
+        <a class="btnWide" id="surveyBtn" href="#" rel="noopener">Survey</a>
       </section>
 
-      <!-- CTAs -->
-      <section class="ctaRow">
-        <button class="btnCta" id="buyBtn" type="button">Buy more targets like this</button>
-        <button class="btnCta" id="surveyBtn" type="button">Survey</button>
-      </section>
-
-      <!-- Diagnostics -->
-      <details class="diag">
+      <details class="diag" id="diag">
         <summary>Diagnostics</summary>
         <pre id="diagOut">(none)</pre>
       </details>
@@ -111,7 +100,6 @@
     </section>
   </main>
 
-  <!-- IMPORTANT: bump v= when Safari caches -->
-  <script defer src="./index.js?v=20260201_sec_fullreplace_1"></script>
+  <script defer src="./index.js?v=20260201_sec_logic_2"></script>
 </body>
 </html>
