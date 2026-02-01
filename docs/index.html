@@ -4,236 +4,279 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
   <meta name="color-scheme" content="light dark" />
-  <title>Tap-n-Score™</title>
+  <title>Tap-n-Score™ — Scoring</title>
 
   <style>
     :root{
       --pad:18px;
-      --r:18px;
-      --bd:rgba(0,0,0,.14);
-      --mut:rgba(0,0,0,.60);
-      --bg:rgba(0,0,0,.03);
-      --bg2:rgba(0,0,0,.06);
+      --card: rgba(25,28,36,.86);
+      --stroke: rgba(255,255,255,.10);
+      --muted: rgba(255,255,255,.70);
+      --muted2: rgba(255,255,255,.55);
+      --good: #7CFFA7;
     }
-    body{ margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial; }
-    .wrap{ max-width:1040px; margin:0 auto; padding:var(--pad); }
-    h1{ margin:0 0 6px; font-size:44px; letter-spacing:-.6px; }
-    .sub{ margin:0 0 16px; color:var(--mut); font-size:16px; }
+    html,body{margin:0;padding:0}
+    body{
+      font-family: system-ui,-apple-system,Segoe UI,Roboto,Arial;
+      background: #0b0d12;
+      color: #eef0f6;
+    }
+    .wrap{max-width:980px;margin:0 auto;padding:var(--pad)}
+    h1{margin:10px 0 6px;font-size:44px;letter-spacing:-.5px}
+    .sub{margin:0 0 16px;color:var(--muted);font-size:16px}
 
     .card{
-      border:1px solid var(--bd);
-      border-radius:var(--r);
-      padding:16px;
-      background:rgba(255,255,255,.55);
-      backdrop-filter:saturate(1.2) blur(6px);
-    }
-
-    .row{ display:flex; flex-wrap:wrap; gap:12px; align-items:center; }
-    .row + .row{ margin-top:12px; }
-
-    .btn{
-      font-size:18px;
-      padding:12px 16px;
-      border-radius:14px;
-      border:1px solid rgba(0,0,0,.20);
-      background:var(--bg);
-      cursor:pointer;
-      user-select:none;
-    }
-    .btn:active{ transform:translateY(1px); }
-    .btn.primary{ background:var(--bg2); font-weight:700; }
-    .btn[disabled]{ opacity:.45; cursor:not-allowed; }
-
-    .pill{
-      display:inline-flex;
-      align-items:center;
-      gap:10px;
-      padding:10px 12px;
-      border-radius:999px;
-      border:1px solid var(--bd);
-      background:rgba(0,0,0,.02);
-      font-size:15px;
-    }
-    .dot{
-      width:10px; height:10px; border-radius:999px; background:#999; opacity:.25;
-    }
-    .dot.ok{ opacity:1; }
-    .k{ color:var(--mut); font-weight:600; }
-    .v{ font-weight:800; }
-
-    .status{
-      margin-top:10px;
-      font-weight:800;
-      font-size:18px;
-    }
-    .hint{ margin-top:6px; color:var(--mut); font-size:14px; line-height:1.35; }
-
-    .gridControls{
-      display:grid;
-      grid-template-columns: repeat(4, minmax(140px, 1fr));
-      gap:10px;
-      margin-top:12px;
-    }
-    .field{
-      border:1px solid var(--bd);
-      border-radius:14px;
-      padding:10px 12px;
-      background:rgba(0,0,0,.02);
-    }
-    .field label{ display:block; font-size:12px; color:var(--mut); margin-bottom:6px; }
-    .field input{
-      width:100%;
-      font-size:16px;
-      padding:8px 10px;
-      border-radius:10px;
-      border:1px solid rgba(0,0,0,.18);
-      background:rgba(255,255,255,.75);
-    }
-
-    /* Stage */
-    #stage{ margin-top:14px; display:none; }
-    .stageBox{
-      position:relative;
+      border:1px solid var(--stroke);
       border-radius:18px;
-      border:1px dashed rgba(0,0,0,.25);
+      padding:16px;
+      background: rgba(255,255,255,.04);
+      backdrop-filter: blur(6px);
+    }
+    .row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+    button{
+      font-size:20px;
+      padding:14px 18px;
+      border-radius:14px;
+      border:1px solid rgba(255,255,255,.14);
+      background: rgba(255,255,255,.06);
+      color:#eef0f6;
+      cursor:pointer;
+    }
+    button:active{transform: translateY(1px)}
+    button.primary{
+      border-color: rgba(255,255,255,.22);
+      background: rgba(255,255,255,.10);
+      font-weight: 800;
+    }
+
+    .hiddenInput{position:absolute;left:-9999px;width:1px;height:1px;opacity:0}
+    #statusLine{margin-top:10px;font-weight:800}
+    #hintLine{margin-top:6px;color:var(--muted2);font-size:14px;line-height:1.35}
+
+    /* Stage (image + tap layer) */
+    #stage{margin-top:14px;display:none}
+    #targetWrap{
+      position:relative;
+      border-radius:16px;
+      border:1px dashed rgba(255,255,255,.18);
       overflow:hidden;
-      background:rgba(0,0,0,.02);
-      touch-action:none; /* important for iOS tap accuracy */
+      background: rgba(255,255,255,.03);
     }
     #targetImg{
-      display:block;
       width:100%;
       height:auto;
+      display:block;
       user-select:none;
       -webkit-user-drag:none;
-      pointer-events:none; /* taps go to overlay layer */
+      -webkit-touch-callout:none;
     }
     #tapLayer{
       position:absolute;
       inset:0;
       pointer-events:auto;
+      touch-action:none; /* critical: allow us to prevent scroll on tap */
     }
-
-    /* Tap dots */
-    .tapDot{
+    .dot{
       position:absolute;
-      width:18px; height:18px;
-      border-radius:999px;
-      transform:translate(-50%,-50%);
-      box-shadow:0 8px 22px rgba(0,0,0,.18);
-      border:2px solid rgba(255,255,255,.85);
+      width:18px;height:18px;
+      border-radius:50%;
+      transform: translate(-50%,-50%);
+      box-shadow: 0 10px 24px rgba(0,0,0,.35);
+      border:2px solid rgba(255,255,255,.65);
     }
-    .tapDot.bull{ width:22px; height:22px; background:#2d7cff; }
-    .tapDot.shot{ background:#ff3b30; }
+    .dot.bull{ background:#4aa3ff; }
+    .dot.shot{ background:#ff4a4a; }
 
-    /* Results */
-    #results{ display:none; margin-top:14px; }
-    .resultsGrid{
-      display:grid;
-      grid-template-columns:1fr;
-      gap:10px;
-      margin-top:12px;
+    /* Chips */
+    .chips{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
+    .chip{
+      display:flex;gap:8px;align-items:center;
+      padding:10px 12px;border-radius:999px;
+      border:1px solid rgba(255,255,255,.14);
+      background: rgba(255,255,255,.05);
+      font-weight:800;
+      color:#eef0f6;
     }
-    .resultRow{
+    .chip .dotMini{
+      width:10px;height:10px;border-radius:50%;
+      background: rgba(255,255,255,.25);
+    }
+    .chip.on .dotMini{background: var(--good)}
+    .chip span{color: var(--muted);font-weight:700}
+
+    /* SEC */
+    #secWrap{display:none;margin-top:14px}
+    .secCard{
+      border:1px solid rgba(255,255,255,.12);
+      background: rgba(15,18,24,.86);
+      border-radius:22px;
+      padding:18px;
+    }
+    .secTop{
       display:flex;
       justify-content:space-between;
+      align-items:flex-end;
       gap:12px;
-      padding:12px 12px;
-      border-radius:14px;
-      border:1px solid var(--bd);
-      background:rgba(0,0,0,.02);
-      font-size:16px;
+      flex-wrap:wrap;
     }
-    .resultRow b{ letter-spacing:-.2px; }
-
-    details{ margin-top:12px; }
-    details summary{ cursor:pointer; color:var(--mut); font-weight:700; }
+    .secTitle{
+      font-weight:900;
+      letter-spacing:.6px;
+      font-size:22px;
+      text-transform:uppercase;
+      color:#e9ecf5;
+    }
+    .secMeta{
+      color: var(--muted2);
+      font-size:14px;
+      font-weight:700;
+    }
+    .scoreBox{
+      margin-top:14px;
+      border-radius:18px;
+      border:1px solid rgba(255,255,255,.12);
+      background: rgba(255,255,255,.05);
+      padding:18px;
+      text-align:center;
+    }
+    .scoreNum{
+      font-size:92px;
+      font-weight:900;
+      line-height:1;
+      color: var(--good);
+      letter-spacing:-2px;
+    }
+    .scoreLabel{
+      margin-top:10px;
+      color: var(--muted2);
+      font-weight:800;
+      letter-spacing:.6px;
+    }
+    .corrRow{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap:12px;
+      margin-top:14px;
+    }
+    .corrBox{
+      border-radius:18px;
+      border:1px solid rgba(255,255,255,.12);
+      background: rgba(255,255,255,.04);
+      padding:14px;
+    }
+    .corrHead{color: var(--muted2); font-weight:900; font-size:14px; text-transform:uppercase; letter-spacing:.8px}
+    .corrMain{
+      margin-top:8px;
+      display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;
+      font-weight:900;
+      font-size:34px;
+    }
+    .corrMain .clicks{font-size:42px;color:#eef0f6}
+    .corrMain .dir{color: var(--good)}
+    .truthRow{
+      margin-top:14px;
+      border-radius:18px;
+      border:1px solid rgba(255,255,255,.12);
+      background: rgba(255,255,255,.03);
+      padding:12px 14px;
+      display:flex;gap:14px;flex-wrap:wrap;
+      color: var(--muted);
+      font-weight:800;
+    }
+    details{
+      margin-top:12px;
+      border-radius:16px;
+      border:1px solid rgba(255,255,255,.10);
+      background: rgba(255,255,255,.03);
+      padding:10px 12px;
+    }
+    summary{cursor:pointer;font-weight:900;color:#e9ecf5}
     pre{
       margin:10px 0 0;
-      padding:12px;
-      border-radius:14px;
-      border:1px solid var(--bd);
-      background:rgba(0,0,0,.02);
-      overflow:auto;
+      white-space:pre-wrap;
+      word-break:break-word;
+      color: rgba(255,255,255,.78);
       font-size:12px;
       line-height:1.35;
     }
-
-    .hiddenInput{ position:absolute; left:-9999px; width:1px; height:1px; opacity:0; }
   </style>
 </head>
 
 <body>
   <div class="wrap">
     <h1>Tap-n-Score™</h1>
-    <p class="sub">Beautiful, iPad-safe photo → tap bull → tap shots → results.</p>
+    <p class="sub">Scoring (bull → shots → results)</p>
 
     <div class="card">
       <div class="row">
-        <button id="chooseBtn" class="btn" type="button">Choose Photo</button>
-        <button id="clearBtn" class="btn" type="button">Clear</button>
-        <button id="undoBtn" class="btn" type="button" disabled>Undo last shot</button>
-        <button id="resetBullBtn" class="btn" type="button" disabled>Reset bull</button>
-
-        <div style="flex:1"></div>
-
-        <button id="resultsBtn" class="btn primary" type="button" disabled>Show Results</button>
+        <button id="chooseBtn" type="button">Choose Photo</button>
+        <button id="clearBtn" type="button">Clear</button>
+        <button id="resultsBtn" class="primary" type="button">Show Results</button>
       </div>
 
       <input id="photoInput" class="hiddenInput" type="file" accept="image/*" />
 
-      <div class="row" style="margin-top:12px;">
-        <span class="pill"><span id="chipImgDot" class="dot"></span><span class="k">Image:</span> <span id="chipImg" class="v">not loaded</span></span>
-        <span class="pill"><span id="chipBullDot" class="dot"></span><span class="k">Bull:</span> <span id="chipBull" class="v">not set</span></span>
-        <span class="pill"><span id="chipShotsDot" class="dot"></span><span class="k">Shots:</span> <span id="chipShots" class="v">0</span></span>
-      </div>
+      <div id="statusLine">Loading…</div>
+      <div id="hintLine">Pick a photo. Tap the bull (blue) once. Then tap shots (red).</div>
 
-      <div id="statusLine" class="status">Loading…</div>
-      <div id="hintLine" class="hint">If “Loading…” never changes, Safari cached an old JS file. Bump the v=.</div>
-
-      <!-- Simple mapping inputs (explicit + visible; no hidden assumptions) -->
-      <div class="gridControls" aria-label="Inputs">
-        <div class="field">
-          <label>Distance (yards)</label>
-          <input id="distanceYds" inputmode="decimal" value="100" />
-        </div>
-        <div class="field">
-          <label>MOA per click</label>
-          <input id="moaPerClick" inputmode="decimal" value="0.25" />
-        </div>
-        <div class="field">
-          <label>Map width (inches)</label>
-          <input id="mapWidthIn" inputmode="decimal" value="20" />
-        </div>
-        <div class="field">
-          <label>Map height (inches)</label>
-          <input id="mapHeightIn" inputmode="decimal" value="20" />
-        </div>
+      <div class="chips">
+        <div id="chipBull" class="chip"><div class="dotMini"></div> Bull: <span id="chipBullVal">not set</span></div>
+        <div id="chipShots" class="chip"><div class="dotMini"></div> Shots: <span id="chipShotsVal">0</span></div>
       </div>
 
       <div id="stage">
-        <div class="stageBox" id="stageBox">
+        <div id="targetWrap">
           <img id="targetImg" alt="Selected photo preview" />
           <div id="tapLayer" aria-label="Tap layer"></div>
         </div>
       </div>
 
-      <div id="results" class="card" style="margin-top:14px;">
-        <div class="row" style="justify-content:space-between;">
-          <b style="font-size:18px;">Results</b>
-          <span id="resultsMeta" class="k"></span>
-        </div>
-        <div id="resultGrid" class="resultsGrid"></div>
+      <div id="secWrap">
+        <div class="secCard">
+          <div class="secTop">
+            <div class="secTitle">Shooter Experience Card</div>
+            <div class="secMeta" id="secMetaLine">Session • Distance • Click</div>
+          </div>
 
-        <details>
-          <summary>Diagnostics</summary>
-          <pre id="diagOut">(none)</pre>
-        </details>
+          <div class="scoreBox">
+            <div class="scoreNum" id="scoreNum">—</div>
+            <div class="scoreLabel">Smart Score (pilot)</div>
+          </div>
+
+          <div class="corrRow">
+            <div class="corrBox">
+              <div class="corrHead">Elevation</div>
+              <div class="corrMain">
+                <span class="dir" id="elevDir">—</span>
+                <span class="clicks" id="elevClicks">—</span>
+              </div>
+            </div>
+            <div class="corrBox">
+              <div class="corrHead">Windage</div>
+              <div class="corrMain">
+                <span class="dir" id="windDir">—</span>
+                <span class="clicks" id="windClicks">—</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="truthRow" id="truthRow">
+            <div id="truthPoib">POIB: —</div>
+            <div id="truthDist">Distance: —</div>
+            <div id="truthClick">Click: —</div>
+            <div id="truthShots">Shots: —</div>
+          </div>
+
+          <details>
+            <summary>Diagnostics</summary>
+            <pre id="diagOut">(none)</pre>
+          </details>
+        </div>
       </div>
     </div>
   </div>
 
-  <!-- IMPORTANT: bump v= when iOS seems cached -->
-  <script defer src="./index.js?v=20260201_beautiful_ui_1"></script>
+  <!-- bump v= if iOS caches -->
+  <script defer src="./index.js?v=20260201_scoring_restart_1"></script>
 </body>
 </html>
