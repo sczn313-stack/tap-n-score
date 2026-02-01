@@ -9,163 +9,154 @@
   <style>
     :root{
       --pad:18px;
-      --radius:18px;
-      --line: rgba(0,0,0,.12);
-      --muted: rgba(0,0,0,.65);
-      --bg: rgba(0,0,0,.03);
-      --btn: rgba(0,0,0,.04);
-      --good:#16a34a;
+      --r:18px;
+      --bd:rgba(0,0,0,.14);
+      --mut:rgba(0,0,0,.60);
+      --bg:rgba(0,0,0,.03);
+      --bg2:rgba(0,0,0,.06);
     }
-    @media (prefers-color-scheme: dark){
-      :root{
-        --line: rgba(255,255,255,.14);
-        --muted: rgba(255,255,255,.70);
-        --bg: rgba(255,255,255,.06);
-        --btn: rgba(255,255,255,.07);
-      }
-    }
-
-    body{ margin:0; font-family: system-ui,-apple-system,Segoe UI,Roboto,Arial; }
-    .wrap{ max-width:980px; margin:0 auto; padding:var(--pad); }
-    h1{ margin:0 0 6px; font-size:42px; letter-spacing:-.5px; }
-    .sub{ margin:0 0 18px; color:var(--muted); font-size:16px; }
+    body{ margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial; }
+    .wrap{ max-width:1040px; margin:0 auto; padding:var(--pad); }
+    h1{ margin:0 0 6px; font-size:44px; letter-spacing:-.6px; }
+    .sub{ margin:0 0 16px; color:var(--mut); font-size:16px; }
 
     .card{
-      border:1px solid var(--line);
-      border-radius:var(--radius);
+      border:1px solid var(--bd);
+      border-radius:var(--r);
       padding:16px;
-      background: transparent;
+      background:rgba(255,255,255,.55);
+      backdrop-filter:saturate(1.2) blur(6px);
     }
-    .row{ display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
 
-    button{
+    .row{ display:flex; flex-wrap:wrap; gap:12px; align-items:center; }
+    .row + .row{ margin-top:12px; }
+
+    .btn{
       font-size:18px;
-      padding:12px 14px;
+      padding:12px 16px;
       border-radius:14px;
-      border:1px solid var(--line);
-      background: var(--btn);
+      border:1px solid rgba(0,0,0,.20);
+      background:var(--bg);
       cursor:pointer;
+      user-select:none;
     }
-    button:active{ transform: translateY(1px); }
-    button.primary{
-      font-weight:800;
-    }
-    button.danger{
-      opacity:.9;
-    }
+    .btn:active{ transform:translateY(1px); }
+    .btn.primary{ background:var(--bg2); font-weight:700; }
+    .btn[disabled]{ opacity:.45; cursor:not-allowed; }
 
-    .chips{ display:flex; gap:10px; flex-wrap:wrap; margin-top:12px; }
-    .chip{
+    .pill{
       display:inline-flex;
-      gap:8px;
       align-items:center;
+      gap:10px;
       padding:10px 12px;
-      border:1px solid var(--line);
       border-radius:999px;
-      background: var(--bg);
+      border:1px solid var(--bd);
+      background:rgba(0,0,0,.02);
+      font-size:15px;
+    }
+    .dot{
+      width:10px; height:10px; border-radius:999px; background:#999; opacity:.25;
+    }
+    .dot.ok{ opacity:1; }
+    .k{ color:var(--mut); font-weight:600; }
+    .v{ font-weight:800; }
+
+    .status{
+      margin-top:10px;
       font-weight:800;
+      font-size:18px;
     }
-    .chip small{ font-weight:700; color:var(--muted); }
-    .okdot{
-      width:10px; height:10px; border-radius:50%;
-      background: var(--good);
-      display:inline-block;
-    }
+    .hint{ margin-top:6px; color:var(--mut); font-size:14px; line-height:1.35; }
 
-    #statusLine{
+    .gridControls{
+      display:grid;
+      grid-template-columns: repeat(4, minmax(140px, 1fr));
+      gap:10px;
       margin-top:12px;
-      font-weight:900;
     }
-    .hint{
-      margin-top:8px;
-      color:var(--muted);
-      font-size:14px;
-      line-height:1.35;
+    .field{
+      border:1px solid var(--bd);
+      border-radius:14px;
+      padding:10px 12px;
+      background:rgba(0,0,0,.02);
+    }
+    .field label{ display:block; font-size:12px; color:var(--mut); margin-bottom:6px; }
+    .field input{
+      width:100%;
+      font-size:16px;
+      padding:8px 10px;
+      border-radius:10px;
+      border:1px solid rgba(0,0,0,.18);
+      background:rgba(255,255,255,.75);
     }
 
-    /* Target stage */
-    .stage{
-      margin-top:14px;
-      border-radius:16px;
-      border:1px dashed var(--line);
-      background: var(--bg);
+    /* Stage */
+    #stage{ margin-top:14px; display:none; }
+    .stageBox{
       position:relative;
+      border-radius:18px;
+      border:1px dashed rgba(0,0,0,.25);
       overflow:hidden;
-      display:none;
-      touch-action: manipulation;
+      background:rgba(0,0,0,.02);
+      touch-action:none; /* important for iOS tap accuracy */
     }
     #targetImg{
+      display:block;
       width:100%;
       height:auto;
-      display:block;
       user-select:none;
-      -webkit-user-select:none;
-      -webkit-touch-callout:none;
       -webkit-user-drag:none;
-      pointer-events:none; /* taps go to overlay */
+      pointer-events:none; /* taps go to overlay layer */
     }
     #tapLayer{
       position:absolute;
       inset:0;
       pointer-events:auto;
     }
-    .dot{
+
+    /* Tap dots */
+    .tapDot{
       position:absolute;
-      width:18px;
-      height:18px;
-      border-radius:50%;
-      transform: translate(-50%, -50%);
-      box-shadow: 0 8px 20px rgba(0,0,0,.25);
-      border: 2px solid rgba(255,255,255,.85);
+      width:18px; height:18px;
+      border-radius:999px;
+      transform:translate(-50%,-50%);
+      box-shadow:0 8px 22px rgba(0,0,0,.18);
+      border:2px solid rgba(255,255,255,.85);
     }
-    .dot.shot{ background: rgba(255,0,0,.75); }
-    .dot.bull{ background: rgba(0,120,255,.80); }
+    .tapDot.bull{ width:22px; height:22px; background:#2d7cff; }
+    .tapDot.shot{ background:#ff3b30; }
 
     /* Results */
-    .results{
-      margin-top:14px;
-      display:none;
-    }
-    .results h2{
-      margin:0 0 10px;
-      font-size:22px;
-      letter-spacing:-.2px;
-    }
-    .resultGrid{
+    #results{ display:none; margin-top:14px; }
+    .resultsGrid{
       display:grid;
-      grid-template-columns: 1fr;
+      grid-template-columns:1fr;
       gap:10px;
+      margin-top:12px;
     }
     .resultRow{
-      border:1px solid var(--line);
-      border-radius:14px;
-      padding:12px;
-      background: var(--bg);
       display:flex;
       justify-content:space-between;
-      gap:10px;
-      flex-wrap:wrap;
-    }
-    .resultRow b{ font-size:18px; }
-    .resultRow span{ color:var(--muted); font-weight:700; }
-
-    details{
-      margin-top:14px;
-      border:1px solid var(--line);
+      gap:12px;
+      padding:12px 12px;
       border-radius:14px;
-      padding:10px 12px;
-      background: transparent;
+      border:1px solid var(--bd);
+      background:rgba(0,0,0,.02);
+      font-size:16px;
     }
-    details summary{
-      cursor:pointer;
-      font-weight:900;
-    }
+    .resultRow b{ letter-spacing:-.2px; }
+
+    details{ margin-top:12px; }
+    details summary{ cursor:pointer; color:var(--mut); font-weight:700; }
     pre{
       margin:10px 0 0;
-      white-space: pre-wrap;
-      word-break: break-word;
+      padding:12px;
+      border-radius:14px;
+      border:1px solid var(--bd);
+      background:rgba(0,0,0,.02);
+      overflow:auto;
       font-size:12px;
-      color: var(--muted);
+      line-height:1.35;
     }
 
     .hiddenInput{ position:absolute; left:-9999px; width:1px; height:1px; opacity:0; }
@@ -175,46 +166,74 @@
 <body>
   <div class="wrap">
     <h1>Tap-n-Score™</h1>
-    <p class="sub">Tap bull. Tap shots. Get clean results.</p>
+    <p class="sub">Beautiful, iPad-safe photo → tap bull → tap shots → results.</p>
 
     <div class="card">
       <div class="row">
-        <button id="chooseBtn" type="button" class="primary">Choose Photo</button>
-        <button id="clearBtn" type="button" class="danger">Clear</button>
-        <button id="resultsBtn" type="button" class="primary">Show Results</button>
+        <button id="chooseBtn" class="btn" type="button">Choose Photo</button>
+        <button id="clearBtn" class="btn" type="button">Clear</button>
+        <button id="undoBtn" class="btn" type="button" disabled>Undo last shot</button>
+        <button id="resetBullBtn" class="btn" type="button" disabled>Reset bull</button>
+
+        <div style="flex:1"></div>
+
+        <button id="resultsBtn" class="btn primary" type="button" disabled>Show Results</button>
       </div>
 
       <input id="photoInput" class="hiddenInput" type="file" accept="image/*" />
 
-      <div id="statusLine">Loading…</div>
-      <div class="hint" id="hintLine">
-        If this stays on “Loading…”, Safari cached an old file. Bump the <b>?v=</b> number in the script tag.
+      <div class="row" style="margin-top:12px;">
+        <span class="pill"><span id="chipImgDot" class="dot"></span><span class="k">Image:</span> <span id="chipImg" class="v">not loaded</span></span>
+        <span class="pill"><span id="chipBullDot" class="dot"></span><span class="k">Bull:</span> <span id="chipBull" class="v">not set</span></span>
+        <span class="pill"><span id="chipShotsDot" class="dot"></span><span class="k">Shots:</span> <span id="chipShots" class="v">0</span></span>
       </div>
 
-      <div class="chips">
-        <div class="chip"><span class="okdot" id="chipImgDot" style="opacity:.25"></span> <small>Photo</small> <span id="chipImg">not loaded</span></div>
-        <div class="chip"><span class="okdot" id="chipBullDot" style="opacity:.25"></span> <small>Bull</small> <span id="chipBull">not set</span></div>
-        <div class="chip"><span class="okdot" id="chipShotsDot" style="opacity:.25"></span> <small>Shots</small> <span id="chipShots">0</span></div>
+      <div id="statusLine" class="status">Loading…</div>
+      <div id="hintLine" class="hint">If “Loading…” never changes, Safari cached an old JS file. Bump the v=.</div>
+
+      <!-- Simple mapping inputs (explicit + visible; no hidden assumptions) -->
+      <div class="gridControls" aria-label="Inputs">
+        <div class="field">
+          <label>Distance (yards)</label>
+          <input id="distanceYds" inputmode="decimal" value="100" />
+        </div>
+        <div class="field">
+          <label>MOA per click</label>
+          <input id="moaPerClick" inputmode="decimal" value="0.25" />
+        </div>
+        <div class="field">
+          <label>Map width (inches)</label>
+          <input id="mapWidthIn" inputmode="decimal" value="20" />
+        </div>
+        <div class="field">
+          <label>Map height (inches)</label>
+          <input id="mapHeightIn" inputmode="decimal" value="20" />
+        </div>
       </div>
 
-      <div class="stage" id="stage">
-        <img id="targetImg" alt="Selected photo preview" />
-        <div id="tapLayer" aria-label="Tap layer"></div>
+      <div id="stage">
+        <div class="stageBox" id="stageBox">
+          <img id="targetImg" alt="Selected photo preview" />
+          <div id="tapLayer" aria-label="Tap layer"></div>
+        </div>
       </div>
 
-      <div class="results" id="results">
-        <h2>Results</h2>
-        <div class="resultGrid" id="resultGrid"></div>
-      </div>
+      <div id="results" class="card" style="margin-top:14px;">
+        <div class="row" style="justify-content:space-between;">
+          <b style="font-size:18px;">Results</b>
+          <span id="resultsMeta" class="k"></span>
+        </div>
+        <div id="resultGrid" class="resultsGrid"></div>
 
-      <details>
-        <summary>Diagnostics (optional)</summary>
-        <pre id="diagOut">(none)</pre>
-      </details>
+        <details>
+          <summary>Diagnostics</summary>
+          <pre id="diagOut">(none)</pre>
+        </details>
+      </div>
     </div>
   </div>
 
-  <!-- IMPORTANT: bump v= anytime iOS seems cached -->
-  <script defer src="./index.js?v=20260201_ui_polish_1"></script>
+  <!-- IMPORTANT: bump v= when iOS seems cached -->
+  <script defer src="./index.js?v=20260201_beautiful_ui_1"></script>
 </body>
 </html>
