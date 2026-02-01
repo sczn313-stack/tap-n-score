@@ -1,9 +1,7 @@
 :root{
   --bg:#0b0f14;
   --card:#131a22;
-  --card2:#111821;
   --stroke:rgba(255,255,255,.10);
-  --stroke2:rgba(0,0,0,.45);
   --text:#eaf0f6;
   --muted:rgba(234,240,246,.68);
   --green:#67f29b;
@@ -27,24 +25,7 @@ body{
   padding:18px 14px 28px;
 }
 
-.top{
-  padding:6px 2px 14px;
-}
-
-.flagLine{
-  display:flex;
-  gap:10px;
-  padding:10px 6px 14px;
-}
-.flagLine .seg{
-  height:4px;
-  border-radius:99px;
-  flex:1;
-  opacity:.9;
-}
-.flagLine .red{ background:#ff4b5c; }
-.flagLine .white{ background:#eaf0f6; opacity:.55; }
-.flagLine .blue{ background:#4aa3ff; }
+.top{ padding:6px 2px 14px; }
 
 .titleRow{
   display:flex;
@@ -68,6 +49,7 @@ body{
 }
 
 .stageCard{ margin-top:10px; }
+.secCard{ margin-top:14px; }
 
 .controls{
   display:flex;
@@ -88,10 +70,7 @@ body{
   cursor:pointer;
 }
 .btn:active{ transform: translateY(1px); }
-
-.btn.primary{
-  background: rgba(255,255,255,.08);
-}
+.btn.primary{ background: rgba(255,255,255,.08); }
 .btn.cta{
   border-color: rgba(103,242,155,.55);
   box-shadow: 0 0 0 2px rgba(103,242,155,.10) inset;
@@ -147,14 +126,8 @@ body{
   box-shadow: 0 10px 25px rgba(0,0,0,.45);
   border:2px solid rgba(255,255,255,.80);
 }
-.dot.bull{
-  background: #4aa3ff;
-}
-.dot.shot{
-  background: #ff4b5c;
-}
-
-.secCard{ margin-top:14px; }
+.dot.bull{ background: #4aa3ff; }
+.dot.shot{ background: #ff4b5c; }
 
 .scoreCard{
   background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.02));
@@ -163,15 +136,13 @@ body{
   padding:18px;
   text-align:center;
 }
-
 .scoreValue{
-  font-size:88px;
+  font-size:82px;
   font-weight:1000;
   letter-spacing:-.04em;
   color:var(--green);
   text-shadow: 0 0 40px rgba(103,242,155,.12);
 }
-
 .scoreLabel{
   margin-top:6px;
   color:rgba(234,240,246,.55);
@@ -184,48 +155,44 @@ body{
   gap:14px;
   margin-top:14px;
 }
-
 @media (max-width:640px){
   .twoCol{ grid-template-columns: 1fr; }
-  .scoreValue{ font-size:76px; }
+  .scoreValue{ font-size:72px; }
 }
 
+/* ↓↓↓ SHRUNK TILES ↓↓↓ */
 .miniCard{
   background: rgba(0,0,0,.20);
   border:1px solid rgba(255,255,255,.10);
   border-radius:18px;
-  padding:16px;
+  padding:14px;
 }
-
 .miniLabel{
   font-weight:900;
   letter-spacing:.14em;
   opacity:.70;
-  font-size:13px;
+  font-size:12px;
 }
-
 .miniDir{
-  margin-top:10px;
-  font-size:36px;
+  margin-top:8px;
+  font-size:30px;   /* was 36 */
   font-weight:1000;
 }
-.dirWord{
-  color:var(--green);
-}
+.dirWord{ color:var(--green); }
 
 .miniClicks{
-  margin-top:8px;
+  margin-top:6px;
   display:flex;
   align-items:baseline;
   gap:10px;
 }
 .clickNum{
-  font-size:52px;
+  font-size:44px;   /* was 52 */
   font-weight:1000;
   letter-spacing:-.03em;
 }
 .clickText{
-  font-size:22px;
+  font-size:18px;   /* was 22 */
   opacity:.80;
   font-weight:900;
 }
@@ -241,7 +208,6 @@ body{
   gap:14px;
   flex-wrap:wrap;
 }
-
 .metaText{
   color:rgba(234,240,246,.78);
   font-weight:800;
