@@ -10,28 +10,27 @@
   const statusLine = $("statusLine");
   const hintLine = $("hintLine");
 
+  const chipImgDot = $("chipImgDot");
+  const chipBullDot = $("chipBullDot");
+  const chipShotsDot = $("chipShotsDot");
+  const chipImg = $("chipImg");
   const chipBull = $("chipBull");
   const chipShots = $("chipShots");
-  const chipBullVal = $("chipBullVal");
-  const chipShotsVal = $("chipShotsVal");
 
   const stage = $("stage");
   const img = $("targetImg");
   const tapLayer = $("tapLayer");
 
-  const secWrap = $("secWrap");
-  const secMetaLine = $("secMetaLine");
-  const scoreNum = $("scoreNum");
-
+  // SEC outputs
+  const secCard = $("secCard");
+  const smartScore = $("smartScore");
   const elevDir = $("elevDir");
-  const elevClicks = $("elevClicks");
   const windDir = $("windDir");
+  const elevClicks = $("elevClicks");
   const windClicks = $("windClicks");
-
-  const truthPoib = $("truthPoib");
-  const truthDist = $("truthDist");
-  const truthClick = $("truthClick");
-  const truthShots = $("truthShots");
+  const shotsCount = $("shotsCount");
+  const distanceOut = $("distanceOut");
+  const clickOut = $("clickOut");
 
   const diagOut = $("diagOut");
 
@@ -40,19 +39,20 @@
   const CALC_URL = `${API_BASE}/api/calc`;
 
   // State
-  let selectedFile = null;
   let objectUrl = null;
 
-  // taps stored normalized to displayed image box (0..1)
-  let bull = null;     // { nx, ny }
-  let shots = [];      // [{ nx, ny }, ...]
+  // Tap coords normalized to displayed image box (0..1)
+  let bull = null;   // { nx, ny }
+  let shots = [];    // [{ nx, ny }...]
 
-  // --- helpers
-  function setStatus(msg) { statusLine.textContent = msg; }
+  // ---- Helpers
+  function setStatus(msg) {
+    statusLine.textContent = msg;
+  }
 
-  function setChip(el, on, textEl, text) {
-    el.classList.toggle("on", !!on);
-    textEl.textContent = text;
+  function setChip(dotEl, valueEl, ok, text) {
+    dotEl.style.opacity = ok ? "1" : ".25";
+    valueEl.textContent = text;
   }
 
   function clearDots() { tapLayer.innerHTML = ""; }
@@ -77,8 +77,8 @@
     return { nx: sx / list.length, ny: sy / list.length };
   }
 
-  // TEMP mapping for docs: inches are placeholders (UI flow validation).
-  // Replace with your real inches mapping later.
+  // ✅ IMPORTANT: This is still your placeholder “inches mapping”.
+  // Swap this later with your true mapping layer.
   function normalizedToInches(deltaNx, deltaNy) {
     const ASSUMED_INCHES_W = 20;
     const ASSUMED_INCHES_H = 20;
@@ -88,48 +88,50 @@
     };
   }
 
+  // ✅ Your rule: NO negatives shown + Elevation fixed
   function directionFromDelta(delta) {
-    // delta is correction vector bull - poib in inches (backend authority)
+    // delta is correction vector bull - poib (inches)
     const wind = delta.x === 0 ? "—" : (delta.x < 0 ? "LEFT" : "RIGHT");
-    const elev = delta.y === 0 ? "—" : (delta.y > 0 ? "DOWN" : "UP");
+    const elev = delta.y === 0 ? "—" : (delta.y > 0 ? "UP" : "DOWN"); // FIXED
     return { wind, elev };
   }
 
-  function showSEC() { secWrap.style.display = "block"; }
-  function hideSEC() { secWrap.style.display = "none"; }
+  function fmt2(n) {
+    const x = Number(n);
+    if (!Number.isFinite(x)) return "—";
+    return Math.abs(x).toFixed(2); // NO negatives
+  }
 
-  // --- iOS-safe photo open
+  // ---- iOS-safe file open
   chooseBtn.addEventListener("click", () => fileInput.click());
 
   fileInput.addEventListener("change", () => {
     const f = fileInput.files && fileInput.files[0];
     if (!f) return;
 
-    selectedFile = f;
-
     if (objectUrl) URL.revokeObjectURL(objectUrl);
     objectUrl = URL.createObjectURL(f);
 
     img.onload = () => {
       stage.style.display = "block";
-      hideSEC();
-      bull = null;
-      shots = [];
-      redraw();
-
-      setChip(chipBull, false, chipBullVal, "not set");
-      setChip(chipShots, false, chipShotsVal, "0");
+      secCard.style.display = "none";
 
       setStatus(`Loaded ✅ ${f.name}`);
-      hintLine.textContent = "Tap the bull (blue) once. Then tap shots (red).";
+      setChip(chipImgDot, chipImg, true, f.name);
+
+      hintLine.textContent = "Tap the bull (blue). Then tap shots (red).";
+      redraw();
     };
 
-    img.onerror = () => setStatus("Could not load image ❌");
+    img.onerror = () => {
+      setStatus("Could not load image ❌");
+      setChip(chipImgDot, chipImg, false, "error");
+    };
 
     img.src = objectUrl;
   });
 
-  // --- tap capture
+  // ---- Tap handling
   function getTapNormalized(ev) {
     const rect = tapLayer.getBoundingClientRect();
     const touch = ev.touches && ev.touches[0];
@@ -141,7 +143,7 @@
 
     return {
       nx: Math.max(0, Math.min(1, x)),
-      ny: Math.max(0, Math.min(1, y))
+      ny: Math.max(0, Math.min(1, y)),
     };
   }
 
@@ -154,48 +156,50 @@
     if (!bull) {
       bull = p;
       setStatus("Bull set ✅");
-      setChip(chipBull, true, chipBullVal, "set");
+      setChip(chipBullDot, chipBull, true, "set");
       redraw();
       return;
     }
 
     shots.push(p);
     setStatus(`Shot added ✅ (${shots.length})`);
-    setChip(chipShots, shots.length > 0, chipShotsVal, String(shots.length));
+    setChip(chipShotsDot, chipShots, true, String(shots.length));
     redraw();
   }
 
   tapLayer.addEventListener("touchstart", onTap, { passive: false });
   tapLayer.addEventListener("click", (ev) => onTap(ev));
 
-  // --- clear
+  // ---- Clear
   clearBtn.addEventListener("click", () => {
     bull = null;
     shots = [];
+    secCard.style.display = "none";
     redraw();
-    hideSEC();
 
     setStatus("Cleared ✅");
-    hintLine.textContent = "Tap the bull (blue) once. Then tap shots (red).";
-    setChip(chipBull, false, chipBullVal, "not set");
-    setChip(chipShots, false, chipShotsVal, "0");
+    setChip(chipBullDot, chipBull, false, "not set");
+    setChip(chipShotsDot, chipShots, false, "0");
     diagOut.textContent = "(none)";
   });
 
-  // --- results
+  // ---- Results
   resultsBtn.addEventListener("click", async () => {
     if (!img.src) { setStatus("Choose a photo first."); return; }
     if (!bull) { setStatus("Tap the bull first (blue)."); return; }
     if (shots.length < 1) { setStatus("Tap at least 1 shot (red)."); return; }
 
     setStatus("Calculating…");
-    hideSEC();
 
-    const poibN = meanPoint(shots); // normalized
-    const poibIn = normalizedToInches(poibN.nx - bull.nx, poibN.ny - bull.ny);
+    const poibN = meanPoint(shots);
 
-    // screen y is down; POIB y should be up-positive in your math space
-    const poib = { x: poibIn.x, y: -poibIn.y };
+    // POIB relative to bull in normalized:
+    const poibRelN = { nx: (poibN.nx - bull.nx), ny: (poibN.ny - bull.ny) };
+
+    // Convert to inches (placeholder) then convert to SCZN3-style:
+    // screen y down => “up” is negative, so invert y for inches coord system
+    const poibRelIn = normalizedToInches(poibRelN.nx, poibRelN.ny);
+    const poib = { x: poibRelIn.x, y: -poibRelIn.y };
 
     const body = {
       distanceYds: 100,
@@ -214,38 +218,34 @@
       const data = await res.json();
       diagOut.textContent = JSON.stringify({ bodySent: body, backendResponse: data }, null, 2);
 
-      if (!data || data.ok !== true || !data.delta) {
+      if (!data || data.ok !== true) {
         setStatus("Backend error ❌ (see Diagnostics)");
         return;
       }
 
-      // direction from backend delta (authority)
-      const dir = directionFromDelta(data.delta);
+      // Backend is authority
+      const delta = data.delta; // correction vector bull - poib (inches)
+      const dir = directionFromDelta(delta);
 
-      // clicks (support either naming style)
-      const w = data.clicks?.windage ?? data.windageClicks ?? null;
-      const e = data.clicks?.elevation ?? data.elevationClicks ?? null;
+      // Prefer backend clicks (whatever your backend returns)
+      const wind = (data.clicks?.windage ?? data.windageClicks ?? null);
+      const elev = (data.clicks?.elevation ?? data.elevationClicks ?? null);
 
-      // SEC fill
-      secMetaLine.textContent = `Session • ${data.distanceYds} yds • ${data.moaPerClick} MOA/click`;
-
-      // pilot score placeholder (until Smart Score is wired)
-      scoreNum.textContent = "92";
+      // Fill SEC
+      secCard.style.display = "block";
+      smartScore.textContent = "92"; // pilot placeholder, swap to your real score when ready
 
       elevDir.textContent = dir.elev;
       windDir.textContent = dir.wind;
 
-      elevClicks.textContent = (e !== null && Number.isFinite(Number(e))) ? `${Number(e).toFixed(2)} clicks` : "—";
-      windClicks.textContent = (w !== null && Number.isFinite(Number(w))) ? `${Number(w).toFixed(2)} clicks` : "—";
+      elevClicks.textContent = elev !== null ? fmt2(elev) : "—";
+      windClicks.textContent = wind !== null ? fmt2(wind) : "—";
 
-      truthPoib.textContent = `POIB: x ${Number(data.poib.x).toFixed(2)} in, y ${Number(data.poib.y).toFixed(2)} in`;
-      truthDist.textContent = `Distance: ${data.distanceYds} yds`;
-      truthClick.textContent = `Click: ${data.moaPerClick} MOA`;
-      truthShots.textContent = `Shots: ${shots.length}`;
+      shotsCount.textContent = String(shots.length);
+      distanceOut.textContent = `${Number(data.distanceYds).toFixed(0)} yds`;
+      clickOut.textContent = `${Number(data.moaPerClick).toFixed(2)} MOA`;
 
-      showSEC();
       setStatus("Results ready ✅");
-      hintLine.textContent = "If needed: Clear and re-tap with deliberate hits.";
 
     } catch (err) {
       diagOut.textContent = String(err);
@@ -253,9 +253,9 @@
     }
   });
 
-  // boot
+  // ---- Boot
   setStatus("Tap-n-Score loaded ✅");
-  setChip(chipBull, false, chipBullVal, "not set");
-  setChip(chipShots, false, chipShotsVal, "0");
-  hideSEC();
+  setChip(chipImgDot, chipImg, false, "not loaded");
+  setChip(chipBullDot, chipBull, false, "not set");
+  setChip(chipShotsDot, chipShots, false, "0");
 })();
