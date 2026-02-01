@@ -1,194 +1,190 @@
 /* ============================================================
-   styles.css (FULL REPLACEMENT) — SEC-RWB-1
-   Purpose:
-   - R/W/B title text (NO stripe)
-   - Score is the centerpiece
-   - Click boxes smaller + phone friendly
-   - Remove POIB / distance / MOA from layout by not including them
+   SEC SPACING + HIERARCHY CLEANUP (v1)
+   Paste at bottom of docs/styles.css
 ============================================================ */
 
-* { box-sizing: border-box; }
-html, body { height: 100%; }
-
-body {
-  margin: 0;
-  font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-  background: radial-gradient(1200px 800px at 30% 20%, rgba(0,120,80,0.28), rgba(0,0,0,0.92)),
-              linear-gradient(180deg, rgba(7,17,12,1), rgba(0,0,0,1));
-  color: rgba(255,255,255,0.92);
-  -webkit-font-smoothing: antialiased;
+/* --- Global rhythm */
+:root{
+  --sec-gap-1: 8px;
+  --sec-gap-2: 12px;
+  --sec-gap-3: 16px;
+  --sec-radius: 18px;
+  --sec-radius-sm: 14px;
+  --sec-border: 1px solid rgba(255,255,255,.10);
+  --sec-muted: rgba(255,255,255,.70);
+  --sec-muted2: rgba(255,255,255,.55);
 }
 
-.page{
-  min-height: 100vh;
-  padding: 16px 14px 22px;
-  display: flex;
-  justify-content: center;
-  align-items: flex-start;
+/* If you already have these, this just tightens */
+.wrap, .page, .container{
+  padding-bottom: 20px;
 }
 
-/* ---------- Card ---------- */
-.secCard{
-  width: min(860px, 96vw);
-  background: rgba(18, 24, 22, 0.60);
-  border: 1px solid rgba(255,255,255,0.10);
-  border-radius: 22px;
-  padding: 16px 16px 18px;
-  box-shadow: 0 20px 60px rgba(0,0,0,0.55);
-  backdrop-filter: blur(14px);
+/* --- Title hierarchy */
+h1, .pageTitle, .secTitle{
+  margin: 0 0 var(--sec-gap-2) 0;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  line-height: 1.06;
+  font-size: clamp(30px, 4.2vw, 48px);
 }
 
-/* ---------- R/W/B TITLE (NO STRIPE) ---------- */
-.secTitle{
-  font-weight: 1000;
-  letter-spacing: 0.10em;
-  text-transform: uppercase;
-  font-size: clamp(22px, 4.4vw, 40px);
-  line-height: 1.05;
-  margin: 4px 0 14px;
-  text-align: center;
-}
-
-.secRed{ color:#d84a4a; }
-.secWhite{ color:#e9eef5; }
-.secBlue{ color:#2f6dff; }
-
-/* If an old stripe exists from older builds, force-hide common stripe classes */
-.rwbLine, .flagLine, .secStripe, .topStripe { display:none !important; }
-
-/* ---------- SCORE CENTERPIECE ---------- */
-.scoreWrap{
-  border-radius: 18px;
-  border: 1px solid rgba(255,255,255,0.10);
-  background: rgba(0,0,0,0.20);
-  padding: 14px 14px 12px;
-  text-align: center;
-  box-shadow: 0 14px 40px rgba(0,0,0,0.35);
-}
-
-.scoreLabel{
-  font-weight: 900;
-  opacity: 0.85;
+.sub, .subtitle, .secSub{
+  margin: 0 0 var(--sec-gap-2) 0;
+  color: var(--sec-muted2);
   font-size: 14px;
-  letter-spacing: 0.06em;
+  line-height: 1.25;
+}
+
+/* --- Top button row: smaller + tighter */
+.row, .controlsRow, .btnRow{
+  gap: 10px !important;
+  margin-bottom: var(--sec-gap-2) !important;
+}
+
+button, .btn{
+  padding: 10px 14px !important;
+  border-radius: 14px !important;
+  font-size: 16px !important;
+  font-weight: 700 !important;
+}
+
+/* Make the primary action less bulky */
+button#resultsBtn, .btnPrimary{
+  padding: 10px 14px !important;
+  border-radius: 14px !important;
+}
+
+/* --- Card containers: tighten padding */
+.card, .panel, .secCard{
+  border-radius: var(--sec-radius) !important;
+  border: var(--sec-border) !important;
+  padding: 16px !important;
+}
+
+/* --- Results layout blocks (score + two tiles + footer) */
+#results, .resultsWrap{
+  margin-top: var(--sec-gap-2) !important;
+}
+
+.scoreCard, .scoreBlock, .scorePanel{
+  padding: 16px !important;
+  border-radius: var(--sec-radius) !important;
+  border: var(--sec-border) !important;
+}
+
+/* Score label smaller; score value prominent */
+.scoreLabel, .scoreTitle, .scoreHdr{
+  margin: 0 0 8px 0 !important;
+  font-size: 14px !important;
+  color: var(--sec-muted) !important;
+  letter-spacing: 2px;
   text-transform: uppercase;
-  margin-bottom: 6px;
 }
 
-.scoreHero{
-  font-weight: 1100;
-  font-size: clamp(70px, 14vw, 150px);
-  line-height: 0.95;
-  letter-spacing: 0.01em;
-  color: rgba(255,255,255,0.92); /* JS can overwrite color */
+.scoreValue, .bigScore{
+  font-size: clamp(44px, 8vw, 72px) !important;
+  font-weight: 900 !important;
+  line-height: 1 !important;
+  margin: 0 !important;
 }
 
-/* ---------- CLICKS (SMALLER) ---------- */
-.clickGrid{
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
-  margin-top: 12px;
+/* --- Two tiles: elevation + windage */
+.tilesRow, .resultTiles, .twocol{
+  display: grid !important;
+  grid-template-columns: 1fr 1fr !important;
+  gap: 12px !important;
+  margin-top: 12px !important;
 }
 
-@media (max-width: 520px){
-  .clickGrid{ grid-template-columns: 1fr; }
+.tile, .resultTile, .clickTile{
+  padding: 14px !important;
+  border-radius: var(--sec-radius) !important;
+  border: var(--sec-border) !important;
 }
 
-.clickBox{
-  border-radius: 16px;
-  border: 1px solid rgba(255,255,255,0.10);
-  background: rgba(0,0,0,0.18);
-  padding: 10px 10px 8px;
-}
-
-.clickHdr{
-  font-weight: 950;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  font-size: 13px;
-  opacity: 0.82;
-  margin-bottom: 8px;
-}
-
-.clickRow{
-  display: grid;
-  grid-template-columns: 34px 1fr;
-  align-items: center;
-  gap: 8px;
-  margin: 6px 0;
-}
-
-.dirTag{
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  height: 30px;
-  width: 30px;
-  border-radius: 10px;
-  background: rgba(255,255,255,0.08);
-  border: 1px solid rgba(255,255,255,0.10);
-  font-weight: 1000;
-  font-size: 14px;
-  opacity: 0.92;
-}
-
-.clickNum{
-  font-weight: 1100;
-  font-size: 22px;
-  letter-spacing: 0.02em;
-}
-
-/* ---------- SHOTS STRIP ---------- */
-.shotsStrip{
-  margin-top: 12px;
-  border-radius: 16px;
-  border: 1px solid rgba(255,255,255,0.10);
-  background: rgba(0,0,0,0.18);
-  padding: 10px 12px;
+/* Tile heading smaller */
+.tileHead, .tileLabel{
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
+  margin: 0 0 10px 0 !important;
 }
 
-.shotsLabel{
-  font-weight: 950;
-  opacity: 0.82;
-  letter-spacing: 0.05em;
+.tileHead .label, .tileLabelText{
+  font-size: 13px !important;
+  letter-spacing: 2px;
+  color: var(--sec-muted2) !important;
   text-transform: uppercase;
-  font-size: 13px;
 }
 
-.shotsNum{
-  font-weight: 1100;
-  font-size: 24px;
+/* Direction word: strong but not huge */
+.dirWord, .directionWord{
+  font-size: 28px !important;
+  font-weight: 900 !important;
+  letter-spacing: 1px;
+  margin: 0 !important;
 }
 
-/* ---------- TWO CTA BUTTONS (EQUAL SIZE) ---------- */
-.ctaRow{
-  margin-top: 12px;
+/* Click number: the star inside each tile */
+.clickNum, .clickValue{
+  font-size: clamp(36px, 6vw, 56px) !important;
+  font-weight: 900 !important;
+  line-height: 1.02 !important;
+  margin: 6px 0 0 0 !important;
+}
+
+.clickUnit, .unitClicks{
+  font-size: 18px !important;
+  color: var(--sec-muted) !important;
+  margin-left: 8px;
+  font-weight: 800;
+}
+
+/* --- U/D/L/R chips smaller */
+.chip, .miniChip, .dirChip{
+  width: 32px !important;
+  height: 32px !important;
+  border-radius: 10px !important;
+  font-size: 14px !important;
+  font-weight: 900 !important;
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
+  place-items: center;
+  border: 1px solid rgba(255,255,255,.12);
+  background: rgba(0,0,0,.20);
 }
 
-@media (max-width: 520px){
-  .ctaRow{ grid-template-columns: 1fr; }
+/* --- Footer line (shots, distance, click): tighten and reduce prominence */
+.footerBar, .metaBar, .resultsMeta{
+  margin-top: 12px !important;
+  padding: 10px 12px !important;
+  border-radius: 14px !important;
+  border: var(--sec-border) !important;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 14px;
+  align-items: center;
+  color: var(--sec-muted);
+  font-size: 14px !important;
 }
 
-.ctaBtn{
-  border: none;
-  border-radius: 16px;
-  padding: 12px 12px;
-  font-size: 15px;
-  font-weight: 1000;
-  cursor: pointer;
-  user-select: none;
-  -webkit-tap-highlight-color: transparent;
-
-  background: rgba(255,255,255,0.10);
-  color: rgba(255,255,255,0.92);
-  border: 1px solid rgba(255,255,255,0.12);
+/* Kill POIB line visually even if it exists somewhere */
+.poib, .poibLine, .poibRow{
+  display: none !important;
 }
 
-.ctaBtn:active{ transform: translateY(1px); }
+/* --- Diagnostics collapsible: tighter */
+details, .diag, .diagnostics{
+  margin-top: 10px !important;
+}
+details > summary{
+  padding: 10px 12px !important;
+  border-radius: 14px !important;
+  border: var(--sec-border) !important;
+  font-size: 15px !important;
+  color: var(--sec-muted);
+}
+pre, code{
+  font-size: 12px !important;
+  line-height: 1.35 !important;
+}
