@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
   <meta name="color-scheme" content="light dark" />
-  <title>Tap-n-Score™</title>
+  <title>Tap-n-Score™ (Docs)</title>
 
   <style>
     :root { --pad: 18px; }
@@ -15,7 +15,7 @@
     .card { border: 1px solid rgba(0,0,0,.12); border-radius: 18px; padding: 18px; }
     .row { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; }
 
-    button {
+    button{
       font-size: 20px;
       padding: 14px 18px;
       border-radius: 14px;
@@ -23,40 +23,70 @@
       background: rgba(0,0,0,.03);
       cursor: pointer;
     }
-    button:active { transform: translateY(1px); }
+    button:active{ transform: translateY(1px); }
 
     #statusLine { margin-top: 12px; font-weight: 800; }
     .hint { margin-top: 8px; opacity: .7; font-size: 14px; line-height: 1.35; }
 
-    #targetWrap { margin-top: 14px; }
-    #targetImg {
-      width: 100%;
-      height: auto;
-      display: none;
+    /* --- Target area --- */
+    #targetWrap{
+      margin-top: 14px;
+      position: relative;
+      display: none; /* shown after image loads */
       border-radius: 16px;
+      overflow: hidden;
       border: 1px dashed rgba(0,0,0,.25);
       background: rgba(0,0,0,.02);
     }
 
-    /* IMPORTANT:
-       Do NOT use display:none on the file input.
-       iOS Safari can get weird if the input is not “real” in the DOM. */
-    .hiddenInput {
-      position: fixed;
-      left: -9999px;
-      top: 0;
-      width: 1px;
-      height: 1px;
-      opacity: 0.001;
+    #targetImg{
+      width: 100%;
+      height: auto;
+      display: block;
+      user-select: none;
+      -webkit-user-drag: none;
+    }
+
+    /* Tap layer sits ON TOP of image */
+    #tapLayer{
+      position: absolute;
+      inset: 0;
+      touch-action: none; /* IMPORTANT: stops iOS scroll/zoom from stealing taps */
+      cursor: crosshair;
+    }
+
+    .dot{
+      position: absolute;
+      width: 16px;
+      height: 16px;
+      border-radius: 999px;
+      transform: translate(-50%, -50%);
+      background: rgba(255, 60, 60, 0.95);
+      border: 2px solid rgba(255,255,255,0.95);
+      box-shadow: 0 6px 18px rgba(0,0,0,0.25);
       pointer-events: none;
+    }
+
+    .metaRow{
+      display:flex;
+      gap:14px;
+      align-items:center;
+      flex-wrap:wrap;
+      margin-top:10px;
+      font-weight:700;
+      opacity:.9;
+    }
+
+    .hiddenInput{
+      position:absolute; left:-9999px; width:1px; height:1px; opacity:0;
     }
   </style>
 </head>
 
 <body>
   <div class="wrap">
-    <h1>Tap-n-Score™</h1>
-    <p class="sub">iPad/iOS-safe photo picker + preview (frontend)</p>
+    <h1>Tap-n-Score™ (Docs)</h1>
+    <p class="sub">iPad/iOS-safe photo picker + tap dots (docs sandbox)</p>
 
     <div class="card">
       <div class="row">
@@ -64,25 +94,25 @@
         <button id="clearBtn" type="button">Clear</button>
       </div>
 
-      <input
-        id="photoInput"
-        class="hiddenInput"
-        type="file"
-        accept="image/*"
-      />
+      <input id="photoInput" class="hiddenInput" type="file" accept="image/*" />
 
       <div id="statusLine">Loading…</div>
       <div class="hint" id="hintLine">
-        If “Loading…” never changes, the JS file isn’t loading (or Safari cached an old version).
+        If “Loading…” never changes, Safari is caching an old file. Bump the v= on index.js.
+      </div>
+
+      <div class="metaRow">
+        <div>Tap count: <span id="tapCount">0</span></div>
       </div>
 
       <div id="targetWrap">
         <img id="targetImg" alt="Selected photo preview" />
+        <div id="tapLayer" aria-label="Tap layer"></div>
       </div>
     </div>
   </div>
 
-  <!-- IMPORTANT: bump v= any time iOS seems cached -->
-  <script src="./index.js?v=20260201_frontend_iosfix_2"></script>
+  <!-- Bump this v= any time Safari acts cached -->
+  <script defer src="./index.js?v=20260201_docs_taps_1"></script>
 </body>
 </html>
