@@ -4,6 +4,8 @@
   // UI
   const chooseBtn = $("chooseBtn");
   const clearBtn = $("clearBtn");
+  const undoBtn = $("undoBtn");
+  const resetBullBtn = $("resetBullBtn");
   const resultsBtn = $("resultsBtn");
   const fileInput = $("photoInput");
 
@@ -17,11 +19,17 @@
   const chipBull = $("chipBull");
   const chipShots = $("chipShots");
 
+  const distanceYdsEl = $("distanceYds");
+  const moaPerClickEl = $("moaPerClick");
+  const mapWidthInEl = $("mapWidthIn");
+  const mapHeightInEl = $("mapHeightIn");
+
   const stage = $("stage");
   const img = $("targetImg");
   const tapLayer = $("tapLayer");
 
   const resultsWrap = $("results");
+  const resultsMeta = $("resultsMeta");
   const resultGrid = $("resultGrid");
 
   const diagOut = $("diagOut");
@@ -31,32 +39,27 @@
   const CALC_URL = `${API_BASE}/api/calc`;
 
   // State
-  let selectedFile = null;
   let objectUrl = null;
 
-  // Tap coords are stored normalized to the displayed image box (0..1)
-  let bull = null;         // { nx, ny }
-  let shots = [];          // [{ nx, ny }, ...]
+  // Tap coords normalized to displayed image box (0..1)
+  let bull = null;  // { nx, ny }
+  let shots = [];   // [{ nx, ny }...]
 
-  // --- Helpers
-  function setStatus(msg) {
-    statusLine.textContent = msg;
-  }
+  // ---------- helpers ----------
+  function setStatus(msg) { statusLine.textContent = msg; }
 
   function setChip(dotEl, valueEl, ok, text) {
-    dotEl.style.opacity = ok ? "1" : ".25";
+    dotEl.classList.toggle("ok", !!ok);
     valueEl.textContent = text;
   }
 
-  function clearDots() {
-    tapLayer.innerHTML = "";
-  }
+  function clearDots() { tapLayer.innerHTML = ""; }
 
   function addDot(nx, ny, kind) {
     const d = document.createElement("div");
-    d.className = `dot ${kind}`;
+    d.className = `tapDot ${kind}`;
     d.style.left = `${nx * 100}%`;
-    d.style.top  = `${ny * 100}%`;
+    d.style.top = `${ny * 100}%`;
     tapLayer.appendChild(d);
   }
 
@@ -88,38 +91,50 @@
     return { nx: sx / list.length, ny: sy / list.length };
   }
 
-  // Convert normalized tap positions into inches using a simple grid model.
-  // For now, we assume the grid visible is 1" squares and we reference bull as (0,0).
-  // The actual inch conversion should be replaced with your production mapping layer later.
-  function normalizedToInches(deltaNx, deltaNy) {
-    // Minimal "docs" conversion:
-    // We treat the displayed image box width as 20 inches and height as 20 inches (placeholder),
-    // but we keep direction logic correct. This is for UI flow validation only.
-    //
-    // If you already have true inches mapping elsewhere, swap this function to that.
-    const ASSUMED_INCHES_W = 20;
-    const ASSUMED_INCHES_H = 20;
-    return {
-      x: deltaNx * ASSUMED_INCHES_W,
-      y: deltaNy * ASSUMED_INCHES_H
-    };
+  function num(v, fallback) {
+    const x = Number(v);
+    return Number.isFinite(x) ? x : fallback;
   }
 
+  // Explicit mapping (visible inputs, not hidden)
+  function normalizedToInches(dxN, dyN) {
+    const wIn = Math.max(0.0001, num(mapWidthInEl.value, 20));
+    const hIn = Math.max(0.0001, num(mapHeightInEl.value, 20));
+    return { x: dxN * wIn, y: dyN * hIn };
+  }
+
+  // Authoritative direction from backend delta (bull - poib) in inches
+  // Rule lock:
+  // - delta.x > 0 => RIGHT, delta.x < 0 => LEFT
+  // - delta.y > 0 => UP,    delta.y < 0 => DOWN
   function directionFromDelta(delta) {
-    // delta is correction vector bull - poib in inches
-    const wind = delta.x === 0 ? "—" : (delta.x < 0 ? "LEFT" : "RIGHT");
-    const elev = delta.y === 0 ? "—" : (delta.y > 0 ? "DOWN" : "UP");
+    const wind = delta.x === 0 ? "—" : (delta.x > 0 ? "RIGHT" : "LEFT");
+    const elev = delta.y === 0 ? "—" : (delta.y > 0 ? "UP" : "DOWN");
     return { wind, elev };
   }
 
-  // --- iOS-safe file open
+  function updateButtons() {
+    undoBtn.disabled = shots.length < 1;
+    resetBullBtn.disabled = !bull && shots.length < 1;
+    resultsBtn.disabled = !(bull && shots.length >= 1);
+  }
+
+  function resetSessionDotsOnly() {
+    bull = null;
+    shots = [];
+    redraw();
+    hideResultsUI();
+    setChip(chipBullDot, chipBull, false, "not set");
+    setChip(chipShotsDot, chipShots, false, "0");
+    updateButtons();
+  }
+
+  // ---------- iOS-safe picker ----------
   chooseBtn.addEventListener("click", () => fileInput.click());
 
   fileInput.addEventListener("change", () => {
     const f = fileInput.files && fileInput.files[0];
     if (!f) return;
-
-    selectedFile = f;
 
     if (objectUrl) URL.revokeObjectURL(objectUrl);
     objectUrl = URL.createObjectURL(f);
@@ -127,10 +142,12 @@
     img.onload = () => {
       stage.style.display = "block";
       setStatus(`Loaded ✅ ${f.name}`);
-      setChip(chipImgDot, chipImg, true, f.name);
       hintLine.textContent = "Tap the bull (blue). Then tap shots (red).";
-      hideResultsUI();
+      setChip(chipImgDot, chipImg, true, f.name);
+
+      resetSessionDotsOnly(); // new photo = new session
       redraw();
+      updateButtons();
     };
 
     img.onerror = () => {
@@ -139,10 +156,9 @@
     };
 
     img.src = objectUrl;
-    img.style.display = "block";
   });
 
-  // --- Tap handling
+  // ---------- taps ----------
   function getTapNormalized(ev) {
     const rect = tapLayer.getBoundingClientRect();
     const touch = ev.touches && ev.touches[0];
@@ -152,51 +168,66 @@
     const x = (clientX - rect.left) / rect.width;
     const y = (clientY - rect.top) / rect.height;
 
-    // Clamp
     const nx = Math.max(0, Math.min(1, x));
     const ny = Math.max(0, Math.min(1, y));
     return { nx, ny };
   }
 
   function onTap(ev) {
-    if (!img.src) return; // no photo
+    if (!img.src) return;
     ev.preventDefault();
 
     const p = getTapNormalized(ev);
 
-    // First tap sets bull, next taps are shots
     if (!bull) {
       bull = p;
       setStatus("Bull set ✅");
       setChip(chipBullDot, chipBull, true, "set");
       redraw();
+      updateButtons();
       return;
     }
 
     shots.push(p);
     setStatus(`Shot added ✅ (${shots.length})`);
-    setChip(chipShotsDot, chipShots, shots.length > 0, String(shots.length));
+    setChip(chipShotsDot, chipShots, true, String(shots.length));
     redraw();
+    updateButtons();
   }
 
-  // Support touch + mouse
   tapLayer.addEventListener("touchstart", onTap, { passive: false });
   tapLayer.addEventListener("click", (ev) => onTap(ev));
 
-  // --- Clear
+  // ---------- controls ----------
   clearBtn.addEventListener("click", () => {
+    hideResultsUI();
+    diagOut.textContent = "(none)";
+    setStatus("Cleared ✅");
+    hintLine.textContent = "Tap the bull (blue). Then tap shots (red).";
+    resetSessionDotsOnly();
+  });
+
+  undoBtn.addEventListener("click", () => {
+    if (shots.length < 1) return;
+    shots.pop();
+    setStatus(shots.length ? `Undo ✅ (${shots.length} shots left)` : "Undo ✅ (no shots)");
+    setChip(chipShotsDot, chipShots, shots.length > 0, String(shots.length));
+    redraw();
+    updateButtons();
+  });
+
+  resetBullBtn.addEventListener("click", () => {
     bull = null;
     shots = [];
     hideResultsUI();
-    redraw();
-
-    setStatus("Cleared ✅");
+    setStatus("Bull reset ✅ (tap bull again)");
     setChip(chipBullDot, chipBull, false, "not set");
     setChip(chipShotsDot, chipShots, false, "0");
-    diagOut.textContent = "(none)";
+    redraw();
+    updateButtons();
   });
 
-  // --- Results
+  // ---------- results ----------
   resultsBtn.addEventListener("click", async () => {
     if (!img.src) { setStatus("Choose a photo first."); return; }
     if (!bull) { setStatus("Tap the bull first (blue)."); return; }
@@ -205,20 +236,23 @@
     hideResultsUI();
     setStatus("Calculating…");
 
-    // Compute POIB as mean of shots (normalized)
+    const distanceYds = num(distanceYdsEl.value, 100);
+    const moaPerClick = num(moaPerClickEl.value, 0.25);
+
+    // POIB = mean of shots (normalized)
     const poibN = meanPoint(shots);
 
-    // Correction vector is bull - poib (normalized)
-    const deltaN = { nx: bull.nx - poibN.nx, ny: bull.ny - poibN.ny };
+    // POIB relative to bull (normalized)
+    const poibRelN = { nx: poibN.nx - bull.nx, ny: poibN.ny - bull.ny };
 
-    // Convert to inches (docs placeholder mapping)
-    const poibIn = normalizedToInches(poibN.nx - bull.nx, poibN.ny - bull.ny); // POIB relative to bull
-    // POIB relative to bull should be: right positive, up negative (screen y down), so we invert y:
-    const poib = { x: poibIn.x, y: -poibIn.y };
+    // Convert to inches.
+    // IMPORTANT: screen y grows DOWN, but our inches y is UP.
+    const poibRelIn_screen = normalizedToInches(poibRelN.nx, poibRelN.ny);
+    const poib = { x: poibRelIn_screen.x, y: -poibRelIn_screen.y };
 
     const body = {
-      distanceYds: 100,
-      moaPerClick: 0.25,
+      distanceYds,
+      moaPerClick,
       bull: { x: 0, y: 0 },
       poib
     };
@@ -231,30 +265,44 @@
       });
 
       const data = await res.json();
-
-      // Diagnostics
       diagOut.textContent = JSON.stringify({ bodySent: body, backendResponse: data }, null, 2);
 
       if (!data || data.ok !== true) {
-        setStatus("Backend error ❌ (see Diagnostics)");
+        setStatus("Backend error ❌ (open Diagnostics)");
         return;
       }
 
-      // Use backend delta for authority
-      const delta = data.delta; // {x,y} in inches, correction vector bull - poib
+      // Backend is authority
+      const delta = data.delta; // correction vector bull - poib (inches)
       const dir = directionFromDelta(delta);
 
-      // Convert to clicks if backend provides click fields, otherwise compute rough
-      // Expected backend fields in your service: inchesPerMoa, moa, clicks, etc.
-      const windClicks = data.clicks?.windage ?? data.windageClicks ?? null;
-      const elevClicks = data.clicks?.elevation ?? data.elevationClicks ?? null;
+      // Click extraction (supports multiple backend shapes)
+      let windClicks = null;
+      let elevClicks = null;
+
+      if (data.clicks && typeof data.clicks === "object") {
+        windClicks = Number.isFinite(Number(data.clicks.windage)) ? Number(data.clicks.windage) : null;
+        elevClicks = Number.isFinite(Number(data.clicks.elevation)) ? Number(data.clicks.elevation) : null;
+      }
+      if (windClicks === null && Number.isFinite(Number(data.windageClicks))) windClicks = Number(data.windageClicks);
+      if (elevClicks === null && Number.isFinite(Number(data.elevationClicks))) elevClicks = Number(data.elevationClicks);
+
+      // If backend didn’t send clicks, compute them from inchesPerMoa + moaPerClick if present
+      if ((windClicks === null || elevClicks === null) && Number.isFinite(Number(data.inchesPerMoa))) {
+        const inchesPerMoa = Number(data.inchesPerMoa);
+        const windMoa = delta.x / inchesPerMoa;
+        const elevMoa = delta.y / inchesPerMoa;
+        if (windClicks === null) windClicks = windMoa / moaPerClick;
+        if (elevClicks === null) elevClicks = elevMoa / moaPerClick;
+      }
+
+      resultsMeta.textContent = `${data.distanceYds} yds • ${data.moaPerClick} MOA/click`;
 
       const rows = [
         { label: "Windage", value: `${dir.wind}${windClicks !== null ? ` • ${windClicks.toFixed(2)} clicks` : ""}` },
         { label: "Elevation", value: `${dir.elev}${elevClicks !== null ? ` • ${elevClicks.toFixed(2)} clicks` : ""}` },
         { label: "POIB", value: `x ${Number(data.poib.x).toFixed(2)} in, y ${Number(data.poib.y).toFixed(2)} in` },
-        { label: "Distance", value: `${data.distanceYds} yds` },
-        { label: "Click value", value: `${data.moaPerClick} MOA/click` }
+        { label: "Delta", value: `x ${Number(delta.x).toFixed(2)} in, y ${Number(delta.y).toFixed(2)} in` }
       ];
 
       showResultsUI(rows);
@@ -262,13 +310,15 @@
 
     } catch (err) {
       diagOut.textContent = String(err);
-      setStatus("Network error ❌ (see Diagnostics)");
+      setStatus("Network error ❌ (open Diagnostics)");
     }
   });
 
   // Boot
   setStatus("Tap-n-Score loaded ✅");
+  hintLine.textContent = "Choose Photo to begin.";
   setChip(chipImgDot, chipImg, false, "not loaded");
   setChip(chipBullDot, chipBull, false, "not set");
   setChip(chipShotsDot, chipShots, false, "0");
+  updateButtons();
 })();
