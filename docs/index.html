@@ -28,11 +28,10 @@
     #statusLine { margin-top: 12px; font-weight: 800; }
     .hint { margin-top: 8px; opacity: .7; font-size: 14px; line-height: 1.35; }
 
-    /* --- Target area --- */
     #targetWrap{
       margin-top: 14px;
       position: relative;
-      display: none; /* shown after image loads */
+      display: none;
       border-radius: 16px;
       overflow: hidden;
       border: 1px dashed rgba(0,0,0,.25);
@@ -47,11 +46,10 @@
       -webkit-user-drag: none;
     }
 
-    /* Tap layer sits ON TOP of image */
     #tapLayer{
       position: absolute;
       inset: 0;
-      touch-action: none; /* IMPORTANT: stops iOS scroll/zoom from stealing taps */
+      touch-action: none;
       cursor: crosshair;
     }
 
@@ -61,11 +59,12 @@
       height: 16px;
       border-radius: 999px;
       transform: translate(-50%, -50%);
-      background: rgba(255, 60, 60, 0.95);
       border: 2px solid rgba(255,255,255,0.95);
       box-shadow: 0 6px 18px rgba(0,0,0,0.25);
       pointer-events: none;
     }
+    .dotShot{ background: rgba(255, 60, 60, 0.95); }      /* red */
+    .dotBull{ background: rgba(60, 140, 255, 0.95); }     /* blue */
 
     .metaRow{
       display:flex;
@@ -73,8 +72,19 @@
       align-items:center;
       flex-wrap:wrap;
       margin-top:10px;
-      font-weight:700;
-      opacity:.9;
+      font-weight:800;
+      opacity:.92;
+    }
+    .pill{
+      display:inline-flex;
+      gap:8px;
+      align-items:center;
+      padding:8px 10px;
+      border-radius:999px;
+      border:1px solid rgba(0,0,0,.12);
+      background: rgba(0,0,0,.03);
+      font-size:14px;
+      font-weight:800;
     }
 
     .hiddenInput{
@@ -86,12 +96,13 @@
 <body>
   <div class="wrap">
     <h1>Tap-n-Score™ (Docs)</h1>
-    <p class="sub">iPad/iOS-safe photo picker + tap dots (docs sandbox)</p>
+    <p class="sub">iPad/iOS-safe photo picker + anchor bull + shot taps</p>
 
     <div class="card">
       <div class="row">
         <button id="chooseBtn" type="button">Choose Photo</button>
         <button id="clearBtn" type="button">Clear</button>
+        <button id="undoBtn" type="button">Undo</button>
       </div>
 
       <input id="photoInput" class="hiddenInput" type="file" accept="image/*" />
@@ -102,7 +113,8 @@
       </div>
 
       <div class="metaRow">
-        <div>Tap count: <span id="tapCount">0</span></div>
+        <span class="pill">Bull: <span id="bullStatus">not set</span></span>
+        <span class="pill">Shots: <span id="shotCount">0</span></span>
       </div>
 
       <div id="targetWrap">
@@ -112,7 +124,6 @@
     </div>
   </div>
 
-  <!-- Bump this v= any time Safari acts cached -->
-  <script defer src="./index.js?v=20260201_docs_taps_1"></script>
+  <script defer src="./index.js?v=20260201_docs_anchor_1"></script>
 </body>
 </html>
