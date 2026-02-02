@@ -1,1 +1,857 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="color-scheme" content="dark" />
+  <meta name="theme-color" content="#06070a" />
+  <title>Tap-n-Score™ — SEC</title>
 
+  <style>
+    :root{
+      --bg0:#05060a;
+      --bg1:#0a0c12;
+      --card: rgba(255,255,255,.06);
+      --card2: rgba(255,255,255,.045);
+      --stroke: rgba(255,255,255,.12);
+      --text:#eef2f7;
+      --muted: rgba(238,242,247,.65);
+      --muted2: rgba(238,242,247,.45);
+      --shadow: 0 24px 70px rgba(0,0,0,.60);
+      --radius: 22px;
+
+      --red:#d64040;
+      --white:#eef2f7;
+      --blue:#2f66ff;
+
+      --ok:#67f3a4;
+
+      --btn: rgba(255,255,255,.07);
+      --btnHover: rgba(255,255,255,.10);
+      --btnStroke: rgba(255,255,255,.14);
+
+      --chipBg: rgba(0,0,0,.25);
+      --chipStroke: rgba(255,255,255,.14);
+
+      --tapRed: #ff4f64;
+      --tapBlue: #35a6ff;
+    }
+
+    *{ box-sizing:border-box; }
+    html,body{ height:100%; }
+    body{
+      margin:0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+      color: var(--text);
+      background:
+        radial-gradient(1200px 800px at 20% 10%, rgba(46,102,255,.10), transparent 60%),
+        radial-gradient(1200px 800px at 80% 20%, rgba(214,64,64,.10), transparent 60%),
+        radial-gradient(1200px 800px at 50% 90%, rgba(103,243,164,.06), transparent 60%),
+        linear-gradient(180deg, var(--bg0), var(--bg1));
+      padding: 18px 14px 24px;
+    }
+
+    .wrap{ max-width: 1080px; margin: 0 auto; }
+    .shell{
+      background: rgba(255,255,255,.04);
+      border: 1px solid rgba(255,255,255,.10);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .top{
+      padding: 18px 18px 14px;
+      border-bottom: 1px solid rgba(255,255,255,.08);
+      background: linear-gradient(180deg, rgba(255,255,255,.035), rgba(255,255,255,.02));
+    }
+
+    .title{
+      margin: 0;
+      letter-spacing: .10em;
+      font-weight: 950;
+      font-size: clamp(24px, 4vw, 46px);
+      text-transform: uppercase;
+      line-height: 1.05;
+    }
+    .title .r{ color: var(--red); }
+    .title .w{ color: var(--white); }
+    .title .b{ color: var(--blue); }
+
+    .subrow{
+      margin-top: 10px;
+      display:flex;
+      flex-wrap:wrap;
+      gap:10px;
+      align-items:center;
+      justify-content: space-between;
+    }
+
+    .hint{
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.35;
+    }
+
+    .pill{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding: 8px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,.12);
+      background: rgba(0,0,0,.22);
+      color: rgba(238,242,247,.82);
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing:.06em;
+      text-transform: uppercase;
+    }
+    .okDot{
+      width: 9px; height:9px; border-radius:50%;
+      background: rgba(103,243,164,.90);
+      box-shadow: 0 0 18px rgba(103,243,164,.35);
+    }
+
+    .grid{
+      display:grid;
+      grid-template-columns: 1fr;
+      gap: 14px;
+      padding: 16px 16px 18px;
+    }
+
+    @media (min-width: 980px){
+      .grid{ grid-template-columns: 1.2fr .8fr; align-items:start; }
+    }
+
+    .card{
+      background: var(--card);
+      border: 1px solid var(--stroke);
+      border-radius: 18px;
+      padding: 14px;
+    }
+
+    .card h2{
+      margin: 0 0 10px;
+      font-size: 12px;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+      color: var(--muted);
+      font-weight: 900;
+    }
+
+    /* Controls */
+    .controls{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      align-items:center;
+    }
+
+    .btn{
+      appearance:none;
+      border: 1px solid var(--btnStroke);
+      background: var(--btn);
+      color: var(--text);
+      padding: 10px 12px;
+      border-radius: 14px;
+      font-size: 14px;
+      font-weight: 850;
+      cursor: pointer;
+      text-align:center;
+      text-decoration:none;
+      user-select:none;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .btn:hover{ background: var(--btnHover); }
+    .btn:active{ transform: translateY(1px); }
+
+    .btnPrimary{
+      border-color: rgba(103,243,164,.35);
+      background: rgba(103,243,164,.10);
+    }
+    .btnPrimary:hover{ background: rgba(103,243,164,.14); }
+
+    .btnDisabled{
+      opacity: .45;
+      pointer-events:none;
+    }
+
+    input[type="file"]{ display:none; }
+
+    /* Image */
+    .stage{
+      position: relative;
+      border-radius: 16px;
+      overflow:hidden;
+      border: 1px solid rgba(255,255,255,.10);
+      background: rgba(0,0,0,.25);
+      min-height: 340px;
+    }
+    img#targetImg{
+      width: 100%;
+      height: auto;
+      display:block;
+      user-select:none;
+      -webkit-user-drag:none;
+    }
+    .stageEmpty{
+      padding: 18px;
+      color: var(--muted2);
+      text-align:center;
+    }
+
+    .dots{
+      position:absolute;
+      inset: 0;
+      pointer-events: none;
+    }
+    .dot{
+      position:absolute;
+      width: 18px;
+      height: 18px;
+      border-radius: 999px;
+      transform: translate(-50%, -50%);
+      box-shadow: 0 10px 24px rgba(0,0,0,.35);
+      border: 2px solid rgba(255,255,255,.65);
+      opacity:.96;
+    }
+    .dot.bull{
+      background: color-mix(in srgb, var(--tapBlue) 85%, black 15%);
+      box-shadow: 0 0 18px rgba(53,166,255,.40);
+    }
+    .dot.shot{
+      background: color-mix(in srgb, var(--tapRed) 85%, black 15%);
+      box-shadow: 0 0 18px rgba(255,79,100,.35);
+    }
+
+    /* Score block */
+    .scoreBox{
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      border-radius: 16px;
+      border: 1px solid rgba(255,255,255,.10);
+      background: rgba(0,0,0,.22);
+      padding: 16px 12px;
+      min-height: 140px;
+    }
+    .scoreNum{
+      font-size: clamp(48px, 7vw, 84px);
+      font-weight: 950;
+      letter-spacing: .02em;
+      color: var(--ok);
+      text-shadow: 0 0 26px rgba(103,243,164,.18);
+      line-height: 1;
+    }
+    .scoreLabel{
+      margin-top: 8px;
+      color: var(--muted);
+      font-weight: 850;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      font-size: 12px;
+      text-align:center;
+    }
+
+    /* Correction tiles */
+    .corrGrid{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-top: 12px;
+    }
+    .corr{
+      border-radius: 16px;
+      border: 1px solid rgba(255,255,255,.10);
+      background: rgba(0,0,0,.22);
+      padding: 12px;
+    }
+    .corrTitle{
+      color: var(--muted);
+      font-weight: 900;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+      font-size: 11px;
+      margin: 0 0 10px;
+    }
+    .corrRow{
+      display:flex;
+      align-items:baseline;
+      justify-content: space-between;
+      gap: 10px;
+    }
+    .corrDir{
+      font-size: 28px;
+      font-weight: 950;
+      color: var(--ok);
+      letter-spacing: .04em;
+      text-transform: uppercase;
+      line-height: 1;
+    }
+    .corrVal{
+      font-size: 34px;
+      font-weight: 950;
+      color: var(--text);
+      line-height: 1;
+      white-space: nowrap;
+    }
+    .corrUnit{
+      font-size: 14px;
+      font-weight: 900;
+      color: var(--muted);
+      margin-left: 6px;
+      letter-spacing: .10em;
+      text-transform: uppercase;
+    }
+
+    /* small U/D L/R buttons */
+    .miniBtns{
+      display:flex;
+      gap: 8px;
+      margin-top: 10px;
+      flex-wrap:wrap;
+    }
+    .chip{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      min-width: 44px;
+      height: 34px;
+      padding: 0 10px;
+      border-radius: 12px;
+      border: 1px solid var(--chipStroke);
+      background: var(--chipBg);
+      color: rgba(238,242,247,.92);
+      font-weight: 950;
+      font-size: 12px;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+    }
+    .chip.on{
+      border-color: rgba(103,243,164,.35);
+      box-shadow: 0 0 18px rgba(103,243,164,.10);
+    }
+
+    .shotsBar{
+      margin-top: 12px;
+      border-radius: 16px;
+      border: 1px solid rgba(255,255,255,.10);
+      background: rgba(0,0,0,.18);
+      padding: 12px;
+      display:flex;
+      align-items:center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+    .shotsLabel{
+      color: var(--muted);
+      font-weight: 900;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+      font-size: 11px;
+    }
+    .shotsNum{
+      font-size: 32px;
+      font-weight: 950;
+      color: var(--text);
+      line-height: 1;
+    }
+
+    details{
+      margin-top: 12px;
+      background: var(--card2);
+      border: 1px solid rgba(255,255,255,.10);
+      border-radius: 16px;
+      padding: 10px 12px;
+    }
+    summary{
+      cursor:pointer;
+      font-weight: 850;
+      color: var(--muted);
+      letter-spacing: .10em;
+      text-transform: uppercase;
+      font-size: 11px;
+      outline:none;
+    }
+    pre{
+      margin: 10px 0 0;
+      white-space: pre-wrap;
+      word-break: break-word;
+      color: rgba(238,242,247,.82);
+      font-size: 12px;
+      line-height: 1.35;
+    }
+
+    .foot{
+      padding: 10px 16px 14px;
+      color: rgba(238,242,247,.30);
+      text-align:center;
+      letter-spacing: .22em;
+      font-weight: 900;
+      text-transform: uppercase;
+      font-size: 12px;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+    <div class="shell">
+
+      <div class="top">
+        <h1 class="title">
+          <span class="r">Shooter</span> <span class="w">Experience</span> <span class="b">Card</span>
+        </h1>
+
+        <div class="subrow">
+          <div class="hint" id="instructionLine">Choose a photo. Tap the bull (blue). Then tap shots (red).</div>
+          <div class="pill"><span class="okDot"></span><span id="settingsPill">Settings: —</span></div>
+        </div>
+      </div>
+
+      <div class="grid">
+        <!-- LEFT: image + taps -->
+        <div class="card">
+          <h2>Tap-n-Score</h2>
+
+          <div class="controls">
+            <label class="btn" for="photoInput">Choose Photo</label>
+            <input id="photoInput" type="file" accept="image/*" />
+            <button id="clearBtn" class="btn">Clear</button>
+            <button id="showBtn" class="btn btnPrimary btnDisabled">Show Results</button>
+          </div>
+
+          <div class="hint" style="margin-top:10px;" id="statusLine">No image loaded.</div>
+
+          <div class="stage" id="stage" style="margin-top:12px;">
+            <div class="stageEmpty" id="stageEmpty">
+              Your target image will appear here.
+            </div>
+            <img id="targetImg" alt="Target" style="display:none;" />
+            <div class="dots" id="dotsLayer"></div>
+          </div>
+
+          <details>
+            <summary>Diagnostics</summary>
+            <pre id="diagOut">(none)</pre>
+          </details>
+        </div>
+
+        <!-- RIGHT: results -->
+        <div class="card">
+          <h2>Shooter’s Score</h2>
+
+          <div class="scoreBox">
+            <div style="text-align:center;">
+              <div class="scoreNum" id="scoreNum">—</div>
+              <div class="scoreLabel" id="scoreLabel">Smart Score (pilot)</div>
+            </div>
+          </div>
+
+          <div class="corrGrid">
+            <div class="corr">
+              <div class="corrTitle">Elevation</div>
+              <div class="corrRow">
+                <div class="corrDir" id="eDir">—</div>
+                <div>
+                  <span class="corrVal" id="eVal">0.00</span><span class="corrUnit">clicks</span>
+                </div>
+              </div>
+              <div class="miniBtns">
+                <div class="chip" id="chipU">U</div>
+                <div class="chip" id="chipD">D</div>
+              </div>
+            </div>
+
+            <div class="corr">
+              <div class="corrTitle">Windage</div>
+              <div class="corrRow">
+                <div class="corrDir" id="wDir">—</div>
+                <div>
+                  <span class="corrVal" id="wVal">0.00</span><span class="corrUnit">clicks</span>
+                </div>
+              </div>
+              <div class="miniBtns">
+                <div class="chip" id="chipL">L</div>
+                <div class="chip" id="chipR">R</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="shotsBar">
+            <div class="shotsLabel">Shots</div>
+            <div class="shotsNum" id="shotsNum">0</div>
+          </div>
+
+          <div style="margin-top:12px; display:grid; gap:10px;">
+            <a class="btn" id="downloadLink" href="./download.html">Download / Share</a>
+            <a class="btn" href="./target.html">Change Distance / MOA</a>
+          </div>
+        </div>
+      </div>
+
+      <div class="foot">SCZN3</div>
+    </div>
+  </div>
+
+  <script>
+    (() => {
+      // -------------------------------
+      // REQUIRED SETTINGS (from target.html)
+      // -------------------------------
+      const KEY_DIST = "sczn3.distanceYds";
+      const KEY_MOA  = "sczn3.moaPerClick";
+
+      function readTargetSettingsOrRedirect() {
+        const d = Number(localStorage.getItem(KEY_DIST));
+        const m = Number(localStorage.getItem(KEY_MOA));
+        if (!Number.isFinite(d) || d <= 0 || !Number.isFinite(m) || m <= 0) {
+          window.location.href = "./target.html";
+          return null;
+        }
+        return { distanceYds: d, moaPerClick: m };
+      }
+
+      const SETTINGS = readTargetSettingsOrRedirect();
+      if (!SETTINGS) return;
+
+      // -------------------------------
+      // BASIC HELPERS
+      // -------------------------------
+      const $ = (id) => document.getElementById(id);
+
+      const elPhoto = $("photoInput");
+      const elImg = $("targetImg");
+      const elStageEmpty = $("stageEmpty");
+      const elDots = $("dotsLayer");
+
+      const elClear = $("clearBtn");
+      const elShow = $("showBtn");
+
+      const elInstruction = $("instructionLine");
+      const elStatus = $("statusLine");
+      const elDiag = $("diagOut");
+
+      const elSettingsPill = $("settingsPill");
+
+      const elScoreNum = $("scoreNum");
+      const elScoreLabel = $("scoreLabel");
+
+      const elEDir = $("eDir");
+      const elEVal = $("eVal");
+      const elWDir = $("wDir");
+      const elWVal = $("wVal");
+
+      const chipU = $("chipU");
+      const chipD = $("chipD");
+      const chipL = $("chipL");
+      const chipR = $("chipR");
+
+      const elShotsNum = $("shotsNum");
+      const elDownloadLink = $("downloadLink");
+
+      // Backend URL (edit if you want)
+      const API_BASE = localStorage.getItem("sczn3.apiBase") || "https://tap-n-score.onrender.com";
+      const API_ENDPOINT = "/api/analyze"; // if your backend uses /api/calc, change this
+
+      // -------------------------------
+      // STATE
+      // -------------------------------
+      let objectUrl = null;
+      let selectedFile = null;
+
+      // taps in image pixel coordinates
+      let bull = null;           // {x,y}
+      let shots = [];            // [{x,y}, ...]
+
+      function setDiag(obj){ elDiag.textContent = JSON.stringify(obj, null, 2); }
+
+      function resetResultsUI(){
+        elScoreNum.textContent = "—";
+        elScoreLabel.textContent = "Smart Score (pilot)";
+
+        elEDir.textContent = "—";
+        elEVal.textContent = "0.00";
+        elWDir.textContent = "—";
+        elWVal.textContent = "0.00";
+
+        [chipU, chipD, chipL, chipR].forEach(c => c.classList.remove("on"));
+
+        elDownloadLink.href = "./download.html";
+      }
+
+      function updateSettingsPill(){
+        elSettingsPill.textContent = `Settings: ${SETTINGS.distanceYds} yds • ${SETTINGS.moaPerClick} MOA`;
+      }
+
+      function updateCounts(){
+        elShotsNum.textContent = String(shots.length);
+        // enable Show Results only if we have bull + at least 1 shot + image loaded
+        const ok = !!bull && shots.length > 0 && !!selectedFile;
+        elShow.classList.toggle("btnDisabled", !ok);
+      }
+
+      function clearDots(){
+        elDots.innerHTML = "";
+      }
+
+      function drawDot(pt, cls){
+        const d = document.createElement("div");
+        d.className = "dot " + cls;
+        d.style.left = pt.x + "px";
+        d.style.top = pt.y + "px";
+        elDots.appendChild(d);
+      }
+
+      function redraw(){
+        clearDots();
+        if (bull) drawDot(bull, "bull");
+        shots.forEach(s => drawDot(s, "shot"));
+      }
+
+      // Convert click/tap point from screen overlay coords to image pixel coords.
+      // We position dotsLayer to match the rendered image box. So we read
+      // the click within elDots and store that as pixel in rendered space.
+      // Backend can use pixel-space; if your backend wants normalized 0..1,
+      // you can convert there.
+      function getPointFromClick(e){
+        const r = elDots.getBoundingClientRect();
+        const x = e.clientX - r.left;
+        const y = e.clientY - r.top;
+        return { x, y };
+      }
+
+      function clearAll(){
+        bull = null;
+        shots = [];
+        redraw();
+        resetResultsUI();
+
+        elInstruction.textContent = "Choose a photo. Tap the bull (blue). Then tap shots (red).";
+        elStatus.textContent = selectedFile ? "Image loaded. Tap the bull first." : "No image loaded.";
+        updateCounts();
+        setDiag({ ok:true, action:"clear" });
+      }
+
+      // -------------------------------
+      // IMAGE LOAD
+      // -------------------------------
+      elPhoto.addEventListener("change", () => {
+        const f = elPhoto.files && elPhoto.files[0];
+        if (!f) return;
+
+        selectedFile = f;
+
+        if (objectUrl) URL.revokeObjectURL(objectUrl);
+        objectUrl = URL.createObjectURL(f);
+
+        elImg.src = objectUrl;
+        elImg.style.display = "block";
+        elStageEmpty.style.display = "none";
+
+        // Make dots layer match the image size after it renders
+        elImg.onload = () => {
+          // Ensure dots layer covers the image rendered area
+          const imgRect = elImg.getBoundingClientRect();
+          const stageRect = elImg.parentElement.getBoundingClientRect();
+
+          // position dots relative to stage
+          // (dotsLayer is absolute inset:0 so it matches stage)
+          // but we need clicks to match image position in stage:
+          // simplest: make image fill stage width; dots cover stage; store taps in stage coords.
+          clearAll();
+          elStatus.textContent = "Image loaded. Tap the bull first.";
+          setDiag({
+            ok:true,
+            action:"image loaded",
+            fileName: f.name,
+            rendered: { w: imgRect.width, h: imgRect.height },
+            stage: { w: stageRect.width, h: stageRect.height },
+            settings: SETTINGS,
+            apiBase: API_BASE,
+            endpoint: API_ENDPOINT
+          });
+        };
+      });
+
+      // -------------------------------
+      // TAP LOGIC
+      // -------------------------------
+      // We allow tapping anywhere on the stage overlay
+      elDots.addEventListener("click", (e) => {
+        if (!selectedFile) return;
+
+        const pt = getPointFromClick(e);
+
+        // First tap sets bull
+        if (!bull) {
+          bull = pt;
+          elInstruction.textContent = "Bull set ✅ Now tap your shot holes (red).";
+          elStatus.textContent = "Bull set. Add shots, then tap Show Results.";
+          redraw();
+          updateCounts();
+          return;
+        }
+
+        // Next taps are shots
+        shots.push(pt);
+        redraw();
+        updateCounts();
+
+        elStatus.textContent = `Shots added: ${shots.length}. Tap Show Results when ready.`;
+      });
+
+      // -------------------------------
+      // SHOW RESULTS
+      // -------------------------------
+      function normalizeDir(dir){
+        // enforce no negatives shown; backend should already send a direction + magnitude
+        // but we normalize to safe display
+        const d = String(dir || "").toUpperCase();
+        if (["UP","U"].includes(d)) return "UP";
+        if (["DOWN","D"].includes(d)) return "DOWN";
+        if (["LEFT","L"].includes(d)) return "LEFT";
+        if (["RIGHT","R"].includes(d)) return "RIGHT";
+        return "—";
+      }
+
+      function setChip(chip, on){ chip.classList.toggle("on", !!on); }
+
+      function showDirectionChips(eDir, wDir){
+        // Elevation chips
+        setChip(chipU, eDir === "UP");
+        setChip(chipD, eDir === "DOWN");
+        // Windage chips
+        setChip(chipL, wDir === "LEFT");
+        setChip(chipR, wDir === "RIGHT");
+      }
+
+      function asNum(v, fallback=0){
+        const n = Number(v);
+        return Number.isFinite(n) ? n : fallback;
+      }
+
+      function fmt2(n){
+        return asNum(n, 0).toFixed(2);
+      }
+
+      function buildPayload(){
+        // IMPORTANT:
+        // If your backend expects a different shape, change ONLY this payload object.
+        return {
+          distanceYds: SETTINGS.distanceYds,
+          moaPerClick: SETTINGS.moaPerClick,
+
+          // Tap data in rendered stage coords
+          bull: bull,
+          shots: shots,
+
+          // Optional debug fields
+          meta: {
+            fileName: selectedFile ? selectedFile.name : "",
+            client: "sec.html",
+            ts: Date.now()
+          }
+        };
+      }
+
+      async function callBackend(payload){
+        const url = API_BASE.replace(/\/$/,"") + API_ENDPOINT;
+
+        const res = await fetch(url, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+
+        const text = await res.text();
+        let data = null;
+        try { data = JSON.parse(text); } catch { data = { raw:text }; }
+
+        if (!res.ok) {
+          throw new Error(`Backend ${res.status}: ${JSON.stringify(data).slice(0,600)}`);
+        }
+        return data;
+      }
+
+      elShow.addEventListener("click", async () => {
+        if (elShow.classList.contains("btnDisabled")) return;
+
+        elShow.textContent = "Working…";
+        elShow.classList.add("btnDisabled");
+
+        try {
+          const payload = buildPayload();
+          setDiag({ ok:true, action:"sending", payload });
+
+          const data = await callBackend(payload);
+
+          // Expected (example) fields:
+          // data.smartScore
+          // data.elevation = { dir:"UP|DOWN", clicks: 12.34 }
+          // data.windage   = { dir:"LEFT|RIGHT", clicks: 2.50 }
+          // data.secUrl (optional) - URL to generated PNG
+          //
+          // If your backend uses different names, map them here.
+
+          const smartScore = data.smartScore ?? data.score ?? null;
+
+          // dir + clicks
+          const eDir = normalizeDir(data.elevation?.dir ?? data.eDir);
+          const wDir = normalizeDir(data.windage?.dir ?? data.wDir);
+
+          const eClicks = Math.abs(asNum(data.elevation?.clicks ?? data.eClicks, 0));
+          const wClicks = Math.abs(asNum(data.windage?.clicks ?? data.wClicks, 0));
+
+          // UI
+          elScoreNum.textContent = (smartScore === null || smartScore === undefined) ? "—" : String(smartScore);
+          elEDir.textContent = eDir;
+          elEVal.textContent = fmt2(eClicks);
+
+          elWDir.textContent = wDir;
+          elWVal.textContent = fmt2(wClicks);
+
+          showDirectionChips(eDir, wDir);
+
+          // Wire download page if we got secUrl
+          const secUrl = data.secUrl || data.pngUrl || "";
+          if (secUrl) {
+            const from = "./sec.html";
+            const target = "./target.html";
+            elDownloadLink.href =
+              `./download.html?img=${encodeURIComponent(secUrl)}&from=${encodeURIComponent(from)}&target=${encodeURIComponent(target)}`;
+          } else {
+            elDownloadLink.href = "./download.html";
+          }
+
+          elStatus.textContent = "Results ready ✅";
+          elInstruction.textContent = "Done. Download / share your SEC, or score another target.";
+
+          setDiag({ ok:true, action:"results", data });
+
+        } catch (err) {
+          elStatus.textContent = "Error getting results. Check Diagnostics.";
+          setDiag({ ok:false, error: String(err) });
+        } finally {
+          elShow.textContent = "Show Results";
+          updateCounts(); // re-enable if bull+shots exist
+        }
+      });
+
+      // -------------------------------
+      // Buttons
+      // -------------------------------
+      elClear.addEventListener("click", () => clearAll());
+
+      // -------------------------------
+      // Init
+      // -------------------------------
+      updateSettingsPill();
+      resetResultsUI();
+      updateCounts();
+      setDiag({ ok:true, action:"loaded", settings: SETTINGS, apiBase: API_BASE, endpoint: API_ENDPOINT });
+    })();
+  </script>
+</body>
+</html>
