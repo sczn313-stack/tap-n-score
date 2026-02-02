@@ -1,3 +1,9 @@
+<!-- =========================================================
+     docs/target.html (FULL REPLACEMENT)
+     - Choose Photo -> stores image in localStorage
+     - Continue -> routes to index.html (tap + /api/calc page)
+     - DOES NOT go to sec.html (SEC must be fed by index.js)
+========================================================= -->
 <!doctype html>
 <html lang="en">
 <head>
@@ -109,6 +115,7 @@
       text-decoration:none;
       user-select:none;
       -webkit-tap-highlight-color: transparent;
+      margin: 0 0 10px;
     }
     .btn:hover{ background: rgba(255,255,255,.10); }
     .btn:active{ transform: translateY(1px); }
@@ -131,7 +138,6 @@
       line-height: 1.35;
     }
 
-    /* Preview */
     .previewBox{
       background: rgba(0,0,0,.25);
       border: 1px dashed rgba(255,255,255,.18);
@@ -161,7 +167,6 @@
     }
     .empty strong{ color: var(--text); }
 
-    /* Checkmark badge */
     .checkBadge{
       position:absolute;
       right: 14px;
@@ -186,7 +191,6 @@
     }
     .checkBadge svg{ width: 26px; height: 26px; fill: var(--green); }
 
-    /* Coach arrow + smile */
     .coach{
       position:absolute;
       right: 72px;
@@ -254,7 +258,6 @@
       border-bottom: 8px solid transparent;
     }
 
-    /* Hidden file input (iOS safe) */
     .hiddenInput{
       position:absolute;
       left:-9999px;
@@ -263,7 +266,6 @@
       opacity:0;
     }
 
-    /* Diagnostics (optional) */
     details{
       background: rgba(255,255,255,.045);
       border: 1px solid rgba(255,255,255,.10);
@@ -306,14 +308,12 @@
     <div class="shell">
       <div class="top">
         <h1 class="title">Target</h1>
-        <!-- IMPORTANT: no “Choose photo / Click to begin” pills anywhere on this page -->
         <p class="subtitle" id="statusLine">
-          Load a target photo. Then tap bull and shots on the next screen.
+          Load a target photo. Then you’ll tap bull and shots on the next screen.
         </p>
       </div>
 
       <div class="grid">
-        <!-- Preview -->
         <div class="card">
           <h2>Selected photo</h2>
 
@@ -331,7 +331,6 @@
               </svg>
             </div>
 
-            <!-- Green arrow + smile to pull attention to the checkmark -->
             <div class="coach" id="coach" aria-hidden="true">
               <div class="bubble">LOOK FOR THE CHECK</div>
               <div class="arrow"></div>
@@ -344,7 +343,6 @@
           </div>
         </div>
 
-        <!-- Actions -->
         <div class="card">
           <h2>Next</h2>
 
@@ -352,7 +350,6 @@
           <button id="continueBtn" class="btn btnPrimary btnDisabled" type="button">Continue</button>
           <button id="clearBtn" class="btn" type="button">Clear</button>
 
-          <!-- Keep routing simple. Change these filenames ONLY if your project uses different names. -->
           <div class="hint" id="hintLine">
             Continue unlocks after a photo is selected.
           </div>
@@ -362,7 +359,6 @@
             <pre id="diagOut">(none)</pre>
           </details>
 
-          <!-- iOS/Safari likes the input to exist in the DOM -->
           <input id="photoInput" class="hiddenInput" type="file" accept="image/*" />
         </div>
       </div>
@@ -389,9 +385,8 @@
       const checkBadge = $("checkBadge");
       const coach = $("coach");
 
-      // Storage key used to pass the selected image to the next page
-      // (SEC page or tap page can read this and display the image.)
-      const KEY_IMG = "sczn3_target_image_dataurl_v1";
+      // Image pass-through keys (tap page can read this)
+      const KEY_IMG  = "sczn3_target_image_dataurl_v1";
       const KEY_NAME = "sczn3_target_image_name_v1";
 
       function setDiag(obj){
@@ -407,7 +402,7 @@
 
           continueBtn.classList.remove("btnDisabled");
           statusLine.textContent = "Target loaded ✅  Ready to continue.";
-          hintLine.textContent = "Tap Continue to move forward.";
+          hintLine.textContent = "Tap Continue to start tapping bull + shots.";
 
           setDiag({ ok:true, selected:name || "(unnamed)" });
         } else {
@@ -424,7 +419,7 @@
         }
       }
 
-      // Restore from prior selection if present
+      // Restore
       (function restore(){
         try{
           const dataUrl = localStorage.getItem(KEY_IMG);
@@ -440,14 +435,13 @@
         }
       })();
 
-      // iOS-safe open picker: MUST be direct user gesture
+      // iOS-safe open picker: direct gesture
       chooseBtn.addEventListener("click", () => fileInput.click());
 
       fileInput.addEventListener("change", () => {
         const f = fileInput.files && fileInput.files[0];
         if (!f) return;
 
-        // Read file into dataURL so the next page can show it without re-picking
         const reader = new FileReader();
         reader.onload = () => {
           const dataUrl = String(reader.result || "");
@@ -474,7 +468,7 @@
 
         reader.readAsDataURL(f);
 
-        // reset input so selecting same file again still fires change
+        // allow selecting same file again
         fileInput.value = "";
       });
 
@@ -491,15 +485,9 @@
       continueBtn.addEventListener("click", () => {
         if (continueBtn.classList.contains("btnDisabled")) return;
 
-        // NEXT PAGE:
-        // If your next step is the tap page, set this to "./tap.html" (or your actual file).
-        // If your next step is directly the SEC scoring page, set it to "./sec.html".
-        //
-        // Right now we default to ./sec.html since you said "go back to scoring page".
-        const NEXT = "./sec.html";
-        window.location.href = NEXT;
+        // ✅ MUST go to the tap/calc page (index.html), NOT sec.html
+        window.location.href = "./index.html?fresh=1";
       });
-
     })();
   </script>
 </body>
