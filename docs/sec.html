@@ -11,30 +11,24 @@
     :root{
       --bg0:#05060a;
       --bg1:#0a0c12;
+
       --card: rgba(255,255,255,.06);
       --card2: rgba(255,255,255,.045);
       --stroke: rgba(255,255,255,.12);
       --text:#eef2f7;
       --muted: rgba(238,242,247,.65);
       --muted2: rgba(238,242,247,.45);
-      --shadow: 0 24px 70px rgba(0,0,0,.60);
+      --shadow: 0 20px 60px rgba(0,0,0,.55);
       --radius: 22px;
 
       --red:#d64040;
       --white:#eef2f7;
       --blue:#2f66ff;
-
-      --ok:#67f3a4;
+      --green:#67f3a4;
 
       --btn: rgba(255,255,255,.07);
       --btnHover: rgba(255,255,255,.10);
       --btnStroke: rgba(255,255,255,.14);
-
-      --chipBg: rgba(0,0,0,.25);
-      --chipStroke: rgba(255,255,255,.14);
-
-      --tapRed: #ff4f64;
-      --tapBlue: #35a6ff;
     }
 
     *{ box-sizing:border-box; }
@@ -48,106 +42,101 @@
         radial-gradient(1200px 800px at 80% 20%, rgba(214,64,64,.10), transparent 60%),
         radial-gradient(1200px 800px at 50% 90%, rgba(103,243,164,.06), transparent 60%),
         linear-gradient(180deg, var(--bg0), var(--bg1));
-      padding: 18px 14px 24px;
+      padding: 14px 12px 22px;
     }
 
-    .wrap{ max-width: 1080px; margin: 0 auto; }
+    .wrap{ max-width: 1080px; margin:0 auto; }
     .shell{
       background: rgba(255,255,255,.04);
       border: 1px solid rgba(255,255,255,.10);
       border-radius: var(--radius);
       box-shadow: var(--shadow);
-      overflow: hidden;
+      overflow:hidden;
     }
 
     .top{
-      padding: 18px 18px 14px;
+      padding: 14px 16px 10px;
       border-bottom: 1px solid rgba(255,255,255,.08);
       background: linear-gradient(180deg, rgba(255,255,255,.035), rgba(255,255,255,.02));
     }
 
     .title{
-      margin: 0;
-      letter-spacing: .10em;
-      font-weight: 950;
-      font-size: clamp(24px, 4vw, 46px);
+      margin:0;
+      letter-spacing:.08em;
+      font-weight: 900;
+      font-size: clamp(22px, 3.7vw, 40px);
       text-transform: uppercase;
-      line-height: 1.05;
+      line-height:1.05;
     }
     .title .r{ color: var(--red); }
     .title .w{ color: var(--white); }
     .title .b{ color: var(--blue); }
 
-    .subrow{
-      margin-top: 10px;
-      display:flex;
-      flex-wrap:wrap;
-      gap:10px;
-      align-items:center;
-      justify-content: space-between;
-    }
-
-    .hint{
+    .sub{
+      margin: 8px 0 0;
       color: var(--muted);
       font-size: 13px;
       line-height: 1.35;
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      align-items:center;
+      justify-content: space-between;
     }
 
     .pill{
       display:inline-flex;
       align-items:center;
       gap:8px;
-      padding: 8px 10px;
+      padding: 7px 10px;
       border-radius: 999px;
-      border: 1px solid rgba(255,255,255,.12);
       background: rgba(0,0,0,.22);
-      color: rgba(238,242,247,.82);
+      border: 1px solid rgba(255,255,255,.10);
+      color: var(--muted);
       font-size: 12px;
-      font-weight: 800;
       letter-spacing:.06em;
       text-transform: uppercase;
+      font-weight: 850;
     }
-    .okDot{
-      width: 9px; height:9px; border-radius:50%;
-      background: rgba(103,243,164,.90);
-      box-shadow: 0 0 18px rgba(103,243,164,.35);
+    .dotOk{
+      width:10px;height:10px;border-radius:50%;
+      background: var(--green);
+      box-shadow: 0 0 0 3px rgba(103,243,164,.10);
     }
 
     .grid{
       display:grid;
       grid-template-columns: 1fr;
-      gap: 14px;
-      padding: 16px 16px 18px;
+      gap: 12px;
+      padding: 14px;
     }
-
     @media (min-width: 980px){
-      .grid{ grid-template-columns: 1.2fr .8fr; align-items:start; }
+      .grid{ grid-template-columns: 1.25fr .75fr; }
     }
 
     .card{
       background: var(--card);
       border: 1px solid var(--stroke);
       border-radius: 18px;
-      padding: 14px;
+      padding: 12px;
     }
 
-    .card h2{
-      margin: 0 0 10px;
+    .cardTitle{
+      margin:0 0 10px;
       font-size: 12px;
-      letter-spacing: .14em;
+      letter-spacing:.14em;
       text-transform: uppercase;
       color: var(--muted);
       font-weight: 900;
     }
 
-    /* Controls */
-    .controls{
+    /* --- Action bar (smaller buttons) */
+    .actions{
       display:flex;
       gap:10px;
       flex-wrap:wrap;
       align-items:center;
     }
-
     .btn{
       appearance:none;
       border: 1px solid var(--btnStroke);
@@ -157,205 +146,168 @@
       border-radius: 14px;
       font-size: 14px;
       font-weight: 850;
-      cursor: pointer;
-      text-align:center;
-      text-decoration:none;
+      cursor:pointer;
       user-select:none;
       -webkit-tap-highlight-color: transparent;
     }
     .btn:hover{ background: var(--btnHover); }
     .btn:active{ transform: translateY(1px); }
-
     .btnPrimary{
       border-color: rgba(103,243,164,.35);
       background: rgba(103,243,164,.10);
     }
     .btnPrimary:hover{ background: rgba(103,243,164,.14); }
+    .btnDisabled{ opacity:.45; pointer-events:none; }
 
-    .btnDisabled{
-      opacity: .45;
-      pointer-events:none;
-    }
-
-    input[type="file"]{ display:none; }
-
-    /* Image */
-    .stage{
+    /* --- Target image / tap layer */
+    .imgWrap{
       position: relative;
       border-radius: 16px;
       overflow:hidden;
-      border: 1px solid rgba(255,255,255,.10);
       background: rgba(0,0,0,.25);
-      min-height: 340px;
+      border: 1px solid rgba(255,255,255,.10);
+      min-height: 260px;
     }
     img#targetImg{
-      width: 100%;
-      height: auto;
+      width:100%;
+      height:auto;
       display:block;
       user-select:none;
       -webkit-user-drag:none;
     }
-    .stageEmpty{
-      padding: 18px;
-      color: var(--muted2);
-      text-align:center;
-    }
-
-    .dots{
+    .layer{
       position:absolute;
-      inset: 0;
-      pointer-events: none;
+      inset:0;
+      pointer-events:none;
     }
     .dot{
       position:absolute;
-      width: 18px;
+      width: 16px; height: 16px;
+      border-radius: 50%;
+      transform: translate(-50%,-50%);
+      box-shadow: 0 10px 24px rgba(0,0,0,.35);
+      border: 2px solid rgba(255,255,255,.85);
+      opacity: .95;
+    }
+    .dotBull{ background: rgba(47,102,255,.95); }
+    .dotShot{ background: rgba(214,64,64,.95); }
+
+    .tapHint{
+      margin-top: 10px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.35;
+    }
+
+    /* --- Results layout: compact hierarchy */
+    .scorePanel{
+      background: rgba(0,0,0,.22);
+      border: 1px solid rgba(255,255,255,.10);
+      border-radius: 16px;
+      padding: 12px;
+      margin-top: 10px;
+    }
+
+    .scoreBar{
       height: 18px;
       border-radius: 999px;
-      transform: translate(-50%, -50%);
-      box-shadow: 0 10px 24px rgba(0,0,0,.35);
-      border: 2px solid rgba(255,255,255,.65);
-      opacity:.96;
+      border: 1px solid rgba(255,255,255,.12);
+      background: rgba(255,255,255,.06);
+      overflow:hidden;
+      position:relative;
     }
-    .dot.bull{
-      background: color-mix(in srgb, var(--tapBlue) 85%, black 15%);
-      box-shadow: 0 0 18px rgba(53,166,255,.40);
+    .scoreFill{
+      height:100%;
+      width: 0%;
+      background: rgba(103,243,164,.85);
+      transition: width .3s ease;
     }
-    .dot.shot{
-      background: color-mix(in srgb, var(--tapRed) 85%, black 15%);
-      box-shadow: 0 0 18px rgba(255,79,100,.35);
-    }
-
-    /* Score block */
-    .scoreBox{
+    .scoreLine{
+      margin-top: 8px;
       display:flex;
-      align-items:center;
-      justify-content:center;
-      border-radius: 16px;
-      border: 1px solid rgba(255,255,255,.10);
-      background: rgba(0,0,0,.22);
-      padding: 16px 12px;
-      min-height: 140px;
-    }
-    .scoreNum{
-      font-size: clamp(48px, 7vw, 84px);
-      font-weight: 950;
-      letter-spacing: .02em;
-      color: var(--ok);
-      text-shadow: 0 0 26px rgba(103,243,164,.18);
-      line-height: 1;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 10px;
     }
     .scoreLabel{
-      margin-top: 8px;
       color: var(--muted);
-      font-weight: 850;
-      letter-spacing: .12em;
-      text-transform: uppercase;
       font-size: 12px;
-      text-align:center;
+      letter-spacing:.12em;
+      text-transform: uppercase;
+      font-weight: 900;
+    }
+    .scoreValue{
+      font-size: 16px;
+      font-weight: 900;
+      letter-spacing:.02em;
     }
 
-    /* Correction tiles */
-    .corrGrid{
+    .pair{
       display:grid;
       grid-template-columns: 1fr 1fr;
       gap: 12px;
       margin-top: 12px;
     }
-    .corr{
-      border-radius: 16px;
+
+    .miniCard{
+      background: rgba(255,255,255,.04);
       border: 1px solid rgba(255,255,255,.10);
-      background: rgba(0,0,0,.22);
+      border-radius: 16px;
       padding: 12px;
-    }
-    .corrTitle{
-      color: var(--muted);
-      font-weight: 900;
-      letter-spacing: .14em;
-      text-transform: uppercase;
-      font-size: 11px;
-      margin: 0 0 10px;
-    }
-    .corrRow{
+      min-height: 96px;
       display:flex;
-      align-items:baseline;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .miniTop{
+      display:flex;
+      align-items: center;
       justify-content: space-between;
       gap: 10px;
     }
-    .corrDir{
+    .miniName{
+      font-size: 12px;
+      letter-spacing:.14em;
+      text-transform: uppercase;
+      color: var(--muted);
+      font-weight: 950;
+    }
+
+    /* This is the “combined” box behavior: result + shots inside Elevation */
+    .miniStatRow{
+      display:flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 10px;
+      margin-top: 8px;
+      color: var(--muted);
+      font-size: 12px;
+      letter-spacing:.08em;
+      text-transform: uppercase;
+      font-weight: 850;
+    }
+
+    .bigDir{
       font-size: 28px;
       font-weight: 950;
-      color: var(--ok);
-      letter-spacing: .04em;
-      text-transform: uppercase;
-      line-height: 1;
+      letter-spacing:.04em;
+      line-height: 1.0;
+      margin-top: 6px;
     }
-    .corrVal{
-      font-size: 34px;
+    .bigNum{
+      font-size: 22px;
       font-weight: 950;
-      color: var(--text);
-      line-height: 1;
-      white-space: nowrap;
+      letter-spacing:.02em;
+      margin-top: 2px;
     }
-    .corrUnit{
-      font-size: 14px;
-      font-weight: 900;
+    .unit{
       color: var(--muted);
-      margin-left: 6px;
-      letter-spacing: .10em;
-      text-transform: uppercase;
-    }
-
-    /* small U/D L/R buttons */
-    .miniBtns{
-      display:flex;
-      gap: 8px;
-      margin-top: 10px;
-      flex-wrap:wrap;
-    }
-    .chip{
-      display:inline-flex;
-      align-items:center;
-      justify-content:center;
-      min-width: 44px;
-      height: 34px;
-      padding: 0 10px;
-      border-radius: 12px;
-      border: 1px solid var(--chipStroke);
-      background: var(--chipBg);
-      color: rgba(238,242,247,.92);
-      font-weight: 950;
       font-size: 12px;
-      letter-spacing: .14em;
-      text-transform: uppercase;
-    }
-    .chip.on{
-      border-color: rgba(103,243,164,.35);
-      box-shadow: 0 0 18px rgba(103,243,164,.10);
-    }
-
-    .shotsBar{
-      margin-top: 12px;
-      border-radius: 16px;
-      border: 1px solid rgba(255,255,255,.10);
-      background: rgba(0,0,0,.18);
-      padding: 12px;
-      display:flex;
-      align-items:center;
-      justify-content: space-between;
-      gap: 10px;
-    }
-    .shotsLabel{
-      color: var(--muted);
       font-weight: 900;
-      letter-spacing: .14em;
+      letter-spacing:.10em;
       text-transform: uppercase;
-      font-size: 11px;
-    }
-    .shotsNum{
-      font-size: 32px;
-      font-weight: 950;
-      color: var(--text);
-      line-height: 1;
+      margin-left: 6px;
     }
 
     details{
@@ -367,11 +319,11 @@
     }
     summary{
       cursor:pointer;
-      font-weight: 850;
+      font-weight: 900;
       color: var(--muted);
-      letter-spacing: .10em;
+      letter-spacing: .06em;
       text-transform: uppercase;
-      font-size: 11px;
+      font-size: 12px;
       outline:none;
     }
     pre{
@@ -388,7 +340,7 @@
       color: rgba(238,242,247,.30);
       text-align:center;
       letter-spacing: .22em;
-      font-weight: 900;
+      font-weight: 950;
       text-transform: uppercase;
       font-size: 12px;
     }
@@ -398,95 +350,103 @@
 <body>
   <div class="wrap">
     <div class="shell">
-
       <div class="top">
         <h1 class="title">
           <span class="r">Shooter</span> <span class="w">Experience</span> <span class="b">Card</span>
         </h1>
 
-        <div class="subrow">
-          <div class="hint" id="instructionLine">Choose a photo. Tap the bull (blue). Then tap shots (red).</div>
-          <div class="pill"><span class="okDot"></span><span id="settingsPill">Settings: —</span></div>
+        <div class="sub">
+          <div class="pill" id="readyPill">
+            <span class="dotOk"></span>
+            <span id="readyText">Setup loaded</span>
+          </div>
+
+          <div class="pill" id="tapModePill">
+            Tap: <span id="modeText">Bull</span>
+          </div>
         </div>
       </div>
 
       <div class="grid">
-        <!-- LEFT: image + taps -->
+        <!-- LEFT: IMAGE + TAPS + SCORE -->
         <div class="card">
-          <h2>Tap-n-Score</h2>
-
-          <div class="controls">
-            <label class="btn" for="photoInput">Choose Photo</label>
-            <input id="photoInput" type="file" accept="image/*" />
+          <div class="actions">
+            <input id="photoInput" type="file" accept="image/*" style="display:none;" />
+            <button id="chooseBtn" class="btn">Choose Photo</button>
             <button id="clearBtn" class="btn">Clear</button>
-            <button id="showBtn" class="btn btnPrimary btnDisabled">Show Results</button>
+            <button id="resultsBtn" class="btn btnPrimary btnDisabled">Show Results</button>
+            <a id="backSetup" class="btn" href="./target.html" style="text-decoration:none;display:inline-flex;align-items:center;">Setup</a>
           </div>
 
-          <div class="hint" style="margin-top:10px;" id="statusLine">No image loaded.</div>
+          <div class="tapHint" id="instruction">
+            Tap the <b>bull</b> first (blue). Then tap shots (red).<br/>
+            (Distance/MOA are locked upstream and not shown here.)
+          </div>
 
-          <div class="stage" id="stage" style="margin-top:12px;">
-            <div class="stageEmpty" id="stageEmpty">
-              Your target image will appear here.
+          <div class="imgWrap" id="imgWrap">
+            <img id="targetImg" alt="Target image" />
+            <div class="layer" id="dotsLayer"></div>
+          </div>
+
+          <div class="scorePanel">
+            <div class="scoreLabel">Shooter’s score</div>
+            <div class="scoreBar" aria-label="score bar">
+              <div class="scoreFill" id="scoreFill"></div>
             </div>
-            <img id="targetImg" alt="Target" style="display:none;" />
-            <div class="dots" id="dotsLayer"></div>
-          </div>
+            <div class="scoreLine">
+              <div class="scoreValue" id="scoreValue">—</div>
+              <div class="scoreLabel" id="shotsInline">Shots: 0</div>
+            </div>
 
-          <details>
-            <summary>Diagnostics</summary>
-            <pre id="diagOut">(none)</pre>
-          </details>
+            <div class="pair">
+              <!-- ELEVATION BOX (combined with shots + tighter) -->
+              <div class="miniCard">
+                <div class="miniTop">
+                  <div class="miniName">Elevation</div>
+                </div>
+                <div>
+                  <div class="bigDir" id="elevDir">—</div>
+                  <div class="bigNum"><span id="elevClicks">0.00</span><span class="unit">clicks</span></div>
+                  <div class="miniStatRow">
+                    <span>Shots</span>
+                    <span id="shotsSmall">0</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- WINDAGE BOX -->
+              <div class="miniCard">
+                <div class="miniTop">
+                  <div class="miniName">Windage</div>
+                </div>
+                <div>
+                  <div class="bigDir" id="windDir">—</div>
+                  <div class="bigNum"><span id="windClicks">0.00</span><span class="unit">clicks</span></div>
+                  <div class="miniStatRow">
+                    <span>Status</span>
+                    <span id="windStatus">Ready</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <details>
+              <summary>Diagnostics</summary>
+              <pre id="diagOut">(none)</pre>
+            </details>
+          </div>
         </div>
 
-        <!-- RIGHT: results -->
+        <!-- RIGHT: CTA (kept minimal) -->
         <div class="card">
-          <h2>Shooter’s Score</h2>
+          <div class="cardTitle">Next</div>
+          <button id="downloadGo" class="btn btnPrimary btnDisabled">Download SEC</button>
+          <div class="tapHint" id="downloadHint">Run results first to generate a downloadable SEC.</div>
 
-          <div class="scoreBox">
-            <div style="text-align:center;">
-              <div class="scoreNum" id="scoreNum">—</div>
-              <div class="scoreLabel" id="scoreLabel">Smart Score (pilot)</div>
-            </div>
-          </div>
-
-          <div class="corrGrid">
-            <div class="corr">
-              <div class="corrTitle">Elevation</div>
-              <div class="corrRow">
-                <div class="corrDir" id="eDir">—</div>
-                <div>
-                  <span class="corrVal" id="eVal">0.00</span><span class="corrUnit">clicks</span>
-                </div>
-              </div>
-              <div class="miniBtns">
-                <div class="chip" id="chipU">U</div>
-                <div class="chip" id="chipD">D</div>
-              </div>
-            </div>
-
-            <div class="corr">
-              <div class="corrTitle">Windage</div>
-              <div class="corrRow">
-                <div class="corrDir" id="wDir">—</div>
-                <div>
-                  <span class="corrVal" id="wVal">0.00</span><span class="corrUnit">clicks</span>
-                </div>
-              </div>
-              <div class="miniBtns">
-                <div class="chip" id="chipL">L</div>
-                <div class="chip" id="chipR">R</div>
-              </div>
-            </div>
-          </div>
-
-          <div class="shotsBar">
-            <div class="shotsLabel">Shots</div>
-            <div class="shotsNum" id="shotsNum">0</div>
-          </div>
-
-          <div style="margin-top:12px; display:grid; gap:10px;">
-            <a class="btn" id="downloadLink" href="./download.html">Download / Share</a>
-            <a class="btn" href="./target.html">Change Distance / MOA</a>
+          <div style="height:10px;"></div>
+          <button class="btn" onclick="window.location.href='./target.html'">Back to Setup</button>
+          <div class="tapHint" style="margin-top:10px;color:var(--muted2);">
+            Tip: If your taps feel off, pinch-zoom to focus before tapping.
           </div>
         </div>
       </div>
@@ -497,148 +457,400 @@
 
   <script>
     (() => {
-      // -------------------------------
-      // REQUIRED SETTINGS (from target.html)
-      // -------------------------------
-      const KEY_DIST = "sczn3.distanceYds";
-      const KEY_MOA  = "sczn3.moaPerClick";
-
-      function readTargetSettingsOrRedirect() {
-        const d = Number(localStorage.getItem(KEY_DIST));
-        const m = Number(localStorage.getItem(KEY_MOA));
-        if (!Number.isFinite(d) || d <= 0 || !Number.isFinite(m) || m <= 0) {
-          window.location.href = "./target.html";
-          return null;
-        }
-        return { distanceYds: d, moaPerClick: m };
-      }
-
-      const SETTINGS = readTargetSettingsOrRedirect();
-      if (!SETTINGS) return;
-
-      // -------------------------------
-      // BASIC HELPERS
-      // -------------------------------
       const $ = (id) => document.getElementById(id);
 
-      const elPhoto = $("photoInput");
-      const elImg = $("targetImg");
-      const elStageEmpty = $("stageEmpty");
-      const elDots = $("dotsLayer");
+      // Elements
+      const chooseBtn = $("chooseBtn");
+      const clearBtn = $("clearBtn");
+      const resultsBtn = $("resultsBtn");
+      const downloadGo = $("downloadGo");
 
-      const elClear = $("clearBtn");
-      const elShow = $("showBtn");
+      const photoInput = $("photoInput");
+      const imgWrap = $("imgWrap");
+      const targetImg = $("targetImg");
+      const dotsLayer = $("dotsLayer");
 
-      const elInstruction = $("instructionLine");
-      const elStatus = $("statusLine");
-      const elDiag = $("diagOut");
+      const instruction = $("instruction");
+      const readyText = $("readyText");
+      const modeText = $("modeText");
 
-      const elSettingsPill = $("settingsPill");
+      const scoreFill = $("scoreFill");
+      const scoreValue = $("scoreValue");
 
-      const elScoreNum = $("scoreNum");
-      const elScoreLabel = $("scoreLabel");
+      const elevDir = $("elevDir");
+      const elevClicks = $("elevClicks");
+      const windDir = $("windDir");
+      const windClicks = $("windClicks");
+      const windStatus = $("windStatus");
 
-      const elEDir = $("eDir");
-      const elEVal = $("eVal");
-      const elWDir = $("wDir");
-      const elWVal = $("wVal");
+      const shotsInline = $("shotsInline");
+      const shotsSmall = $("shotsSmall");
 
-      const chipU = $("chipU");
-      const chipD = $("chipD");
-      const chipL = $("chipL");
-      const chipR = $("chipR");
+      const downloadHint = $("downloadHint");
+      const diagOut = $("diagOut");
 
-      const elShotsNum = $("shotsNum");
-      const elDownloadLink = $("downloadLink");
-
-      // Backend URL (edit if you want)
-      const API_BASE = localStorage.getItem("sczn3.apiBase") || "https://tap-n-score.onrender.com";
-      const API_ENDPOINT = "/api/analyze"; // if your backend uses /api/calc, change this
-
-      // -------------------------------
-      // STATE
-      // -------------------------------
-      let objectUrl = null;
+      // State
       let selectedFile = null;
+      let objectUrl = null;
 
-      // taps in image pixel coordinates
-      let bull = null;           // {x,y}
-      let shots = [];            // [{x,y}, ...]
+      // Tap state stored in image-relative percentages (0..1)
+      let bull = null;        // {x,y} in 0..1
+      let shots = [];         // [{x,y}...]
+      let lastSecDataUrl = ""; // data:image/png;base64,...
 
-      function setDiag(obj){ elDiag.textContent = JSON.stringify(obj, null, 2); }
+      // Settings (MUST come from target page)
+      const params = new URLSearchParams(window.location.search);
+      const distance = Number(params.get("distance") || localStorage.getItem("sczn3_distanceYds") || "");
+      const moa = Number(params.get("moa") || localStorage.getItem("sczn3_moaPerClick") || "");
 
-      function resetResultsUI(){
-        elScoreNum.textContent = "—";
-        elScoreLabel.textContent = "Smart Score (pilot)";
-
-        elEDir.textContent = "—";
-        elEVal.textContent = "0.00";
-        elWDir.textContent = "—";
-        elWVal.textContent = "0.00";
-
-        [chipU, chipD, chipL, chipR].forEach(c => c.classList.remove("on"));
-
-        elDownloadLink.href = "./download.html";
+      // Hard stop: if missing, force setup page
+      if (!Number.isFinite(distance) || distance <= 0 || !Number.isFinite(moa) || moa <= 0) {
+        window.location.href = "./target.html";
+        return;
       }
 
-      function updateSettingsPill(){
-        elSettingsPill.textContent = `Settings: ${SETTINGS.distanceYds} yds • ${SETTINGS.moaPerClick} MOA`;
+      // Persist again (in case user shared direct link)
+      localStorage.setItem("sczn3_distanceYds", String(distance));
+      localStorage.setItem("sczn3_moaPerClick", String(moa));
+
+      readyText.textContent = "Setup locked";
+
+      // API base: try vendor.json (optional), else same origin relative calls will fail on GH pages
+      let API_BASE = ""; // set by vendor.json if present
+
+      async function loadVendor() {
+        try {
+          const res = await fetch("./vendor.json", { cache: "no-store" });
+          if (!res.ok) throw new Error("vendor.json not found");
+          const v = await res.json();
+          if (v && typeof v.apiBase === "string") API_BASE = v.apiBase.replace(/\/+$/,"");
+        } catch (e) {
+          // ok, run without vendor config (fallback results still render)
+        }
       }
 
-      function updateCounts(){
-        elShotsNum.textContent = String(shots.length);
-        // enable Show Results only if we have bull + at least 1 shot + image loaded
-        const ok = !!bull && shots.length > 0 && !!selectedFile;
-        elShow.classList.toggle("btnDisabled", !ok);
+      function setDiag(obj) {
+        diagOut.textContent = JSON.stringify(obj, null, 2);
       }
 
-      function clearDots(){
-        elDots.innerHTML = "";
+      function clamp01(n){ return Math.max(0, Math.min(1, n)); }
+
+      function resetAll() {
+        bull = null;
+        shots = [];
+        lastSecDataUrl = "";
+
+        dotsLayer.innerHTML = "";
+        resultsBtn.classList.add("btnDisabled");
+        downloadGo.classList.add("btnDisabled");
+
+        scoreFill.style.width = "0%";
+        scoreValue.textContent = "—";
+        elevDir.textContent = "—";
+        elevClicks.textContent = "0.00";
+        windDir.textContent = "—";
+        windClicks.textContent = "0.00";
+        windStatus.textContent = "Ready";
+
+        shotsInline.textContent = "Shots: 0";
+        shotsSmall.textContent = "0";
+
+        modeText.textContent = "Bull";
+        instruction.innerHTML = "Tap the <b>bull</b> first (blue). Then tap shots (red).<br/>(Distance/MOA are locked upstream and not shown here.)";
+        downloadHint.textContent = "Run results first to generate a downloadable SEC.";
+
+        setDiag({ ok:true, cleared:true });
       }
 
-      function drawDot(pt, cls){
+      function addDot(x01, y01, kind) {
         const d = document.createElement("div");
-        d.className = "dot " + cls;
-        d.style.left = pt.x + "px";
-        d.style.top = pt.y + "px";
-        elDots.appendChild(d);
+        d.className = "dot " + (kind === "bull" ? "dotBull" : "dotShot");
+        d.style.left = (x01 * 100) + "%";
+        d.style.top  = (y01 * 100) + "%";
+        dotsLayer.appendChild(d);
       }
 
-      function redraw(){
-        clearDots();
-        if (bull) drawDot(bull, "bull");
-        shots.forEach(s => drawDot(s, "shot"));
+      function rebuildDots() {
+        dotsLayer.innerHTML = "";
+        if (bull) addDot(bull.x, bull.y, "bull");
+        for (const s of shots) addDot(s.x, s.y, "shot");
       }
 
-      // Convert click/tap point from screen overlay coords to image pixel coords.
-      // We position dotsLayer to match the rendered image box. So we read
-      // the click within elDots and store that as pixel in rendered space.
-      // Backend can use pixel-space; if your backend wants normalized 0..1,
-      // you can convert there.
-      function getPointFromClick(e){
-        const r = elDots.getBoundingClientRect();
-        const x = e.clientX - r.left;
-        const y = e.clientY - r.top;
+      // Convert pointer event -> normalized 0..1 within displayed image
+      function getTap01(evt) {
+        const rect = targetImg.getBoundingClientRect();
+        const x = clamp01((evt.clientX - rect.left) / rect.width);
+        const y = clamp01((evt.clientY - rect.top) / rect.height);
         return { x, y };
       }
 
-      function clearAll(){
-        bull = null;
-        shots = [];
-        redraw();
-        resetResultsUI();
-
-        elInstruction.textContent = "Choose a photo. Tap the bull (blue). Then tap shots (red).";
-        elStatus.textContent = selectedFile ? "Image loaded. Tap the bull first." : "No image loaded.";
-        updateCounts();
-        setDiag({ ok:true, action:"clear" });
+      function updateTapModeUI() {
+        if (!bull) {
+          modeText.textContent = "Bull";
+          instruction.innerHTML = "Tap the <b>bull</b> first (blue). Then tap shots (red).";
+        } else {
+          modeText.textContent = "Shots";
+          instruction.innerHTML = "Now tap <b>shots</b> (red). Add 3–5 hits, then tap <b>Show Results</b>.";
+        }
       }
 
-      // -------------------------------
-      // IMAGE LOAD
-      // -------------------------------
-      elPhoto.addEventListener("change", () => {
-        const f = elPhoto.files && elPhoto.files[0];
+      function updateShotCounts() {
+        shotsInline.textContent = "Shots: " + shots.length;
+        shotsSmall.textContent = String(shots.length);
+
+        if (bull && shots.length > 0) {
+          resultsBtn.classList.remove("btnDisabled");
+        } else {
+          resultsBtn.classList.add("btnDisabled");
+        }
+      }
+
+      // Fallback direction logic (signed deltas)
+      // delta = bull - poib
+      // Screen coords: x right positive, y down positive.
+      function fallbackDirections(deltaX, deltaY) {
+        const wind = deltaX > 0 ? "RIGHT" : (deltaX < 0 ? "LEFT" : "CENTER");
+        const elev = deltaY > 0 ? "DOWN" : (deltaY < 0 ? "UP" : "CENTER");
+        return { wind, elev };
+      }
+
+      function format2(n) {
+        return (Math.round(n * 100) / 100).toFixed(2);
+      }
+
+      function computePOIB(shotsArr) {
+        const n = shotsArr.length || 1;
+        let sx = 0, sy = 0;
+        for (const p of shotsArr) { sx += p.x; sy += p.y; }
+        return { x: sx / n, y: sy / n };
+      }
+
+      // Create a simple SEC PNG in-browser (no POIB label, no red/white/blue line)
+      async function makeSecPngDataUrl(result) {
+        const W = 1200, H = 700;
+        const canvas = document.createElement("canvas");
+        canvas.width = W; canvas.height = H;
+        const ctx = canvas.getContext("2d");
+
+        // Background
+        ctx.fillStyle = "#0a0c12";
+        ctx.fillRect(0,0,W,H);
+
+        // Soft panel
+        ctx.fillStyle = "rgba(255,255,255,0.06)";
+        roundRect(ctx, 30, 30, W-60, H-60, 26);
+        ctx.fill();
+
+        // Title (red/white/blue WORDS ONLY; no stripe)
+        ctx.font = "900 46px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial";
+        ctx.textBaseline = "top";
+        ctx.letterSpacing = "2px";
+
+        // Safari doesn't support letterSpacing; ignore safely
+        const t1 = "SHOOTER";
+        const t2 = " EXPERIENCE ";
+        const t3 = "CARD";
+
+        let x = 60, y = 52;
+        ctx.fillStyle = "#d64040"; ctx.fillText(t1, x, y);
+        x += ctx.measureText(t1).width;
+        ctx.fillStyle = "#eef2f7"; ctx.fillText(t2, x, y);
+        x += ctx.measureText(t2).width;
+        ctx.fillStyle = "#2f66ff"; ctx.fillText(t3, x, y);
+
+        // Score label
+        ctx.fillStyle = "rgba(238,242,247,0.70)";
+        ctx.font = "800 18px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial";
+        ctx.fillText("SHOOTER’S SCORE", 60, 125);
+
+        // Score bar
+        const barX = 60, barY = 160, barW = W-120, barH = 18;
+        ctx.fillStyle = "rgba(255,255,255,0.10)";
+        roundRect(ctx, barX, barY, barW, barH, 999); ctx.fill();
+
+        const pct = Math.max(0, Math.min(1, (result.scorePercent || 0)));
+        ctx.fillStyle = "rgba(103,243,164,0.90)";
+        roundRect(ctx, barX, barY, Math.max(10, barW * pct), barH, 999); ctx.fill();
+
+        // Two stat boxes (Elevation includes shots)
+        const boxY = 220, boxH = 190, gap = 20;
+        const boxW = (W - 120 - gap) / 2;
+        const leftX = 60, rightX = 60 + boxW + gap;
+
+        ctx.fillStyle = "rgba(255,255,255,0.05)";
+        roundRect(ctx, leftX, boxY, boxW, boxH, 18); ctx.fill();
+        roundRect(ctx, rightX, boxY, boxW, boxH, 18); ctx.fill();
+
+        // Labels
+        ctx.fillStyle = "rgba(238,242,247,0.60)";
+        ctx.font = "900 16px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial";
+        ctx.fillText("ELEVATION", leftX+18, boxY+16);
+        ctx.fillText("WINDAGE", rightX+18, boxY+16);
+
+        // Directions
+        ctx.fillStyle = "#67f3a4";
+        ctx.font = "950 46px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial";
+        ctx.fillText(result.elevDir || "—", leftX+18, boxY+52);
+        ctx.fillText(result.windDir || "—", rightX+18, boxY+52);
+
+        // Click numbers
+        ctx.fillStyle = "#eef2f7";
+        ctx.font = "950 44px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial";
+        ctx.fillText(format2(result.elevClicks || 0), leftX+18, boxY+108);
+        ctx.fillText(format2(result.windClicks || 0), rightX+18, boxY+108);
+
+        ctx.fillStyle = "rgba(238,242,247,0.55)";
+        ctx.font = "900 16px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial";
+        ctx.fillText("CLICKS", leftX+18 + ctx.measureText(format2(result.elevClicks||0)).width + 10, boxY+122);
+        ctx.fillText("CLICKS", rightX+18 + ctx.measureText(format2(result.windClicks||0)).width + 10, boxY+122);
+
+        // Shots inside elevation box (combined)
+        ctx.fillStyle = "rgba(238,242,247,0.65)";
+        ctx.font = "900 16px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial";
+        ctx.fillText("SHOTS", leftX+18, boxY+160);
+        ctx.fillStyle = "#eef2f7";
+        ctx.fillText(String(result.shots || 0), leftX+90, boxY+160);
+
+        // Footer
+        ctx.fillStyle = "rgba(238,242,247,0.25)";
+        ctx.font = "900 14px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial";
+        ctx.fillText("SCZN3", 60, H-48);
+
+        return canvas.toDataURL("image/png");
+      }
+
+      function roundRect(ctx, x, y, w, h, r) {
+        const rr = Math.min(r, w/2, h/2);
+        ctx.beginPath();
+        ctx.moveTo(x+rr,y);
+        ctx.arcTo(x+w,y,x+w,y+h,rr);
+        ctx.arcTo(x+w,y+h,x,y+h,rr);
+        ctx.arcTo(x,y+h,x,y,rr);
+        ctx.arcTo(x,y,x+w,y,rr);
+        ctx.closePath();
+      }
+
+      // Core result path
+      async function runResults() {
+        if (!bull || shots.length === 0) return;
+
+        const poib = computePOIB(shots);
+        const dx = (bull.x - poib.x);
+        const dy = (bull.y - poib.y);
+
+        // inches are unknown without calibration, so we’ll treat dx/dy as “relative”
+        // Backend (if configured) can map pixels->inches. We still compute click counts using inches only if backend returns inches.
+        // Here: we compute clicks using normalized distance (still useful for UI checks), but backend should override.
+        // We'll call backend first if API_BASE exists.
+
+        let result = {
+          ok: true,
+          shots: shots.length,
+          elevDir: "—",
+          windDir: "—",
+          elevClicks: 0,
+          windClicks: 0,
+          scorePercent: 0
+        };
+
+        // Simple score % (tight cluster better): inverse of dispersion
+        // Use normalized values; backend can override later.
+        const distNorm = Math.sqrt(dx*dx + dy*dy);
+        const pct = Math.max(0, Math.min(1, 1 - (distNorm * 1.25)));
+        result.scorePercent = pct;
+        scoreFill.style.width = Math.round(pct * 100) + "%";
+        scoreValue.textContent = Math.round(pct * 100) + "%";
+
+        // Backend call (authoritative direction + clicks)
+        const payload = {
+          distanceYds: distance,
+          moaPerClick: moa,
+          bull: bull,
+          shots: shots
+        };
+
+        let backend = null;
+        if (API_BASE) {
+          try {
+            const res = await fetch(API_BASE + "/api/calc", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(payload)
+            });
+            if (res.ok) backend = await res.json();
+          } catch (e) {
+            backend = null;
+          }
+        }
+
+        if (backend && backend.ok) {
+          // Expect backend fields (best effort)
+          // directions: backend.elevationDirection, backend.windageDirection
+          // clicks: backend.elevationClicks, backend.windageClicks
+          result.elevDir = (backend.elevationDirection || backend.elevDir || "—").toUpperCase();
+          result.windDir = (backend.windageDirection || backend.windDir || "—").toUpperCase();
+          result.elevClicks = Number(backend.elevationClicks ?? backend.elevClicks ?? 0) || 0;
+          result.windClicks = Number(backend.windageClicks ?? backend.windClicks ?? 0) || 0;
+
+          // If backend returns a score percent, use it
+          if (Number.isFinite(Number(backend.scorePercent))) {
+            result.scorePercent = Math.max(0, Math.min(1, Number(backend.scorePercent)));
+            scoreFill.style.width = Math.round(result.scorePercent * 100) + "%";
+            scoreValue.textContent = Math.round(result.scorePercent * 100) + "%";
+          }
+        } else {
+          // Fallback: directions from signed deltas, clicks from MOA math using a fake inch conversion.
+          // Use 1.047" per MOA at 100 yards scaling; but we don't know inches here.
+          // So we compute clicks in "relative units" to keep UI moving. Backend should be used for real clicks.
+          const dirs = fallbackDirections(dx, dy);
+          result.elevDir = dirs.elev;
+          result.windDir = dirs.wind;
+
+          // Relative clicks: convert normalized displacement into pseudo-inches by assuming image width = 10"
+          const pseudoInchesX = dx * 10;
+          const pseudoInchesY = dy * 10;
+
+          const inchPerMoaAtDist = 1.047 * (distance / 100);
+          const moaX = Math.abs(pseudoInchesX) / inchPerMoaAtDist;
+          const moaY = Math.abs(pseudoInchesY) / inchPerMoaAtDist;
+
+          result.windClicks = moaX / moa;
+          result.elevClicks = moaY / moa;
+        }
+
+        // Render
+        elevDir.textContent = result.elevDir;
+        windDir.textContent = result.windDir;
+        elevClicks.textContent = format2(result.elevClicks);
+        windClicks.textContent = format2(result.windClicks);
+
+        windStatus.textContent = "Done";
+        shotsInline.textContent = "Shots: " + result.shots;
+        shotsSmall.textContent = String(result.shots);
+
+        // Generate SEC image (no POIB label, no stripe)
+        lastSecDataUrl = await makeSecPngDataUrl(result);
+
+        // Enable download routing
+        downloadGo.classList.remove("btnDisabled");
+        downloadHint.textContent = "Ready. Tap Download SEC.";
+
+        setDiag({
+          ok:true,
+          settings: { distanceYds: distance, moaPerClick: moa },
+          bull, shotsCount: shots.length,
+          poib,
+          delta: { x: dx, y: dy },
+          usedBackend: Boolean(backend && backend.ok),
+          backendPreview: backend ? Object.keys(backend) : null
+        });
+      }
+
+      // Choose photo
+      chooseBtn.addEventListener("click", () => photoInput.click());
+
+      photoInput.addEventListener("change", () => {
+        const f = photoInput.files && photoInput.files[0];
         if (!f) return;
 
         selectedFile = f;
@@ -646,211 +858,84 @@
         if (objectUrl) URL.revokeObjectURL(objectUrl);
         objectUrl = URL.createObjectURL(f);
 
-        elImg.src = objectUrl;
-        elImg.style.display = "block";
-        elStageEmpty.style.display = "none";
+        targetImg.src = objectUrl;
 
-        // Make dots layer match the image size after it renders
-        elImg.onload = () => {
-          // Ensure dots layer covers the image rendered area
-          const imgRect = elImg.getBoundingClientRect();
-          const stageRect = elImg.parentElement.getBoundingClientRect();
-
-          // position dots relative to stage
-          // (dotsLayer is absolute inset:0 so it matches stage)
-          // but we need clicks to match image position in stage:
-          // simplest: make image fill stage width; dots cover stage; store taps in stage coords.
-          clearAll();
-          elStatus.textContent = "Image loaded. Tap the bull first.";
-          setDiag({
-            ok:true,
-            action:"image loaded",
-            fileName: f.name,
-            rendered: { w: imgRect.width, h: imgRect.height },
-            stage: { w: stageRect.width, h: stageRect.height },
-            settings: SETTINGS,
-            apiBase: API_BASE,
-            endpoint: API_ENDPOINT
-          });
+        // enable tapping
+        targetImg.onload = () => {
+          resetAll();
+          // allow taps now
+          imgWrap.style.cursor = "crosshair";
+          setDiag({ ok:true, photoLoaded:true, name:f.name, size:f.size });
         };
       });
 
-      // -------------------------------
-      // TAP LOGIC
-      // -------------------------------
-      // We allow tapping anywhere on the stage overlay
-      elDots.addEventListener("click", (e) => {
-        if (!selectedFile) return;
+      // Tapping (use pointerdown on the image itself)
+      targetImg.addEventListener("pointerdown", (evt) => {
+        if (!targetImg.src) return;
 
-        const pt = getPointFromClick(e);
+        // prevent scroll-zoom weirdness
+        evt.preventDefault();
 
-        // First tap sets bull
+        const p = getTap01(evt);
+
         if (!bull) {
-          bull = pt;
-          elInstruction.textContent = "Bull set ✅ Now tap your shot holes (red).";
-          elStatus.textContent = "Bull set. Add shots, then tap Show Results.";
-          redraw();
-          updateCounts();
-          return;
+          bull = p;
+        } else {
+          shots.push(p);
         }
 
-        // Next taps are shots
-        shots.push(pt);
-        redraw();
-        updateCounts();
+        rebuildDots();
+        updateTapModeUI();
+        updateShotCounts();
 
-        elStatus.textContent = `Shots added: ${shots.length}. Tap Show Results when ready.`;
-      });
+        // Disable results until we have bull+shots
+        if (bull && shots.length > 0) resultsBtn.classList.remove("btnDisabled");
+      }, { passive:false });
 
-      // -------------------------------
-      // SHOW RESULTS
-      // -------------------------------
-      function normalizeDir(dir){
-        // enforce no negatives shown; backend should already send a direction + magnitude
-        // but we normalize to safe display
-        const d = String(dir || "").toUpperCase();
-        if (["UP","U"].includes(d)) return "UP";
-        if (["DOWN","D"].includes(d)) return "DOWN";
-        if (["LEFT","L"].includes(d)) return "LEFT";
-        if (["RIGHT","R"].includes(d)) return "RIGHT";
-        return "—";
-      }
+      // Clear
+      clearBtn.addEventListener("click", () => resetAll());
 
-      function setChip(chip, on){ chip.classList.toggle("on", !!on); }
-
-      function showDirectionChips(eDir, wDir){
-        // Elevation chips
-        setChip(chipU, eDir === "UP");
-        setChip(chipD, eDir === "DOWN");
-        // Windage chips
-        setChip(chipL, wDir === "LEFT");
-        setChip(chipR, wDir === "RIGHT");
-      }
-
-      function asNum(v, fallback=0){
-        const n = Number(v);
-        return Number.isFinite(n) ? n : fallback;
-      }
-
-      function fmt2(n){
-        return asNum(n, 0).toFixed(2);
-      }
-
-      function buildPayload(){
-        // IMPORTANT:
-        // If your backend expects a different shape, change ONLY this payload object.
-        return {
-          distanceYds: SETTINGS.distanceYds,
-          moaPerClick: SETTINGS.moaPerClick,
-
-          // Tap data in rendered stage coords
-          bull: bull,
-          shots: shots,
-
-          // Optional debug fields
-          meta: {
-            fileName: selectedFile ? selectedFile.name : "",
-            client: "sec.html",
-            ts: Date.now()
-          }
-        };
-      }
-
-      async function callBackend(payload){
-        const url = API_BASE.replace(/\/$/,"") + API_ENDPOINT;
-
-        const res = await fetch(url, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        });
-
-        const text = await res.text();
-        let data = null;
-        try { data = JSON.parse(text); } catch { data = { raw:text }; }
-
-        if (!res.ok) {
-          throw new Error(`Backend ${res.status}: ${JSON.stringify(data).slice(0,600)}`);
-        }
-        return data;
-      }
-
-      elShow.addEventListener("click", async () => {
-        if (elShow.classList.contains("btnDisabled")) return;
-
-        elShow.textContent = "Working…";
-        elShow.classList.add("btnDisabled");
-
+      // Show results
+      resultsBtn.addEventListener("click", async () => {
+        if (resultsBtn.classList.contains("btnDisabled")) return;
+        resultsBtn.textContent = "Working…";
         try {
-          const payload = buildPayload();
-          setDiag({ ok:true, action:"sending", payload });
-
-          const data = await callBackend(payload);
-
-          // Expected (example) fields:
-          // data.smartScore
-          // data.elevation = { dir:"UP|DOWN", clicks: 12.34 }
-          // data.windage   = { dir:"LEFT|RIGHT", clicks: 2.50 }
-          // data.secUrl (optional) - URL to generated PNG
-          //
-          // If your backend uses different names, map them here.
-
-          const smartScore = data.smartScore ?? data.score ?? null;
-
-          // dir + clicks
-          const eDir = normalizeDir(data.elevation?.dir ?? data.eDir);
-          const wDir = normalizeDir(data.windage?.dir ?? data.wDir);
-
-          const eClicks = Math.abs(asNum(data.elevation?.clicks ?? data.eClicks, 0));
-          const wClicks = Math.abs(asNum(data.windage?.clicks ?? data.wClicks, 0));
-
-          // UI
-          elScoreNum.textContent = (smartScore === null || smartScore === undefined) ? "—" : String(smartScore);
-          elEDir.textContent = eDir;
-          elEVal.textContent = fmt2(eClicks);
-
-          elWDir.textContent = wDir;
-          elWVal.textContent = fmt2(wClicks);
-
-          showDirectionChips(eDir, wDir);
-
-          // Wire download page if we got secUrl
-          const secUrl = data.secUrl || data.pngUrl || "";
-          if (secUrl) {
-            const from = "./sec.html";
-            const target = "./target.html";
-            elDownloadLink.href =
-              `./download.html?img=${encodeURIComponent(secUrl)}&from=${encodeURIComponent(from)}&target=${encodeURIComponent(target)}`;
-          } else {
-            elDownloadLink.href = "./download.html";
-          }
-
-          elStatus.textContent = "Results ready ✅";
-          elInstruction.textContent = "Done. Download / share your SEC, or score another target.";
-
-          setDiag({ ok:true, action:"results", data });
-
-        } catch (err) {
-          elStatus.textContent = "Error getting results. Check Diagnostics.";
-          setDiag({ ok:false, error: String(err) });
+          await runResults();
         } finally {
-          elShow.textContent = "Show Results";
-          updateCounts(); // re-enable if bull+shots exist
+          resultsBtn.textContent = "Show Results";
         }
       });
 
-      // -------------------------------
-      // Buttons
-      // -------------------------------
-      elClear.addEventListener("click", () => clearAll());
+      // Download routing
+      downloadGo.addEventListener("click", () => {
+        if (downloadGo.classList.contains("btnDisabled")) return;
 
-      // -------------------------------
-      // Init
-      // -------------------------------
-      updateSettingsPill();
-      resetResultsUI();
-      updateCounts();
-      setDiag({ ok:true, action:"loaded", settings: SETTINGS, apiBase: API_BASE, endpoint: API_ENDPOINT });
+        // Route to download.html with data URL (works on GH pages)
+        const fromPath = "./sec.html?distance=" + encodeURIComponent(String(distance)) + "&moa=" + encodeURIComponent(String(moa));
+        const targetPath = "./target.html";
+
+        const url = new URL("./download.html", window.location.href);
+        url.searchParams.set("img", lastSecDataUrl);
+        url.searchParams.set("from", fromPath);
+        url.searchParams.set("target", targetPath);
+
+        window.location.href = url.toString();
+      });
+
+      // Boot
+      (async () => {
+        await loadVendor();
+        resetAll();
+        updateTapModeUI();
+        updateShotCounts();
+
+        setDiag({
+          ok:true,
+          note:"SEC loaded",
+          settings: { distanceYds: distance, moaPerClick: moa },
+          vendorApiBase: API_BASE || "(none)"
+        });
+      })();
     })();
   </script>
 </body>
