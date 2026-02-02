@@ -254,8 +254,6 @@
           <div class="actions">
             <button id="downloadBtn" class="btn btnPrimary btnDisabled">Download SEC PNG</button>
 
-            <!-- These two links are the only “routing” assumptions.
-                 If your scoring page is not ./index.html, change it here. -->
             <a id="scoreAnotherLink" class="btn" href="./index.html">Score another</a>
             <a id="backToTargetLink" class="btn" href="./target.html">Back to target</a>
           </div>
@@ -286,20 +284,17 @@
       const subLine = $("subLine");
       const hintLine = $("hintLine");
 
-      // Links (edit these if your filenames differ)
       const scoreAnotherLink = $("scoreAnotherLink");
       const backToTargetLink = $("backToTargetLink");
 
-      // Pull query params
       const params = new URLSearchParams(window.location.search);
       const imgUrl = params.get("img") || "";
-      const from = params.get("from") || ""; // optional: allow caller to set return paths
-      const target = params.get("target") || ""; // optional
+      const from = params.get("from") || "";
+      const target = params.get("target") || "";
 
       if (from) scoreAnotherLink.href = from;
       if (target) backToTargetLink.href = target;
 
-      // Helper: best-effort filename
       function guessFileName(url) {
         try {
           const u = new URL(url);
@@ -310,7 +305,6 @@
         }
       }
 
-      // Helper: download (blob) to force a file save in most browsers
       async function downloadAsFile(url) {
         const res = await fetch(url, { mode: "cors" });
         if (!res.ok) throw new Error("Fetch failed: " + res.status);
@@ -329,7 +323,6 @@
         diagOut.textContent = JSON.stringify(obj, null, 2);
       }
 
-      // No image in query
       if (!imgUrl) {
         subLine.textContent = "Download your SEC PNG.";
         hintLine.textContent = "No image was provided. Open this page with ?img=YOUR_PNG_URL";
@@ -337,7 +330,6 @@
         return;
       }
 
-      // Load image into preview
       subLine.textContent = "SEC ready to download.";
       emptyState.style.display = "none";
       secImg.style.display = "block";
@@ -355,7 +347,6 @@
         setDiag({ ok:false, img: imgUrl, error:"image failed to load" });
       };
 
-      // Download button behavior
       downloadBtn.addEventListener("click", async () => {
         if (downloadBtn.classList.contains("btnDisabled")) return;
         downloadBtn.textContent = "Downloading…";
@@ -363,7 +354,6 @@
           await downloadAsFile(imgUrl);
           downloadBtn.textContent = "Download SEC PNG";
         } catch (e) {
-          // Fallback: open image in a new tab
           setDiag({ ok:false, img: imgUrl, error:String(e), fallback:"opening image" });
           downloadBtn.textContent = "Open image (fallback)";
           window.open(imgUrl, "_blank", "noopener");
