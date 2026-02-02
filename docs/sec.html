@@ -7,464 +7,158 @@
   <meta name="theme-color" content="#06070a" />
   <title>Tap-n-Score™ — Shooter Experience Card</title>
 
-  <!-- If you already have sec.css, keep this. If not, delete this line and it will still render clean. -->
-  <link rel="stylesheet" href="./sec.css?v=20260202a" />
-
-  <style>
-    :root{
-      --bg0:#05060a;
-      --bg1:#0a0c12;
-      --card: rgba(255,255,255,.06);
-      --card2: rgba(255,255,255,.045);
-      --stroke: rgba(255,255,255,.12);
-      --text:#eef2f7;
-      --muted: rgba(238,242,247,.65);
-      --muted2: rgba(238,242,247,.45);
-      --shadow: 0 18px 55px rgba(0,0,0,.55);
-      --radius: 22px;
-
-      --red:#d64040;
-      --white:#eef2f7;
-      --blue:#2f66ff;
-      --green:#67f3a4;
-
-      --btn: rgba(255,255,255,.07);
-      --btnHover: rgba(255,255,255,.10);
-      --btnStroke: rgba(255,255,255,.14);
-    }
-
-    *{ box-sizing:border-box; }
-    html,body{ height:100%; }
-    body{
-      margin:0;
-      font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
-      color: var(--text);
-      background:
-        radial-gradient(1200px 800px at 15% 10%, rgba(46,102,255,.10), transparent 60%),
-        radial-gradient(1200px 800px at 85% 20%, rgba(214,64,64,.10), transparent 60%),
-        radial-gradient(1200px 800px at 50% 90%, rgba(103,243,164,.06), transparent 60%),
-        linear-gradient(180deg, var(--bg0), var(--bg1));
-      padding: 18px 14px 28px;
-    }
-
-    .wrap{ max-width: 1080px; margin: 0 auto; }
-    .shell{
-      background: rgba(255,255,255,.04);
-      border: 1px solid rgba(255,255,255,.10);
-      border-radius: var(--radius);
-      box-shadow: var(--shadow);
-      overflow: hidden;
-    }
-
-    .top{
-      padding: 18px 18px 14px;
-      border-bottom: 1px solid rgba(255,255,255,.08);
-      background: linear-gradient(180deg, rgba(255,255,255,.035), rgba(255,255,255,.02));
-    }
-
-    .title{
-      margin: 0;
-      letter-spacing: .08em;
-      font-weight: 900;
-      font-size: clamp(26px, 4.2vw, 44px);
-      text-transform: uppercase;
-      line-height: 1.05;
-    }
-    .title .r{ color: var(--red); }
-    .title .w{ color: var(--white); }
-    .title .b{ color: var(--blue); }
-
-    .metaRow{
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap: 12px;
-      margin-top: 10px;
-      flex-wrap: wrap;
-    }
-
-    .pill{
-      display:inline-flex;
-      align-items:center;
-      gap:10px;
-      padding: 10px 12px;
-      border-radius: 999px;
-      border: 1px solid rgba(255,255,255,.12);
-      background: rgba(0,0,0,.20);
-      color: var(--muted);
-      letter-spacing:.12em;
-      text-transform: uppercase;
-      font-size: 12px;
-      font-weight: 850;
-      user-select:none;
-    }
-    .dot{
-      width: 10px; height: 10px;
-      border-radius: 50%;
-      background: var(--green);
-      box-shadow: 0 0 0 3px rgba(103,243,164,.10);
-    }
-
-    .tapMode{
-      display:inline-flex;
-      align-items:center;
-      gap: 10px;
-      padding: 10px 12px;
-      border-radius: 999px;
-      border: 1px solid rgba(255,255,255,.10);
-      background: rgba(0,0,0,.16);
-      color: rgba(238,242,247,.78);
-      letter-spacing:.10em;
-      text-transform: uppercase;
-      font-size: 12px;
-      font-weight: 850;
-    }
-    .tapMode b{ color: var(--text); }
-
-    .grid{
-      display:grid;
-      grid-template-columns: 1fr;
-      gap: 14px;
-      padding: 16px 16px 18px;
-    }
-
-    /* Score card on top, then two compact stat cards */
-    .card{
-      background: var(--card);
-      border: 1px solid var(--stroke);
-      border-radius: 18px;
-      padding: 14px;
-    }
-
-    .card h2{
-      margin: 0 0 10px;
-      font-size: 13px;
-      letter-spacing: .14em;
-      text-transform: uppercase;
-      color: var(--muted);
-      font-weight: 900;
-    }
-
-    .scoreBox{
-      min-height: 130px;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      background: rgba(0,0,0,.18);
-      border: 1px solid rgba(255,255,255,.10);
-      border-radius: 18px;
-      padding: 18px;
-      position: relative;
-      overflow:hidden;
-    }
-
-    .scoreNum{
-      font-size: clamp(54px, 7vw, 96px);
-      font-weight: 950;
-      letter-spacing: .02em;
-      line-height: 1;
-    }
-
-    .statusLine{
-      margin-top: 10px;
-      color: var(--muted);
-      font-size: 13px;
-      line-height: 1.35;
-    }
-
-    .twoCols{
-      display:grid;
-      grid-template-columns: 1fr;
-      gap: 14px;
-    }
-    @media (min-width: 860px){
-      .twoCols{
-        grid-template-columns: 1fr 1fr;
-      }
-    }
-
-    .statRow{
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap: 10px;
-      padding: 10px 12px;
-      border-radius: 16px;
-      background: rgba(0,0,0,.18);
-      border: 1px solid rgba(255,255,255,.10);
-    }
-
-    .statLabel{
-      display:flex;
-      flex-direction: column;
-      gap: 2px;
-      text-transform: uppercase;
-      letter-spacing: .12em;
-      font-size: 12px;
-      color: rgba(238,242,247,.62);
-      font-weight: 900;
-    }
-    .statLabel span:last-child{
-      letter-spacing: normal;
-      text-transform: none;
-      font-weight: 700;
-      font-size: 12px;
-      color: rgba(238,242,247,.45);
-    }
-
-    .pair{
-      display:flex;
-      align-items:center;
-      gap: 12px;
-      font-weight: 900;
-    }
-
-    .dirPill{
-      width: 36px;
-      height: 36px;
-      border-radius: 12px;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      border: 1px solid rgba(255,255,255,.12);
-      background: rgba(255,255,255,.06);
-      color: rgba(238,242,247,.78);
-      font-weight: 950;
-      letter-spacing:.08em;
-      text-transform: uppercase;
-    }
-
-    .clicks{
-      font-size: 28px;
-      font-weight: 950;
-      letter-spacing:.01em;
-      min-width: 86px;
-      text-align:right;
-    }
-
-    .shotsMini{
-      display:flex;
-      align-items:center;
-      gap: 10px;
-      padding: 10px 12px;
-      border-radius: 16px;
-      background: rgba(0,0,0,.18);
-      border: 1px solid rgba(255,255,255,.10);
-      margin-top: 10px;
-      justify-content:space-between;
-    }
-    .shotsMini .n{
-      font-size: 26px;
-      font-weight: 950;
-      letter-spacing:.02em;
-    }
-
-    .actionsCard{
-      padding: 14px;
-    }
-
-    .actionsGrid{
-      display:grid;
-      grid-template-columns: 1fr;
-      gap: 10px;
-    }
-    @media (min-width: 860px){
-      .actionsGrid{
-        grid-template-columns: 1fr 1fr;
-      }
-    }
-
-    .btn{
-      width:100%;
-      appearance:none;
-      border: 1px solid var(--btnStroke);
-      background: var(--btn);
-      color: var(--text);
-      padding: 12px 14px;
-      border-radius: 14px;
-      font-size: 15px;
-      font-weight: 800;
-      cursor: pointer;
-      text-align:center;
-      text-decoration:none;
-      user-select:none;
-      -webkit-tap-highlight-color: transparent;
-    }
-    .btn:hover{ background: var(--btnHover); }
-    .btn:active{ transform: translateY(1px); }
-
-    .btnPrimary{
-      border-color: rgba(103,243,164,.35);
-      background: rgba(103,243,164,.10);
-    }
-    .btnPrimary:hover{ background: rgba(103,243,164,.14); }
-
-    .btnDisabled{
-      opacity: .45;
-      pointer-events:none;
-    }
-
-    details{
-      margin-top: 12px;
-      background: var(--card2);
-      border: 1px solid rgba(255,255,255,.10);
-      border-radius: 16px;
-      padding: 10px 12px;
-    }
-    summary{
-      cursor:pointer;
-      font-weight: 900;
-      color: var(--muted);
-      letter-spacing: .10em;
-      text-transform: uppercase;
-      font-size: 12px;
-      outline:none;
-    }
-    pre{
-      margin: 10px 0 0;
-      white-space: pre-wrap;
-      word-break: break-word;
-      color: rgba(238,242,247,.82);
-      font-size: 12px;
-      line-height: 1.35;
-    }
-
-    .foot{
-      padding: 10px 16px 14px;
-      color: rgba(238,242,247,.30);
-      text-align:center;
-      letter-spacing: .22em;
-      font-weight: 900;
-      text-transform: uppercase;
-      font-size: 12px;
-    }
-  </style>
+  <link rel="stylesheet" href="./sec.css?v=20260202b" />
 </head>
 
 <body>
-  <div class="wrap">
-    <div class="shell">
+  <main class="page">
+    <section class="shell">
 
-      <div class="top">
-        <h1 class="title">
-          <span class="r">Shooter</span> <span class="w">Experience</span> <span class="b">Card</span>
-        </h1>
-
-        <div class="metaRow">
-          <div class="pill" aria-label="setup locked">
-            <span class="dot" aria-hidden="true"></span>
-            Setup locked
+      <!-- HEADER -->
+      <header class="hdr">
+        <div class="hdrTitle">
+          <div class="brand">
+            <span class="r">SHOOTER</span>
+            <span class="w">EXPERIENCE</span>
+            <span class="b">CARD</span>
           </div>
 
-          <div class="tapMode" aria-label="tap mode">
-            Tap: <b>Bull</b>
-          </div>
-        </div>
-
-        <div class="statusLine" id="secStatus">
-          Distance + MOA are locked upstream (Target Setup) and not shown here.
-        </div>
-      </div>
-
-      <div class="grid">
-
-        <!-- SCORE -->
-        <div class="card">
-          <h2>Shooter’s Score</h2>
-          <div class="scoreBox" role="img" aria-label="shooter score">
-            <div class="scoreNum" id="secScore">—</div>
-          </div>
-        </div>
-
-        <!-- STATS -->
-        <div class="twoCols">
-
-          <!-- Elevation + Shots (combined like you asked) -->
-          <div class="card">
-            <h2>Elevation</h2>
-
-            <div class="statRow">
-              <div class="statLabel">
-                <span>Direction</span>
-                <span>Backend authority</span>
-              </div>
-
-              <div class="pair">
-                <div class="dirPill" id="secElevDir">—</div>
-                <div class="clicks" id="secElevClicks">0.00</div>
-              </div>
+          <div class="pillRow">
+            <div class="pill">
+              <span class="pillLabel">Session:</span>
+              <span class="pillValue" id="secSession">—</span>
             </div>
-
-            <div class="shotsMini" aria-label="shots">
-              <div class="statLabel">
-                <span>Shots</span>
-                <span>Count</span>
-              </div>
-              <div class="n" id="secShots">0</div>
+            <div class="pill">
+              <span class="pillLabel">Shots:</span>
+              <span class="pillValue" id="secShots">0</span>
             </div>
           </div>
+        </div>
+      </header>
 
-          <!-- Windage -->
-          <div class="card">
-            <h2>Windage</h2>
+      <!-- BODY GRID -->
+      <section class="grid">
 
-            <div class="statRow">
-              <div class="statLabel">
-                <span>Direction</span>
-                <span>Backend authority</span>
-              </div>
+        <!-- LEFT: SCORING + ADJUSTMENTS + HISTORY -->
+        <section class="leftCol">
 
-              <div class="pair">
-                <div class="dirPill" id="secWindDir">—</div>
-                <div class="clicks" id="secWindClicks">0.00</div>
-              </div>
+          <!-- SCORING -->
+          <article class="card">
+            <div class="cardHead">
+              <div class="cardKicker">SCORING</div>
             </div>
 
-            <div class="statusLine" style="margin-top:10px;">
-              Tip: apply clicks, then shoot a fresh 3–5 and re-score.
+            <div class="scoreWrap">
+              <div class="scoreLabel">SHOOTER’S SCORE</div>
+              <div class="scoreBox">
+                <div class="scoreValue" id="secScore">—</div>
+              </div>
             </div>
-          </div>
+          </article>
 
-        </div>
+          <!-- ADJUSTMENTS -->
+          <article class="card">
+            <div class="cardHead">
+              <div class="cardKicker">ADJUSTMENTS</div>
+            </div>
 
-        <!-- ACTIONS -->
-        <div class="card actionsCard">
-          <h2>Actions</h2>
+            <div class="adjustTitle">Target clicks</div>
 
-          <div class="actionsGrid">
-            <button id="downloadBtn" class="btn btnPrimary btnDisabled" aria-disabled="true">
-              Download SEC PNG
-            </button>
+            <div class="adjustGrid">
+              <!-- WINDAGE -->
+              <div class="adjustItem">
+                <div class="adjustMini">WINDAGE</div>
 
-            <button id="scoreAnotherBtn" class="btn">
-              Score another
-            </button>
+                <div class="adjustRow">
+                  <div class="adjustNum" id="secWindClicks">0.00</div>
 
-            <button id="backToTargetBtn" class="btn">
-              Back to target
-            </button>
+                  <div class="dirStack">
+                    <div class="dirPill" id="secWindDir">—</div>
+                  </div>
+                </div>
+              </div>
 
-            <button id="vendorBtn" class="btn btnDisabled" aria-disabled="true">
-              Buy more targets like this
-            </button>
+              <!-- ELEVATION -->
+              <div class="adjustItem">
+                <div class="adjustMini">ELEVATION</div>
 
-            <button id="surveyBtn" class="btn btnDisabled" aria-disabled="true">
-              Survey
-            </button>
-          </div>
+                <div class="adjustRow">
+                  <div class="adjustNum" id="secElevClicks">0.00</div>
 
-          <details>
-            <summary>Diagnostics</summary>
-            <pre id="secDiag">(none)</pre>
-          </details>
-        </div>
+                  <div class="dirStack">
+                    <div class="dirPill" id="secElevDir">—</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </article>
 
-      </div>
+          <!-- HISTORY -->
+          <article class="card">
+            <div class="cardHead">
+              <div class="cardKicker">HISTORY</div>
+            </div>
 
-      <div class="foot">SCZN3</div>
-    </div>
-  </div>
+            <div class="historyGrid">
+              <div class="histItem">
+                <div class="histMini">PREV 1</div>
+                <div class="histVal" id="prev1">—</div>
+              </div>
+              <div class="histItem">
+                <div class="histMini">PREV 2</div>
+                <div class="histVal" id="prev2">—</div>
+              </div>
+              <div class="histItem">
+                <div class="histMini">PREV 3</div>
+                <div class="histVal" id="prev3">—</div>
+              </div>
+            </div>
+          </article>
 
-  <script src="./sec.js?v=20260202a"></script>
+        </section>
+
+        <!-- RIGHT: ACTIONS -->
+        <aside class="rightCol">
+          <article class="card actionsCard">
+            <div class="cardHead">
+              <div class="cardKicker">ACTIONS</div>
+            </div>
+
+            <div class="btnCol">
+              <button id="downloadBtn" class="btn btnPrimary btnDisabled" aria-disabled="true">
+                Download SEC
+              </button>
+
+              <button id="vendorBtn" class="btn btnDisabled" aria-disabled="true">
+                Buy more targets
+              </button>
+
+              <button id="surveyBtn" class="btn btnDisabled" aria-disabled="true">
+                Survey
+              </button>
+
+              <button id="backToTargetBtn" class="btn">
+                Back to target
+              </button>
+            </div>
+
+            <div class="tip">
+              Tip (iPad): if download doesn’t start, you can also press-and-hold the image on the download page and save it.
+            </div>
+
+            <details class="diag">
+              <summary>Diagnostics</summary>
+              <pre id="secDiag">(none)</pre>
+            </details>
+          </article>
+        </aside>
+
+      </section>
+
+      <footer class="foot">SCZN3</footer>
+    </section>
+  </main>
+
+  <script src="./sec.js?v=20260202b"></script>
 </body>
 </html>
