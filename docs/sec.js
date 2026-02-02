@@ -1,16 +1,25 @@
 /* ============================================================
    docs/sec.js  (FULL REPLACEMENT)
-   Shooter Experience Card
-   - Reads payload from localStorage key: "SCZN3_SEC_PAYLOAD_V1"
-   - Reads history from localStorage key: "SCZN3_SEC_HISTORY_V1"
-   - Populates UI + enables buttons when data is present
+   - Reads SEC payload from multiple possible keys (cache-proof)
+   - Writes diagnostics showing EXACTLY which key was found
 ============================================================ */
 
 (() => {
   const $ = (id) => document.getElementById(id);
 
-  const SEC_KEY  = "SCZN3_SEC_PAYLOAD_V1";
-  const HIST_KEY = "SCZN3_SEC_HISTORY_V1";
+  // ✅ Accept BOTH (and a couple common variants) so we can't lose it
+  const SEC_KEYS = [
+    "SCZN3_SEC_PAYLOAD_V1",
+    "SCZN3_SEC_PAYLOAD",
+    "SCZN3_SEC_PAYLOAD_V0",
+    "SCZN3_SEC_PAYLOAD_v1",
+    "sczn3_sec_payload_v1"
+  ];
+
+  const HIST_KEYS = [
+    "SCZN3_SEC_HISTORY_V1",
+    "SCZN3_SEC_HISTORY"
+  ];
 
   // ---- DOM
   const elSession    = $("secSession");
@@ -37,14 +46,10 @@
   // ---- Helpers
   const round2 = (n) => {
     const x = Number(n);
-    if (!Number.isFinite(x)) return "0.00";
-    return x.toFixed(2);
+    return Number.isFinite(x) ? x.toFixed(2) : "0.00";
   };
 
-  function setText(el, v) {
-    if (!el) return;
-    el.textContent = v;
-  }
+  function setText(el, v) { if (el) el.textContent = v; }
 
   function disableBtn(btn) {
     if (!btn) return;
@@ -63,83 +68,72 @@
     if (typeof onClick === "function") btn.onclick = onClick;
   }
 
-  function safeJsonParse(s, fallback) {
-    try { return JSON.parse(s); } catch { return fallback; }
-  }
+  function safeParse(s) { try { return JSON.parse(s); } catch { return null; } }
 
   function setDiag(obj) {
     if (!elDiag) return;
     elDiag.textContent = JSON.stringify(obj, null, 2);
   }
 
-  function loadPayload() {
-    const raw = localStorage.getItem(SEC_KEY);
-    if (!raw) return null;
-    return safeJsonParse(raw, null);
-  }
-
-  function loadHistory() {
-    const raw = localStorage.getItem(HIST_KEY);
-    const arr = safeJsonParse(raw, []);
-    return Array.isArray(arr) ? arr : [];
-  }
-
-  function renderHistory() {
-    const h = loadHistory();
-
-    const v1 = h[0] ? formatHist(h[0]) : "—";
-    const v2 = h[1] ? formatHist(h[1]) : "—";
-    const v3 = h[2] ? formatHist(h[2]) : "—";
-
-    setText(elPrev1, v1);
-    setText(elPrev2, v2);
-    setText(elPrev3, v3);
-  }
-
-  function formatHist(entry) {
-    // entry expected like:
-    // { t, score, shots, wind:"LEFT 1.25", elev:"UP 0.50" }
-    const shots = Number.isFinite(Number(entry?.shots)) ? Number(entry.shots) : null;
-    const wind = String(entry?.wind || "").trim();
-    const elev = String(entry?.elev || "").trim();
-
-    const parts = [];
-    if (shots !== null) parts.push(`${shots} shots`);
-    if (wind) parts.push(wind);
-    if (elev) parts.push(elev);
-
-    return parts.length ? parts.join(" • ") : "—";
+  function findFirstLocalStorageKey(keys) {
+    for (const k of keys) {
+      const raw = localStorage.getItem(k);
+      if (raw) return { key: k, raw };
+    }
+    return { key: null, raw: null };
   }
 
   function normalizeDir(d) {
     const s = String(d || "—").toUpperCase();
-    if (s === "LEFT" || s === "RIGHT" || s === "NONE") return s;
-    if (s === "UP" || s === "DOWN") return s;
+    if (["LEFT","RIGHT","NONE","UP","DOWN"].includes(s)) return s;
     return "—";
   }
 
-  // ---- Wire Back button (always)
+  function loadHistory() {
+    const found = findFirstLocalStorageKey(HIST_KEYS);
+    if (!found.raw) return [];
+    const arr = safeParse(found.raw);
+    return Array.isArray(arr) ? arr : [];
+  }
+
+  function formatHist(entry) {
+    const shots = Number(entry?.shots);
+    const wind = String(entry?.wind || "").trim();
+    const elev = String(entry?.elev || "").trim();
+    const parts = [];
+    if (Number.isFinite(shots)) parts.push(`${shots} shots`);
+    if (wind) parts.push(wind);
+    if (elev) parts.push(elev);
+    return parts.length ? parts.join(" • ") : "—";
+  }
+
+  function renderHistory() {
+    const h = loadHistory();
+    setText(elPrev1, h[0] ? formatHist(h[0]) : "—");
+    setText(elPrev2, h[1] ? formatHist(h[1]) : "—");
+    setText(elPrev3, h[2] ? formatHist(h[2]) : "—");
+  }
+
+  // ---- Back button always works
   if (backBtn) {
     backBtn.addEventListener("click", () => {
-      // back to Target flow
       window.location.href = "./target.html?fresh=1";
     });
   }
 
   // ---- Boot
   (function init() {
-    // default disabled
     disableBtn(downloadBtn);
     disableBtn(vendorBtn);
     disableBtn(surveyBtn);
 
-    // always render history blocks (even if empty)
     renderHistory();
 
-    const payload = loadPayload();
+    const found = findFirstLocalStorageKey(SEC_KEYS);
+    const payload = found.raw ? safeParse(found.raw) : null;
 
+    // If missing payload, show EXACT truth
     if (!payload) {
-      // No SEC payload => you landed here directly (wrong route)
       setText(elSession, "—");
       setText(elShots, "0");
       setText(elScore, "—");
@@ -150,19 +144,18 @@
 
       setDiag({
         ok: false,
-        reason: "Missing SEC payload in localStorage",
-        key: SEC_KEY
+        reason: "SEC payload not found under any known key",
+        triedKeys: SEC_KEYS,
+        foundKey: found.key,
+        note: "If foundKey is null, the payload was never written OR you're on a cached/old build."
       });
-
       return;
     }
 
-    // Populate
+    // Render payload
     const sessionId = String(payload.sessionId || "—");
-    const shots = Number.isFinite(Number(payload.shots)) ? Number(payload.shots) : 0;
-
+    const shots = Number(payload.shots);
     const scoreNum = Number(payload.score);
-    const scoreText = Number.isFinite(scoreNum) ? String(scoreNum) : "—";
 
     const windDir = normalizeDir(payload?.windage?.dir);
     const elevDir = normalizeDir(payload?.elevation?.dir);
@@ -171,8 +164,8 @@
     const elevClicks = payload?.elevation?.clicks ?? 0;
 
     setText(elSession, sessionId);
-    setText(elShots, String(shots));
-    setText(elScore, scoreText);
+    setText(elShots, Number.isFinite(shots) ? String(shots) : "0");
+    setText(elScore, Number.isFinite(scoreNum) ? String(scoreNum) : "—");
 
     setText(elWindClicks, round2(windClicks));
     setText(elElevClicks, round2(elevClicks));
@@ -180,52 +173,32 @@
     setText(elWindDir, windDir);
     setText(elElevDir, elevDir);
 
-    // Buttons
     const secPngUrl = String(payload.secPngUrl || payload.secUrl || "").trim();
     const vendorUrl = String(payload.vendorUrl || "").trim();
     const surveyUrl = String(payload.surveyUrl || "").trim();
 
-    // Download routes to download.html?img=...
     if (secPngUrl) {
       enableBtn(downloadBtn, () => {
         const from = "./index.html?fresh=1";
         const target = "./target.html?fresh=1";
-        const u = `./download.html?img=${encodeURIComponent(secPngUrl)}&from=${encodeURIComponent(from)}&target=${encodeURIComponent(target)}`;
-        window.location.href = u;
+        window.location.href =
+          `./download.html?img=${encodeURIComponent(secPngUrl)}&from=${encodeURIComponent(from)}&target=${encodeURIComponent(target)}`;
       });
-    } else {
-      disableBtn(downloadBtn);
     }
 
-    // Vendor
-    if (vendorUrl) {
-      enableBtn(vendorBtn, () => {
-        window.location.href = vendorUrl;
-      });
-    } else {
-      disableBtn(vendorBtn);
-    }
+    if (vendorUrl) enableBtn(vendorBtn, () => (window.location.href = vendorUrl));
+    if (surveyUrl) enableBtn(surveyBtn, () => (window.location.href = surveyUrl));
 
-    // Survey
-    if (surveyUrl) {
-      enableBtn(surveyBtn, () => {
-        window.location.href = surveyUrl;
-      });
-    } else {
-      disableBtn(surveyBtn);
-    }
+    renderHistory();
 
-    // Diagnostics
-    setDiag({ ok: true, payloadSummary: {
+    setDiag({
+      ok: true,
+      foundKey: found.key,
       sessionId,
-      shots,
-      score: scoreText,
+      shots: Number.isFinite(shots) ? shots : 0,
       wind: { dir: windDir, clicks: round2(windClicks) },
       elev: { dir: elevDir, clicks: round2(elevClicks) },
       hasDownload: !!secPngUrl
-    }});
-
-    // Refresh history UI after render
-    renderHistory();
+    });
   })();
 })();
