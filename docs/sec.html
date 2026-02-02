@@ -1,28 +1,83 @@
-<!-- SEC ADJUSTMENTS (Elevation + Windage + Shots) -->
-<section class="sec-adjustments">
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <meta name="color-scheme" content="dark" />
+  <meta name="theme-color" content="#06070a" />
+  <title>Tap-n-Score™ — Shooter Experience Card</title>
 
-  <div class="adjustment-row">
-    <div class="adjustment-label">Elevation</div>
-    <div class="adjustment-value">
-      <span class="arrow">↑</span>
-      <span class="number" id="elevationValue">2.25</span>
-      <span class="dir">U</span>
-    </div>
-  </div>
+  <link rel="stylesheet" href="./sec.css?v=SEC-A-1" />
+</head>
 
-  <div class="adjustment-row">
-    <div class="adjustment-label">Windage</div>
-    <div class="adjustment-value">
-      <span class="arrow">→</span>
-      <span class="number" id="windageValue">1.50</span>
-      <span class="dir">R</span>
-    </div>
-  </div>
+<body>
+  <main class="secWrap">
+    <section class="secCard" id="secCard">
 
-  <div class="adjustment-meta">
-    <span class="shots">
-      Shots: <strong id="shotCount">5</strong>
-    </span>
-  </div>
+      <!-- Header -->
+      <header class="secHeader">
+        <div class="secTitle" aria-label="Shooter Experience Card title">
+          <span class="tRed">Shooter</span>
+          <span class="tWhite">Experience</span>
+          <span class="tBlue">Card</span>
+        </div>
+        <div class="secSub">
+          <span class="secSessionLabel">Session</span>
+          <span id="secSessionId" class="secSessionId">SEC-—</span>
+        </div>
+      </header>
 
-</section>
+      <!-- HERO SCORE (centerpiece) -->
+      <section class="scoreHero" aria-label="Shooter score">
+        <div class="scoreLabel">Shooter Score</div>
+        <div id="scoreHero" class="scoreNum">—</div>
+        <div class="scoreRule">
+          <span class="ruleDot"></span>
+          Numerals only are color-coded (0–60 / 61–79 / 80–100)
+        </div>
+      </section>
+
+      <!-- COMPACT INFO STRIP -->
+      <section class="infoStrip" aria-label="Clicks and shots">
+        <div class="miniCard">
+          <div class="miniLabel">Elevation</div>
+          <div class="miniValue">
+            <span class="miniDir" id="elevDir">U</span>
+            <span class="miniNum" id="elevClicks">0.00</span>
+          </div>
+        </div>
+
+        <div class="miniCard">
+          <div class="miniLabel">Windage</div>
+          <div class="miniValue">
+            <span class="miniDir" id="windDir">R</span>
+            <span class="miniNum" id="windClicks">0.00</span>
+          </div>
+        </div>
+
+        <div class="miniCard">
+          <div class="miniLabel">Shots</div>
+          <div class="miniValue">
+            <span class="miniNum" id="shotsCount">0</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- ACTIONS (smaller, same size, same color) -->
+      <section class="secActions" aria-label="Actions">
+        <button id="downloadSecBtn" class="btnAction" type="button">Download SEC</button>
+        <button id="surveyBtn" class="btnAction" type="button">Survey</button>
+      </section>
+
+      <!-- Vendor hook -->
+      <section class="vendorRow" aria-label="Vendor hook">
+        <a id="vendorLink" class="vendorBtn" href="#" rel="noopener">Buy more targets</a>
+      </section>
+
+      <!-- Canvas for download render (hidden) -->
+      <canvas id="secCanvas" width="1080" height="1350" class="secCanvas"></canvas>
+
+    </section>
+  </main>
+</body>
+</html>
