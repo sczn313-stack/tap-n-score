@@ -157,11 +157,24 @@ body{
   gap: 10px;
 }
 
+/* Arrow + letter group */
 .miniDir{
+  display:inline-flex;
+  align-items: center;
+  gap: 6px;
   font-weight: 1000;
-  font-size: 18px;
-  color: rgba(238,242,247,.78);
   letter-spacing: .06em;
+  color: rgba(238,242,247,.78);
+}
+
+.miniArrow{
+  font-size: 18px;
+  line-height: 1;
+}
+
+.miniLetter{
+  font-size: 16px;
+  line-height: 1;
 }
 
 .miniNum{
