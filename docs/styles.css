@@ -1,99 +1,60 @@
 /* ============================================================
-   SEC ADJUSTMENTS (B) — paste into styles.css (FULL REPLACEMENT
-   NOT required). This block ONLY styles the HTML I gave you.
-   Goal:
-   - Smaller Elev/Wind buttons
-   - Shots compact and can sit with them
-   - Clean hierarchy on iPhone
+   SEC ADJUSTMENTS (C) — VISUAL GUIDANCE + CLEANUP
+   Paste into styles.css (no HTML changes required)
+   Goals:
+   - Remove “choose/next” leftovers once past that step
+   - Add a subtle GREEN ARROW + SMILE pointing to the active thumbnail
+   - Keep it calm, not noisy
 ============================================================ */
 
-/* Container that holds Elevation / Windage / Shots */
-.sec-adjustments{
-  display:grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
-  margin-top: 12px;
+/* --- 1) HIDE UPSTREAM PROMPTS AFTER PROGRESS --- */
+/* Anything marked with data-step="pre" disappears once SEC is active */
+body.sec-active [data-step="pre"]{
+  display:none !important;
 }
 
-/* Each small box */
-.adjust-box{
-  background: rgba(255,255,255,0.06);
-  border: 1px solid rgba(255,255,255,0.12);
-  border-radius: 16px;
-  padding: 10px 10px 9px;
-  box-shadow: 0 12px 30px rgba(0,0,0,0.35);
-  min-height: 72px;
-  display:flex;
-  flex-direction: column;
-  justify-content: center;
+/* --- 2) THUMBNAIL CONFIRMATION CALLOUT --- */
+/* Wrapper around the thumbnail */
+.thumbWrap{
+  position: relative;
 }
 
-/* Shots box: compact */
-.adjust-box.compact{
-  grid-column: 1 / -1;           /* spans both columns by default */
-  min-height: 58px;
-  padding: 9px 10px 8px;
-}
-
-/* Label */
-.adjust-label{
-  font-size: 11px;
-  letter-spacing: .14em;
-  text-transform: uppercase;
+/* Green arrow + smile pointing at the active checkmark */
+.thumbWrap.is-active::after{
+  content: "➜ 😊";
+  position: absolute;
+  right: -18px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #67f3a4;                /* friendly green */
+  font-size: 22px;
   font-weight: 900;
-  color: rgba(238,242,247,0.60);
-  margin-bottom: 6px;
+  text-shadow: 0 6px 16px rgba(0,0,0,.35);
+  pointer-events: none;
 }
 
-/* Value row */
-.adjust-value{
-  display:flex;
-  align-items: baseline;
-  justify-content: flex-start;
-  gap: 8px;
-  font-weight: 950;
-  color: rgba(238,242,247,0.92);
+/* Pulse once when it becomes active (guidance, not distraction) */
+@keyframes nudgeOnce{
+  0%{ transform: translateY(-50%) translateX(0); opacity:.0; }
+  30%{ opacity:1; }
+  60%{ transform: translateY(-50%) translateX(6px); }
+  100%{ transform: translateY(-50%) translateX(0); }
+}
+.thumbWrap.is-active::after{
+  animation: nudgeOnce .9s ease-out 1;
 }
 
-/* Big number (clicks) */
-#elevationValue,
-#windageValue{
-  font-size: 22px;
-  line-height: 1;
-  letter-spacing: -0.02em;
+/* --- 3) CHECKMARK EMPHASIS (SUBTLE) --- */
+.thumbWrap.is-active .checkmark{
+  background: rgba(103,243,164,.18);
+  border-color: rgba(103,243,164,.55);
+  box-shadow: 0 10px 28px rgba(103,243,164,.25);
 }
 
-/* Shots number */
-#shotsCount{
-  font-size: 22px;
-  line-height: 1;
-  letter-spacing: -0.02em;
+/* --- 4) MOBILE TIGHTENING --- */
+@media (max-width:420px){
+  .thumbWrap.is-active::after{
+    right: -14px;
+    font-size: 20px;
+  }
 }
-
-/* Arrow + direction letter */
-.arrow{
-  font-size: 18px;
-  line-height: 1;
-  opacity: .95;
-}
-
-.dir{
-  font-size: 12px;
-  font-weight: 950;
-  letter-spacing: .08em;
-  opacity: .78;
-}
-
-/* Make it tighter on small screens */
-@media (max-width: 420px){
-  .sec-adjustments{ gap: 8px; }
-  .adjust-box{ min-height: 68px; padding: 9px 9px 8px; }
-  #elevationValue, #windageValue, #shotsCount{ font-size: 21px; }
-  .arrow{ font-size: 17px; }
-}
-
-/* Optional: if you want Shots on the right only, uncomment this:
-.adjust-box.compact{
-  grid-column: 2 / 3;
-}
-*/
