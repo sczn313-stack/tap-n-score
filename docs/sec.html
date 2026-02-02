@@ -1,89 +1,538 @@
 <!doctype html>
+<!-- ============================================================
+     sec.html (FULL REPLACEMENT) — SEC-RENDER-LOCK-1
+     - Reads SEC payload from localStorage key: SCZN3_SEC_PAYLOAD_V1
+     - Shows: Shooter Score (centerpiece), Elevation/Windage (small), Shots (small)
+     - NO distance / NO MOA / NO POIB
+     - TWO action buttons only (same size)
+============================================================ -->
 <html lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
   <meta name="color-scheme" content="dark" />
   <meta name="theme-color" content="#06070a" />
-  <title>Tap-n-Score™ — Shooter Experience Card</title>
+  <title>Shooter Experience Card</title>
 
-  <link rel="stylesheet" href="./sec.css?v=SEC-A-2" />
+  <style>
+    :root{
+      --bg0:#05060a;
+      --bg1:#0a0c12;
+      --card: rgba(255,255,255,.06);
+      --stroke: rgba(255,255,255,.12);
+      --text:#eef2f7;
+      --muted: rgba(238,242,247,.62);
+      --shadow: 0 20px 60px rgba(0,0,0,.55);
+      --radius: 22px;
+
+      /* score colors (numbers only) */
+      --scoreRed:#ff4d4d;
+      --scoreYellow:#ffd24a;
+      --scoreGreen:#00eb96;
+
+      /* brand (keep subtle; no big RWB line) */
+      --red:#d64040;
+      --white:#eef2f7;
+      --blue:#2f66ff;
+
+      --btn: rgba(255,255,255,.07);
+      --btnHover: rgba(255,255,255,.10);
+      --btnStroke: rgba(255,255,255,.14);
+      --btnPrimary: rgba(103,243,164,.12);
+      --btnPrimaryStroke: rgba(103,243,164,.35);
+    }
+
+    *{ box-sizing:border-box; }
+    html,body{ height:100%; }
+    body{
+      margin:0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+      color: var(--text);
+      background:
+        radial-gradient(1200px 800px at 18% 12%, rgba(46,102,255,.10), transparent 60%),
+        radial-gradient(1200px 800px at 84% 20%, rgba(214,64,64,.10), transparent 60%),
+        radial-gradient(1200px 800px at 50% 90%, rgba(103,243,164,.06), transparent 60%),
+        linear-gradient(180deg, var(--bg0), var(--bg1));
+      padding: 16px 12px 20px;
+    }
+
+    .wrap{ max-width: 980px; margin: 0 auto; }
+    .shell{
+      border: 1px solid rgba(255,255,255,.10);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      background: rgba(255,255,255,.04);
+    }
+
+    .top{
+      padding: 14px 16px 12px;
+      border-bottom: 1px solid rgba(255,255,255,.08);
+      background: linear-gradient(180deg, rgba(255,255,255,.035), rgba(255,255,255,.02));
+    }
+
+    .title{
+      margin:0;
+      font-size: 14px;
+      letter-spacing: .18em;
+      text-transform: uppercase;
+      font-weight: 900;
+      color: var(--muted);
+      display:flex;
+      gap:10px;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+    }
+
+    .session{
+      font-size: 12px;
+      letter-spacing: .12em;
+      color: rgba(238,242,247,.45);
+      font-weight: 850;
+    }
+
+    .grid{
+      display:grid;
+      grid-template-columns: 1fr;
+      gap: 12px;
+      padding: 14px 14px 16px;
+    }
+
+    @media (min-width: 900px){
+      .grid{ grid-template-columns: 1.35fr .65fr; align-items: start; }
+    }
+
+    .card{
+      background: var(--card);
+      border: 1px solid var(--stroke);
+      border-radius: 18px;
+      padding: 14px;
+    }
+
+    /* ===============================
+       SCORE CENTERPIECE
+    =============================== */
+    .scoreCard{
+      display:flex;
+      flex-direction: column;
+      gap: 10px;
+      align-items: stretch;
+    }
+
+    .scoreLabel{
+      font-size: 14px;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+      font-weight: 900;
+      color: var(--muted);
+      display:flex;
+      align-items:center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .scoreBox{
+      border-radius: 18px;
+      border: 1px solid rgba(255,255,255,.12);
+      background: rgba(0,0,0,.22);
+      padding: 16px 14px 18px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      min-height: 180px; /* iPhone friendly */
+    }
+
+    .scoreNum{
+      font-weight: 1000;
+      font-size: clamp(78px, 16vw, 170px);
+      line-height: 1;
+      letter-spacing: -0.04em;
+      color: var(--text);
+      text-shadow: 0 22px 60px rgba(0,0,0,.55);
+    }
+
+    /* ===============================
+       SMALL INFO STRIP
+    =============================== */
+    .mini{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .miniBox{
+      border-radius: 16px;
+      border: 1px solid rgba(255,255,255,.10);
+      background: rgba(0,0,0,.18);
+      padding: 10px 10px;
+      min-height: 66px;
+      display:flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 6px;
+    }
+
+    .miniTitle{
+      font-size: 12px;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      font-weight: 900;
+      color: rgba(238,242,247,.55);
+    }
+
+    .miniValue{
+      font-size: 22px;
+      font-weight: 950;
+      letter-spacing: .02em;
+    }
+
+    /* ===============================
+       CLICK BARS (small)
+    =============================== */
+    .bars{
+      display:flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .bar{
+      border-radius: 16px;
+      border: 1px solid rgba(255,255,255,.10);
+      background: rgba(0,0,0,.18);
+      padding: 10px;
+      display:flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      min-height: 66px;
+    }
+
+    .barLeft{
+      display:flex;
+      flex-direction: column;
+      gap: 4px;
+      min-width: 120px;
+    }
+
+    .barTitle{
+      font-size: 12px;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      font-weight: 900;
+      color: rgba(238,242,247,.58);
+    }
+
+    .barDir{
+      font-size: 14px;
+      font-weight: 950;
+      color: rgba(238,242,247,.78);
+    }
+
+    .barRight{
+      display:flex;
+      align-items: baseline;
+      gap: 10px;
+      justify-content: flex-end;
+      text-align:right;
+      flex: 1;
+    }
+
+    .clickNum{
+      font-size: 34px;
+      font-weight: 1000;
+      letter-spacing: -0.02em;
+    }
+
+    .clickHint{
+      font-size: 12px;
+      font-weight: 900;
+      letter-spacing: .10em;
+      text-transform: uppercase;
+      color: rgba(238,242,247,.45);
+    }
+
+    /* ===============================
+       ACTION BUTTONS (TWO ONLY)
+    =============================== */
+    .actions{
+      display:flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .btn{
+      width:100%;
+      appearance:none;
+      border: 1px solid var(--btnStroke);
+      background: var(--btn);
+      color: var(--text);
+      padding: 12px 14px;
+      border-radius: 14px;
+      font-size: 15px;
+      font-weight: 850;
+      cursor: pointer;
+      text-align:center;
+      text-decoration:none;
+      user-select:none;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .btn:hover{ background: var(--btnHover); }
+    .btn:active{ transform: translateY(1px); }
+
+    .btnPrimary{
+      border-color: var(--btnPrimaryStroke);
+      background: var(--btnPrimary);
+    }
+    .btnPrimary:hover{ background: rgba(103,243,164,.16); }
+
+    .btnDisabled{
+      opacity: .45;
+      pointer-events:none;
+    }
+
+    .tinyLinkRow{
+      margin-top: 10px;
+      display:flex;
+      justify-content:center;
+      gap: 10px;
+      flex-wrap: wrap;
+      color: rgba(238,242,247,.40);
+      font-size: 12px;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      font-weight: 900;
+    }
+    .tinyLinkRow a{
+      color: rgba(238,242,247,.55);
+      text-decoration: none;
+      border-bottom: 1px dashed rgba(238,242,247,.22);
+      padding-bottom: 2px;
+    }
+
+    .foot{
+      padding: 10px 16px 14px;
+      color: rgba(238,242,247,.26);
+      text-align:center;
+      letter-spacing: .22em;
+      font-weight: 900;
+      text-transform: uppercase;
+      font-size: 12px;
+    }
+
+    /* small screens: tighten everything */
+    @media (max-width: 420px){
+      body{ padding: 12px 10px 16px; }
+      .grid{ padding: 12px; gap: 10px; }
+      .card{ padding: 12px; }
+      .scoreBox{ min-height: 160px; }
+      .clickNum{ font-size: 30px; }
+    }
+  </style>
 </head>
 
 <body>
-  <main class="secWrap">
-    <section class="secCard" id="secCard">
-
-      <!-- Header -->
-      <header class="secHeader">
-        <div class="secTitle" aria-label="Shooter Experience Card title">
-          <span class="tRed">Shooter</span>
-          <span class="tWhite">Experience</span>
-          <span class="tBlue">Card</span>
+  <div class="wrap">
+    <div class="shell">
+      <div class="top">
+        <div class="title">
+          <span>Shooter Experience Card</span>
+          <span class="session" id="sessionLine">SESSION: —</span>
         </div>
-        <div class="secSub">
-          <span class="secSessionLabel">Session</span>
-          <span id="secSessionId" class="secSessionId">SEC-—</span>
-        </div>
-      </header>
+      </div>
 
-      <!-- HERO SCORE (centerpiece) -->
-      <section class="scoreHero" aria-label="Shooter score">
-        <div class="scoreLabel">Shooter Score</div>
-        <div id="scoreHero" class="scoreNum">—</div>
-        <div class="scoreRule">
-          <span class="ruleDot"></span>
-          Numerals only are color-coded (0–60 / 61–79 / 80–100)
-        </div>
-      </section>
+      <div class="grid">
+        <!-- LEFT: SCORE + SMALL INFO -->
+        <div class="card scoreCard" id="secCard">
+          <div class="scoreLabel">
+            <span>Shooter Score</span>
+            <!-- (intentionally no RWB headline) -->
+          </div>
 
-      <!-- COMPACT INFO STRIP -->
-      <section class="infoStrip" aria-label="Clicks and shots">
-        <div class="miniCard">
-          <div class="miniLabel">Elevation</div>
-          <div class="miniValue">
-            <span class="miniDir" id="elevDir">
-              <span class="miniArrow" id="elevArrow">↑</span>
-              <span class="miniLetter" id="elevLetter">U</span>
-            </span>
-            <span class="miniNum" id="elevClicks">0.00</span>
+          <div class="scoreBox">
+            <div class="scoreNum" id="scoreNum">—</div>
+          </div>
+
+          <div class="mini">
+            <div class="miniBox">
+              <div class="miniTitle">Shots</div>
+              <div class="miniValue" id="shotsVal">—</div>
+            </div>
+            <div class="miniBox">
+              <div class="miniTitle">Status</div>
+              <div class="miniValue" id="statusVal">Ready</div>
+            </div>
           </div>
         </div>
 
-        <div class="miniCard">
-          <div class="miniLabel">Windage</div>
-          <div class="miniValue">
-            <span class="miniDir" id="windDir">
-              <span class="miniArrow" id="windArrow">→</span>
-              <span class="miniLetter" id="windLetter">R</span>
-            </span>
-            <span class="miniNum" id="windClicks">0.00</span>
+        <!-- RIGHT: BARS + ACTIONS -->
+        <div class="card">
+          <div class="bars">
+            <div class="bar" id="barElevation">
+              <div class="barLeft">
+                <div class="barTitle">Elevation</div>
+                <div class="barDir" id="elevDir">D</div>
+              </div>
+              <div class="barRight">
+                <div class="clickNum" id="elevClicks">0.00</div>
+                <div class="clickHint">clicks</div>
+              </div>
+            </div>
+
+            <div class="bar" id="barWindage">
+              <div class="barLeft">
+                <div class="barTitle">Windage</div>
+                <div class="barDir" id="windDir">R</div>
+              </div>
+              <div class="barRight">
+                <div class="clickNum" id="windClicks">0.00</div>
+                <div class="clickHint">clicks</div>
+              </div>
+            </div>
+          </div>
+
+          <div style="height:12px;"></div>
+
+          <div class="actions">
+            <!-- TWO BUTTONS ONLY -->
+            <a id="vendorBtn" class="btn btnPrimary btnDisabled" href="#" rel="noopener">Buy more targets</a>
+            <a id="surveyBtn" class="btn btnPrimary btnDisabled" href="#" rel="noopener">Survey</a>
+          </div>
+
+          <div class="tinyLinkRow">
+            <a id="scoreAnotherLink" href="./index.html">Score another</a>
           </div>
         </div>
+      </div>
 
-        <div class="miniCard">
-          <div class="miniLabel">Shots</div>
-          <div class="miniValue">
-            <span class="miniNum" id="shotsCount">0</span>
-          </div>
-        </div>
-      </section>
+      <div class="foot">SCZN3</div>
+    </div>
+  </div>
 
-      <!-- ACTIONS (smaller, same size, same color) -->
-      <section class="secActions" aria-label="Actions">
-        <button id="downloadSecBtn" class="btnAction" type="button">Download SEC</button>
-        <button id="surveyBtn" class="btnAction" type="button">Survey</button>
-      </section>
+  <script>
+    (() => {
+      const SEC_KEY = "SCZN3_SEC_PAYLOAD_V1";
+      const $ = (id) => document.getElementById(id);
 
-      <!-- Vendor hook -->
-      <section class="vendorRow" aria-label="Vendor hook">
-        <a id="vendorLink" class="vendorBtn" href="#" rel="noopener">Buy more targets</a>
-      </section>
+      const sessionLine = $("sessionLine");
+      const scoreNum = $("scoreNum");
+      const shotsVal = $("shotsVal");
+      const statusVal = $("statusVal");
 
-      <!-- Canvas for download render (hidden) -->
-      <canvas id="secCanvas" width="1080" height="1350" class="secCanvas"></canvas>
+      const elevDir = $("elevDir");
+      const elevClicks = $("elevClicks");
+      const windDir = $("windDir");
+      const windClicks = $("windClicks");
 
-    </section>
-  </main>
+      const vendorBtn = $("vendorBtn");
+      const surveyBtn = $("surveyBtn");
+
+      const scoreAnotherLink = $("scoreAnotherLink");
+
+      function safeNum(n, fallback=0){
+        const x = Number(n);
+        return Number.isFinite(x) ? x : fallback;
+      }
+
+      function fmt2(n){
+        return safeNum(n, 0).toFixed(2);
+      }
+
+      function scoreColor(score){
+        // 0-60 red, 61-79 yellow, 80-100 green
+        if (!Number.isFinite(score)) return "var(--text)";
+        if (score <= 60) return "var(--scoreRed)";
+        if (score <= 79) return "var(--scoreYellow)";
+        return "var(--scoreGreen)";
+      }
+
+      function shortDir(d){
+        // Only capitalize first letter via single-letter code requested: R/L/U/D
+        const s = String(d || "—").toUpperCase();
+        if (s.startsWith("R")) return "R";
+        if (s.startsWith("L")) return "L";
+        if (s.startsWith("U")) return "U";
+        if (s.startsWith("D")) return "D";
+        return "—";
+      }
+
+      function loadPayload(){
+        try{
+          const raw = localStorage.getItem(SEC_KEY);
+          if (!raw) return null;
+          return JSON.parse(raw);
+        }catch{
+          return null;
+        }
+      }
+
+      const p = loadPayload();
+
+      if (!p){
+        sessionLine.textContent = "SESSION: —";
+        scoreNum.textContent = "—";
+        scoreNum.style.color = "var(--text)";
+        shotsVal.textContent = "—";
+        statusVal.textContent = "No SEC payload";
+        elevDir.textContent = "—";
+        elevClicks.textContent = "0.00";
+        windDir.textContent = "—";
+        windClicks.textContent = "0.00";
+        return;
+      }
+
+      // Session
+      sessionLine.textContent = "SESSION: " + String(p.sessionId || "—");
+
+      // Score
+      const s = safeNum(p.score, NaN);
+      const sInt = Number.isFinite(s) ? Math.round(s) : NaN;
+      scoreNum.textContent = Number.isFinite(sInt) ? String(sInt) : "—";
+      scoreNum.style.color = scoreColor(sInt);
+
+      // Shots
+      const shots = safeNum(p.shots, NaN);
+      shotsVal.textContent = Number.isFinite(shots) ? String(Math.round(shots)) : "—";
+      statusVal.textContent = "Ready";
+
+      // Windage / Elevation (BACKEND AUTHORITY)
+      // IMPORTANT: We display ONLY what backend decided. No local flips here.
+      elevDir.textContent = shortDir(p.elevation && p.elevation.dir);
+      elevClicks.textContent = fmt2(p.elevation && p.elevation.clicks);
+
+      windDir.textContent = shortDir(p.windage && p.windage.dir);
+      windClicks.textContent = fmt2(p.windage && p.windage.clicks);
+
+      // Buttons (two only)
+      const vUrl = String(p.vendorUrl || "").trim();
+      if (vUrl){
+        vendorBtn.href = vUrl;
+        vendorBtn.classList.remove("btnDisabled");
+        vendorBtn.target = "_blank";
+      }
+
+      const sUrl = String(p.surveyUrl || "").trim();
+      if (sUrl){
+        surveyBtn.href = sUrl;
+        surveyBtn.classList.remove("btnDisabled");
+        surveyBtn.target = "_blank";
+      }
+
+      // Optional return path (if you ever store it later)
+      // scoreAnotherLink.href stays ./index.html for now.
+
+      // Recenter after rotation (iPhone/iPad)
+      const recenter = () => {
+        document.documentElement.scrollTop = 0;
+        document.body.scrollTop = 0;
+        $("secCard")?.scrollIntoView({ behavior: "instant", block: "start" });
+      };
+      window.addEventListener("orientationchange", () => setTimeout(recenter, 120));
+      window.addEventListener("resize", () => setTimeout(recenter, 120));
+      if (window.visualViewport){
+        window.visualViewport.addEventListener("resize", () => setTimeout(recenter, 120));
+      }
+    })();
+  </script>
 </body>
 </html>
