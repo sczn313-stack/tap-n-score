@@ -1,118 +1,69 @@
 /* ============================================================
-   docs/index.js (FULL REPLACEMENT) — Tap-n-Score™ → SEC Route
-   Goals:
-   - iOS Safari friendly file load (store File immediately)
-   - Tap flow: Bull first, then shots
-   - Backend is authority for directions + numbers
-   - Write SEC payload to localStorage, then route to sec.html
-   - Resilient: works even if your HTML IDs differ (tries many)
+   docs/index.js  (FULL REPLACEMENT)
+   Tap-n-Score™ → Backend /api/calc → SEC localStorage → sec.html
+
+   Requires these IDs in index.html:
+   - photoInput        (file input)
+   - targetImg         (img)
+   - targetWrap        (container around img)
+   - dotsLayer         (overlay div positioned over img)
+   - instructionLine   (text line)
+   - tapCount          (text/label)
+   - clearTapsBtn      (button)
+   - showResultsBtn    (button)
+   - backBtn (optional) (button or link)
+   - distanceYds (optional) input
+   - clickMoa   (optional) input
 ============================================================ */
 
 (() => {
-  // ---------- helpers ----------
-  const $id = (id) => document.getElementById(id);
-  const firstEl = (...candidates) => {
-    for (const c of candidates.flat()) {
-      const el = typeof c === "string" ? $id(c) : c;
-      if (el) return el;
-    }
-    return null;
-  };
-  const clamp01 = (v) => Math.max(0, Math.min(1, v));
-  const isNum = (v) => Number.isFinite(Number(v));
-  const toNum = (v, fallback = 0) => (isNum(v) ? Number(v) : fallback);
+  const $ = (id) => document.getElementById(id);
 
-  // ---------- CONFIG ----------
-  // If you have a backend on Render, set this to the full origin:
-  // e.g. "https://tap-n-score.onrender.com"
-  // If you proxy backend on same origin, leave as "".
-  const BACKEND_ORIGIN = ""; // <-- EDIT IF NEEDED
-  const API_CALC_PATH = "/api/calc"; // <-- match your backend route
-  const API_ANALYZE_PATH = "/api/analyze"; // optional (if you use it)
+  // ---- Backend
+  const API_BASE = "https://sczn3-backend-new.onrender.com";
+  const API_CALC = `${API_BASE}/api/calc`;
 
-  // ---------- storage keys ----------
+  // ---- SEC localStorage key (MUST MATCH sec.js)
   const SEC_KEY = "SCZN3_SEC_PAYLOAD_V1";
-  const DIST_KEY = "SCZN3_DISTANCE_YDS_V1";
-  const MOA_KEY = "SCZN3_MOA_PER_CLICK_V1";
-  const VENDOR_KEY = "SCZN3_VENDOR_ID_V1";
-  const TARGET_KEY = "SCZN3_TARGET_ID_V1";
+  const HIST_KEY = "SCZN3_SEC_HISTORY_V1";
 
-  // ---------- DOM (try multiple IDs so we don’t break) ----------
-  const elFile =
-    firstEl(
-      "photoInput",
-      "fileInput",
-      "imageInput",
-      "uploadInput",
-      document.querySelector('input[type="file"]')
-    );
+  // ---- Assumption: the target is a 23x23 inch grid unless overridden
+  // You can override by adding ?size=23 in URL, or change default below.
+  const params = new URLSearchParams(location.search);
+  const TARGET_SIZE_IN = Number(params.get("size")) || 23;
 
-  const elImg = firstEl("targetImg", "img", "photo", "previewImg");
-  const elWrap = firstEl("targetWrap", "imgWrap", "imageWrap", "wrap");
-  const elDots = firstEl("dotsLayer", "tapLayer", "overlayLayer");
+  // ---- DOM (only bind if it exists; avoids hard crashes)
+  const elFile = $("photoInput");
+  const elImg = $("targetImg");
+  const elWrap = $("targetWrap");
+  const elDots = $("dotsLayer");
+  const elInstruction = $("instructionLine");
+  const elTapCount = $("tapCount");
+  const elClear = $("clearTapsBtn");
+  const elShow = $("showResultsBtn");
+  const elDist = $("distanceYds"); // optional
+  const elClick = $("clickMoa");   // optional
 
-  const elTapCount = firstEl("tapCount", "shotCount", "count");
-  const elInstruction = firstEl("instructionLine", "instruction", "hint");
-  const btnClear = firstEl("clearTapsBtn", "clearBtn", "btnClear");
-  const btnShow = firstEl("showResultsBtn", "seeResultsBtn", "btnShowResults");
-  const btnSetup = firstEl("setupBtn", "btnSetup");
-  const btnChoose =
-    firstEl("choosePhotoBtn", "chooseBtn", "btnChoosePhoto") ||
-    null; // optional
-
-  const elSetupPill =
-    firstEl("setupPill", "setupLockedPill", "lockedPill") || null;
-  const elTapModePill =
-    firstEl("tapModePill", "tapMode", "modePill") || null;
-
-  // ---------- state ----------
+  // ---- State
   let selectedFile = null;
   let objectUrl = null;
 
-  // taps are normalized to the displayed image box (0..1)
-  let bull = null; // {nx, ny}
-  let shots = []; // [{nx, ny}, ...]
+  // Bull + shots in *inches* (screen-space: x right, y down)
+  let bull = null;     // {x,y}
+  let shots = [];      // [{x,y}, ...]
 
-  // ---------- UI text ----------
-  const UI = {
-    setInstruction(txt) {
-      if (elInstruction) elInstruction.textContent = txt;
-    },
-    setCount() {
-      if (elTapCount) elTapCount.textContent = String(shots.length);
-    },
-    setTapMode(label) {
-      if (elTapModePill) elTapModePill.textContent = label;
-    },
-    setSetupLocked(locked) {
-      if (!elSetupPill) return;
-      // if your pill is text-only:
-      elSetupPill.textContent = locked ? "SETUP LOCKED" : "SETUP";
-      // if you style via classes:
-      elSetupPill.classList.toggle("isLocked", !!locked);
-    },
-    enable(el, on) {
-      if (!el) return;
-      el.classList.toggle("btnDisabled", !on);
-      el.setAttribute("aria-disabled", on ? "false" : "true");
-      el.disabled = !on;
-    }
-  };
+  // ---- Helpers
+  function setText(el, txt) {
+    if (!el) return;
+    el.textContent = txt;
+  }
 
-  // ---------- create a dot element ----------
-  function makeDot(kind) {
-    const d = document.createElement("div");
-    d.className = kind === "bull" ? "tapDot tapDotBull" : "tapDot tapDotShot";
-    // fallback inline styles if css classes missing
-    d.style.position = "absolute";
-    d.style.width = "14px";
-    d.style.height = "14px";
-    d.style.borderRadius = "999px";
-    d.style.transform = "translate(-50%, -50%)";
-    d.style.boxShadow = "0 8px 20px rgba(0,0,0,.35)";
-    d.style.border = "2px solid rgba(255,255,255,.85)";
-    d.style.background = kind === "bull" ? "rgba(47,102,255,.95)" : "rgba(214,64,64,.95)";
-    return d;
+  function setInstruction(txt) {
+    setText(elInstruction, txt);
+  }
+
+  function setTapCount() {
+    setText(elTapCount, `${shots.length}`);
   }
 
   function clearDots() {
@@ -120,245 +71,263 @@
     elDots.innerHTML = "";
   }
 
-  function renderDots() {
+  function addDot(xPx, yPx, cls) {
     if (!elDots) return;
+    const d = document.createElement("div");
+    d.className = `dot ${cls || ""}`.trim();
+    d.style.left = `${xPx}px`;
+    d.style.top = `${yPx}px`;
+    elDots.appendChild(d);
+  }
+
+  function syncOverlayToImage() {
+    if (!elImg || !elDots) return;
+    const r = elImg.getBoundingClientRect();
+    // dotsLayer is positioned absolute inside targetWrap in most of your layouts
+    // This keeps the overlay the same size as the displayed image.
+    elDots.style.width = `${r.width}px`;
+    elDots.style.height = `${r.height}px`;
+  }
+
+  function imgRect() {
+    if (!elImg) return null;
+    const r = elImg.getBoundingClientRect();
+    if (r.width <= 2 || r.height <= 2) return null;
+    return r;
+  }
+
+  function pointPxToInches(xPx, yPx, rect) {
+    // Map displayed-pixel coords -> inches over known target size
+    const xIn = (xPx / rect.width) * TARGET_SIZE_IN;
+    const yIn = (yPx / rect.height) * TARGET_SIZE_IN;
+    return { x: xIn, y: yIn };
+  }
+
+  function pointInchesToPx(p, rect) {
+    const xPx = (p.x / TARGET_SIZE_IN) * rect.width;
+    const yPx = (p.y / TARGET_SIZE_IN) * rect.height;
+    return { xPx, yPx };
+  }
+
+  function enable(el, yes) {
+    if (!el) return;
+    if (yes) {
+      el.classList.remove("btnDisabled");
+      el.setAttribute("aria-disabled", "false");
+      el.disabled = false;
+    } else {
+      el.classList.add("btnDisabled");
+      el.setAttribute("aria-disabled", "true");
+      el.disabled = true;
+    }
+  }
+
+  function readNum(el, fallback) {
+    const v = Number(el?.value);
+    return Number.isFinite(v) ? v : fallback;
+  }
+
+  function redrawAllDots() {
     clearDots();
+    const r = imgRect();
+    if (!r) return;
 
-    // Render bull
     if (bull) {
-      const dot = makeDot("bull");
-      dot.style.left = `${bull.nx * 100}%`;
-      dot.style.top = `${bull.ny * 100}%`;
-      elDots.appendChild(dot);
+      const { xPx, yPx } = pointInchesToPx(bull, r);
+      addDot(xPx, yPx, "dotBull");
     }
-
-    // Render shots
     for (const s of shots) {
-      const dot = makeDot("shot");
-      dot.style.left = `${s.nx * 100}%`;
-      dot.style.top = `${s.ny * 100}%`;
-      elDots.appendChild(dot);
+      const { xPx, yPx } = pointInchesToPx(s, r);
+      addDot(xPx, yPx, "dotShot");
     }
-
-    UI.setCount();
-    UI.enable(btnShow, !!bull && shots.length > 0);
   }
 
   function resetAll() {
     bull = null;
     shots = [];
-    renderDots();
-    UI.setTapMode("TAP: BULL");
-    UI.setInstruction("Tap the bull first (blue). Then tap shots (red).");
+    redrawAllDots();
+    setTapCount();
+    setInstruction("Tap the bull first (blue). Then tap shots (red).");
+    enable(elShow, false);
   }
 
-  // ---------- get normalized tap coords ----------
-  function getTapNormFromEvent(ev) {
-    const rect = (elDots || elWrap || elImg).getBoundingClientRect();
-    const clientX = ev.touches?.[0]?.clientX ?? ev.clientX;
-    const clientY = ev.touches?.[0]?.clientY ?? ev.clientY;
-    const nx = clamp01((clientX - rect.left) / rect.width);
-    const ny = clamp01((clientY - rect.top) / rect.height);
-    return { nx, ny };
-  }
+  // ---- SEC route + payload (backend authority)
+  function routeToSEC_FromBackendResult(calcResult) {
+    // calcResult is expected from /api/calc
+    // {
+    //   ok:true,
+    //   directions:{windage:"LEFT|RIGHT|NONE", elevation:"UP|DOWN|NONE"},
+    //   clicks:{windage:number, elevation:number},
+    //   ...
+    // }
 
-  // ---------- SEC ROUTE + PAYLOAD ----------
-  function routeToSEC_FromBackendResult(data) {
-    // Build the SEC payload from BACKEND AUTHORITY ONLY
+    const windDir = calcResult?.directions?.windage ?? "—";
+    const elevDir = calcResult?.directions?.elevation ?? "—";
+
+    const windClicks = calcResult?.clicks?.windage ?? 0;
+    const elevClicks = calcResult?.clicks?.elevation ?? 0;
+
+    // If your backend later returns score, we’ll show it. Otherwise keep "—".
+    const scoreMaybe = Number(calcResult?.score);
+    const score = Number.isFinite(scoreMaybe) ? scoreMaybe : null;
+
     const secPayload = {
-      sessionId: data.sessionId || `SEC-${Date.now().toString(36).toUpperCase()}`,
-      score: Number.isFinite(Number(data.score)) ? Number(data.score) : null,
-      shots: Number.isFinite(Number(data.shots)) ? Number(data.shots) : 0,
+      sessionId: calcResult?.sessionId || `SEC-${Date.now().toString(36).toUpperCase()}`,
+      score,               // number or null (sec.html will show —)
+      shots: shots.length, // local shot count is reliable
 
-      windage: {
-        dir: data.windage?.dir || data.clicks?.windDir || data.windDir || "—",
-        clicks: data.windage?.clicks ?? data.clicks?.windage ?? data.windageClicks ?? 0
-      },
+      windage: { dir: windDir, clicks: windClicks },
+      elevation: { dir: elevDir, clicks: elevClicks },
 
-      elevation: {
-        dir: data.elevation?.dir || data.clicks?.elevDir || data.elevDir || "—",
-        clicks: data.elevation?.clicks ?? data.clicks?.elevation ?? data.elevationClicks ?? 0
-      },
+      secPngUrl: calcResult?.secPngUrl || calcResult?.secUrl || "",
 
-      secPngUrl: data.secPngUrl || data.secUrl || "",
-      vendorUrl: data.vendorUrl || "",
-      surveyUrl: data.surveyUrl || ""
+      vendorUrl: calcResult?.vendorUrl || "",
+      surveyUrl: calcResult?.surveyUrl || ""
     };
 
+    // Save a small history for PREV 1–3 display on SEC page
     try {
-      localStorage.setItem(SEC_KEY, JSON.stringify(secPayload));
-    } catch (e) {
-      console.error("SEC localStorage write failed:", e);
-      alert("Could not save SEC data (storage blocked). Try disabling private browsing.");
-      return;
-    }
+      const prev = JSON.parse(localStorage.getItem(HIST_KEY) || "[]");
+      const entry = {
+        t: Date.now(),
+        score: secPayload.score,
+        shots: secPayload.shots,
+        wind: `${secPayload.windage.dir} ${Number(secPayload.windage.clicks).toFixed(2)}`,
+        elev: `${secPayload.elevation.dir} ${Number(secPayload.elevation.clicks).toFixed(2)}`
+      };
+      const next = [entry, ...prev].slice(0, 3);
+      localStorage.setItem(HIST_KEY, JSON.stringify(next));
+    } catch (_) {}
 
-    console.log("✅ SEC payload written:", secPayload);
+    // Persist for sec.html
+    localStorage.setItem(SEC_KEY, JSON.stringify(secPayload));
+
+    // Route
     window.location.href = "./sec.html";
   }
 
-  // ---------- backend call ----------
-  async function callBackendForResults() {
-    // Pull upstream (set on target.html)
-    const distanceYds = toNum(localStorage.getItem(DIST_KEY), 100);
-    const moaPerClick = toNum(localStorage.getItem(MOA_KEY), 0.25);
-    const vendorId = (localStorage.getItem(VENDOR_KEY) || "").trim();
-    const targetId = (localStorage.getItem(TARGET_KEY) || "").trim();
+  // ---- Backend call
+  async function calcViaBackend() {
+    const distanceYds = readNum(elDist, 100);
+    const clickMoa = readNum(elClick, 0.25);
 
-    // Minimal payload that most backends can adapt to
-    const payload = {
-      meta: {
-        distanceYds,
-        moaPerClick,
-        vendorId,
-        targetId
-      },
-      taps: {
-        bull,   // {nx, ny}
-        shots   // [{nx, ny}, ...]
-      }
+    const body = {
+      bull,
+      shots,
+      distanceYds,
+      clickMoa
     };
 
-    const url = `${BACKEND_ORIGIN}${API_CALC_PATH}`;
-
-    const res = await fetch(url, {
+    const res = await fetch(API_CALC, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload)
+      body: JSON.stringify(body)
     });
 
     const data = await res.json().catch(() => ({}));
-
-    if (!res.ok) {
-      const msg = data?.error || data?.message || `Backend error (${res.status})`;
+    if (!res.ok || !data?.ok) {
+      const msg = data?.error || `Backend error (${res.status})`;
       throw new Error(msg);
     }
-
     return data;
   }
 
-  // ---------- event wiring ----------
-  function bindTapLayer() {
-    const layer = elDots || elWrap || elImg;
-    if (!layer) return;
+  // ---- Tap handling
+  function onTap(e) {
+    const r = imgRect();
+    if (!r) return;
 
-    // Make sure overlay can receive taps
-    layer.style.touchAction = "none";
+    // Tap position inside displayed image
+    const xPx = e.clientX - r.left;
+    const yPx = e.clientY - r.top;
 
-    const onTap = (ev) => {
-      ev.preventDefault?.();
+    // Only accept taps inside the image bounds
+    if (xPx < 0 || yPx < 0 || xPx > r.width || yPx > r.height) return;
 
-      if (!elImg || !elImg.src) {
-        UI.setInstruction("Choose a photo first.");
-        return;
-      }
+    const pIn = pointPxToInches(xPx, yPx, r);
 
-      const p = getTapNormFromEvent(ev);
+    if (!bull) {
+      bull = pIn;
+      addDot(xPx, yPx, "dotBull");
+      setInstruction("Bull set. Now tap shots (red).");
+      return;
+    }
 
-      // bull first
-      if (!bull) {
-        bull = p;
-        UI.setTapMode("TAP: SHOTS");
-        UI.setInstruction("Now tap your shots (red). Then press Show Results.");
-        renderDots();
-        return;
-      }
+    shots.push(pIn);
+    addDot(xPx, yPx, "dotShot");
+    setTapCount();
 
-      // shots
-      shots.push(p);
-      renderDots();
-    };
-
-    // pointer events work best across iOS/desktop
-    layer.addEventListener("pointerdown", onTap);
+    // Enable results after 1+ shots
+    enable(elShow, shots.length >= 1);
   }
 
-  function bindFileInput() {
-    if (!elFile) return;
+  // ---- File load (iOS safe)
+  function loadFile(file) {
+    if (!file) return;
 
-    const openPicker = () => elFile.click?.();
-    if (btnChoose) btnChoose.addEventListener("click", openPicker);
+    selectedFile = file;
 
-    elFile.addEventListener("change", () => {
-      const file = elFile.files?.[0];
-      if (!file) return;
+    if (objectUrl) URL.revokeObjectURL(objectUrl);
+    objectUrl = URL.createObjectURL(file);
 
-      selectedFile = file;
+    if (elImg) {
+      elImg.onload = () => {
+        syncOverlayToImage();
+        redrawAllDots();
+      };
+      elImg.src = objectUrl;
+    }
 
-      // iOS Safari: createObjectURL is fastest + reliable
-      if (objectUrl) URL.revokeObjectURL(objectUrl);
-      objectUrl = URL.createObjectURL(file);
+    resetAll();
+  }
 
-      if (elImg) {
-        elImg.onload = () => {
-          // ensure dots layer covers image (if your HTML uses absolute overlay)
-          renderDots();
-        };
-        elImg.src = objectUrl;
-      }
-
-      resetAll();
-      UI.setSetupLocked(true);
+  // ---- Wiring
+  if (elFile) {
+    elFile.addEventListener("change", (e) => {
+      const f = e.target.files && e.target.files[0];
+      loadFile(f);
     });
   }
 
-  function bindButtons() {
-    if (btnClear) {
-      btnClear.addEventListener("click", () => {
-        resetAll();
-      });
-    }
+  // Tap on overlay if available, otherwise on the image
+  if (elDots) elDots.addEventListener("click", onTap);
+  else if (elImg) elImg.addEventListener("click", onTap);
 
-    if (btnSetup) {
-      btnSetup.addEventListener("click", () => {
-        // if you want setup to re-open upstream setup page:
-        // window.location.href = "./target.html";
-        // Otherwise, just reset taps:
-        resetAll();
-      });
-    }
-
-    if (btnShow) {
-      btnShow.addEventListener("click", async () => {
-        if (!bull || shots.length === 0) {
-          UI.setInstruction("Tap bull first, then at least 1 shot.");
-          return;
-        }
-
-        UI.enable(btnShow, false);
-        UI.setInstruction("Computing results…");
-
-        try {
-          const data = await callBackendForResults();
-
-          // ✅ WRITE SEC PAYLOAD + ROUTE (THIS FIXES “Missing SEC payload”)
-          routeToSEC_FromBackendResult(data);
-          return;
-        } catch (e) {
-          console.error(e);
-          UI.setInstruction(`Error: ${String(e.message || e)}`);
-          UI.enable(btnShow, true);
-        }
-      });
-    }
-
-    // default button states
-    UI.enable(btnShow, false);
+  if (elClear) {
+    elClear.addEventListener("click", () => {
+      resetAll();
+    });
   }
 
-  // ---------- init ----------
-  function init() {
-    // Instruction defaults (distance/moa are upstream and not shown here)
-    UI.setInstruction("Tap the bull first (blue). Then tap shots (red).");
-    UI.setTapMode("TAP: BULL");
-    UI.setCount();
-    UI.setSetupLocked(false);
+  if (elShow) {
+    enable(elShow, false);
+    elShow.addEventListener("click", async () => {
+      if (!bull || shots.length < 1) return;
 
-    bindFileInput();
-    bindTapLayer();
-    bindButtons();
-    renderDots();
+      try {
+        enable(elShow, false);
+        setInstruction("Calculating…");
+
+        const calcResult = await calcViaBackend();
+
+        // ✅ This is the exact moment results are finalized:
+        // write SEC payload -> route to sec.html
+        routeToSEC_FromBackendResult(calcResult);
+      } catch (err) {
+        console.error(err);
+        setInstruction(`Error: ${String(err?.message || err)}`);
+        enable(elShow, true);
+      }
+    });
   }
 
-  init();
+  // Keep overlay in sync on resize/orientation
+  window.addEventListener("resize", () => {
+    syncOverlayToImage();
+    redrawAllDots();
+  });
+
+  // Boot
+  setInstruction("Tap the bull first (blue). Then tap shots (red).");
+  setTapCount();
 })();
