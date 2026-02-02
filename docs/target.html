@@ -1,1 +1,375 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="color-scheme" content="dark" />
+  <meta name="theme-color" content="#06070a" />
+  <title>Tap-n-Score™ — Target Setup</title>
 
+  <style>
+    :root{
+      --bg0:#05060a;
+      --bg1:#0a0c12;
+      --card: rgba(255,255,255,.06);
+      --card2: rgba(255,255,255,.045);
+      --stroke: rgba(255,255,255,.12);
+      --text:#eef2f7;
+      --muted: rgba(238,242,247,.65);
+      --muted2: rgba(238,242,247,.45);
+      --shadow: 0 20px 60px rgba(0,0,0,.55);
+      --radius: 22px;
+
+      --btn: rgba(255,255,255,.07);
+      --btnHover: rgba(255,255,255,.10);
+      --btnStroke: rgba(255,255,255,.14);
+      --green: #67f3a4;
+
+      --red:#d64040;
+      --white:#eef2f7;
+      --blue:#2f66ff;
+    }
+
+    *{ box-sizing:border-box; }
+    html,body{ height:100%; }
+    body{
+      margin:0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+      color: var(--text);
+      background:
+        radial-gradient(1200px 800px at 20% 10%, rgba(46,102,255,.10), transparent 60%),
+        radial-gradient(1200px 800px at 80% 20%, rgba(214,64,64,.10), transparent 60%),
+        radial-gradient(1200px 800px at 50% 90%, rgba(103,243,164,.06), transparent 60%),
+        linear-gradient(180deg, var(--bg0), var(--bg1));
+      padding: 18px 14px 24px;
+    }
+
+    .wrap{ max-width: 980px; margin: 0 auto; }
+    .shell{
+      background: rgba(255,255,255,.04);
+      border: 1px solid rgba(255,255,255,.10);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .top{
+      padding: 18px 18px 14px;
+      border-bottom: 1px solid rgba(255,255,255,.08);
+      background: linear-gradient(180deg, rgba(255,255,255,.035), rgba(255,255,255,.02));
+    }
+
+    .title{
+      margin: 0;
+      letter-spacing: .08em;
+      font-weight: 900;
+      font-size: clamp(22px, 4vw, 36px);
+      text-transform: uppercase;
+      line-height: 1.05;
+    }
+    .subtitle{
+      margin: 10px 0 0;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.35;
+    }
+
+    .grid{
+      display:grid;
+      grid-template-columns: 1fr;
+      gap: 14px;
+      padding: 16px 16px 18px;
+    }
+    @media (min-width: 900px){
+      .grid{ grid-template-columns: 1.1fr .9fr; align-items:start; }
+    }
+
+    .card{
+      background: var(--card);
+      border: 1px solid var(--stroke);
+      border-radius: 18px;
+      padding: 14px;
+    }
+
+    .card h2{
+      margin: 0 0 10px;
+      font-size: 13px;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      color: var(--muted);
+      font-weight: 850;
+    }
+
+    .form{
+      display:grid;
+      gap: 10px;
+    }
+
+    .row{
+      display:grid;
+      grid-template-columns: 1fr;
+      gap: 10px;
+    }
+    @media (min-width: 520px){
+      .row{ grid-template-columns: 1fr 1fr; }
+    }
+
+    label{
+      display:block;
+      font-size: 12px;
+      letter-spacing: .10em;
+      text-transform: uppercase;
+      color: var(--muted);
+      font-weight: 800;
+      margin: 0 0 8px;
+    }
+
+    input, select{
+      width:100%;
+      appearance:none;
+      border: 1px solid rgba(255,255,255,.14);
+      background: rgba(0,0,0,.25);
+      color: var(--text);
+      padding: 12px 12px;
+      border-radius: 14px;
+      font-size: 16px;
+      font-weight: 750;
+      outline:none;
+    }
+    input:focus, select:focus{
+      border-color: rgba(103,243,164,.35);
+      box-shadow: 0 0 0 3px rgba(103,243,164,.10);
+    }
+
+    .hint{
+      margin-top: 8px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.35;
+    }
+
+    .pill{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding: 8px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,.12);
+      background: rgba(255,255,255,.05);
+      color: rgba(238,242,247,.78);
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+    .dot{
+      width:8px; height:8px; border-radius:99px;
+      background: var(--green);
+      box-shadow: 0 0 14px rgba(103,243,164,.35);
+    }
+
+    .actions{
+      display:flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    .btn{
+      width:100%;
+      appearance:none;
+      border: 1px solid var(--btnStroke);
+      background: var(--btn);
+      color: var(--text);
+      padding: 12px 14px;
+      border-radius: 14px;
+      font-size: 15px;
+      font-weight: 800;
+      cursor: pointer;
+      text-align:center;
+      text-decoration:none;
+      user-select:none;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .btn:hover{ background: var(--btnHover); }
+    .btn:active{ transform: translateY(1px); }
+
+    .btnPrimary{
+      border-color: rgba(103,243,164,.35);
+      background: rgba(103,243,164,.10);
+    }
+    .btnPrimary:hover{ background: rgba(103,243,164,.14); }
+
+    .btnGhost{
+      border-color: rgba(255,255,255,.12);
+      background: rgba(255,255,255,.04);
+    }
+
+    .foot{
+      padding: 10px 16px 14px;
+      color: rgba(238,242,247,.30);
+      text-align:center;
+      letter-spacing: .22em;
+      font-weight: 900;
+      text-transform: uppercase;
+      font-size: 12px;
+    }
+
+    details{
+      background: var(--card2);
+      border: 1px solid rgba(255,255,255,.10);
+      border-radius: 16px;
+      padding: 10px 12px;
+      margin-top: 12px;
+    }
+    summary{
+      cursor:pointer;
+      font-weight: 850;
+      color: var(--muted);
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      font-size: 12px;
+      outline:none;
+    }
+    pre{
+      margin: 10px 0 0;
+      white-space: pre-wrap;
+      word-break: break-word;
+      color: rgba(238,242,247,.82);
+      font-size: 12px;
+      line-height: 1.35;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+    <div class="shell">
+      <div class="top">
+        <h1 class="title">Target Setup</h1>
+        <p class="subtitle">
+          Set <b>Distance</b> and <b>MOA per click</b> here — then scoring uses these values.
+        </p>
+      </div>
+
+      <div class="grid">
+        <!-- LEFT: SETTINGS -->
+        <div class="card">
+          <h2>Inputs</h2>
+
+          <div class="form">
+            <div class="row">
+              <div>
+                <label for="distanceYds">Distance (yards)</label>
+                <input id="distanceYds" inputmode="numeric" pattern="[0-9]*" placeholder="e.g., 100" />
+              </div>
+
+              <div>
+                <label for="moaPerClick">MOA per click</label>
+                <select id="moaPerClick">
+                  <option value="0.25">0.25 MOA (¼)</option>
+                  <option value="0.5">0.50 MOA (½)</option>
+                  <option value="0.125">0.125 MOA (⅛)</option>
+                  <option value="0.1">0.10 MRAD (if you store MRAD elsewhere)</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="hint">
+              These values are saved on your device and should be read by the scoring page.
+            </div>
+
+            <div class="actions">
+              <button id="saveBtn" class="btn btnPrimary">Save settings</button>
+              <a id="toSecBtn" class="btn" href="./sec.html">Continue to scoring</a>
+              <a class="btn btnGhost" href="./index.html">Back</a>
+            </div>
+
+            <details>
+              <summary>Diagnostics</summary>
+              <pre id="diagOut">(none)</pre>
+            </details>
+          </div>
+        </div>
+
+        <!-- RIGHT: STATUS -->
+        <div class="card">
+          <h2>Status</h2>
+
+          <div class="pill" id="statusPill">
+            <span class="dot"></span>
+            <span id="statusText">Not saved yet</span>
+          </div>
+
+          <div class="hint" style="margin-top:12px;">
+            When you tap <b>Save settings</b>, we store:
+            <br/>• <code>sczn3.distanceYds</code>
+            <br/>• <code>sczn3.moaPerClick</code>
+          </div>
+        </div>
+      </div>
+
+      <div class="foot">SCZN3</div>
+    </div>
+  </div>
+
+  <script>
+    (() => {
+      const $ = (id) => document.getElementById(id);
+
+      const distanceYds = $("distanceYds");
+      const moaPerClick = $("moaPerClick");
+      const saveBtn = $("saveBtn");
+      const diagOut = $("diagOut");
+      const statusText = $("statusText");
+
+      const KEY_DIST = "sczn3.distanceYds";
+      const KEY_MOA  = "sczn3.moaPerClick";
+
+      function clampNum(n, fallback){
+        const x = Number(n);
+        return Number.isFinite(x) ? x : fallback;
+      }
+
+      function loadSaved(){
+        const d = localStorage.getItem(KEY_DIST);
+        const m = localStorage.getItem(KEY_MOA);
+
+        if (d !== null) distanceYds.value = String(clampNum(d, ""));
+        if (m !== null) moaPerClick.value = String(m);
+
+        if (d !== null && m !== null) {
+          statusText.textContent = "Loaded saved settings";
+          diagOut.textContent = JSON.stringify({ loaded:true, distanceYds:d, moaPerClick:m }, null, 2);
+        } else {
+          diagOut.textContent = JSON.stringify({ loaded:false, note:"No saved values yet" }, null, 2);
+        }
+      }
+
+      function save(){
+        const dRaw = (distanceYds.value || "").trim();
+        const dNum = clampNum(dRaw, NaN);
+
+        if (!Number.isFinite(dNum) || dNum <= 0) {
+          statusText.textContent = "Enter a valid distance";
+          diagOut.textContent = JSON.stringify({ ok:false, error:"invalid distance", distanceYds:dRaw }, null, 2);
+          distanceYds.focus();
+          return;
+        }
+
+        const m = String(moaPerClick.value || "0.25");
+
+        localStorage.setItem(KEY_DIST, String(dNum));
+        localStorage.setItem(KEY_MOA, m);
+
+        statusText.textContent = "Saved ✓";
+        diagOut.textContent = JSON.stringify({ ok:true, saved:{ distanceYds:String(dNum), moaPerClick:m } }, null, 2);
+      }
+
+      saveBtn.addEventListener("click", save);
+
+      loadSaved();
+    })();
+  </script>
+</body>
+</html>
