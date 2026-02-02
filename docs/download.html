@@ -62,7 +62,7 @@
     .title{
       margin: 0;
       letter-spacing: .08em;
-      font-weight: 900;
+      font-weight: 850;
       font-size: clamp(26px, 4vw, 42px);
       text-transform: uppercase;
       line-height: 1.05;
@@ -83,9 +83,11 @@
       gap: 14px;
       padding: 16px 16px 18px;
     }
-
     @media (min-width: 900px){
-      .grid{ grid-template-columns: 1.35fr .65fr; align-items: start; }
+      .grid{
+        grid-template-columns: 1.35fr .65fr;
+        align-items: start;
+      }
     }
 
     .card{
@@ -101,7 +103,7 @@
       letter-spacing: .12em;
       text-transform: uppercase;
       color: var(--muted);
-      font-weight: 900;
+      font-weight: 800;
     }
 
     .previewBox{
@@ -148,7 +150,7 @@
       padding: 12px 14px;
       border-radius: 14px;
       font-size: 15px;
-      font-weight: 850;
+      font-weight: 750;
       cursor: pointer;
       text-align:center;
       text-decoration:none;
@@ -184,7 +186,7 @@
     }
     summary{
       cursor:pointer;
-      font-weight: 850;
+      font-weight: 750;
       color: var(--muted);
       letter-spacing: .06em;
       text-transform: uppercase;
@@ -205,7 +207,7 @@
       color: rgba(238,242,247,.30);
       text-align:center;
       letter-spacing: .22em;
-      font-weight: 900;
+      font-weight: 800;
       text-transform: uppercase;
       font-size: 12px;
     }
@@ -223,13 +225,15 @@
       </div>
 
       <div class="grid">
+        <!-- PREVIEW -->
         <div class="card">
           <h2>Preview</h2>
           <div class="previewBox" id="previewBox">
             <div class="empty" id="emptyState">
               <strong>No SEC image loaded.</strong><br/>
               This page expects a link like:<br/>
-              <code>?img=https://.../sec.png</code>
+              <code>?img=https://.../sec.png</code><br/>
+              or a <code>data:image/png...</code> URL.
             </div>
             <img id="secImg" alt="Shooter Experience Card preview" />
           </div>
@@ -239,6 +243,7 @@
           </div>
         </div>
 
+        <!-- ACTIONS -->
         <div class="card">
           <h2>Download</h2>
 
@@ -285,7 +290,16 @@
       if (from) scoreAnotherLink.href = from;
       if (target) backToTargetLink.href = target;
 
+      function setDiag(obj) {
+        diagOut.textContent = JSON.stringify(obj, null, 2);
+      }
+
+      function isDataUrl(url) {
+        return typeof url === "string" && url.startsWith("data:image/");
+      }
+
       function guessFileName(url) {
+        if (isDataUrl(url)) return "SEC.png";
         try {
           const u = new URL(url);
           const p = u.pathname.split("/").filter(Boolean).pop() || "SEC.png";
@@ -296,9 +310,22 @@
       }
 
       async function downloadAsFile(url) {
+        // If it's a data URL, we can download directly without fetch/CORS.
+        if (isDataUrl(url)) {
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = guessFileName(url);
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+          return;
+        }
+
+        // Otherwise fetch as blob to force download
         const res = await fetch(url, { mode: "cors" });
         if (!res.ok) throw new Error("Fetch failed: " + res.status);
         const blob = await res.blob();
+
         const a = document.createElement("a");
         const obj = URL.createObjectURL(blob);
         a.href = obj;
@@ -309,13 +336,9 @@
         setTimeout(() => URL.revokeObjectURL(obj), 1500);
       }
 
-      function setDiag(obj) {
-        diagOut.textContent = JSON.stringify(obj, null, 2);
-      }
-
       if (!imgUrl) {
         subLine.textContent = "Download your SEC PNG.";
-        hintLine.textContent = "No image was provided. Open this page with ?img=YOUR_PNG_URL";
+        hintLine.textContent = "No image provided. Open with ?img=YOUR_PNG_URL";
         setDiag({
           ok:false,
           reason:"missing img param",
@@ -332,7 +355,7 @@
       secImg.onload = () => {
         downloadBtn.classList.remove("btnDisabled");
         hintLine.textContent = "Tap Download SEC PNG. (iPad tip: press-and-hold image to Save to Photos.)";
-        setDiag({ ok:true, img: imgUrl, note:"Preview loaded" });
+        setDiag({ ok:true, imgProvided:true, imgType: isDataUrl(imgUrl) ? "dataUrl" : "remoteUrl" });
       };
 
       secImg.onerror = () => {
