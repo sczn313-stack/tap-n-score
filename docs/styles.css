@@ -1,47 +1,49 @@
 /* ============================================================
-   SEC ADJUSTMENTS (C) — VISUAL GUIDANCE + CLEANUP
-   Paste into styles.css (no HTML changes required)
-   Goals:
-   - Remove “choose/next” leftovers once past that step
-   - Add a subtle GREEN ARROW + SMILE pointing to the active thumbnail
-   - Keep it calm, not noisy
+   SEC ADJUSTMENTS (C) — LEFT-SIDE VISUAL GUIDANCE
+   Paste into styles.css (replaces prior C block)
 ============================================================ */
 
 /* --- 1) HIDE UPSTREAM PROMPTS AFTER PROGRESS --- */
-/* Anything marked with data-step="pre" disappears once SEC is active */
 body.sec-active [data-step="pre"]{
   display:none !important;
 }
 
-/* --- 2) THUMBNAIL CONFIRMATION CALLOUT --- */
-/* Wrapper around the thumbnail */
+/* --- 2) THUMBNAIL CONFIRMATION CALLOUT (LEFT) --- */
 .thumbWrap{
   position: relative;
 }
 
-/* Green arrow + smile pointing at the active checkmark */
-.thumbWrap.is-active::after{
-  content: "➜ 😊";
+/* Green arrow + smile pointing from the LEFT */
+.thumbWrap.is-active::before{
+  content: "😊 ⇦";
   position: absolute;
-  right: -18px;
+  left: -22px;
   top: 50%;
   transform: translateY(-50%);
-  color: #67f3a4;                /* friendly green */
+  color: #67f3a4;                 /* friendly green */
   font-size: 22px;
   font-weight: 900;
   text-shadow: 0 6px 16px rgba(0,0,0,.35);
   pointer-events: none;
 }
 
-/* Pulse once when it becomes active (guidance, not distraction) */
-@keyframes nudgeOnce{
-  0%{ transform: translateY(-50%) translateX(0); opacity:.0; }
-  30%{ opacity:1; }
-  60%{ transform: translateY(-50%) translateX(6px); }
-  100%{ transform: translateY(-50%) translateX(0); }
+/* Gentle one-time nudge */
+@keyframes nudgeOnceLeft{
+  0%{
+    transform: translateY(-50%) translateX(0);
+    opacity: 0;
+  }
+  30%{ opacity: 1; }
+  60%{
+    transform: translateY(-50%) translateX(-6px);
+  }
+  100%{
+    transform: translateY(-50%) translateX(0);
+  }
 }
-.thumbWrap.is-active::after{
-  animation: nudgeOnce .9s ease-out 1;
+
+.thumbWrap.is-active::before{
+  animation: nudgeOnceLeft .9s ease-out 1;
 }
 
 /* --- 3) CHECKMARK EMPHASIS (SUBTLE) --- */
@@ -53,8 +55,8 @@ body.sec-active [data-step="pre"]{
 
 /* --- 4) MOBILE TIGHTENING --- */
 @media (max-width:420px){
-  .thumbWrap.is-active::after{
-    right: -14px;
+  .thumbWrap.is-active::before{
+    left: -16px;
     font-size: 20px;
   }
 }
