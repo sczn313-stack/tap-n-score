@@ -1,165 +1,175 @@
 /* ============================================================
    docs/sec.js (FULL REPLACEMENT) — SEC page renderer
-   - Reads SEC payload from localStorage
-   - Populates SEC numbers
-   - Enables Download button when secPngUrl exists
-   - Adds diagnostics so we can see what's missing
+   Matches IDs in docs/sec.html exactly.
+   Reads SEC payload from localStorage and populates:
+   - Session / Shots / Score
+   - Windage + Elevation (dir + clicks)
+   - Enables buttons (Download / Vendor / Survey)
+   - Diagnostics in <pre id="secDiag">
 ============================================================ */
 
 (() => {
-  // ---- Storage key (writer should use this)
   const SEC_KEY = "SCZN3_SEC_PAYLOAD_V1";
+  const FALLBACK_KEYS = ["SCZN3_SEC_PAYLOAD", "SCZN3_SEC", "SEC_PAYLOAD"];
 
   const $ = (id) => document.getElementById(id);
 
-  // ---- Try to find elements by multiple possible IDs (safe + tolerant)
-  const elSession =
-    $("secSession") || $("sessionVal") || $("sessionValue") || $("sessionText");
-  const elShots =
-    $("secShots") || $("shotsVal") || $("shotsValue") || $("shotsText");
-  const elScore =
-    $("secScore") || $("scoreVal") || $("scoreValue") || $("scoreText");
+  // ---- Elements (must match sec.html)
+  const elSession = $("secSession");
+  const elShots = $("secShots");
+  const elScore = $("secScore");
 
-  const elWindDir =
-    $("windDir") || $("windageDir") || $("secWindDir");
-  const elWindClicks =
-    $("windClicks") || $("windageClicks") || $("secWindClicks");
+  const elWindDir = $("secWindDir");
+  const elWindClicks = $("secWindClicks");
 
-  const elElevDir =
-    $("elevDir") || $("elevationDir") || $("secElevDir");
-  const elElevClicks =
-    $("elevClicks") || $("elevationClicks") || $("secElevClicks");
+  const elElevDir = $("secElevDir");
+  const elElevClicks = $("secElevClicks");
 
-  const btnDownload =
-    $("downloadSecBtn") || $("downloadBtn") || $("downloadSEC");
+  const btnDownload = $("downloadBtn");
+  const btnVendor = $("vendorBtn");
+  const btnSurvey = $("surveyBtn");
+  const btnBack = $("backToTargetBtn");
 
-  const btnBuy =
-    $("buyMoreBtn") || $("buyMoreTargetsBtn") || $("buyMore");
-  const btnSurvey =
-    $("surveyBtn") || $("surveyButton") || $("survey");
+  const diag = $("secDiag");
 
-  const btnBack =
-    $("backToTargetBtn") || $("backBtn") || $("backToTarget");
-
-  // ---- Create a small diagnostics panel (non-intrusive)
-  function ensureDiag() {
-    let box = $("secDiag");
-    if (box) return box;
-    box = document.createElement("pre");
-    box.id = "secDiag";
-    box.style.marginTop = "12px";
-    box.style.padding = "10px 12px";
-    box.style.borderRadius = "12px";
-    box.style.border = "1px solid rgba(255,255,255,.12)";
-    box.style.background = "rgba(0,0,0,.25)";
-    box.style.color = "rgba(238,242,247,.80)";
-    box.style.fontSize = "12px";
-    box.style.lineHeight = "1.35";
-    box.style.whiteSpace = "pre-wrap";
-    box.style.wordBreak = "break-word";
-    box.style.maxHeight = "180px";
-    box.style.overflow = "auto";
-    box.textContent = "SEC diagnostics…";
-
-    // Put it at the bottom of the page
-    document.body.appendChild(box);
-    return box;
+  // ---- Helpers
+  function setDiag(obj) {
+    if (!diag) return;
+    diag.textContent = typeof obj === "string" ? obj : JSON.stringify(obj, null, 2);
   }
 
-  const diag = ensureDiag();
-
-  function setText(el, value) {
+  function setText(el, val) {
     if (!el) return;
-    el.textContent = value;
+    el.textContent = val;
+  }
+
+  function toNum(x, fallback = 0) {
+    const n = Number(x);
+    return Number.isFinite(n) ? n : fallback;
   }
 
   function n2(x) {
-    const v = Number(x);
-    return Number.isFinite(v) ? v.toFixed(2) : "0.00";
+    return toNum(x, 0).toFixed(2);
   }
 
-  function safeParse(json) {
-    try { return JSON.parse(json); } catch { return null; }
+  function setBtnEnabled(btn, enabled) {
+    if (!btn) return;
+    btn.classList.toggle("btnDisabled", !enabled);
+    btn.setAttribute("aria-disabled", enabled ? "false" : "true");
+    btn.disabled = !enabled;
+  }
+
+  function safeJsonParse(raw) {
+    try {
+      return JSON.parse(raw);
+    } catch {
+      return null;
+    }
   }
 
   function readPayload() {
-    // Primary
-    const raw = localStorage.getItem(SEC_KEY);
-    if (raw) return { raw, payload: safeParse(raw), key: SEC_KEY };
+    const raw0 = localStorage.getItem(SEC_KEY);
+    if (raw0) return { key: SEC_KEY, raw: raw0, payload: safeJsonParse(raw0) };
 
-    // Optional fallbacks (in case earlier builds used a different key)
-    const fallbacks = [
-      "SCZN3_SEC_PAYLOAD",
-      "SCZN3_SEC",
-      "SEC_PAYLOAD",
-    ];
-    for (const k of fallbacks) {
+    for (const k of FALLBACK_KEYS) {
       const r = localStorage.getItem(k);
-      if (r) return { raw: r, payload: safeParse(r), key: k };
+      if (r) return { key: k, raw: r, payload: safeJsonParse(r) };
     }
-    return { raw: null, payload: null, key: null };
+    return { key: null, raw: null, payload: null };
   }
 
-  function setBtnDisabled(btn, disabled) {
-    if (!btn) return;
-    btn.disabled = !!disabled;
-    btn.classList.toggle("btnDisabled", !!disabled);
-  }
-
-  function buildDownloadHref(secPngUrl) {
-    // Use your existing download page flow
+  function buildDownloadUrl(secPngUrl) {
+    // Your download page expects: ./download.html?img=...
+    // We also pass return paths so buttons are consistent.
+    const img = encodeURIComponent(secPngUrl);
     const from = encodeURIComponent("./sec.html");
     const target = encodeURIComponent("./target.html");
-    const img = encodeURIComponent(secPngUrl);
     return `./download.html?img=${img}&from=${from}&target=${target}`;
   }
 
   // ---- Main
-  const { raw, payload, key } = readPayload();
+  const { key, raw, payload } = readPayload();
 
-  // If missing: show exactly why the page is empty
+  // Default UI state (safe)
+  setText(elSession, "—");
+  setText(elShots, "0");
+  setText(elScore, "—");
+
+  setText(elWindDir, "—");
+  setText(elWindClicks, "0.00");
+
+  setText(elElevDir, "—");
+  setText(elElevClicks, "0.00");
+
+  setBtnEnabled(btnDownload, false);
+  setBtnEnabled(btnVendor, false);
+  setBtnEnabled(btnSurvey, false);
+
+  // Back button always works
+  if (btnBack) {
+    btnBack.addEventListener("click", () => {
+      window.location.href = "./target.html";
+    });
+  }
+
+  // If no payload, explain why
   if (!payload) {
-    setText(elSession, "—");
-    setText(elShots, "0");
-    setText(elScore, "—");
-
-    if (elWindDir) setText(elWindDir, "—");
-    if (elWindClicks) setText(elWindClicks, "0.00");
-
-    if (elElevDir) setText(elElevDir, "—");
-    if (elElevClicks) setText(elElevClicks, "0.00");
-
-    setBtnDisabled(btnDownload, true);
-
-    diag.textContent =
-      "SEC payload NOT FOUND in localStorage.\n\n" +
-      "Fix:\n" +
-      "1) Go back to scoring page\n" +
-      "2) Tap bull + shots\n" +
-      "3) Press Show Results (this writes payload then routes here)\n\n" +
-      "Expected key: " + SEC_KEY;
-
-    // Back button fallback
-    if (btnBack) {
-      btnBack.addEventListener("click", () => {
-        window.location.href = "./target.html";
-      });
-    }
+    setDiag({
+      ok: false,
+      reason: raw ? "payload JSON parse failed" : "payload missing from localStorage",
+      expectedKey: SEC_KEY,
+      foundKey: key,
+      fix:
+        "Do NOT open sec.html directly. Run scoring flow and press Show Results so it writes payload then routes here."
+    });
     return;
   }
 
-  // ---- We have payload: populate UI
-  const sessionId = payload.sessionId || "—";
-  const shots = Number(payload.shots ?? 0);
-  const score = payload.score;
+  // Pull fields (tolerant of slight backend naming differences)
+  const sessionId =
+    payload.sessionId ||
+    payload.id ||
+    payload.session ||
+    "—";
 
-  const windDir = payload.windage?.dir ?? "—";
-  const windClicks = payload.windage?.clicks ?? 0;
+  const shots =
+    payload.shots ??
+    payload.shotCount ??
+    payload.count ??
+    0;
 
-  const elevDir = payload.elevation?.dir ?? "—";
-  const elevClicks = payload.elevation?.clicks ?? 0;
+  const score =
+    payload.score ??
+    payload.smartScore ??
+    payload.resultScore ??
+    null;
 
-  // Link for download
+  // Windage / Elevation
+  const windDir =
+    payload.windage?.dir ??
+    payload.windDir ??
+    payload.clicks?.windDir ??
+    "—";
+
+  const windClicks =
+    payload.windage?.clicks ??
+    payload.windageClicks ??
+    payload.clicks?.windage ??
+    0;
+
+  const elevDir =
+    payload.elevation?.dir ??
+    payload.elevDir ??
+    payload.clicks?.elevDir ??
+    "—";
+
+  const elevClicks =
+    payload.elevation?.clicks ??
+    payload.elevationClicks ??
+    payload.clicks?.elevation ??
+    0;
+
+  // SEC image url (for download page)
   const secPngUrl =
     payload.secPngUrl ||
     payload.secUrl ||
@@ -167,57 +177,67 @@
     payload.cardPngUrl ||
     "";
 
-  setText(elSession, sessionId);
-  setText(elShots, String(Number.isFinite(shots) ? shots : 0));
+  // Optional links
+  const vendorUrl = payload.vendorUrl || "";
+  const surveyUrl = payload.surveyUrl || "";
 
-  // Score display: if number, show it; else dash
+  // Populate UI
+  setText(elSession, String(sessionId));
+  setText(elShots, String(toNum(shots, 0)));
+
   if (Number.isFinite(Number(score))) {
     setText(elScore, String(Number(score)));
   } else {
     setText(elScore, "—");
   }
 
-  if (elWindDir) setText(elWindDir, String(windDir));
-  if (elWindClicks) setText(elWindClicks, n2(windClicks));
+  setText(elWindDir, String(windDir));
+  setText(elWindClicks, n2(windClicks));
 
-  if (elElevDir) setText(elElevDir, String(elevDir));
-  if (elElevClicks) setText(elElevClicks, n2(elevClicks));
+  setText(elElevDir, String(elevDir));
+  setText(elElevClicks, n2(elevClicks));
 
   // Buttons
   if (btnDownload) {
-    if (!secPngUrl) {
-      setBtnDisabled(btnDownload, true);
-    } else {
-      setBtnDisabled(btnDownload, false);
+    if (secPngUrl) {
+      setBtnEnabled(btnDownload, true);
       btnDownload.addEventListener("click", () => {
-        window.location.href = buildDownloadHref(secPngUrl);
+        window.location.href = buildDownloadUrl(secPngUrl);
       });
+    } else {
+      setBtnEnabled(btnDownload, false);
     }
   }
 
-  if (btnBuy && payload.vendorUrl) {
-    btnBuy.addEventListener("click", () => window.open(payload.vendorUrl, "_blank", "noopener"));
-  } else {
-    // If empty, disable to avoid dead tap
-    setBtnDisabled(btnBuy, true);
+  if (btnVendor) {
+    if (vendorUrl) {
+      setBtnEnabled(btnVendor, true);
+      btnVendor.addEventListener("click", () => window.open(vendorUrl, "_blank", "noopener"));
+    } else {
+      setBtnEnabled(btnVendor, false);
+    }
   }
 
-  if (btnSurvey && payload.surveyUrl) {
-    btnSurvey.addEventListener("click", () => window.open(payload.surveyUrl, "_blank", "noopener"));
-  } else {
-    setBtnDisabled(btnSurvey, true);
+  if (btnSurvey) {
+    if (surveyUrl) {
+      setBtnEnabled(btnSurvey, true);
+      btnSurvey.addEventListener("click", () => window.open(surveyUrl, "_blank", "noopener"));
+    } else {
+      setBtnEnabled(btnSurvey, false);
+    }
   }
 
-  if (btnBack) {
-    btnBack.addEventListener("click", () => {
-      window.location.href = "./target.html";
-    });
-  }
-
-  // ---- Diagnostics
-  diag.textContent =
-    "SEC payload loaded ✅\n" +
-    "storageKey: " + key + "\n" +
-    "secPngUrl present: " + (secPngUrl ? "YES" : "NO") + "\n\n" +
-    "payload:\n" + raw;
+  // Diagnostics (show what we loaded)
+  setDiag({
+    ok: true,
+    storageKey: key,
+    sessionId,
+    shots: toNum(shots, 0),
+    score: Number.isFinite(Number(score)) ? Number(score) : null,
+    windage: { dir: windDir, clicks: toNum(windClicks, 0) },
+    elevation: { dir: elevDir, clicks: toNum(elevClicks, 0) },
+    secPngUrlPresent: !!secPngUrl,
+    vendorUrlPresent: !!vendorUrl,
+    surveyUrlPresent: !!surveyUrl
+  });
 })();
