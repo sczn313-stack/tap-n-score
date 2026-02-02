@@ -1,29 +1,10 @@
 /* ============================================================
-   docs/index.js  (FULL REPLACEMENT)
-   Tap-n-Score™ (Tap Page)
-   Flow:
-   1) Load photo (from target.html localStorage OR picker)
-   2) Tap bull (blue) + shots (red)
-   3) POST to backend /api/calc (backend authority)
-   4) Write SEC payload to localStorage (SCZN3_SEC_PAYLOAD_V1)
-   5) Route to sec.html
-
-   REQUIRED IDs in docs/index.html:
-   - photoInput
-   - targetImg
-   - targetWrap
-   - dotsLayer
-   - instructionLine
-   - tapCount
-   - clearTapsBtn
-   - showResultsBtn
-   - backBtn (optional)
-   - distanceYds (optional)
-   - clickMoa   (optional)
-
-   NOTE:
-   - Inches-only internal representation.
-   - Screen-space: x right positive, y down positive (matches backend server.js).
+   docs/index.js (FULL REPLACEMENT)
+   SINGLE-PAGE FLOW:
+   - Choose Photo
+   - Tap bull (blue) + shots (red)
+   - POST to backend /api/calc (backend authority)
+   - Render SEC numbers ON THIS PAGE (no sec.html, no localStorage payload)
 ============================================================ */
 
 (() => {
@@ -33,49 +14,54 @@
   const API_BASE = "https://sczn3-backend-new.onrender.com";
   const API_CALC = `${API_BASE}/api/calc`;
 
-  // ---- Storage Keys
-  const KEY_IMG = "sczn3_target_image_dataurl_v1"; // from target.html
-  const KEY_NAME = "sczn3_target_image_name_v1";
-  const SEC_KEY = "SCZN3_SEC_PAYLOAD_V1";
-  const HIST_KEY = "SCZN3_SEC_HISTORY_V1";
+  // ---- Optional: if you still use target.html elsewhere, we’ll restore an image if present
+  const KEY_IMG = "sczn3_target_image_dataurl_v1";
 
-  // ---- Target size (inches) mapping for tap->inches conversion
-  // default 23; override with ?size=23
+  // ---- Target size for tap->inches mapping (default 23" grid)
   const params = new URLSearchParams(location.search);
   const TARGET_SIZE_IN = Number(params.get("size")) || 23;
 
   // ---- DOM
-  const elFile = $("photoInput");
-  const elImg = $("targetImg");
-  const elWrap = $("targetWrap");
-  const elDots = $("dotsLayer");
-  const elInstruction = $("instructionLine");
-  const elTapCount = $("tapCount");
-  const elClear = $("clearTapsBtn");
-  const elShow = $("showResultsBtn");
-  const elBack = $("backBtn");       // optional
-  const elDist = $("distanceYds");   // optional
-  const elClick = $("clickMoa");     // optional
+  const chooseBtn = $("chooseBtn");
+  const fileInput = $("photoInput");
+  const clearBtn = $("clearTapsBtn");
+  const showBtn = $("showResultsBtn");
 
-  // ---- State (in inches, screen-space)
-  let bull = null;    // {x,y}
-  let shots = [];     // [{x,y},...]
+  const img = $("targetImg");
+  const wrap = $("targetWrap");
+  const dotsLayer = $("dotsLayer");
+  const emptyState = $("emptyState");
 
+  const instructionLine = $("instructionLine");
+  const tapCount = $("tapCount");
+  const diagOut = $("diagOut");
+
+  const distanceYdsEl = $("distanceYds");
+  const clickMoaEl = $("clickMoa");
+
+  // Results (SEC on same page)
+  const resultsWrap = $("results");
+  const secScore = $("secScore");
+  const secWindClicks = $("secWindClicks");
+  const secWindDir = $("secWindDir");
+  const secElevClicks = $("secElevClicks");
+  const secElevDir = $("secElevDir");
+
+  // ---- State (in inches, screen-space: x right+, y down+)
+  let bull = null;     // {x,y}
+  let shots = [];      // [{x,y},...]
   let objectUrl = null;
 
-  // ---- Tiny helpers
+  // ---- Helpers
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 
-  function setText(el, txt) {
-    if (el) el.textContent = txt;
+  function setDiag(obj) {
+    if (!diagOut) return;
+    diagOut.textContent = JSON.stringify(obj, null, 2);
   }
 
   function setInstruction(txt) {
-    setText(elInstruction, txt);
-  }
-
-  function setTapCount() {
-    setText(elTapCount, String(shots.length));
+    if (instructionLine) instructionLine.textContent = txt;
   }
 
   function enable(el, yes) {
@@ -96,36 +82,15 @@
     return Number.isFinite(v) ? v : fallback;
   }
 
-  // ---- Overlay / dots
-  function clearDots() {
-    if (elDots) elDots.innerHTML = "";
-  }
-
-  function addDotPx(xPx, yPx, cls) {
-    if (!elDots) return;
-    const d = document.createElement("div");
-    d.className = `dot ${cls || ""}`.trim();
-    d.style.left = `${xPx}px`;
-    d.style.top = `${yPx}px`;
-    elDots.appendChild(d);
-  }
-
   function imgRect() {
-    if (!elImg) return null;
-    const r = elImg.getBoundingClientRect();
+    if (!img) return null;
+    const r = img.getBoundingClientRect();
     if (!r || r.width < 2 || r.height < 2) return null;
     return r;
   }
 
-  function syncOverlayToImage() {
-    if (!elImg || !elDots) return;
-    const r = elImg.getBoundingClientRect();
-    elDots.style.width = `${r.width}px`;
-    elDots.style.height = `${r.height}px`;
-  }
-
+  // px (inside image box) -> inches (0..TARGET_SIZE_IN)
   function pxToInches(xPx, yPx, rect) {
-    // Map displayed pixels -> inches across known target size
     const xIn = (xPx / rect.width) * TARGET_SIZE_IN;
     const yIn = (yPx / rect.height) * TARGET_SIZE_IN;
     return { x: xIn, y: yIn };
@@ -137,7 +102,21 @@
     return { xPx, yPx };
   }
 
-  function redrawAllDots() {
+  function clearDots() {
+    if (!dotsLayer) return;
+    dotsLayer.innerHTML = "";
+  }
+
+  function addDotPx(xPx, yPx, cls) {
+    if (!dotsLayer) return;
+    const d = document.createElement("div");
+    d.className = `dot ${cls || ""}`.trim();
+    d.style.left = `${xPx}px`;
+    d.style.top = `${yPx}px`;
+    dotsLayer.appendChild(d);
+  }
+
+  function redrawDots() {
     clearDots();
     const r = imgRect();
     if (!r) return;
@@ -152,21 +131,43 @@
     }
   }
 
-  function resetAll() {
+  function resetTaps() {
     bull = null;
     shots = [];
-    redrawAllDots();
-    setTapCount();
-    setInstruction("Tap the bull first (blue). Then tap shots (red).");
-    enable(elShow, false);
+    redrawDots();
+    if (tapCount) tapCount.textContent = "0";
+    resultsWrap.style.display = "none";
+    secScore.textContent = "—";
+    secWindClicks.textContent = "0.00";
+    secWindDir.textContent = "—";
+    secElevClicks.textContent = "0.00";
+    secElevDir.textContent = "—";
+    enable(showBtn, false);
+    setInstruction("Choose a photo. Tap the bull (blue). Tap shots (red). Then Show Results.");
   }
 
-  // ---- Tap handling (overlay click)
+  function setImageSrc(src) {
+    if (!img) return;
+    img.onload = () => {
+      img.style.display = "block";
+      if (emptyState) emptyState.style.display = "none";
+      redrawDots();
+      resetTaps(); // start clean every time photo loads
+      setInstruction("Photo loaded ✅ Tap the bull (blue).");
+      setDiag({ ok: true, imageLoaded: true });
+    };
+    img.onerror = () => {
+      setInstruction("Image failed to load ❌");
+      setDiag({ ok: false, imageLoaded: false });
+    };
+    img.src = src;
+  }
+
+  // ---- Tap handling
   function onTap(ev) {
     const r = imgRect();
     if (!r) return;
 
-    // Support touch and mouse
     const t = ev.touches && ev.touches[0];
     const clientX = t ? t.clientX : ev.clientX;
     const clientY = t ? t.clientY : ev.clientY;
@@ -180,220 +181,138 @@
 
     if (!bull) {
       bull = pIn;
-      redrawAllDots();
+      redrawDots();
       setInstruction("Bull set ✅ Now tap shots (red).");
       return;
     }
 
     shots.push(pIn);
-    setTapCount();
-    redrawAllDots();
-    enable(elShow, shots.length >= 1);
+    if (tapCount) tapCount.textContent = String(shots.length);
+    redrawDots();
+    enable(showBtn, shots.length >= 1);
   }
 
-  // ---- Backend call
+  // ---- Backend calc
   async function calcViaBackend() {
-    const distanceYds = readNum(elDist, 100);
-    const clickMoa = readNum(elClick, 0.25);
+    const distanceYds = readNum(distanceYdsEl, 100);
+    const clickMoa = readNum(clickMoaEl, 0.25);
 
-    const body = {
-      bull,          // inches
-      shots,         // inches
-      distanceYds,
-      clickMoa
-    };
+    const body = { bull, shots, distanceYds, clickMoa };
 
     const res = await fetch(API_CALC, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body)
+      body: JSON.stringify(body),
     });
 
     const data = await res.json().catch(() => ({}));
 
     if (!res.ok || !data?.ok) {
-      const msg = data?.error || `Backend error (${res.status})`;
-      throw new Error(msg);
-    }
-    return data;
-  }
-
-  // ---- Write SEC payload + route
-  function routeToSEC_FromCalc(calcResult) {
-    const payload = {
-      sessionId: calcResult.sessionId || `SEC-${Date.now().toString(36).toUpperCase()}`,
-
-      // score may not exist yet; SEC will show —
-      score: Number.isFinite(Number(calcResult.score)) ? Number(calcResult.score) : null,
-
-      shots: shots.length,
-
-      windage: {
-        dir: calcResult?.directions?.windage || "—",
-        clicks: Number(calcResult?.clicks?.windage ?? 0)
-      },
-      elevation: {
-        dir: calcResult?.directions?.elevation || "—",
-        clicks: Number(calcResult?.clicks?.elevation ?? 0)
-      },
-
-      // optional future: backend-generated png URL
-      secPngUrl: String(calcResult?.secPngUrl || calcResult?.secUrl || "").trim(),
-      vendorUrl: String(calcResult?.vendorUrl || "").trim(),
-      surveyUrl: String(calcResult?.surveyUrl || "").trim()
-    };
-
-    // history (prev1-3)
-    try {
-      const prev = JSON.parse(localStorage.getItem(HIST_KEY) || "[]");
-      const entry = {
-        t: Date.now(),
-        score: payload.score,
-        shots: payload.shots,
-        wind: `${payload.windage.dir} ${Number(payload.windage.clicks).toFixed(2)}`,
-        elev: `${payload.elevation.dir} ${Number(payload.elevation.clicks).toFixed(2)}`
-      };
-      localStorage.setItem(HIST_KEY, JSON.stringify([entry, ...prev].slice(0, 3)));
-    } catch (_) {}
-
-    // write + verify
-    localStorage.setItem(SEC_KEY, JSON.stringify(payload));
-    const verify = localStorage.getItem(SEC_KEY);
-
-    if (!verify) {
-      alert("SEC payload did NOT save. (Safari storage blocked / wrong page running)");
-      console.log("❌ localStorage write failed", payload);
-      return;
+      throw new Error(data?.error || `Backend error (${res.status})`);
     }
 
-    console.log("✅ SEC payload saved", payload);
-
-    // cache-bust the SEC page so iOS doesn’t show an old render
-    window.location.href = `./sec.html?fresh=${Date.now()}`;
+    return { data, bodySent: body };
   }
 
-  // ---- Image loading (from target.html storage OR picker)
-  function setImageSrc(src) {
-    if (!elImg) return;
-    elImg.onload = () => {
-      syncOverlayToImage();
-      redrawAllDots();
-    };
-    elImg.onerror = () => {
-      setInstruction("Image failed to load ❌");
-    };
-    elImg.src = src;
-    if (elImg.style) elImg.style.display = "block";
+  function fmt2(n) {
+    const x = Number(n);
+    return Number.isFinite(x) ? x.toFixed(2) : "0.00";
   }
 
-  function restoreImageFromStorage() {
-    try {
-      const dataUrl = localStorage.getItem(KEY_IMG);
-      if (dataUrl && String(dataUrl).startsWith("data:image/")) {
-        setImageSrc(dataUrl);
-        return true;
-      }
-    } catch (_) {}
-    return false;
+  // ---- Render SEC (same page)
+  function renderSEC(calcResult) {
+    const data = calcResult.data;
+
+    // Directions + clicks (backend authority)
+    const wDir = data?.directions?.windage || "—";
+    const eDir = data?.directions?.elevation || "—";
+    const wClicks = data?.clicks?.windage ?? 0;
+    const eClicks = data?.clicks?.elevation ?? 0;
+
+    secWindDir.textContent = wDir;
+    secElevDir.textContent = eDir;
+    secWindClicks.textContent = fmt2(wClicks);
+    secElevClicks.textContent = fmt2(eClicks);
+
+    // Score not implemented by backend yet -> show —
+    const scoreMaybe = Number(data?.score);
+    secScore.textContent = Number.isFinite(scoreMaybe) ? String(scoreMaybe) : "—";
+
+    resultsWrap.style.display = "block";
+
+    setInstruction("Results ready ✅");
+    setDiag({
+      ok: true,
+      bodySent: calcResult.bodySent,
+      backend: data
+    });
   }
 
-  function loadFile(file) {
-    if (!file) return;
+  // ---- Wire events
+  chooseBtn.addEventListener("click", () => fileInput.click());
+
+  fileInput.addEventListener("change", () => {
+    const f = fileInput.files && fileInput.files[0];
+    if (!f) return;
 
     if (objectUrl) URL.revokeObjectURL(objectUrl);
-    objectUrl = URL.createObjectURL(file);
+    objectUrl = URL.createObjectURL(f);
 
-    setImageSrc(objectUrl);
-
-    // also store a dataURL so user can bounce pages without re-picking (iOS-friendly)
+    // Save dataURL too (helps if you still bounce pages)
     const reader = new FileReader();
     reader.onload = () => {
       const dataUrl = String(reader.result || "");
       if (dataUrl.startsWith("data:image/")) {
-        try {
-          localStorage.setItem(KEY_IMG, dataUrl);
-          localStorage.setItem(KEY_NAME, file.name || "target.jpg");
-        } catch (_) {}
+        try { localStorage.setItem(KEY_IMG, dataUrl); } catch {}
       }
     };
-    reader.readAsDataURL(file);
+    reader.readAsDataURL(f);
 
-    resetAll();
-  }
-
-  // ---- Wire events
-  if (elDots) {
-    elDots.addEventListener("touchstart", (e) => { e.preventDefault(); onTap(e); }, { passive: false });
-    elDots.addEventListener("click", onTap);
-  } else if (elImg) {
-    elImg.addEventListener("touchstart", (e) => { e.preventDefault(); onTap(e); }, { passive: false });
-    elImg.addEventListener("click", onTap);
-  }
-
-  if (elFile) {
-    elFile.addEventListener("change", (e) => {
-      const f = e.target.files && e.target.files[0];
-      loadFile(f);
-      // allow same file again
-      elFile.value = "";
-    });
-  }
-
-  if (elClear) {
-    elClear.addEventListener("click", () => {
-      resetAll();
-      setInstruction("Cleared ✅ Tap the bull first (blue). Then tap shots (red).");
-    });
-  }
-
-  if (elShow) {
-    enable(elShow, false);
-    elShow.addEventListener("click", async () => {
-      if (!bull) { setInstruction("Tap the bull first (blue)."); return; }
-      if (shots.length < 1) { setInstruction("Tap at least 1 shot (red)."); return; }
-
-      try {
-        enable(elShow, false);
-        setInstruction("Calculating…");
-
-        const calcResult = await calcViaBackend();
-
-        // ✅ FINALIZE -> write SEC payload -> go SEC
-        routeToSEC_FromCalc(calcResult);
-      } catch (err) {
-        console.error(err);
-        setInstruction(`Error: ${String(err?.message || err)}`);
-        enable(elShow, true);
-      }
-    });
-  }
-
-  if (elBack) {
-    elBack.addEventListener("click", () => {
-      // go back to target page if you have it, otherwise to root
-      window.location.href = "./target.html";
-    });
-  }
-
-  window.addEventListener("resize", () => {
-    syncOverlayToImage();
-    redrawAllDots();
+    setImageSrc(objectUrl);
+    fileInput.value = "";
   });
 
+  clearBtn.addEventListener("click", () => {
+    resetTaps();
+    setInstruction("Cleared ✅ Tap the bull (blue). Then tap shots (red).");
+  });
+
+  // Tap on overlay (preferred) so dots never block image taps
+  dotsLayer.addEventListener("touchstart", (e) => { e.preventDefault(); onTap(e); }, { passive: false });
+  dotsLayer.addEventListener("click", onTap);
+
+  enable(showBtn, false);
+  showBtn.addEventListener("click", async () => {
+    if (!img.src) { setInstruction("Choose a photo first."); return; }
+    if (!bull) { setInstruction("Tap the bull first (blue)."); return; }
+    if (shots.length < 1) { setInstruction("Tap at least 1 shot (red)."); return; }
+
+    try {
+      enable(showBtn, false);
+      setInstruction("Calculating…");
+
+      const calcResult = await calcViaBackend();
+      renderSEC(calcResult);
+
+      enable(showBtn, true);
+    } catch (err) {
+      setInstruction(`Error: ${String(err?.message || err)}`);
+      setDiag({ ok: false, error: String(err?.message || err) });
+      enable(showBtn, true);
+    }
+  });
+
+  window.addEventListener("resize", () => redrawDots());
+
   // ---- Boot
-  setInstruction("Tap the bull first (blue). Then tap shots (red).");
-  setTapCount();
+  setInstruction("Choose a photo. Tap the bull (blue). Tap shots (red). Then Show Results.");
+  setDiag({ ok: true, mode: "single-page-sec", api: API_CALC });
 
-  // If we came from target.html, image should already be in storage
-  const restored = restoreImageFromStorage();
-
-  // If not restored, user must pick a file (your UI will handle the picker)
-  if (restored) {
-    // ensure overlay matches
-    setTimeout(() => {
-      syncOverlayToImage();
-      redrawAllDots();
-    }, 0);
-  }
-
+  // If an image was stored previously (from an old target page), restore it
+  try {
+    const stored = localStorage.getItem(KEY_IMG);
+    if (stored && String(stored).startsWith("data:image/")) {
+      setImageSrc(stored);
+    }
+  } catch {}
 })();
