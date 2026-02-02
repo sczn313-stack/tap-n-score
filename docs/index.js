@@ -1,268 +1,396 @@
 /* ============================================================
-   index.js (FULL REPLACEMENT) — ROUTE-TO-SEC-LOCK-1
-   Purpose:
-   - Target page: choose photo → tap bull → tap shots → Results
-   - Results: POST to backend (math authority = backend)
-   - Store SEC payload to localStorage (SCZN3_SEC_PAYLOAD_V1)
-   - Route to ./sec.html
+   docs/index.js (FULL REPLACEMENT)
+   Tap-n-Score™ (Shooter-facing)
+   - Bull first (blue), then shots (red)
+   - Sends taps + setup (distance/moa) to backend
+   - Backend is authority for directions + clicks
+   - Saves SEC payload to localStorage then routes to sec.html
 ============================================================ */
 
 (() => {
+  // --------------------------
+  // DOM helpers
+  // --------------------------
   const $ = (id) => document.getElementById(id);
 
-  // UI (must exist in your docs/index.html)
-  const chooseBtn  = $("chooseBtn");
-  const clearBtn   = $("clearBtn");
-  const resultsBtn = $("resultsBtn");
-  const fileInput  = $("photoInput");
+  // Expected IDs (match your index.html)
+  const elFile = $("photoInput");
+  const elImg = $("targetImg");
+  const elDots = $("dotsLayer");
+  const elTapCount = $("tapCount");
+  const elClear = $("clearTapsBtn");
+  const elShow = $("showResultsBtn");
+  const elInstruction = $("instructionLine");
+  const elWrap = $("targetWrap");
 
-  const statusLine = $("statusLine");
-  const hintLine   = $("hintLine");
+  // Optional UI (safe if missing)
+  const elDiag = $("diagOut"); // optional <pre>
+  const elMode = $("modeLine"); // optional
+  const elSetupLocked = $("setupLockedBadge"); // optional
 
-  const stage   = $("stage");      // wrapper that becomes visible once image loads
-  const img     = $("targetImg");  // <img>
-  const tapLayer= $("tapLayer");   // overlay div on top of the image
+  // --------------------------
+  // Storage keys
+  // --------------------------
+  const SETUP_KEY = "SCZN3_TARGET_SETUP_V1";       // written by target.html
+  const SEC_KEY   = "SCZN3_SEC_PAYLOAD_V1";        // read by sec.js
 
-  // Optional “chips” (if your HTML has them). If not, we fail-soft.
-  const chipImgDot   = $("chipImgDot");
-  const chipBullDot  = $("chipBullDot");
-  const chipShotsDot = $("chipShotsDot");
-  const chipImg      = $("chipImg");
-  const chipBull     = $("chipBull");
-  const chipShots    = $("chipShots");
-
-  // Dots container (if your CSS uses .dot). If not present, we still run.
-  // We'll draw dots into tapLayer itself.
-  // Backend
-  // ✅ CHANGE THIS to your Render backend base URL
-  // Example: "https://YOUR-BACKEND.onrender.com"
-  const API_BASE = "https://YOUR-BACKEND.onrender.com";
-  const ANALYZE_URL = `${API_BASE}/api/analyze`;
-
-  // SEC storage key
-  const SEC_KEY = "SCZN3_SEC_PAYLOAD_V1";
-
+  // --------------------------
   // State
+  // --------------------------
   let selectedFile = null;
   let objectUrl = null;
 
-  // Store taps normalized to image box (0..1)
-  let bull = null;   // { nx, ny }
-  let shots = [];    // [{ nx, ny }...]
+  // taps: bull (first) + shots
+  let bull = null;            // {x,y} in image pixel space
+  let shots = [];             // [{x,y}]
+  let stage = "bull";         // "bull" | "shots"
 
-  // ---------- helpers ----------
-  function setStatus(msg) {
-    if (statusLine) statusLine.textContent = msg;
+  // --------------------------
+  // Diagnostics
+  // --------------------------
+  function diag(obj) {
+    if (!elDiag) return;
+    elDiag.textContent = JSON.stringify(obj, null, 2);
   }
 
-  function setHint(msg) {
-    if (hintLine) hintLine.textContent = msg;
+  // --------------------------
+  // Setup (distance/moa) from target.html
+  // --------------------------
+  function readSetup() {
+    try {
+      const raw = localStorage.getItem(SETUP_KEY);
+      if (!raw) return null;
+      const s = JSON.parse(raw);
+      // expected: { distanceYds: number, moaPerClick: number, vendorUrl?: string, surveyUrl?: string }
+      return s && typeof s === "object" ? s : null;
+    } catch {
+      return null;
+    }
   }
 
-  function setChip(dotEl, valueEl, ok, text) {
-    if (!dotEl || !valueEl) return;
-    dotEl.style.opacity = ok ? "1" : ".25";
-    valueEl.textContent = text;
+  function ensureSetupLockedUI() {
+    const setup = readSetup();
+    if (!setup) {
+      if (elSetupLocked) elSetupLocked.textContent = "SETUP NOT SET";
+      return false;
+    }
+    if (elSetupLocked) elSetupLocked.textContent = "SETUP LOCKED";
+    return true;
   }
 
+  // --------------------------
+  // Coordinate mapping
+  // Tap position -> image pixel coordinates
+  // --------------------------
+  function getImageRect() {
+    return elImg.getBoundingClientRect();
+  }
+
+  function clientToImageXY(clientX, clientY) {
+    const rect = getImageRect();
+    const xRel = (clientX - rect.left) / rect.width;
+    const yRel = (clientY - rect.top) / rect.height;
+
+    const x = xRel * elImg.naturalWidth;
+    const y = yRel * elImg.naturalHeight;
+
+    return { x, y };
+  }
+
+  // Render dots in overlay layer using % positioning (stable on resize)
   function clearDots() {
-    if (!tapLayer) return;
-    // remove any .dot elements we added
-    tapLayer.querySelectorAll(".dot").forEach((n) => n.remove());
+    if (!elDots) return;
+    elDots.innerHTML = "";
   }
 
-  function addDot(nx, ny, kind) {
-    if (!tapLayer) return;
-    const d = document.createElement("div");
-    d.className = `dot ${kind}`;
-    d.style.left = `${nx * 100}%`;
-    d.style.top  = `${ny * 100}%`;
-    tapLayer.appendChild(d);
+  function addDot(clientX, clientY, colorClass) {
+    if (!elDots) return;
+
+    const rect = getImageRect();
+    const xPct = ((clientX - rect.left) / rect.width) * 100;
+    const yPct = ((clientY - rect.top) / rect.height) * 100;
+
+    const dot = document.createElement("div");
+    dot.className = `dot ${colorClass}`; // expect .dot, .dotBull, .dotShot in CSS
+    dot.style.left = `${xPct}%`;
+    dot.style.top = `${yPct}%`;
+
+    elDots.appendChild(dot);
   }
 
-  function redraw() {
-    clearDots();
-    if (bull) addDot(bull.nx, bull.ny, "bull");
-    for (const s of shots) addDot(s.nx, s.ny, "shot");
-  }
+  function updateInstruction() {
+    if (!elInstruction) return;
 
-  function clamp01(v) {
-    return Math.max(0, Math.min(1, v));
-  }
-
-  function getTapNormalized(ev) {
-    const rect = tapLayer.getBoundingClientRect();
-
-    // Support pointer/touch/mouse
-    const t = ev.touches && ev.touches[0];
-    const clientX = t ? t.clientX : ev.clientX;
-    const clientY = t ? t.clientY : ev.clientY;
-
-    const x = (clientX - rect.left) / rect.width;
-    const y = (clientY - rect.top) / rect.height;
-
-    return { nx: clamp01(x), ny: clamp01(y) };
-  }
-
-  // ---------- actions ----------
-  function hardReset() {
-    bull = null;
-    shots = [];
-    redraw();
-
-    setChip(chipBullDot, chipBull, false, "not set");
-    setChip(chipShotsDot, chipShots, false, "0");
-  }
-
-  // iOS-safe file open
-  chooseBtn?.addEventListener("click", () => fileInput.click());
-
-  fileInput?.addEventListener("change", () => {
-    const f = fileInput.files && fileInput.files[0];
-    if (!f) return;
-
-    selectedFile = f;
-
-    if (objectUrl) URL.revokeObjectURL(objectUrl);
-    objectUrl = URL.createObjectURL(f);
-
-    img.onload = () => {
-      if (stage) stage.style.display = "block";
-      img.style.display = "block";
-
-      setStatus(`Loaded ✅ ${f.name}`);
-      setHint("Tap the bull first. Then tap your shots. Press Results.");
-
-      setChip(chipImgDot, chipImg, true, f.name);
-
-      hardReset();
-    };
-
-    img.onerror = () => {
-      setStatus("Could not load image ❌");
-      setChip(chipImgDot, chipImg, false, "error");
-    };
-
-    img.src = objectUrl;
-
-    // allow re-pick same file
-    fileInput.value = "";
-  });
-
-  // Tap handling (use pointerdown so it works reliably on iOS)
-  function onTap(ev) {
-    if (!img || !img.src) return;
-    ev.preventDefault();
-
-    const p = getTapNormalized(ev);
-
-    if (!bull) {
-      bull = p;
-      setStatus("Bull set ✅");
-      setChip(chipBullDot, chipBull, true, "set");
-      redraw();
+    if (!selectedFile) {
+      elInstruction.textContent = "Choose a photo to start.";
       return;
     }
 
-    shots.push(p);
-    setStatus(`Shot added ✅ (${shots.length})`);
-    setChip(chipShotsDot, chipShots, shots.length > 0, String(shots.length));
-    redraw();
+    if (stage === "bull") {
+      elInstruction.textContent = "Tap the bull first (blue).";
+    } else {
+      elInstruction.textContent = "Now tap your shots (red), then hit Show Results.";
+    }
   }
 
-  tapLayer?.addEventListener("pointerdown", onTap, { passive: false });
+  function updateCounts() {
+    if (!elTapCount) return;
+    const bullCount = bull ? 1 : 0;
+    elTapCount.textContent = `${bullCount + shots.length}`;
+  }
 
-  // Clear
-  clearBtn?.addEventListener("click", () => {
-    hardReset();
-    setStatus("Cleared ✅");
-    setHint("Tap the bull first. Then tap your shots.");
-  });
+  function setModeLabel() {
+    if (!elMode) return;
+    elMode.textContent = stage === "bull" ? "TAP: BULL" : "TAP: SHOTS";
+  }
 
-  // Results → Backend → SEC payload → sec.html
-  resultsBtn?.addEventListener("click", async () => {
-    if (!img || !img.src) { setStatus("Choose a photo first."); return; }
-    if (!bull) { setStatus("Tap the bull first."); return; }
-    if (shots.length < 1) { setStatus("Tap at least 1 shot."); return; }
+  // --------------------------
+  // Image loading
+  // --------------------------
+  function setImageFromFile(file) {
+    selectedFile = file;
 
-    setStatus("Calculating…");
+    if (objectUrl) URL.revokeObjectURL(objectUrl);
+    objectUrl = URL.createObjectURL(file);
 
-    // Backend contract: send normalized points (backend is authority)
-    const body = {
-      bull: { x: bull.nx, y: bull.ny },
-      hits: shots.map((s) => ({ x: s.nx, y: s.ny }))
+    elImg.onload = () => {
+      // Clear previous state on new image load
+      bull = null;
+      shots = [];
+      stage = "bull";
+      clearDots();
+      updateCounts();
+      updateInstruction();
+      setModeLabel();
+      ensureSetupLockedUI();
+
+      diag({
+        ok: true,
+        event: "image_loaded",
+        natural: { w: elImg.naturalWidth, h: elImg.naturalHeight },
+      });
     };
 
+    elImg.src = objectUrl;
+  }
+
+  // --------------------------
+  // Tapping handler
+  // --------------------------
+  function handleTap(ev) {
+    if (!selectedFile) return;
+    if (!elImg.naturalWidth || !elImg.naturalHeight) return;
+
+    // iOS: use changedTouches for touch events
+    const p = ev.touches?.[0] || ev.changedTouches?.[0] || ev;
+    const clientX = p.clientX;
+    const clientY = p.clientY;
+
+    const imgXY = clientToImageXY(clientX, clientY);
+
+    if (stage === "bull") {
+      bull = imgXY;
+      addDot(clientX, clientY, "dotBull");
+      stage = "shots";
+    } else {
+      shots.push(imgXY);
+      addDot(clientX, clientY, "dotShot");
+    }
+
+    updateCounts();
+    updateInstruction();
+    setModeLabel();
+
+    diag({
+      ok: true,
+      event: "tap",
+      stage,
+      bull: bull ? { x: round2(bull.x), y: round2(bull.y) } : null,
+      shots: shots.length,
+    });
+  }
+
+  function round2(n) {
+    return Math.round(n * 100) / 100;
+  }
+
+  // --------------------------
+  // Backend call
+  // --------------------------
+  function getApiBase() {
+    // Uses same-origin by default. If you have a different backend host,
+    // set localStorage SCZN3_API_BASE once, or add a global window.SCXN3_API_BASE.
+    return (
+      window.SCXN3_API_BASE ||
+      localStorage.getItem("SCZN3_API_BASE") ||
+      ""
+    );
+  }
+
+  async function callAnalyze(payload) {
+    const apiBase = getApiBase();
+    const url = (apiBase ? apiBase.replace(/\/+$/, "") : "") + "/api/analyze";
+
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+
+    if (!res.ok) {
+      const text = await res.text().catch(() => "");
+      throw new Error(`Analyze failed (${res.status}) ${text}`.trim());
+    }
+    return res.json();
+  }
+
+  // --------------------------
+  // SEC payload + routing
+  // --------------------------
+  function buildSecPayloadFromBackend(data, setup) {
+    return {
+      sessionId: data.sessionId || `SEC-${Date.now().toString(36).toUpperCase()}`,
+
+      // score number only (SEC page decides style)
+      score: Number(data.score ?? 0),
+
+      // shot count
+      shots: Number(data.shots ?? shots.length),
+
+      windage: {
+        dir: data.windage?.dir || data.clicks?.windDir || data.windDir || "—",
+        clicks: data.windage?.clicks ?? data.clicks?.windage ?? data.windageClicks ?? 0,
+      },
+
+      elevation: {
+        dir: data.elevation?.dir || data.clicks?.elevDir || data.elevDir || "—",
+        clicks: data.elevation?.clicks ?? data.clicks?.elevation ?? data.elevationClicks ?? 0,
+      },
+
+      // Optional linkouts
+      vendorUrl: setup?.vendorUrl || data.vendorUrl || "",
+      surveyUrl: setup?.surveyUrl || data.surveyUrl || "",
+
+      // Optional debug fields (safe)
+      debug: data.debug || null,
+    };
+  }
+
+  function routeToSec() {
+    window.location.href = "./sec.html";
+  }
+
+  // --------------------------
+  // Buttons
+  // --------------------------
+  function onClear() {
+    bull = null;
+    shots = [];
+    stage = "bull";
+    clearDots();
+    updateCounts();
+    updateInstruction();
+    setModeLabel();
+
+    diag({ ok: true, event: "clear" });
+  }
+
+  async function onShowResults() {
+    // Setup MUST be chosen upstream (target.html)
+    const setup = readSetup();
+    if (!setup || !Number.isFinite(Number(setup.distanceYds)) || !Number.isFinite(Number(setup.moaPerClick))) {
+      alert("Setup not set yet. Go to Target Setup first (distance + MOA per click).");
+      diag({ ok: false, event: "show_results", reason: "missing_setup", setup });
+      return;
+    }
+
+    if (!bull) {
+      alert("Tap the bull first.");
+      return;
+    }
+    if (shots.length < 1) {
+      alert("Tap at least one shot.");
+      return;
+    }
+
+    // Disable button while working (if present)
+    if (elShow) {
+      elShow.disabled = true;
+      elShow.classList.add("isWorking");
+    }
+
     try {
-      const res = await fetch(ANALYZE_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body)
-      });
-
-      if (!res.ok) {
-        const t = await res.text().catch(() => "");
-        setStatus(`Backend error ❌ ${res.status}`);
-        console.warn("Backend error body:", t);
-        return;
-      }
-
-      const data = await res.json();
-
-      // Build SEC payload from BACKEND AUTHORITY ONLY
-      const secPayload = {
-        sessionId:
-          data.sessionId ||
-          `SEC-${Date.now().toString(36).toUpperCase()}`,
-
-        score: Number(data.score),
-        shots: Number(data.shots),
-
-        windage: {
-          dir:
-            data.windage?.dir ||
-            data.clicks?.windDir ||
-            data.windDir ||
-            "—",
-          clicks:
-            data.windage?.clicks ??
-            data.clicks?.windage ??
-            data.windageClicks ??
-            0
+      const payload = {
+        setup: {
+          distanceYds: Number(setup.distanceYds),
+          moaPerClick: Number(setup.moaPerClick),
         },
+        bull: { x: bull.x, y: bull.y },
+        shots: shots.map((s) => ({ x: s.x, y: s.y })),
 
-        elevation: {
-          dir:
-            data.elevation?.dir ||
-            data.clicks?.elevDir ||
-            data.elevDir ||
-            "—",
-          clicks:
-            data.elevation?.clicks ??
-            data.clicks?.elevation ??
-            data.elevationClicks ??
-            0
+        // optional metadata
+        client: {
+          ua: navigator.userAgent,
+          ts: Date.now(),
         },
-
-        vendorUrl: data.vendorUrl || "",
-        surveyUrl: data.surveyUrl || ""
       };
 
+      diag({ ok: true, event: "analyze_request", url: getApiBase() + "/api/analyze", payload });
+
+      const data = await callAnalyze(payload);
+
+      // Build + persist SEC payload
+      const secPayload = buildSecPayloadFromBackend(data, setup);
       localStorage.setItem(SEC_KEY, JSON.stringify(secPayload));
 
-      setStatus("SEC ready ✅");
-      window.location.href = "./sec.html";
+      diag({ ok: true, event: "analyze_ok", data, secPayload });
 
+      // Route to SEC screen
+      routeToSec();
     } catch (err) {
-      console.warn(err);
-      setStatus("Network error ❌");
+      console.error(err);
+      alert(String(err?.message || err || "Analyze error"));
+      diag({ ok: false, event: "analyze_error", error: String(err) });
+    } finally {
+      if (elShow) {
+        elShow.disabled = false;
+        elShow.classList.remove("isWorking");
+      }
     }
-  });
+  }
 
-  // Boot
-  setStatus("Tap-n-Score loaded ✅");
-  setHint("Choose a photo to begin.");
-  setChip(chipImgDot, chipImg, false, "not loaded");
-  setChip(chipBullDot, chipBull, false, "not set");
-  setChip(chipShotsDot, chipShots, false, "0");
+  // --------------------------
+  // Hook up listeners
+  // --------------------------
+  function init() {
+    ensureSetupLockedUI();
+    updateInstruction();
+    setModeLabel();
+    updateCounts();
+
+    // Choose photo
+    if (elFile) {
+      elFile.addEventListener("change", (e) => {
+        const file = e.target?.files?.[0];
+        if (file) setImageFromFile(file);
+      });
+    }
+
+    // Tap area (wrap preferred; fallback to image)
+    const tapTarget = elWrap || elImg;
+    if (tapTarget) {
+      tapTarget.addEventListener("click", handleTap, { passive: true });
+      tapTarget.addEventListener("touchend", handleTap, { passive: true });
+    }
+
+    // Clear
+    if (elClear) elClear.addEventListener("click", onClear);
+
+    // Show Results
+    if (elShow) elShow.addEventListener("click", onShowResults);
+
+    diag({ ok: true, event: "init", setup: readSetup() });
+  }
+
+  init();
 })();
