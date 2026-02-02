@@ -1,7 +1,9 @@
 /* ============================================================
-   docs/sec.js (FULL REPLACEMENT)
-   - Reads SEC payload from localStorage
-   - If missing, auto-redirects to landing (target.html)
+   docs/sec.js  (FULL REPLACEMENT)
+   Shooter Experience Card
+   - Reads payload from localStorage key: "SCZN3_SEC_PAYLOAD_V1"
+   - Reads history from localStorage key: "SCZN3_SEC_HISTORY_V1"
+   - Populates UI + enables buttons when data is present
 ============================================================ */
 
 (() => {
@@ -10,135 +12,220 @@
   const SEC_KEY  = "SCZN3_SEC_PAYLOAD_V1";
   const HIST_KEY = "SCZN3_SEC_HISTORY_V1";
 
-  // --- Elements
-  const elSession = $("secSession");
-  const elShots   = $("secShots");
-  const elScore   = $("secScore");
+  // ---- DOM
+  const elSession    = $("secSession");
+  const elShots      = $("secShots");
+  const elScore      = $("secScore");
 
   const elWindClicks = $("secWindClicks");
   const elWindDir    = $("secWindDir");
+
   const elElevClicks = $("secElevClicks");
   const elElevDir    = $("secElevDir");
 
-  const elPrev1 = $("prev1");
-  const elPrev2 = $("prev2");
-  const elPrev3 = $("prev3");
+  const elPrev1      = $("prev1");
+  const elPrev2      = $("prev2");
+  const elPrev3      = $("prev3");
 
-  const elDiag = $("secDiag");
+  const elDiag       = $("secDiag");
 
-  const downloadBtn = $("downloadBtn");
-  const vendorBtn   = $("vendorBtn");
-  const surveyBtn   = $("surveyBtn");
-  const backBtn     = $("backToTargetBtn");
+  const downloadBtn  = $("downloadBtn");
+  const vendorBtn    = $("vendorBtn");
+  const surveyBtn    = $("surveyBtn");
+  const backBtn      = $("backToTargetBtn");
 
-  function setText(el, v) { if (el) el.textContent = v; }
+  // ---- Helpers
+  const round2 = (n) => {
+    const x = Number(n);
+    if (!Number.isFinite(x)) return "0.00";
+    return x.toFixed(2);
+  };
+
+  function setText(el, v) {
+    if (!el) return;
+    el.textContent = v;
+  }
+
+  function disableBtn(btn) {
+    if (!btn) return;
+    btn.classList.add("btnDisabled");
+    btn.setAttribute("aria-disabled", "true");
+    btn.disabled = true;
+    btn.onclick = null;
+  }
+
+  function enableBtn(btn, onClick) {
+    if (!btn) return;
+    btn.classList.remove("btnDisabled");
+    btn.setAttribute("aria-disabled", "false");
+    btn.disabled = false;
+    btn.onclick = null;
+    if (typeof onClick === "function") btn.onclick = onClick;
+  }
+
+  function safeJsonParse(s, fallback) {
+    try { return JSON.parse(s); } catch { return fallback; }
+  }
 
   function setDiag(obj) {
     if (!elDiag) return;
     elDiag.textContent = JSON.stringify(obj, null, 2);
   }
 
-  function num2(v) {
-    const n = Number(v);
-    return Number.isFinite(n) ? n.toFixed(2) : "0.00";
+  function loadPayload() {
+    const raw = localStorage.getItem(SEC_KEY);
+    if (!raw) return null;
+    return safeJsonParse(raw, null);
   }
 
-  // --- Read payload
-  let raw = null;
-  try { raw = localStorage.getItem(SEC_KEY); } catch (_) {}
-
-  if (!raw) {
-    // Hard truth: SEC should never be visited first.
-    const bounce = {
-      ok: false,
-      reason: "Missing SEC payload in localStorage",
-      key: SEC_KEY,
-      action: "Redirecting to landing (target.html)…"
-    };
-    setDiag(bounce);
-
-    // Bounce back to landing page with cache-buster
-    const u = "./target.html?fresh=" + Date.now();
-    setTimeout(() => window.location.replace(u), 400);
-    return;
+  function loadHistory() {
+    const raw = localStorage.getItem(HIST_KEY);
+    const arr = safeJsonParse(raw, []);
+    return Array.isArray(arr) ? arr : [];
   }
 
-  let payload = null;
-  try { payload = JSON.parse(raw); } catch (_) {}
+  function renderHistory() {
+    const h = loadHistory();
 
-  if (!payload || typeof payload !== "object") {
-    setDiag({ ok:false, reason:"SEC payload invalid JSON", raw });
-    const u = "./target.html?fresh=" + Date.now();
-    setTimeout(() => window.location.replace(u), 400);
-    return;
+    const v1 = h[0] ? formatHist(h[0]) : "—";
+    const v2 = h[1] ? formatHist(h[1]) : "—";
+    const v3 = h[2] ? formatHist(h[2]) : "—";
+
+    setText(elPrev1, v1);
+    setText(elPrev2, v2);
+    setText(elPrev3, v3);
   }
 
-  // --- Populate UI
-  setText(elSession, payload.sessionId || "—");
-  setText(elShots,   String(payload.shots ?? 0));
+  function formatHist(entry) {
+    // entry expected like:
+    // { t, score, shots, wind:"LEFT 1.25", elev:"UP 0.50" }
+    const shots = Number.isFinite(Number(entry?.shots)) ? Number(entry.shots) : null;
+    const wind = String(entry?.wind || "").trim();
+    const elev = String(entry?.elev || "").trim();
 
-  const score = payload.score;
-  setText(elScore, Number.isFinite(Number(score)) ? String(score) : "—");
+    const parts = [];
+    if (shots !== null) parts.push(`${shots} shots`);
+    if (wind) parts.push(wind);
+    if (elev) parts.push(elev);
 
-  setText(elWindClicks, num2(payload.windage?.clicks));
-  setText(elWindDir, payload.windage?.dir || "—");
+    return parts.length ? parts.join(" • ") : "—";
+  }
 
-  setText(elElevClicks, num2(payload.elevation?.clicks));
-  setText(elElevDir, payload.elevation?.dir || "—");
+  function normalizeDir(d) {
+    const s = String(d || "—").toUpperCase();
+    if (s === "LEFT" || s === "RIGHT" || s === "NONE") return s;
+    if (s === "UP" || s === "DOWN") return s;
+    return "—";
+  }
 
-  // --- History (optional)
-  try {
-    const hist = JSON.parse(localStorage.getItem(HIST_KEY) || "[]");
-    const h1 = hist?.[0];
-    const h2 = hist?.[1];
-    const h3 = hist?.[2];
-    setText(elPrev1, h1 ? `${h1.wind} | ${h1.elev}` : "—");
-    setText(elPrev2, h2 ? `${h2.wind} | ${h2.elev}` : "—");
-    setText(elPrev3, h3 ? `${h3.wind} | ${h3.elev}` : "—");
-  } catch (_) {}
-
-  // --- Buttons
+  // ---- Wire Back button (always)
   if (backBtn) {
     backBtn.addEventListener("click", () => {
-      window.location.href = "./target.html?fresh=" + Date.now();
+      // back to Target flow
+      window.location.href = "./target.html?fresh=1";
     });
   }
 
-  // Download button only if secPngUrl exists
-  const secUrl = String(payload.secPngUrl || "").trim();
-  if (downloadBtn) {
-    if (secUrl) {
-      downloadBtn.classList.remove("btnDisabled");
-      downloadBtn.disabled = false;
-      downloadBtn.addEventListener("click", () => {
-        const u = `./download.html?img=${encodeURIComponent(secUrl)}&from=${encodeURIComponent("./target.html")}`;
+  // ---- Boot
+  (function init() {
+    // default disabled
+    disableBtn(downloadBtn);
+    disableBtn(vendorBtn);
+    disableBtn(surveyBtn);
+
+    // always render history blocks (even if empty)
+    renderHistory();
+
+    const payload = loadPayload();
+
+    if (!payload) {
+      // No SEC payload => you landed here directly (wrong route)
+      setText(elSession, "—");
+      setText(elShots, "0");
+      setText(elScore, "—");
+      setText(elWindClicks, "0.00");
+      setText(elElevClicks, "0.00");
+      setText(elWindDir, "—");
+      setText(elElevDir, "—");
+
+      setDiag({
+        ok: false,
+        reason: "Missing SEC payload in localStorage",
+        key: SEC_KEY
+      });
+
+      return;
+    }
+
+    // Populate
+    const sessionId = String(payload.sessionId || "—");
+    const shots = Number.isFinite(Number(payload.shots)) ? Number(payload.shots) : 0;
+
+    const scoreNum = Number(payload.score);
+    const scoreText = Number.isFinite(scoreNum) ? String(scoreNum) : "—";
+
+    const windDir = normalizeDir(payload?.windage?.dir);
+    const elevDir = normalizeDir(payload?.elevation?.dir);
+
+    const windClicks = payload?.windage?.clicks ?? 0;
+    const elevClicks = payload?.elevation?.clicks ?? 0;
+
+    setText(elSession, sessionId);
+    setText(elShots, String(shots));
+    setText(elScore, scoreText);
+
+    setText(elWindClicks, round2(windClicks));
+    setText(elElevClicks, round2(elevClicks));
+
+    setText(elWindDir, windDir);
+    setText(elElevDir, elevDir);
+
+    // Buttons
+    const secPngUrl = String(payload.secPngUrl || payload.secUrl || "").trim();
+    const vendorUrl = String(payload.vendorUrl || "").trim();
+    const surveyUrl = String(payload.surveyUrl || "").trim();
+
+    // Download routes to download.html?img=...
+    if (secPngUrl) {
+      enableBtn(downloadBtn, () => {
+        const from = "./index.html?fresh=1";
+        const target = "./target.html?fresh=1";
+        const u = `./download.html?img=${encodeURIComponent(secPngUrl)}&from=${encodeURIComponent(from)}&target=${encodeURIComponent(target)}`;
         window.location.href = u;
       });
     } else {
-      downloadBtn.classList.add("btnDisabled");
-      downloadBtn.disabled = true;
+      disableBtn(downloadBtn);
     }
-  }
 
-  // Vendor / Survey (optional)
-  if (vendorBtn) {
-    const v = String(payload.vendorUrl || "").trim();
-    if (v) {
-      vendorBtn.classList.remove("btnDisabled");
-      vendorBtn.disabled = false;
-      vendorBtn.addEventListener("click", () => window.open(v, "_blank"));
+    // Vendor
+    if (vendorUrl) {
+      enableBtn(vendorBtn, () => {
+        window.location.href = vendorUrl;
+      });
+    } else {
+      disableBtn(vendorBtn);
     }
-  }
 
-  if (surveyBtn) {
-    const s = String(payload.surveyUrl || "").trim();
-    if (s) {
-      surveyBtn.classList.remove("btnDisabled");
-      surveyBtn.disabled = false;
-      surveyBtn.addEventListener("click", () => window.open(s, "_blank"));
+    // Survey
+    if (surveyUrl) {
+      enableBtn(surveyBtn, () => {
+        window.location.href = surveyUrl;
+      });
+    } else {
+      disableBtn(surveyBtn);
     }
-  }
 
-  // Final diag
-  setDiag({ ok:true, key: SEC_KEY, payload });
+    // Diagnostics
+    setDiag({ ok: true, payloadSummary: {
+      sessionId,
+      shots,
+      score: scoreText,
+      wind: { dir: windDir, clicks: round2(windClicks) },
+      elev: { dir: elevDir, clicks: round2(elevClicks) },
+      hasDownload: !!secPngUrl
+    }});
+
+    // Refresh history UI after render
+    renderHistory();
+  })();
 })();
