@@ -2,361 +2,374 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="color-scheme" content="dark" />
-  <meta name="theme-color" content="#06110c" />
+  <meta name="theme-color" content="#06070a" />
   <title>Tap-n-Score™ — Download SEC</title>
 
   <style>
     :root{
-      --bg0:#050b08;
-      --bg1:#06110c;
-      --line:rgba(255,255,255,.10);
-      --line2:rgba(255,255,255,.06);
-      --txt:rgba(255,255,255,.92);
-      --mut:rgba(255,255,255,.68);
+      --bg0:#05060a;
+      --bg1:#0a0c12;
+      --card: rgba(255,255,255,.06);
+      --card2: rgba(255,255,255,.045);
+      --stroke: rgba(255,255,255,.12);
+      --text:#eef2f7;
+      --muted: rgba(238,242,247,.65);
+      --muted2: rgba(238,242,247,.45);
+      --shadow: 0 20px 60px rgba(0,0,0,.55);
+      --radius: 22px;
 
-      --red:#d14a4a;
-      --white:#e9eef3;
+      --red:#d64040;
+      --white:#eef2f7;
       --blue:#2f66ff;
 
-      --mint:#51f0a1;
+      --btn: rgba(255,255,255,.07);
+      --btnHover: rgba(255,255,255,.10);
+      --btnStroke: rgba(255,255,255,.14);
+      --green: #67f3a4;
     }
 
-    *{box-sizing:border-box}
-    html,body{height:100%}
+    *{ box-sizing:border-box; }
+    html,body{ height:100%; }
     body{
       margin:0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+      color: var(--text);
       background:
-        radial-gradient(1200px 800px at 30% 20%, rgba(255,255,255,.06), transparent 55%),
-        radial-gradient(900px 700px at 70% 30%, rgba(255,255,255,.05), transparent 60%),
-        linear-gradient(180deg, var(--bg1), var(--bg0));
-      color:var(--txt);
-      font-family: system-ui,-apple-system,Segoe UI,Roboto,Arial;
+        radial-gradient(1200px 800px at 20% 10%, rgba(46,102,255,.10), transparent 60%),
+        radial-gradient(1200px 800px at 80% 20%, rgba(214,64,64,.10), transparent 60%),
+        radial-gradient(1200px 800px at 50% 90%, rgba(103,243,164,.06), transparent 60%),
+        linear-gradient(180deg, var(--bg0), var(--bg1));
+      padding: 18px 14px 24px;
     }
 
-    .page{
-      max-width:980px;
-      margin:0 auto;
-      padding:24px 18px 40px;
+    .wrap{
+      max-width: 980px;
+      margin: 0 auto;
     }
 
-    .card{
-      border:1px solid var(--line);
-      border-radius:24px;
-      padding:20px;
-      background:
-        radial-gradient(900px 600px at 30% 20%, rgba(255,255,255,.05), transparent 60%),
-        radial-gradient(900px 600px at 70% 30%, rgba(255,255,255,.04), transparent 60%),
-        linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.01));
-      box-shadow: 0 22px 80px rgba(0,0,0,.55);
+    .shell{
+      background: rgba(255,255,255,.04);
+      border: 1px solid rgba(255,255,255,.10);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
     }
 
-    .header{
-      text-align:center;
-      padding:10px 10px 6px;
+    .top{
+      padding: 18px 18px 14px;
+      border-bottom: 1px solid rgba(255,255,255,.08);
+      background: linear-gradient(180deg, rgba(255,255,255,.035), rgba(255,255,255,.02));
     }
 
     .title{
-      margin:0;
-      font-weight:900;
-      letter-spacing:.08em;
-      text-transform:uppercase;
-      font-size: clamp(26px, 4vw, 46px);
+      margin: 0;
+      letter-spacing: .08em;
+      font-weight: 850;
+      font-size: clamp(26px, 4vw, 42px);
+      text-transform: uppercase;
+      line-height: 1.05;
     }
-    .tRed{color:var(--red)}
-    .tWhite{color:var(--white)}
-    .tBlue{color:var(--blue)}
+    .title .r{ color: var(--red); }
+    .title .w{ color: var(--white); }
+    .title .b{ color: var(--blue); }
 
-    .sub{
-      margin-top:10px;
-      color:var(--mut);
-      font-weight:800;
-      letter-spacing:.20em;
-      text-transform:uppercase;
-      font-size:12px;
+    .subtitle{
+      margin: 10px 0 0;
+      color: var(--muted);
+      font-size: 14px;
     }
 
-    .panel{
-      margin-top:14px;
-      border:1px solid var(--line2);
-      border-radius:20px;
-      background: rgba(0,0,0,.20);
-      padding:14px;
+    .grid{
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 14px;
+      padding: 16px 16px 18px;
     }
 
-    .panelTop{
-      display:flex;
-      align-items:baseline;
-      justify-content:space-between;
-      gap:12px;
-      margin-bottom:10px;
+    @media (min-width: 900px){
+      .grid{
+        grid-template-columns: 1.35fr .65fr;
+        align-items: start;
+      }
     }
 
-    .label{
-      font-weight:900;
-      letter-spacing:.18em;
-      opacity:.80;
-      font-size:12px;
+    .card{
+      background: var(--card);
+      border: 1px solid var(--stroke);
+      border-radius: 18px;
+      padding: 14px;
     }
 
-    .meta{
-      color:var(--mut);
-      font-weight:700;
-      font-size:12px;
-      text-align:right;
+    .card h2{
+      margin: 0 0 10px;
+      font-size: 14px;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      color: var(--muted);
+      font-weight: 800;
     }
 
-    .previewWrap{
-      position:relative;
-      border-radius:18px;
-      overflow:hidden;
-      border:1px solid rgba(255,255,255,.10);
-      background: rgba(255,255,255,.03);
-      min-height:360px;
+    .previewBox{
+      background: rgba(0,0,0,.25);
+      border: 1px dashed rgba(255,255,255,.18);
+      border-radius: 16px;
+      padding: 12px;
+      overflow: hidden;
+      min-height: 260px;
       display:flex;
       align-items:center;
       justify-content:center;
+      position: relative;
     }
 
-    #previewImg{
-      display:none;
-      width:100%;
-      height:auto;
+    img#secImg{
+      max-width: 100%;
+      height: auto;
+      display: none;
+      border-radius: 12px;
+      box-shadow: 0 14px 40px rgba(0,0,0,.45);
     }
 
-    .previewPlaceholder{
-      padding:18px;
+    .empty{
+      color: var(--muted2);
       text-align:center;
-      color:rgba(255,255,255,.55);
-      font-weight:800;
-      max-width:420px;
+      padding: 26px 10px;
+      line-height: 1.35;
     }
+    .empty strong{ color: var(--text); }
 
     .actions{
-      margin-top:14px;
-      border:1px solid var(--line2);
-      border-radius:20px;
-      background: rgba(0,0,0,.18);
-      padding:14px;
-    }
-
-    .btnPrimary{
-      width:100%;
-      height:56px;
-      border-radius:18px;
-      border:1px solid rgba(81,240,161,.35);
-      background: rgba(0,0,0,.22);
-      color:var(--white);
-      font-weight:900;
-      font-size:18px;
-      cursor:pointer;
-      box-shadow: 0 0 0 2px rgba(81,240,161,.08) inset;
-    }
-
-    .btnPrimary:disabled{
-      opacity:.45;
-      cursor:not-allowed;
-      box-shadow:none;
-      border-color: rgba(255,255,255,.12);
-    }
-
-    .row2{
-      margin-top:12px;
-      display:grid;
-      grid-template-columns: 1fr 1fr;
-      gap:12px;
+      display:flex;
+      flex-direction: column;
+      gap: 10px;
     }
 
     .btn{
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      height:52px;
-      border-radius:18px;
-      background: rgba(255,255,255,.06);
-      border:1px solid rgba(255,255,255,.10);
-      color:var(--white);
+      width:100%;
+      appearance:none;
+      border: 1px solid var(--btnStroke);
+      background: var(--btn);
+      color: var(--text);
+      padding: 12px 14px;
+      border-radius: 14px;
+      font-size: 15px;
+      font-weight: 750;
+      cursor: pointer;
+      text-align:center;
       text-decoration:none;
-      font-weight:900;
-      font-size:16px;
+      user-select:none;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .btn:hover{ background: var(--btnHover); }
+    .btn:active{ transform: translateY(1px); }
+
+    .btnPrimary{
+      border-color: rgba(103,243,164,.35);
+      background: rgba(103,243,164,.10);
+    }
+    .btnPrimary:hover{ background: rgba(103,243,164,.14); }
+
+    .btnDisabled{
+      opacity: .45;
+      pointer-events:none;
     }
 
     .hint{
-      margin-top:10px;
-      color:rgba(255,255,255,.60);
-      font-weight:650;
-      font-size:12px;
-      line-height:1.35;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.35;
+      margin-top: 4px;
     }
 
-    details.diag{
-      margin-top:12px;
-      border:1px solid rgba(255,255,255,.10);
-      border-radius:18px;
-      padding:10px 12px;
-      background: rgba(0,0,0,.18);
+    details{
+      background: var(--card2);
+      border: 1px solid rgba(255,255,255,.10);
+      border-radius: 16px;
+      padding: 10px 12px;
     }
-
-    details.diag summary{
+    summary{
       cursor:pointer;
-      font-weight:900;
-      color:var(--mut);
+      font-weight: 750;
+      color: var(--muted);
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      font-size: 12px;
+      outline:none;
+    }
+    pre{
+      margin: 10px 0 0;
+      white-space: pre-wrap;
+      word-break: break-word;
+      color: rgba(238,242,247,.82);
+      font-size: 12px;
+      line-height: 1.35;
     }
 
-    details.diag pre{
-      white-space:pre-wrap;
-      word-break:break-word;
-      font-size:12px;
-      color:rgba(255,255,255,.78);
-      margin:10px 0 0;
-    }
-
-    .footer{
+    .foot{
+      padding: 10px 16px 14px;
+      color: rgba(238,242,247,.30);
       text-align:center;
-      margin-top:18px;
-      color:rgba(255,255,255,.25);
-      font-weight:900;
-      letter-spacing:.35em;
-    }
-
-    @media (max-width: 820px){
-      .row2{grid-template-columns:1fr}
+      letter-spacing: .22em;
+      font-weight: 800;
+      text-transform: uppercase;
+      font-size: 12px;
     }
   </style>
 </head>
 
 <body>
-  <main class="page">
-    <section class="card" aria-label="SEC Download">
-      <header class="header">
+  <div class="wrap">
+    <div class="shell">
+      <div class="top">
         <h1 class="title">
-          <span class="tRed">SHOOTER</span>
-          <span class="tWhite"> EXPERIENCE </span>
-          <span class="tBlue">CARD</span>
+          <span class="r">Shooter</span> <span class="w">Experience</span> <span class="b">Card</span>
         </h1>
-        <div class="sub">Download</div>
-      </header>
+        <p class="subtitle" id="subLine">Download your SEC PNG.</p>
+      </div>
 
-      <section class="panel" aria-label="Preview">
-        <div class="panelTop">
-          <div class="label">PREVIEW</div>
-          <div class="meta" id="metaLine">No SEC image loaded.</div>
-        </div>
+      <div class="grid">
+        <!-- PREVIEW -->
+        <div class="card">
+          <h2>Preview</h2>
+          <div class="previewBox" id="previewBox">
+            <div class="empty" id="emptyState">
+              <strong>No SEC image loaded.</strong><br/>
+              This page expects a link like:<br/>
+              <code>?img=https://.../sec.png</code>
+            </div>
+            <img id="secImg" alt="Shooter Experience Card preview" />
+          </div>
 
-        <div class="previewWrap">
-          <img id="previewImg" alt="Shooter Experience Card preview" />
-          <div class="previewPlaceholder" id="previewPlaceholder">
-            Your Shooter Experience Card will appear here.
+          <div class="hint" style="margin-top:10px;">
+            Tip (iPad): if a download doesn’t start, press-and-hold the image and choose <b>Save to Photos</b>.
           </div>
         </div>
-      </section>
 
-      <section class="actions" aria-label="Actions">
-        <button class="btnPrimary" id="downloadBtn" type="button" disabled>
-          Download SEC PNG
-        </button>
+        <!-- ACTIONS -->
+        <div class="card">
+          <h2>Download</h2>
 
-        <div class="row2">
-          <a class="btn" href="./index.html">Score another</a>
-          <a class="btn" href="./index.html">Back to target</a>
+          <div class="actions">
+            <button id="downloadBtn" class="btn btnPrimary btnDisabled">Download SEC PNG</button>
+
+            <!-- These two links are the only “routing” assumptions.
+                 If your scoring page is not ./index.html, change it here. -->
+            <a id="scoreAnotherLink" class="btn" href="./index.html">Score another</a>
+            <a id="backToTargetLink" class="btn" href="./target.html">Back to target</a>
+          </div>
+
+          <div class="hint" id="hintLine">
+            When the SEC image is present, the download button will turn on.
+          </div>
+
+          <details style="margin-top:12px;">
+            <summary>Diagnostics</summary>
+            <pre id="diagOut">(none)</pre>
+          </details>
         </div>
+      </div>
 
-        <div class="hint">
-          Tip: If download doesn’t start on iPad, press-and-hold the image and “Save to Photos.”
-        </div>
-      </section>
-
-      <details class="diag">
-        <summary>Diagnostics</summary>
-        <pre id="diagOut">(none)</pre>
-      </details>
-
-      <footer class="footer">SCZN3</footer>
-    </section>
-  </main>
+      <div class="foot">SCZN3</div>
+    </div>
+  </div>
 
   <script>
     (() => {
       const $ = (id) => document.getElementById(id);
 
-      const previewImg = $("previewImg");
-      const previewPlaceholder = $("previewPlaceholder");
-      const metaLine = $("metaLine");
+      const secImg = $("secImg");
+      const emptyState = $("emptyState");
       const downloadBtn = $("downloadBtn");
       const diagOut = $("diagOut");
+      const subLine = $("subLine");
+      const hintLine = $("hintLine");
 
-      function getSecImage() {
-        const qs = new URLSearchParams(location.search);
-        const imgParam = qs.get("img");
-        if (imgParam && imgParam.trim()) return { src: imgParam.trim(), source: "querystring" };
+      // Links (edit these if your filenames differ)
+      const scoreAnotherLink = $("scoreAnotherLink");
+      const backToTargetLink = $("backToTargetLink");
 
-        const ss = sessionStorage.getItem("sec_png_dataurl");
-        if (ss && ss.trim()) return { src: ss.trim(), source: "sessionStorage" };
+      // Pull query params
+      const params = new URLSearchParams(window.location.search);
+      const imgUrl = params.get("img") || "";
+      const from = params.get("from") || ""; // optional: allow caller to set return paths
+      const target = params.get("target") || ""; // optional
 
-        return null;
+      if (from) scoreAnotherLink.href = from;
+      if (target) backToTargetLink.href = target;
+
+      // Helper: best-effort filename
+      function guessFileName(url) {
+        try {
+          const u = new URL(url);
+          const p = u.pathname.split("/").filter(Boolean).pop() || "SEC.png";
+          return p.toLowerCase().endsWith(".png") ? p : (p + ".png");
+        } catch {
+          return "SEC.png";
+        }
       }
 
-      function setPreview(src, source) {
-        previewImg.src = src;
-        previewImg.style.display = "block";
-        previewPlaceholder.style.display = "none";
-
-        const kind = src.startsWith("data:") ? "data URL" : "URL";
-        metaLine.textContent = `Loaded (${kind}) • source: ${source}`;
-
-        downloadBtn.disabled = false;
-      }
-
-      function triggerDownload(href, filename) {
+      // Helper: download (blob) to force a file save in most browsers
+      async function downloadAsFile(url) {
+        const res = await fetch(url, { mode: "cors" });
+        if (!res.ok) throw new Error("Fetch failed: " + res.status);
+        const blob = await res.blob();
         const a = document.createElement("a");
-        a.href = href;
-        a.download = filename;
+        const obj = URL.createObjectURL(blob);
+        a.href = obj;
+        a.download = guessFileName(url);
         document.body.appendChild(a);
         a.click();
         a.remove();
+        setTimeout(() => URL.revokeObjectURL(obj), 1500);
       }
 
-      async function downloadFromUrl(url) {
-        if (url.startsWith("data:image")) {
-          triggerDownload(url, `SEC_${Date.now()}.png`);
-          return;
-        }
-
-        const res = await fetch(url, { mode: "cors" });
-        const blob = await res.blob();
-        const objUrl = URL.createObjectURL(blob);
-        triggerDownload(objUrl, `SEC_${Date.now()}.png`);
-        setTimeout(() => URL.revokeObjectURL(objUrl), 2000);
+      function setDiag(obj) {
+        diagOut.textContent = JSON.stringify(obj, null, 2);
       }
 
-      downloadBtn.addEventListener("click", async () => {
-        try {
-          const info = getSecImage();
-          if (!info) return;
-          diagOut.textContent = JSON.stringify({ action: "download", info }, null, 2);
-          await downloadFromUrl(info.src);
-        } catch (e) {
-          diagOut.textContent = String(e);
-          alert("Download failed. Open Diagnostics.");
-        }
-      });
-
-      const info = getSecImage();
-      if (!info) {
-        diagOut.textContent = JSON.stringify({
-          ok: false,
-          message: "No SEC image provided.",
-          expected: [
-            "download.html?img=<SEC image url or data url>",
-            "sessionStorage.sec_png_dataurl = 'data:image/png;base64,...'"
-          ]
-        }, null, 2);
+      // No image in query
+      if (!imgUrl) {
+        subLine.textContent = "Download your SEC PNG.";
+        hintLine.textContent = "No image was provided. Open this page with ?img=YOUR_PNG_URL";
+        setDiag({ ok:false, reason:"missing img param", example: window.location.origin + window.location.pathname + "?img=https://example.com/sec.png" });
         return;
       }
 
-      setPreview(info.src, info.source);
-      diagOut.textContent = JSON.stringify({ ok: true, loadedFrom: info.source }, null, 2);
+      // Load image into preview
+      subLine.textContent = "SEC ready to download.";
+      emptyState.style.display = "none";
+      secImg.style.display = "block";
+      secImg.src = imgUrl;
+
+      secImg.onload = () => {
+        downloadBtn.classList.remove("btnDisabled");
+        hintLine.textContent = "Tap Download SEC PNG. (iPad tip: press-and-hold image to Save to Photos.)";
+        setDiag({ ok:true, img: imgUrl, note:"Preview loaded" });
+      };
+
+      secImg.onerror = () => {
+        downloadBtn.classList.add("btnDisabled");
+        hintLine.textContent = "Could not load the SEC image. (Check the img= URL.)";
+        setDiag({ ok:false, img: imgUrl, error:"image failed to load" });
+      };
+
+      // Download button behavior
+      downloadBtn.addEventListener("click", async () => {
+        if (downloadBtn.classList.contains("btnDisabled")) return;
+        downloadBtn.textContent = "Downloading…";
+        try {
+          await downloadAsFile(imgUrl);
+          downloadBtn.textContent = "Download SEC PNG";
+        } catch (e) {
+          // Fallback: open image in a new tab
+          setDiag({ ok:false, img: imgUrl, error:String(e), fallback:"opening image" });
+          downloadBtn.textContent = "Open image (fallback)";
+          window.open(imgUrl, "_blank", "noopener");
+          setTimeout(() => (downloadBtn.textContent = "Download SEC PNG"), 1200);
+        }
+      });
     })();
   </script>
 </body>
