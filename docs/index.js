@@ -2,60 +2,63 @@
    docs/index.js  (FULL REPLACEMENT)
    Tap-n-Score™ → Backend /api/calc → SEC localStorage → sec.html
 
-   IMPORTANT:
-   - localStorage is PER-DOMAIN.
-   - This file MUST be run from your GitHub Pages site (same origin as sec.html).
+   HARDENED:
+   - Binds to multiple possible element IDs so a renamed button
+     won’t silently break the flow.
+   - Writes SEC payload every time BEFORE routing.
+   - Uses inches only. Screen space: x right, y down.
 ============================================================ */
 
 (() => {
-  const $ = (id) => document.getElementById(id);
-
-  // ---- Backend
   const API_BASE = "https://sczn3-backend-new.onrender.com";
   const API_CALC = `${API_BASE}/api/calc`;
 
-  // ---- SEC storage keys (MUST MATCH sec.js)
   const SEC_KEY = "SCZN3_SEC_PAYLOAD_V1";
   const HIST_KEY = "SCZN3_SEC_HISTORY_V1";
 
-  // ---- Target size (inches)
+  // ---- helpers
+  const $ = (id) => document.getElementById(id);
+  const pick = (...ids) => ids.map($).find(Boolean) || null;
+
+  const setText = (el, txt) => { if (el) el.textContent = txt; };
+  const enable = (el, yes) => {
+    if (!el) return;
+    el.disabled = !yes;
+    el.setAttribute("aria-disabled", yes ? "false" : "true");
+    el.classList.toggle("btnDisabled", !yes);
+    el.classList.toggle("btnDisabled", !yes);
+  };
+
+  const readNum = (el, fallback) => {
+    const v = Number(el?.value);
+    return Number.isFinite(v) ? v : fallback;
+  };
+
+  // ---- target size inches (default 23)
   const params = new URLSearchParams(location.search);
   const TARGET_SIZE_IN = Number(params.get("size")) || 23;
 
-  // ---- DOM
-  const elFile = $("photoInput");
-  const elImg = $("targetImg");
-  const elDots = $("dotsLayer");
-  const elInstruction = $("instructionLine");
-  const elTapCount = $("tapCount");
-  const elClear = $("clearTapsBtn");
-  const elShow = $("showResultsBtn");
-  const elDist = $("distanceYds"); // optional
-  const elClick = $("clickMoa");   // optional
+  // ---- DOM (support multiple ID variants)
+  const elFile = pick("photoInput", "fileInput", "imageInput");
+  const elImg = pick("targetImg", "previewImg", "img");
+  const elWrap = pick("targetWrap", "imgWrap", "wrap");
+  const elDots = pick("dotsLayer", "tapLayer", "overlay");
+  const elInstruction = pick("instructionLine", "instruction", "instructions");
+  const elTapCount = pick("tapCount", "countLabel", "shotCount");
+  const elClear = pick("clearTapsBtn", "clearBtn", "btnClear");
+  const elShow = pick("showResultsBtn", "showResults", "showResultsButton", "btnResults");
+  const elDist = pick("distanceYds", "distance");
+  const elClick = pick("clickMoa", "moaPerClick");
 
-  // ---- State
-  let selectedFile = null;
+  // ---- state
   let objectUrl = null;
+  let bull = null;      // {x,y} inches
+  let shots = [];       // [{x,y}] inches
 
-  // Bull + shots in inches (screen-space: x right, y down)
-  let bull = null;
-  let shots = [];
-
-  // ---- Helpers
-  function setText(el, txt) {
-    if (el) el.textContent = txt;
-  }
-
-  function setInstruction(txt) {
-    setText(elInstruction, txt);
-  }
-
-  function setTapCount() {
-    setText(elTapCount, `${shots.length}`);
-  }
-
+  // ---- overlay dots
   function clearDots() {
-    if (elDots) elDots.innerHTML = "";
+    if (!elDots) return;
+    elDots.innerHTML = "";
   }
 
   function addDot(xPx, yPx, cls) {
@@ -74,28 +77,25 @@
     return r;
   }
 
-  function pointPxToInches(xPx, yPx, rect) {
-    const xIn = (xPx / rect.width) * TARGET_SIZE_IN;
-    const yIn = (yPx / rect.height) * TARGET_SIZE_IN;
-    return { x: xIn, y: yIn };
+  function syncOverlayToImage() {
+    if (!elImg || !elDots) return;
+    const r = elImg.getBoundingClientRect();
+    elDots.style.width = `${r.width}px`;
+    elDots.style.height = `${r.height}px`;
   }
 
-  function pointInchesToPx(p, rect) {
-    const xPx = (p.x / TARGET_SIZE_IN) * rect.width;
-    const yPx = (p.y / TARGET_SIZE_IN) * rect.height;
-    return { xPx, yPx };
+  function pxToInches(xPx, yPx, rect) {
+    return {
+      x: (xPx / rect.width) * TARGET_SIZE_IN,
+      y: (yPx / rect.height) * TARGET_SIZE_IN
+    };
   }
 
-  function enable(el, yes) {
-    if (!el) return;
-    el.disabled = !yes;
-    el.setAttribute("aria-disabled", yes ? "false" : "true");
-    el.classList.toggle("btnDisabled", !yes);
-  }
-
-  function readNum(el, fallback) {
-    const v = Number(el?.value);
-    return Number.isFinite(v) ? v : fallback;
+  function inchesToPx(p, rect) {
+    return {
+      xPx: (p.x / TARGET_SIZE_IN) * rect.width,
+      yPx: (p.y / TARGET_SIZE_IN) * rect.height
+    };
   }
 
   function redrawAllDots() {
@@ -104,48 +104,57 @@
     if (!r) return;
 
     if (bull) {
-      const { xPx, yPx } = pointInchesToPx(bull, r);
+      const { xPx, yPx } = inchesToPx(bull, r);
       addDot(xPx, yPx, "dotBull");
     }
+
     for (const s of shots) {
-      const { xPx, yPx } = pointInchesToPx(s, r);
+      const { xPx, yPx } = inchesToPx(s, r);
       addDot(xPx, yPx, "dotShot");
     }
+  }
+
+  function setInstruction(txt) {
+    setText(elInstruction, txt);
+  }
+
+  function setCount() {
+    setText(elTapCount, String(shots.length));
   }
 
   function resetAll() {
     bull = null;
     shots = [];
     redrawAllDots();
-    setTapCount();
+    setCount();
     setInstruction("Tap the bull first (blue). Then tap shots (red).");
     enable(elShow, false);
   }
 
-  // ---- SAFE SAME-ORIGIN ROUTE (prevents bouncing to another domain)
-  function goToSecSameOrigin() {
-    // Example:
-    // https://sczn313-stack.github.io/tap-n-score/sec.html
-    const basePath = location.pathname.replace(/[^/]*$/, ""); // current folder
-    const secUrl = `${location.origin}${basePath}sec.html`;
-    window.location.href = secUrl;
+  // ---- SEC payload + history
+  function pushHistory(entry) {
+    try {
+      const prev = JSON.parse(localStorage.getItem(HIST_KEY) || "[]");
+      const next = [entry, ...prev].slice(0, 3);
+      localStorage.setItem(HIST_KEY, JSON.stringify(next));
+    } catch (_) {}
   }
 
-  // ---- SEC route + payload (backend authority)
-  function routeToSEC_FromBackendResult(calcResult) {
+  function routeToSEC(calcResult) {
     const windDir = calcResult?.directions?.windage ?? "—";
     const elevDir = calcResult?.directions?.elevation ?? "—";
 
     const windClicks = Number(calcResult?.clicks?.windage ?? 0);
     const elevClicks = Number(calcResult?.clicks?.elevation ?? 0);
 
+    // backend may not return score yet; keep null
     const scoreMaybe = Number(calcResult?.score);
     const score = Number.isFinite(scoreMaybe) ? scoreMaybe : null;
 
-    const secPayload = {
+    const payload = {
       sessionId: calcResult?.sessionId || `SEC-${Date.now().toString(36).toUpperCase()}`,
-      score,               // number or null
-      shots: shots.length, // local shot count is correct
+      score,
+      shots: shots.length,
       windage: { dir: windDir, clicks: windClicks },
       elevation: { dir: elevDir, clicks: elevClicks },
       secPngUrl: calcResult?.secPngUrl || calcResult?.secUrl || "",
@@ -153,35 +162,23 @@
       surveyUrl: calcResult?.surveyUrl || ""
     };
 
-    // Save small history (PREV 1–3)
-    try {
-      const prev = JSON.parse(localStorage.getItem(HIST_KEY) || "[]");
-      const entry = {
-        t: Date.now(),
-        score: secPayload.score,
-        shots: secPayload.shots,
-        wind: `${secPayload.windage.dir} ${Number(secPayload.windage.clicks).toFixed(2)}`,
-        elev: `${secPayload.elevation.dir} ${Number(secPayload.elevation.clicks).toFixed(2)}`
-      };
-      const next = [entry, ...prev].slice(0, 3);
-      localStorage.setItem(HIST_KEY, JSON.stringify(next));
-    } catch (_) {}
+    // write history
+    pushHistory({
+      t: Date.now(),
+      score: payload.score,
+      shots: payload.shots,
+      wind: `${payload.windage.dir} ${windClicks.toFixed(2)}`,
+      elev: `${payload.elevation.dir} ${elevClicks.toFixed(2)}`
+    });
 
-    // Persist payload (BOTH storages = extra iOS safety)
-    try {
-      localStorage.setItem(SEC_KEY, JSON.stringify(secPayload));
-      sessionStorage.setItem(SEC_KEY, JSON.stringify(secPayload));
-    } catch (e) {
-      console.error("SEC storage write failed:", e);
-    }
+    // write payload
+    localStorage.setItem(SEC_KEY, JSON.stringify(payload));
 
-    console.log("✅ SEC payload written on:", location.origin, secPayload);
-
-    // Route to SEC on SAME ORIGIN
-    goToSecSameOrigin();
+    // route
+    window.location.href = "./sec.html";
   }
 
-  // ---- Backend call
+  // ---- backend calc
   async function calcViaBackend() {
     const distanceYds = readNum(elDist, 100);
     const clickMoa = readNum(elClick, 0.25);
@@ -196,13 +193,12 @@
 
     const data = await res.json().catch(() => ({}));
     if (!res.ok || !data?.ok) {
-      const msg = data?.error || `Backend error (${res.status})`;
-      throw new Error(msg);
+      throw new Error(data?.error || `Backend error (${res.status})`);
     }
     return data;
   }
 
-  // ---- Tap handling
+  // ---- tapping
   function onTap(e) {
     const r = imgRect();
     if (!r) return;
@@ -212,7 +208,7 @@
 
     if (xPx < 0 || yPx < 0 || xPx > r.width || yPx > r.height) return;
 
-    const pIn = pointPxToInches(xPx, yPx, r);
+    const pIn = pxToInches(xPx, yPx, r);
 
     if (!bull) {
       bull = pIn;
@@ -223,27 +219,29 @@
 
     shots.push(pIn);
     addDot(xPx, yPx, "dotShot");
-    setTapCount();
+    setCount();
     enable(elShow, shots.length >= 1);
   }
 
-  // ---- File load (iOS safe)
+  // ---- file load
   function loadFile(file) {
     if (!file) return;
-    selectedFile = file;
 
     if (objectUrl) URL.revokeObjectURL(objectUrl);
     objectUrl = URL.createObjectURL(file);
 
     if (elImg) {
-      elImg.onload = () => redrawAllDots();
+      elImg.onload = () => {
+        syncOverlayToImage();
+        redrawAllDots();
+      };
       elImg.src = objectUrl;
     }
 
     resetAll();
   }
 
-  // ---- Wiring
+  // ---- wiring
   if (elFile) {
     elFile.addEventListener("change", (e) => {
       const f = e.target.files && e.target.files[0];
@@ -267,8 +265,8 @@
 
         const calcResult = await calcViaBackend();
 
-        // ✅ Results finalized → write payload → route
-        routeToSEC_FromBackendResult(calcResult);
+        // ✅ results finalized → write SEC payload → route
+        routeToSEC(calcResult);
       } catch (err) {
         console.error(err);
         setInstruction(`Error: ${String(err?.message || err)}`);
@@ -277,9 +275,12 @@
     });
   }
 
-  window.addEventListener("resize", redrawAllDots);
+  window.addEventListener("resize", () => {
+    syncOverlayToImage();
+    redrawAllDots();
+  });
 
-  // Boot
+  // boot
   setInstruction("Tap the bull first (blue). Then tap shots (red).");
-  setTapCount();
+  setCount();
 })();
