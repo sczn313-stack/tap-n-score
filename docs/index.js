@@ -1,46 +1,54 @@
 /* ============================================================
-   index.js (FULL REPLACEMENT) — Target Page → SEC handoff
-   Fix:
-   - SEC payload is passed via URL (base64) for reliability.
-   - localStorage used only as backup.
+   index.js (FULL REPLACEMENT) — Works with YOUR index.html
+   IDs expected (matches what you pasted):
+   - photoInput, targetImg, targetWrap, dotsLayer
+   - tapCount, clearTapsBtn, seeResultsBtn
+   - distanceYds, moaPerClick
+   - vendorLink (optional)
+
+   Output:
+   - Builds SEC payload
+   - Saves backup to localStorage: SCZN3_SEC_PAYLOAD_V1
+   - Routes to: ./sec.html?payload=BASE64&fresh=TIMESTAMP
+
+   NOTE: This is “frontend math” to keep the pipeline solid.
+   When you’re ready, we can swap compute() to call /api/calc.
 ============================================================ */
 
 (() => {
   const $ = (id) => document.getElementById(id);
 
-  // ---- REQUIRED ELEMENT IDs on Target page
-  // Photo + canvas/layer
-  const elFile = $("photoInput");     // <input type="file" id="photoInput" accept="image/*">
-  const elImg = $("targetImg");       // <img id="targetImg">
-  const elDots = $("dotsLayer");      // <div id="dotsLayer"> overlay container (position:absolute)
-  const elWrap = $("targetWrap");     // <div id="targetWrap"> wrapper around img + dots
+  // ---- DOM
+  const elFile = $("photoInput");
+  const elImg = $("targetImg");
+  const elWrap = $("targetWrap");
+  const elDots = $("dotsLayer");
 
-  // Controls
-  const elTapCount = $("tapCount");   // <span id="tapCount">
-  const elClear = $("clearTapsBtn");  // <button id="clearTapsBtn">
-  const elSee = $("seeResultsBtn");   // <button id="seeResultsBtn">
+  const elTapCount = $("tapCount");
+  const elClear = $("clearTapsBtn");
+  const elSee = $("seeResultsBtn");
 
-  // Optional UI / links (safe if null)
-  const elVendor = $("vendorLink");   // <a id="vendorLink">
-  const elDistance = $("distanceYds");// <select or input id="distanceYds">
-  const elMoaClick = $("moaPerClick");// <select or input id="moaPerClick">
+  const elDistance = $("distanceYds");
+  const elMoaClick = $("moaPerClick");
+
+  const elVendor = $("vendorLink"); // optional
+
+  // ---- Storage
+  const SEC_KEY = "SCZN3_SEC_PAYLOAD_V1";
 
   // ---- State
-  const KEY = "SCZN3_SEC_PAYLOAD_V1";
   let objectUrl = null;
-  let taps = []; // {x01,y01, kind:'bull'|'shot'}
-  let bull = null;
-  let shots = [];
+  let bull = null;   // {x01,y01}
+  let shots = [];    // [{x01,y01},...]
 
   // ---- Helpers
-  function clamp01(v) { return Math.max(0, Math.min(1, v)); }
+  const clamp01 = (v) => Math.max(0, Math.min(1, v));
 
   function setTapCount() {
     if (elTapCount) elTapCount.textContent = String(shots.length);
   }
 
   function clearDots() {
-    taps = [];
     bull = null;
     shots = [];
     if (elDots) elDots.innerHTML = "";
@@ -48,92 +56,85 @@
   }
 
   function addDot(x01, y01, kind) {
-    taps.push({ x01, y01, kind });
+    if (!elDots) return;
 
     const d = document.createElement("div");
     d.className = "tapDot " + (kind === "bull" ? "tapDotBull" : "tapDotShot");
-
-    // percent positioning so it stays correct with scaling
-    d.style.left = (x01 * 100) + "%";
-    d.style.top = (y01 * 100) + "%";
-
+    d.style.left = `${x01 * 100}%`;
+    d.style.top = `${y01 * 100}%`;
     elDots.appendChild(d);
   }
 
   function getRelative01FromEvent(ev) {
-    // tap coordinates relative to the displayed image box
     const r = elImg.getBoundingClientRect();
     const x = (ev.clientX - r.left) / r.width;
     const y = (ev.clientY - r.top) / r.height;
     return { x01: clamp01(x), y01: clamp01(y) };
   }
 
-  function b64FromObj(obj) {
+  // base64 helpers (safe for unicode)
+  function toB64(obj) {
     const json = JSON.stringify(obj);
     return btoa(unescape(encodeURIComponent(json)));
   }
 
-  // ---- Simple click math (placeholder)
-  // IMPORTANT: This only exists so the pipeline works end-to-end.
-  // Your real backend can replace this later.
-  function computeDirectionsFromTaps() {
-    // Need bull + at least 1 shot
+  function round2(n) {
+    const x = Number(n);
+    if (!Number.isFinite(x)) return 0;
+    return Math.round(x * 100) / 100;
+  }
+
+  // ---- Frontend “compute” (placeholder math)
+  // Keeps directions consistent with your screen-space convention:
+  // delta = bull - avgShot
+  // dx>0 => RIGHT, dx<0 => LEFT
+  // dy>0 => DOWN,  dy<0 => UP
+  function computeFromTaps() {
     if (!bull || shots.length < 1) return null;
 
-    // Compute POI average in normalized space
-    const avg = shots.reduce((acc, p) => ({ x: acc.x + p.x01, y: acc.y + p.y01 }), { x: 0, y: 0 });
-    avg.x /= shots.length;
-    avg.y /= shots.length;
+    // avg POI (normalized)
+    let sx = 0, sy = 0;
+    for (const p of shots) { sx += p.x01; sy += p.y01; }
+    const avg = { x01: sx / shots.length, y01: sy / shots.length };
 
-    // Signed deltas: bull - POI (we want to move POI to bull)
-    const dx = bull.x01 - avg.x; // + means need RIGHT
-    const dy = bull.y01 - avg.y; // + means need DOWN in screen space
+    const dx01 = bull.x01 - avg.x01;
+    const dy01 = bull.y01 - avg.y01;
 
-    // Convert to "fake inches" scale just for demo pipeline:
-    // Treat image width as 10 inches. (Replace later with real inches mapping.)
-    const inchesPerFullWidth = 10;
-    const inchesX = dx * inchesPerFullWidth;
-    const inchesY = dy * inchesPerFullWidth;
+    // “fake inches” scale just to drive clicks until backend is wired
+    // Treat full image width as 10.00 inches (placeholder)
+    const inchesPerFullWidth = 10.0;
+    const inchesX = dx01 * inchesPerFullWidth;
+    const inchesY = dy01 * inchesPerFullWidth;
 
-    // User distance + moa/click (default safe values)
     const dist = Number(elDistance?.value ?? 100);
     const moaPerClick = Number(elMoaClick?.value ?? 0.25);
 
-    // Inches per MOA (true MOA) at distance
-    const inchesPerMoa = (dist / 100) * 1.047;
+    // True MOA inches @ distance: 1 MOA = 1.047" @ 100y
+    const inchesPerMoa = 1.047 * (dist / 100);
+
     const moaX = inchesX / inchesPerMoa;
     const moaY = inchesY / inchesPerMoa;
 
     const clicksX = moaX / moaPerClick;
     const clicksY = moaY / moaPerClick;
 
-    const windage = {
-      dir: clicksX >= 0 ? "RIGHT" : "LEFT",
-      clicks: Math.abs(clicksX)
-    };
-
-    const elevation = {
-      // screen-space down is +dy, but elevation “UP” is the opposite of screen-down.
-      // If dy is positive (bull below POI), you need to move POI DOWN => dial DOWN.
-      dir: clicksY >= 0 ? "DOWN" : "UP",
-      clicks: Math.abs(clicksY)
-    };
+    const windDir = clicksX === 0 ? "NONE" : (clicksX > 0 ? "RIGHT" : "LEFT");
+    const elevDir = clicksY === 0 ? "NONE" : (clicksY > 0 ? "DOWN" : "UP");
 
     return {
-      avgPoi: { x01: avg.x, y01: avg.y },
       bull,
-      shots,
-      windage,
-      elevation
+      avgPoi: avg,
+      windage: { dir: windDir, clicks: round2(Math.abs(clicksX)) },
+      elevation:{ dir: elevDir, clicks: round2(Math.abs(clicksY)) }
     };
   }
 
-  function goToSEC(payload) {
-    // Store backup
-    try { localStorage.setItem(KEY, JSON.stringify(payload)); } catch (e) {}
+  function routeToSEC(payload) {
+    // backup storage
+    try { localStorage.setItem(SEC_KEY, JSON.stringify(payload)); } catch {}
 
-    // URL payload is primary
-    const b64 = b64FromObj(payload);
+    // primary: URL payload
+    const b64 = toB64(payload);
     location.href = `./sec.html?payload=${encodeURIComponent(b64)}&fresh=${Date.now()}`;
   }
 
@@ -143,23 +144,22 @@
       const f = elFile.files && elFile.files[0];
       if (!f) return;
 
-      // reset dots when new photo selected
       clearDots();
 
       if (objectUrl) URL.revokeObjectURL(objectUrl);
       objectUrl = URL.createObjectURL(f);
-      elImg.src = objectUrl;
+
+      if (elImg) elImg.src = objectUrl;
     });
   }
 
+  // Tap on the IMAGE (dotsLayer has pointer-events:none in your HTML — perfect)
   if (elImg) {
     elImg.addEventListener("click", (ev) => {
-      // Must have image loaded
       if (!elImg.src) return;
 
       const { x01, y01 } = getRelative01FromEvent(ev);
 
-      // First tap = bull, remaining taps = shots
       if (!bull) {
         bull = { x01, y01 };
         addDot(x01, y01, "bull");
@@ -176,35 +176,32 @@
 
   if (elSee) {
     elSee.addEventListener("click", () => {
-      const out = computeDirectionsFromTaps();
+      const out = computeFromTaps();
       if (!out) {
         alert("Tap the bull first, then tap at least one shot.");
         return;
       }
 
-      // Build SEC payload
+      // Build SEC payload (what sec.js expects)
       const payload = {
-        sessionId: "S-" + Date.now(),
-        score: 99,                // placeholder
-        shots: out.shots.length,
-        windage: {
-          dir: out.windage.dir,
-          clicks: Number(out.windage.clicks.toFixed(2))
-        },
-        elevation: {
-          dir: out.elevation.dir,
-          clicks: Number(out.elevation.clicks.toFixed(2))
-        },
-        secPngUrl: "",            // optional
-        vendorUrl: elVendor?.href || "",
-        surveyUrl: "",            // optional
+        sessionId: `S-${Date.now()}`,
+        score: 99, // placeholder until backend score exists
+        shots: shots.length,
+
+        windage: { dir: out.windage.dir, clicks: round2(out.windage.clicks) },
+        elevation:{ dir: out.elevation.dir, clicks: round2(out.elevation.clicks) },
+
+        secPngUrl: "", // optional later
+        vendorUrl: (elVendor && elVendor.href && elVendor.href !== "#") ? elVendor.href : "",
+        surveyUrl: "",
+
         debug: {
           bull: out.bull,
           avgPoi: out.avgPoi
         }
       };
 
-      goToSEC(payload);
+      routeToSEC(payload);
     });
   }
 
