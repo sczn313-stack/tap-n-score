@@ -6,22 +6,19 @@
   <meta name="color-scheme" content="dark" />
   <meta name="theme-color" content="#06070a" />
 
-  <!-- CRITICAL: lock ALL relative URLs to the project root -->
-  <base href="/tap-n-score/" />
+  <!-- HARD NO-CACHE (Safari helpers) -->
+  <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
 
   <!-- PWA -->
   <link rel="manifest" href="/tap-n-score/manifest.webmanifest" />
   <link rel="apple-touch-icon" href="/tap-n-score/icons/icon-192.png" />
   <link rel="icon" href="/tap-n-score/icons/icon-192.png" />
 
-  <!-- HARD NO-CACHE (Safari helpers) -->
-  <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0" />
-  <meta http-equiv="Pragma" content="no-cache" />
-  <meta http-equiv="Expires" content="0" />
-
   <title>Tap-n-Score™</title>
 
-  <!-- App CSS (absolute path) -->
+  <!-- App CSS (ABSOLUTE) -->
   <link rel="stylesheet" href="/tap-n-score/styles.css?v=22206" />
 </head>
 
@@ -52,14 +49,17 @@
       </div>
 
       <div class="row">
-        <div class="pill">Taps: <span id="tapCount">0</span></div>
+        <div class="pill">
+          Taps: <span id="tapCount">0</span>
+        </div>
 
         <button id="clearTapsBtn" class="btnSecondary" type="button">Clear</button>
-
         <button id="seeResultsBtn" class="btnPrimary" type="button">Show results</button>
       </div>
 
-      <p id="instructionLine" class="hint">Tap the bull first, then tap each shot.</p>
+      <p id="instructionLine" class="hint">
+        Tap the bull first, then tap each shot.
+      </p>
     </section>
 
     <section class="card">
@@ -95,7 +95,7 @@
     </footer>
   </main>
 
-  <!-- App JS (absolute path) -->
+  <!-- App JS (ABSOLUTE) -->
   <script src="/tap-n-score/index.js?v=22206"></script>
 </body>
 </html>
