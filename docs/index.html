@@ -6,35 +6,35 @@
   <meta name="color-scheme" content="dark" />
   <meta name="theme-color" content="#06070a" />
 
-  <!-- HARD NO-CACHE (iOS/Safari friendly) -->
-  <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0" />
-  <meta http-equiv="Pragma" content="no-cache" />
-  <meta http-equiv="Expires" content="0" />
-
   <title>Tap-n-Score™</title>
+
+  <link rel="manifest" href="./manifest.webmanifest" />
 </head>
 
-<body style="background:#06070a;color:#fff;font-family:system-ui;padding:24px">
-  Launching…
+<body style="
+  margin:0;
+  min-height:100vh;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background:#06070a;
+  color:#fff;
+  font-family:system-ui;
+">
+
+  <div style="
+    padding:18px 22px;
+    border-radius:14px;
+    background:rgba(255,255,255,0.06);
+    border:1px solid rgba(255,255,255,0.12);
+  ">
+    Launching Tap-n-Score…
+  </div>
 
   <script>
-    (function () {
-      // Always force a fresh URL so iOS won't reuse stale cached JS/CSS.
-      // Landing page = index.html (this file) -> redirect to your real app page.
-      const ts = Date.now();
-
-      // If your real landing page is index.html (and this file is also index.html),
-      // then we should redirect to the next real page (target.html).
-      // If you want it to go somewhere else, change TARGET below.
-      const TARGET = "./target.html";
-
-      // Preserve any existing query params + add fresh=
-      const u = new URL(TARGET, location.href);
-      u.searchParams.set("fresh", String(ts));
-
-      // Replace (not assign) so Back doesn’t bounce through the redirect page
-      location.replace(u.toString());
-    })();
+    // ONE clean handoff. No loops.
+    window.location.replace("./target.html?fresh=1");
   </script>
+
 </body>
 </html>
