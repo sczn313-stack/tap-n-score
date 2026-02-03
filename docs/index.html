@@ -8,66 +8,104 @@
 
   <!-- PWA -->
   <link rel="manifest" href="./manifest.webmanifest" />
-  <link rel="icon" href="./icons/icon-192.png" />
   <link rel="apple-touch-icon" href="./icons/icon-192.png" />
+  <link rel="icon" href="./icons/icon-192.png" />
 
-  <!-- HARD NO-CACHE (helps Safari) -->
+  <!-- HARD NO-CACHE (Safari helpers) -->
   <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
 
   <title>Tap-n-Score™</title>
 
-  <style>
-    html, body { height: 100%; }
-    body{
-      margin:0;
-      background:#06070a;
-      color:#fff;
-      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-    }
-    .card{
-      width:min(720px, 92vw);
-      border:1px solid rgba(255,255,255,0.08);
-      background:rgba(255,255,255,0.03);
-      border-radius:18px;
-      padding:22px 18px;
-      box-shadow: 0 18px 45px rgba(0,0,0,0.35);
-    }
-    .title{ font-size:18px; font-weight:700; margin:0 0 6px 0; }
-    .sub{ font-size:13px; opacity:.8; margin:0; }
-  </style>
+  <!-- App CSS -->
+  <link rel="stylesheet" href="./styles.css?v=22206" />
 </head>
 
 <body>
-  <div class="card" role="status" aria-live="polite">
-    <p class="title">Redirecting…</p>
-    <p class="sub">Sending you to Tap-n-Score.</p>
-  </div>
+  <main class="page">
 
-  <script>
-    (function () {
-      // Target landing page (the “real app” page)
-      const LANDING = "target.html";
+    <!-- Top row (keep it clean; no pudding/smiley/check junk) -->
+    <header class="topBar">
+      <div class="topTitle">TARGET</div>
+      <div id="statusLine" class="topSub">Choose a photo to begin.</div>
+    </header>
 
-      const url = new URL(location.href);
+    <!-- Photo card -->
+    <section class="card">
+      <div class="cardTitle">SELECTED PHOTO</div>
 
-      // If we already booted once, STOP. (prevents loops)
-      if (url.searchParams.get("boot") === "1") return;
+      <!-- iOS-friendly file input -->
+      <label class="fileBtn" for="photoInput">Choose Photo</label>
+      <input
+        id="photoInput"
+        type="file"
+        accept="image/*"
+        inputmode="none"
+        capture="environment"
+        style="display:none"
+      />
 
-      // Add a one-time cache buster
-      url.searchParams.set("fresh", String(Date.now()));
-      url.searchParams.set("boot", "1");
+      <div id="targetWrap" class="targetWrap" aria-label="Target photo area">
+        <img id="targetImg" alt="Target preview" />
+        <div id="dotsLayer" class="dotsLayer" aria-hidden="true"></div>
+      </div>
 
-      // Send to landing page, keeping the same origin/path base
-      const next = new URL("./" + LANDING, url.toString());
-      next.search = url.search; // carry fresh + boot
+      <div class="row">
+        <div class="pill">
+          Taps: <span id="tapCount">0</span>
+        </div>
 
-      location.replace(next.toString());
-    })();
-  </script>
+        <button id="clearTapsBtn" class="btnSecondary" type="button">
+          Clear
+        </button>
+
+        <button id="seeResultsBtn" class="btnPrimary" type="button">
+          Show results
+        </button>
+      </div>
+
+      <p id="instructionLine" class="hint">
+        Tap the bull first, then tap each shot.
+      </p>
+    </section>
+
+    <!-- Settings (kept upstream; you locked this rule) -->
+    <section class="card">
+      <div class="cardTitle">SETTINGS</div>
+
+      <div class="row">
+        <label class="field">
+          <span class="fieldLabel">Distance (yards)</span>
+          <select id="distanceYds" class="select">
+            <option value="25">25</option>
+            <option value="50">50</option>
+            <option value="100" selected>100</option>
+            <option value="200">200</option>
+            <option value="300">300</option>
+          </select>
+        </label>
+
+        <label class="field">
+          <span class="fieldLabel">MOA / click</span>
+          <select id="moaPerClick" class="select">
+            <option value="0.25" selected>0.25</option>
+            <option value="0.5">0.5</option>
+            <option value="0.125">0.125</option>
+          </select>
+        </label>
+      </div>
+
+      <!-- Optional vendor link hook (safe if missing) -->
+      <a id="vendorLink" class="vendorLink" href="#" target="_blank" rel="noopener"></a>
+    </section>
+
+    <footer class="footer">
+      <span class="footerMark">SCZN3</span>
+    </footer>
+  </main>
+
+  <!-- App JS -->
+  <script src="./index.js?v=22206"></script>
 </body>
 </html>
