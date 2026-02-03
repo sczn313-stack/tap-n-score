@@ -7,7 +7,17 @@
   <meta name="theme-color" content="#06070a" />
   <title>Tap-n-Score™ — Shooter Experience Card</title>
 
-  <link rel="stylesheet" href="./sec.css?v=20260206a" />
+  <!-- PWA (keeps iOS from doing weird scope stuff) -->
+  <link rel="manifest" href="/tap-n-score/manifest.webmanifest" />
+  <link rel="apple-touch-icon" href="/tap-n-score/icons/icon-192.png" />
+  <link rel="icon" href="/tap-n-score/icons/icon-192.png" />
+
+  <!-- HARD NO-CACHE (Safari helpers) -->
+  <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
+
+  <link rel="stylesheet" href="/tap-n-score/sec.css?v=20260206a" />
 
   <!-- tiny helper: diagnostics hidden unless JS reveals -->
   <style>
@@ -167,6 +177,6 @@
     </section>
   </main>
 
-  <script src="./sec.js?v=20260206a"></script>
+  <script src="/tap-n-score/sec.js?v=20260206a"></script>
 </body>
 </html>
