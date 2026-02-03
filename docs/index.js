@@ -1,4 +1,5 @@
-/* ============================================================
+alert("✅ index.js is loading");
+console.log("✅ index.js loaded", location.href);/* ============================================================
    index.js (FULL REPLACEMENT) — Works with YOUR index.html
    IDs expected (matches what you pasted):
    - photoInput, targetImg, targetWrap, dotsLayer
