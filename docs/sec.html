@@ -5,160 +5,211 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="color-scheme" content="dark" />
   <meta name="theme-color" content="#06070a" />
-  <title>Tap-n-Score™ — Shooter Experience Card</title>
 
-  <link rel="stylesheet" href="./sec.css?v=20260202b" />
+  <!-- HARD NO-CACHE -->
+  <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
+
+  <title>SEC — Tap-n-Score™</title>
+
+  <style>
+    :root{
+      --bg0:#05060a; --bg1:#0a0c12;
+      --card: rgba(255,255,255,.06);
+      --stroke: rgba(255,255,255,.12);
+      --text:#eef2f7;
+      --muted: rgba(238,242,247,.65);
+      --shadow: 0 20px 60px rgba(0,0,0,.55);
+      --radius: 22px;
+
+      --red:#d64040;
+      --white:#eef2f7;
+      --blue:#2f66ff;
+      --green:#67f3a4;
+
+      --btn: rgba(255,255,255,.07);
+      --btnHover: rgba(255,255,255,.10);
+      --btnStroke: rgba(255,255,255,.14);
+    }
+    *{ box-sizing:border-box; }
+    html,body{ height:100%; }
+    body{
+      margin:0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial;
+      color: var(--text);
+      background:
+        radial-gradient(900px 600px at 15% 10%, rgba(47,102,255,.14), transparent 60%),
+        radial-gradient(800px 500px at 85% 0%, rgba(214,64,64,.10), transparent 60%),
+        radial-gradient(900px 700px at 50% 100%, rgba(103,243,164,.08), transparent 65%),
+        linear-gradient(180deg, var(--bg0), var(--bg1));
+    }
+    .wrap{ max-width: 980px; margin: 0 auto; padding: 18px 14px 34px; }
+
+    .card{
+      border: 1px solid var(--stroke);
+      background: var(--card);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow:hidden;
+    }
+    .head{
+      padding: 14px 14px 10px;
+      border-bottom: 1px solid rgba(255,255,255,.08);
+      background: rgba(255,255,255,.03);
+      display:flex; align-items:center; justify-content:space-between; gap:12px;
+    }
+    .title{
+      font-weight: 900;
+      letter-spacing:.3px;
+      display:flex; align-items:center; gap:10px;
+    }
+    .pill{
+      display:inline-flex; gap:8px; align-items:center;
+      padding: 8px 12px;
+      border: 1px solid var(--stroke);
+      background: rgba(255,255,255,.04);
+      border-radius: 999px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .grid{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      padding: 14px;
+    }
+    @media (max-width: 760px){
+      .grid{ grid-template-columns: 1fr; }
+    }
+
+    .box{
+      border: 1px solid rgba(255,255,255,.10);
+      background: rgba(0,0,0,.22);
+      border-radius: 18px;
+      padding: 14px;
+    }
+    .k{ color: var(--muted); font-size: 12px; margin-bottom: 6px; }
+    .v{ font-size: 22px; font-weight: 900; letter-spacing:.2px; }
+    .row2{ display:flex; gap:10px; }
+    .row2 > div{ flex:1; }
+
+    .btn{
+      appearance:none;
+      border: 1px solid var(--btnStroke);
+      background: var(--btn);
+      color: var(--text);
+      padding: 12px 14px;
+      border-radius: 16px;
+      font-weight: 800;
+      cursor:pointer;
+      transition: .15s ease;
+      min-height: 44px;
+    }
+    .btn:hover{ background: var(--btnHover); }
+
+    details.diag{
+      margin: 0 14px 14px;
+      border: 1px solid rgba(255,255,255,.10);
+      border-radius: 18px;
+      background: rgba(0,0,0,.18);
+      overflow:hidden;
+    }
+    details.diag summary{
+      cursor:pointer;
+      padding: 12px 14px;
+      color: var(--muted);
+      user-select:none;
+      font-weight: 700;
+    }
+    pre{
+      margin:0;
+      padding: 12px 14px;
+      font-size: 12px;
+      color: rgba(238,242,247,.80);
+      overflow:auto;
+      border-top: 1px solid rgba(255,255,255,.08);
+    }
+
+    .foot{
+      margin-top: 16px;
+      color: rgba(238,242,247,.35);
+      font-size: 12px;
+      text-align:center;
+      letter-spacing:.3px;
+    }
+
+    a{ color: #9bb7ff; text-decoration:none; }
+    a:hover{ text-decoration:underline; }
+  </style>
 </head>
 
 <body>
-  <main class="page">
-    <section class="shell">
+  <div class="wrap">
+    <section class="card">
+      <div class="head">
+        <div class="title">
+          <span style="color:var(--red)">SEC</span>
+          <span class="pill">Shooter Experience Card</span>
+        </div>
+        <button id="backToTargetBtn" class="btn" type="button">Back to target</button>
+      </div>
 
-      <!-- HEADER -->
-      <header class="hdr">
-        <div class="hdrTitle">
-          <div class="brand">
-            <span class="r">SHOOTER</span>
-            <span class="w">EXPERIENCE</span>
-            <span class="b">CARD</span>
+      <div class="grid">
+        <div class="box">
+          <div class="k">Score</div>
+          <div class="v"><span id="scoreVal">—</span></div>
+        </div>
+
+        <div class="box">
+          <div class="k">Shots</div>
+          <div class="v"><span id="shotsCount">—</span></div>
+        </div>
+
+        <div class="box">
+          <div class="k">Windage</div>
+          <div class="v">
+            <span id="windageDir">—</span>
+            <span style="opacity:.55">/</span>
+            <span id="windageClicks">—</span>
+            <span style="font-size:14px; opacity:.6;"> clicks</span>
           </div>
+        </div>
 
-          <div class="pillRow">
-            <div class="pill">
-              <span class="pillLabel">Session:</span>
-              <span class="pillValue" id="secSession">—</span>
+        <div class="box">
+          <div class="k">Elevation</div>
+          <div class="v">
+            <span id="elevationDir">—</span>
+            <span style="opacity:.55">/</span>
+            <span id="elevationClicks">—</span>
+            <span style="font-size:14px; opacity:.6;"> clicks</span>
+          </div>
+        </div>
+
+        <div class="box" style="grid-column: 1 / -1;">
+          <div class="row2">
+            <div>
+              <div class="k">Vendor</div>
+              <a id="vendorLink" href="#" style="display:none">Open</a>
             </div>
-            <div class="pill">
-              <span class="pillLabel">Shots:</span>
-              <span class="pillValue" id="secShots">0</span>
+            <div>
+              <div class="k">Survey</div>
+              <a id="surveyLink" href="#" style="display:none">Open</a>
             </div>
           </div>
         </div>
-      </header>
+      </div>
 
-      <!-- BODY GRID -->
-      <section class="grid">
-
-        <!-- LEFT: SCORING + ADJUSTMENTS + HISTORY -->
-        <section class="leftCol">
-
-          <!-- SCORING -->
-          <article class="card">
-            <div class="cardHead">
-              <div class="cardKicker">SCORING</div>
-            </div>
-
-            <div class="scoreWrap">
-              <div class="scoreLabel">SHOOTER’S SCORE</div>
-              <div class="scoreBox">
-                <div class="scoreValue" id="secScore">—</div>
-              </div>
-            </div>
-          </article>
-
-          <!-- ADJUSTMENTS -->
-          <article class="card">
-            <div class="cardHead">
-              <div class="cardKicker">ADJUSTMENTS</div>
-            </div>
-
-            <div class="adjustTitle">Target clicks</div>
-
-            <div class="adjustGrid">
-              <!-- WINDAGE -->
-              <div class="adjustItem">
-                <div class="adjustMini">WINDAGE</div>
-
-                <div class="adjustRow">
-                  <div class="adjustNum" id="secWindClicks">0.00</div>
-
-                  <div class="dirStack">
-                    <div class="dirPill" id="secWindDir">—</div>
-                  </div>
-                </div>
-              </div>
-
-              <!-- ELEVATION -->
-              <div class="adjustItem">
-                <div class="adjustMini">ELEVATION</div>
-
-                <div class="adjustRow">
-                  <div class="adjustNum" id="secElevClicks">0.00</div>
-
-                  <div class="dirStack">
-                    <div class="dirPill" id="secElevDir">—</div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </article>
-
-          <!-- HISTORY -->
-          <article class="card">
-            <div class="cardHead">
-              <div class="cardKicker">HISTORY</div>
-            </div>
-
-            <div class="historyGrid">
-              <div class="histItem">
-                <div class="histMini">PREV 1</div>
-                <div class="histVal" id="prev1">—</div>
-              </div>
-              <div class="histItem">
-                <div class="histMini">PREV 2</div>
-                <div class="histVal" id="prev2">—</div>
-              </div>
-              <div class="histItem">
-                <div class="histMini">PREV 3</div>
-                <div class="histVal" id="prev3">—</div>
-              </div>
-            </div>
-          </article>
-
-        </section>
-
-        <!-- RIGHT: ACTIONS -->
-        <aside class="rightCol">
-          <article class="card actionsCard">
-            <div class="cardHead">
-              <div class="cardKicker">ACTIONS</div>
-            </div>
-
-            <div class="btnCol">
-              <button id="downloadBtn" class="btn btnPrimary btnDisabled" aria-disabled="true">
-                Download SEC
-              </button>
-
-              <button id="vendorBtn" class="btn btnDisabled" aria-disabled="true">
-                Buy more targets
-              </button>
-
-              <button id="surveyBtn" class="btn btnDisabled" aria-disabled="true">
-                Survey
-              </button>
-
-              <button id="backToTargetBtn" class="btn">
-                Back to target
-              </button>
-            </div>
-
-            <div class="tip">
-              Tip (iPad): if download doesn’t start, you can also press-and-hold the image on the download page and save it.
-            </div>
-
-            <details class="diag">
-              <summary>Diagnostics</summary>
-              <pre id="secDiag">(none)</pre>
-            </details>
-          </article>
-        </aside>
-
-      </section>
-
-      <footer class="foot">SCZN3</footer>
+      <details class="diag">
+        <summary>Diagnostics</summary>
+        <pre id="secDiag">(none)</pre>
+      </details>
     </section>
-  </main>
 
-  <script src="./sec.js?v=20260202b"></script>
+    <div class="foot">SCZN3</div>
+  </div>
+
+  <script src="./sec.js?v=20260202h"></script>
 </body>
 </html>
