@@ -38,419 +38,255 @@
     html,body{ height:100%; }
     body{
       margin:0;
-      font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial;
       color: var(--text);
       background:
-        radial-gradient(1200px 800px at 20% 10%, rgba(46,102,255,.10), transparent 60%),
-        radial-gradient(1200px 800px at 80% 20%, rgba(214,64,64,.10), transparent 60%),
-        radial-gradient(1200px 800px at 50% 90%, rgba(103,243,164,.06), transparent 60%),
+        radial-gradient(900px 600px at 15% 10%, rgba(47,102,255,.14), transparent 60%),
+        radial-gradient(800px 500px at 85% 0%, rgba(214,64,64,.10), transparent 60%),
+        radial-gradient(900px 700px at 50% 100%, rgba(103,243,164,.08), transparent 65%),
         linear-gradient(180deg, var(--bg0), var(--bg1));
-      padding: 16px 14px 22px;
     }
 
-    .wrap{ max-width: 980px; margin: 0 auto; }
-    .shell{
+    .wrap{ max-width: 980px; margin: 0 auto; padding: 18px 14px 34px; }
+    .brand{
+      display:flex; align-items:center; justify-content:space-between;
+      gap:12px; margin-bottom: 14px;
+    }
+    .brand .title{
+      font-weight: 800; letter-spacing:.4px;
+      font-size: 20px;
+      display:flex; align-items:center; gap:10px;
+    }
+    .pill{
+      display:inline-flex; gap:8px; align-items:center;
+      padding: 8px 12px;
+      border: 1px solid var(--stroke);
       background: rgba(255,255,255,.04);
-      border: 1px solid rgba(255,255,255,.10);
-      border-radius: var(--radius);
-      box-shadow: var(--shadow);
-      overflow: hidden;
-    }
-
-    .top{
-      padding: 18px 18px 14px;
-      border-bottom: 1px solid rgba(255,255,255,.08);
-      background: linear-gradient(180deg, rgba(255,255,255,.035), rgba(255,255,255,.02));
-    }
-
-    .title{
-      margin: 0;
-      letter-spacing: .08em;
-      font-weight: 900;
-      font-size: clamp(22px, 3.8vw, 42px);
-      text-transform: uppercase;
-      line-height: 1.05;
-    }
-    .title .r{ color: var(--red); }
-    .title .w{ color: var(--white); }
-    .title .b{ color: var(--blue); }
-
-    .subtitle{
-      margin: 10px 0 0;
+      border-radius: 999px;
       color: var(--muted);
-      font-size: 14px;
-      line-height: 1.35;
+      font-size: 13px;
     }
 
     .grid{
       display:grid;
-      grid-template-columns: 1fr;
+      grid-template-columns: 1.35fr .65fr;
       gap: 14px;
-      padding: 16px 16px 18px;
     }
-    @media (min-width: 900px){
-      .grid{ grid-template-columns: 1.35fr .65fr; align-items:start; }
+    @media (max-width: 880px){
+      .grid{ grid-template-columns: 1fr; }
     }
 
     .card{
-      background: var(--card);
       border: 1px solid var(--stroke);
-      border-radius: 18px;
-      padding: 14px;
+      background: var(--card);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow:hidden;
     }
-    .card h2{
-      margin:0 0 10px;
-      font-size: 14px;
-      letter-spacing: .12em;
-      text-transform: uppercase;
+    .cardHeader{
+      padding: 14px 14px 10px;
+      border-bottom: 1px solid rgba(255,255,255,.08);
+      background: rgba(255,255,255,.03);
+      display:flex; align-items:center; justify-content:space-between; gap:12px;
+    }
+    .cardHeader h2{
+      margin:0; font-size: 15px; letter-spacing:.2px;
+    }
+    .sub{
       color: var(--muted);
-      font-weight: 850;
+      font-size: 13px;
+      margin: 8px 0 0;
+      line-height: 1.35;
     }
 
+    .pad{ padding: 14px; }
+
+    .row{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+    label{ font-size:12px; color: var(--muted2); display:block; margin-bottom:6px; }
+    .field{
+      flex:1;
+      min-width: 160px;
+      background: rgba(0,0,0,.22);
+      border: 1px solid rgba(255,255,255,.10);
+      border-radius: 14px;
+      padding: 10px 10px;
+      color: var(--text);
+      outline:none;
+    }
+    select.field{ padding: 10px 8px; }
+
     .btn{
-      width:100%;
       appearance:none;
       border: 1px solid var(--btnStroke);
       background: var(--btn);
       color: var(--text);
       padding: 12px 14px;
-      border-radius: 14px;
-      font-size: 15px;
-      font-weight: 850;
-      cursor: pointer;
-      text-align:center;
-      user-select:none;
-      -webkit-tap-highlight-color: transparent;
+      border-radius: 16px;
+      font-weight: 700;
+      letter-spacing: .2px;
+      cursor:pointer;
+      transition: .15s ease;
+      display:inline-flex; align-items:center; justify-content:center;
+      gap:10px;
+      min-height: 44px;
     }
     .btn:hover{ background: var(--btnHover); }
-    .btn:active{ transform: translateY(1px); }
-
     .btnPrimary{
-      border-color: rgba(103,243,164,.35);
-      background: rgba(103,243,164,.10);
+      border-color: rgba(47,102,255,.45);
+      background: rgba(47,102,255,.20);
     }
-    .btnPrimary:hover{ background: rgba(103,243,164,.14); }
-
-    .btnDisabled{
-      opacity: .45;
-      pointer-events:none;
+    .btnDanger{
+      border-color: rgba(214,64,64,.45);
+      background: rgba(214,64,64,.16);
     }
 
     .hint{
-      margin-top: 10px;
+      font-size: 12px;
       color: var(--muted);
-      font-size: 13px;
-      line-height: 1.35;
+      line-height: 1.4;
+      margin-top: 10px;
     }
 
-    /* STAGE */
+    /* Image + tap overlay */
     #targetWrap{
       position: relative;
-      border-radius: 16px;
-      overflow: hidden;
-      background: rgba(0,0,0,.22);
-      border: 1px dashed rgba(255,255,255,.18);
-      min-height: 280px;
-      display:flex;
-      align-items:center;
-      justify-content:center;
+      width: 100%;
+      border-top: 1px solid rgba(255,255,255,.08);
+      background: rgba(0,0,0,.18);
+      overflow:hidden;
     }
-
     #targetImg{
-      width:100%;
-      height:auto;
-      display:none;
-      border-radius: 16px;
+      width: 100%;
+      height: auto;
+      display:block;
+      user-select:none;
+      -webkit-user-drag:none;
     }
-
-    /* Overlay */
     #dotsLayer{
       position:absolute;
-      inset: 0;
-      width:100%;
-      height:100%;
-      touch-action: none; /* important for iPad tapping */
+      left:0; top:0; right:0; bottom:0;
+      pointer-events:none;
     }
-
-    .dot{
+    .tapDot{
       position:absolute;
-      width: 14px;
-      height: 14px;
+      width: 16px; height: 16px;
+      margin-left: -8px; margin-top: -8px;
       border-radius: 999px;
-      transform: translate(-50%, -50%);
-      box-shadow: 0 10px 24px rgba(0,0,0,.55);
-      border: 2px solid rgba(255,255,255,.75);
+      box-shadow: 0 6px 20px rgba(0,0,0,.55);
+      border: 2px solid rgba(255,255,255,.85);
     }
-    .dotBull{ background: rgba(47,102,255,.95); }
-    .dotShot{ background: rgba(214,64,64,.95); }
+    .tapDotBull{ background: rgba(103,243,164,.95); border-color: rgba(0,0,0,.55); }
+    .tapDotShot{ background: rgba(214,64,64,.92); border-color: rgba(0,0,0,.55); }
 
-    /* Compact controls row */
-    .row{
-      display:flex;
-      gap: 10px;
-      flex-wrap: wrap;
-      align-items:center;
-    }
-    .mini{
-      flex: 1 1 140px;
-      padding: 10px 12px;
-      border-radius: 14px;
-      background: rgba(255,255,255,.045);
-      border: 1px solid rgba(255,255,255,.10);
-    }
-    .mini label{
-      display:block;
-      font-size: 11px;
-      letter-spacing: .12em;
-      text-transform: uppercase;
+    .statLine{
+      display:flex; align-items:center; justify-content:space-between;
+      gap:10px; padding: 10px 14px;
+      border-top: 1px solid rgba(255,255,255,.08);
+      background: rgba(255,255,255,.03);
       color: var(--muted);
-      font-weight: 900;
-      margin-bottom: 6px;
-    }
-    .mini input{
-      width:100%;
-      border-radius: 12px;
-      padding: 10px 10px;
-      border: 1px solid rgba(255,255,255,.14);
-      background: rgba(0,0,0,.25);
-      color: var(--text);
-      outline: none;
-      font-size: 15px;
-      font-weight: 800;
-    }
-
-    /* SEC RESULTS */
-    #results{
-      display:none;
-    }
-    .secTitle{
-      margin: 0 0 10px;
-      font-weight: 950;
-      letter-spacing: .10em;
-      text-transform: uppercase;
-      font-size: 14px;
-      color: var(--muted);
-    }
-    .secScoreBox{
-      background: rgba(255,255,255,.05);
-      border: 1px solid rgba(255,255,255,.12);
-      border-radius: 16px;
-      padding: 14px;
-      text-align:center;
-      margin-bottom: 12px;
-    }
-    .secScoreLabel{
-      font-size: 12px;
-      letter-spacing: .12em;
-      text-transform: uppercase;
-      color: var(--muted);
-      font-weight: 900;
-      margin-bottom: 10px;
-    }
-    .secScoreValue{
-      font-size: 54px;
-      font-weight: 1000;
-      letter-spacing: .02em;
-    }
-
-    .secGrid{
-      display:grid;
-      gap: 10px;
-      grid-template-columns: 1fr;
-    }
-    .secItem{
-      background: rgba(255,255,255,.05);
-      border: 1px solid rgba(255,255,255,.12);
-      border-radius: 16px;
-      padding: 12px;
-    }
-    .secMini{
-      font-size: 11px;
-      letter-spacing: .12em;
-      text-transform: uppercase;
-      color: var(--muted);
-      font-weight: 950;
-      margin-bottom: 8px;
-    }
-    .secRow{
-      display:flex;
-      align-items:baseline;
-      justify-content:space-between;
-      gap: 10px;
-    }
-    .secNum{
-      font-size: 34px;
-      font-weight: 1000;
-    }
-    .secDir{
       font-size: 13px;
-      font-weight: 950;
-      letter-spacing: .08em;
-      text-transform: uppercase;
-      padding: 8px 10px;
-      border-radius: 999px;
-      background: rgba(255,255,255,.06);
-      border: 1px solid rgba(255,255,255,.12);
-      color: rgba(238,242,247,.92);
-      white-space: nowrap;
     }
-
-    details{
-      background: var(--card2);
-      border: 1px solid rgba(255,255,255,.10);
-      border-radius: 16px;
-      padding: 10px 12px;
-      margin-top: 12px;
-    }
-    summary{
-      cursor:pointer;
-      font-weight: 850;
-      color: var(--muted);
-      letter-spacing: .06em;
-      text-transform: uppercase;
-      font-size: 12px;
-      outline:none;
-    }
-    pre{
-      margin: 10px 0 0;
-      white-space: pre-wrap;
-      word-break: break-word;
-      color: rgba(238,242,247,.82);
-      font-size: 12px;
-      line-height: 1.35;
-    }
-
-    .hiddenInput{
-      position:absolute;
-      left:-9999px;
-      width:1px;
-      height:1px;
-      opacity:0;
-    }
+    .statLine b{ color: var(--white); }
 
     .foot{
-      padding: 10px 16px 14px;
-      color: rgba(238,242,247,.30);
-      text-align:center;
-      letter-spacing: .22em;
-      font-weight: 950;
-      text-transform: uppercase;
+      margin-top: 16px;
+      color: rgba(238,242,247,.35);
       font-size: 12px;
+      text-align:center;
+      letter-spacing:.3px;
     }
+
+    a{ color: #9bb7ff; text-decoration:none; }
+    a:hover{ text-decoration:underline; }
   </style>
 </head>
 
 <body>
   <div class="wrap">
-    <div class="shell">
 
-      <div class="top">
-        <h1 class="title">
-          <span class="r">Tap</span>-<span class="w">n</span>-<span class="b">Score</span>™
-        </h1>
-        <p class="subtitle" id="instructionLine">
-          Choose a photo. Tap the bull (blue). Tap shots (red). Then Show Results.
-        </p>
+    <div class="brand">
+      <div class="title">
+        <span style="color:var(--red)">TAP</span><span style="color:var(--white)">-N-</span><span style="color:var(--blue)">SCORE</span><span style="opacity:.85">™</span>
+        <span class="pill">Bull → taps → results</span>
       </div>
 
-      <div class="grid">
-
-        <!-- LEFT: IMAGE + TAPS -->
-        <div class="card">
-          <h2>Target</h2>
-
-          <div id="targetWrap">
-            <img id="targetImg" alt="Selected target" />
-            <div id="dotsLayer" aria-label="tap overlay"></div>
-            <div id="emptyState" class="hint" style="padding:18px;text-align:center;">
-              No photo loaded yet.
-            </div>
-          </div>
-
-          <div class="hint" style="margin-top:10px;">
-            Bull first (blue). Then shots (red). Taps must land on the photo.
-          </div>
-
-          <details>
-            <summary>Diagnostics</summary>
-            <pre id="diagOut">(none)</pre>
-          </details>
-        </div>
-
-        <!-- RIGHT: CONTROLS + RESULTS -->
-        <div class="card">
-          <h2>Controls</h2>
-
-          <div class="row" style="margin-bottom:10px;">
-            <button id="chooseBtn" class="btn" type="button">Choose Photo</button>
-            <button id="clearTapsBtn" class="btn" type="button">Clear</button>
-          </div>
-
-          <!-- Settings live here (top of the tap flow). -->
-          <div class="row" style="margin-bottom:10px;">
-            <div class="mini">
-              <label for="distanceYds">Distance (yards)</label>
-              <input id="distanceYds" inputmode="numeric" value="100" />
-            </div>
-            <div class="mini">
-              <label for="clickMoa">MOA per click</label>
-              <input id="clickMoa" inputmode="decimal" value="0.25" />
-            </div>
-          </div>
-
-          <div class="row" style="margin-bottom:10px;">
-            <div class="mini">
-              <label>Taps (shots)</label>
-              <div style="font-size:26px;font-weight:1000;" id="tapCount">0</div>
-            </div>
-            <button id="showResultsBtn" class="btn btnPrimary btnDisabled" type="button" aria-disabled="true" disabled>
-              Show Results
-            </button>
-          </div>
-
-          <!-- RESULTS (SEC ON SAME PAGE) -->
-          <div id="results" style="margin-top:14px;">
-            <div class="secTitle">Shooter Experience Card</div>
-
-            <div class="secScoreBox">
-              <div class="secScoreLabel">Shooter’s Score</div>
-              <div class="secScoreValue" id="secScore">—</div>
-            </div>
-
-            <div class="secGrid">
-              <div class="secItem">
-                <div class="secMini">Windage</div>
-                <div class="secRow">
-                  <div class="secNum" id="secWindClicks">0.00</div>
-                  <div class="secDir" id="secWindDir">—</div>
-                </div>
-              </div>
-
-              <div class="secItem">
-                <div class="secMini">Elevation</div>
-                <div class="secRow">
-                  <div class="secNum" id="secElevClicks">0.00</div>
-                  <div class="secDir" id="secElevDir">—</div>
-                </div>
-              </div>
-            </div>
-
-            <div class="hint" style="margin-top:10px;">
-              If you change Distance/MOA-per-click, re-tap and score again.
-            </div>
-          </div>
-
-          <!-- iOS/Safari likes the input to exist in the DOM -->
-          <input id="photoInput" class="hiddenInput" type="file" accept="image/*" />
-        </div>
-
-      </div>
-
-      <div class="foot">SCZN3</div>
+      <!-- Optional vendor link used by JS -->
+      <a id="vendorLink" class="pill" href="#" style="display:none">Vendor</a>
     </div>
+
+    <div class="grid">
+
+      <!-- LEFT: Target photo + taps -->
+      <section class="card">
+        <div class="cardHeader">
+          <h2>1) Upload target photo</h2>
+          <div class="pill">Shots: <b id="tapCount">0</b></div>
+        </div>
+
+        <div class="pad">
+          <input id="photoInput" class="field" type="file" accept="image/*" />
+          <div class="sub">
+            Tap once for the <b style="color:var(--green)">bull</b>, then tap your <b style="color:var(--red)">hits</b>.
+          </div>
+        </div>
+
+        <div id="targetWrap">
+          <img id="targetImg" alt="Target" />
+          <div id="dotsLayer"></div>
+        </div>
+
+        <div class="statLine">
+          <div>Tap order: <b>Bull first</b>, then shots</div>
+          <div><span style="color:var(--green)">●</span> bull &nbsp; <span style="color:var(--red)">●</span> shots</div>
+        </div>
+      </section>
+
+      <!-- RIGHT: Settings + buttons -->
+      <aside class="card">
+        <div class="cardHeader">
+          <h2>2) Settings</h2>
+          <span class="pill">SEC handoff</span>
+        </div>
+
+        <div class="pad">
+          <div class="row" style="margin-bottom:12px;">
+            <div style="flex:1;">
+              <label for="distanceYds">Distance (yards)</label>
+              <select id="distanceYds" class="field">
+                <option value="25">25</option>
+                <option value="50">50</option>
+                <option value="100" selected>100</option>
+                <option value="200">200</option>
+              </select>
+            </div>
+
+            <div style="flex:1;">
+              <label for="moaPerClick">MOA per click</label>
+              <select id="moaPerClick" class="field">
+                <option value="0.25" selected>0.25</option>
+                <option value="0.5">0.5</option>
+                <option value="0.125">0.125</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="row">
+            <button id="clearTapsBtn" class="btn btnDanger" type="button">Clear taps</button>
+            <button id="seeResultsBtn" class="btn btnPrimary" type="button">Show results</button>
+          </div>
+
+          <div class="hint">
+            If you see the dots but SEC is empty, the SEC page isn’t decoding payload.
+            This build is wired to pass payload by URL for iPad reliability.
+          </div>
+        </div>
+      </aside>
+
+    </div>
+
+    <div class="foot">SCZN3</div>
   </div>
 
-  <!-- Bump this v= any time iOS seems cached -->
-  <script defer src="./index.js?v=20260202_singlepage_sec_1"></script>
+  <script src="./index.js?v=20260202h"></script>
 </body>
 </html>
