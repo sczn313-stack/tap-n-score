@@ -17,7 +17,6 @@
     :root{
       --bg0:#05060a; --bg1:#0a0c12;
       --card: rgba(255,255,255,.06);
-      --card2: rgba(255,255,255,.045);
       --stroke: rgba(255,255,255,.12);
       --text:#eef2f7;
       --muted: rgba(238,242,247,.65);
@@ -29,6 +28,7 @@
       --white:#eef2f7;
       --blue:#2f66ff;
       --green:#67f3a4;
+
       --btn: rgba(255,255,255,.07);
       --btnHover: rgba(255,255,255,.10);
       --btnStroke: rgba(255,255,255,.14);
@@ -48,14 +48,17 @@
     }
 
     .wrap{ max-width: 980px; margin: 0 auto; padding: 18px 14px 34px; }
-    .brand{
+
+    .brandRow{
       display:flex; align-items:center; justify-content:space-between;
       gap:12px; margin-bottom: 14px;
     }
-    .brand .title{
-      font-weight: 800; letter-spacing:.4px;
+    .brand{
+      font-weight: 900;
+      letter-spacing:.4px;
       font-size: 20px;
       display:flex; align-items:center; gap:10px;
+      flex-wrap:wrap;
     }
     .pill{
       display:inline-flex; gap:8px; align-items:center;
@@ -65,7 +68,9 @@
       border-radius: 999px;
       color: var(--muted);
       font-size: 13px;
+      white-space: nowrap;
     }
+    #vendorLink{ display:none; }
 
     .grid{
       display:grid;
@@ -98,11 +103,11 @@
       margin: 8px 0 0;
       line-height: 1.35;
     }
-
     .pad{ padding: 14px; }
 
     .row{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
     label{ font-size:12px; color: var(--muted2); display:block; margin-bottom:6px; }
+
     .field{
       flex:1;
       min-width: 160px;
@@ -122,15 +127,17 @@
       color: var(--text);
       padding: 12px 14px;
       border-radius: 16px;
-      font-weight: 700;
+      font-weight: 800;
       letter-spacing: .2px;
       cursor:pointer;
       transition: .15s ease;
       display:inline-flex; align-items:center; justify-content:center;
       gap:10px;
       min-height: 44px;
+      width: 100%;
     }
     .btn:hover{ background: var(--btnHover); }
+
     .btnPrimary{
       border-color: rgba(47,102,255,.45);
       background: rgba(47,102,255,.20);
@@ -161,6 +168,7 @@
       display:block;
       user-select:none;
       -webkit-user-drag:none;
+      touch-action: manipulation;
     }
     #dotsLayer{
       position:absolute;
@@ -185,8 +193,26 @@
       background: rgba(255,255,255,.03);
       color: var(--muted);
       font-size: 13px;
+      flex-wrap:wrap;
     }
     .statLine b{ color: var(--white); }
+
+    .instruction{
+      margin-top: 8px;
+      padding: 10px 12px;
+      border-radius: 14px;
+      border: 1px solid rgba(255,255,255,.10);
+      background: rgba(0,0,0,.18);
+      color: rgba(238,242,247,.85);
+      font-size: 13px;
+      line-height: 1.35;
+    }
+
+    .sideBtns{
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+    }
 
     .foot{
       margin-top: 16px;
@@ -204,14 +230,17 @@
 <body>
   <div class="wrap">
 
-    <div class="brand">
-      <div class="title">
-        <span style="color:var(--red)">TAP</span><span style="color:var(--white)">-N-</span><span style="color:var(--blue)">SCORE</span><span style="opacity:.85">™</span>
-        <span class="pill">Bull → taps → results</span>
+    <div class="brandRow">
+      <div class="brand" aria-label="Tap-n-Score brand">
+        <span style="color:var(--red)">TAP</span>
+        <span style="color:var(--white)">-N-</span>
+        <span style="color:var(--blue)">SCORE</span>
+        <span style="opacity:.85">™</span>
+        <span class="pill">Bull → shots → results</span>
       </div>
 
-      <!-- Optional vendor link used by JS -->
-      <a id="vendorLink" class="pill" href="#" style="display:none">Vendor</a>
+      <!-- optional, JS may set this -->
+      <a id="vendorLink" class="pill" href="#" rel="noopener">Vendor</a>
     </div>
 
     <div class="grid">
@@ -219,7 +248,7 @@
       <!-- LEFT: Target photo + taps -->
       <section class="card">
         <div class="cardHeader">
-          <h2>1) Upload target photo</h2>
+          <h2>Tap your target</h2>
           <div class="pill">Shots: <b id="tapCount">0</b></div>
         </div>
 
@@ -227,6 +256,9 @@
           <input id="photoInput" class="field" type="file" accept="image/*" />
           <div class="sub">
             Tap once for the <b style="color:var(--green)">bull</b>, then tap your <b style="color:var(--red)">hits</b>.
+          </div>
+          <div class="instruction" id="instructionLine">
+            Load a photo, then tap the bull first.
           </div>
         </div>
 
@@ -244,7 +276,7 @@
       <!-- RIGHT: Settings + buttons -->
       <aside class="card">
         <div class="cardHeader">
-          <h2>2) Settings</h2>
+          <h2>Settings</h2>
           <span class="pill">SEC handoff</span>
         </div>
 
@@ -270,14 +302,13 @@
             </div>
           </div>
 
-          <div class="row">
+          <div class="sideBtns">
             <button id="clearTapsBtn" class="btn btnDanger" type="button">Clear taps</button>
             <button id="seeResultsBtn" class="btn btnPrimary" type="button">Show results</button>
           </div>
 
           <div class="hint">
-            If you see the dots but SEC is empty, the SEC page isn’t decoding payload.
-            This build is wired to pass payload by URL for iPad reliability.
+            Keep it simple: photo → bull → shots → results.
           </div>
         </div>
       </aside>
@@ -287,6 +318,7 @@
     <div class="foot">SCZN3</div>
   </div>
 
-  <script src="./index.js?v=20260202h"></script>
+  <!-- Your locked baseline JS -->
+  <script src="./index.js?v=22206"></script>
 </body>
 </html>
