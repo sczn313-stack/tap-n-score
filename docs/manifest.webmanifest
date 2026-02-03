@@ -1,12 +1,12 @@
 {
   "name": "Tap-n-Score™",
   "short_name": "Tap-n-Score",
-  "start_url": "/tap-n-score/docs/target.html?fresh=1",
+  "start_url": "/tap-n-score/docs/index.html?fresh=1",
   "display": "standalone",
   "background_color": "#06070a",
   "theme_color": "#06070a",
   "icons": [
-    { "src": "/tap-n-score/docs/icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
-    { "src": "/tap-n-score/docs/icons/icon-512.png", "sizes": "512x512", "type": "image/png" }
+    { "src": "./icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "./icons/icon-512.png", "sizes": "512x512", "type": "image/png" }
   ]
 }
