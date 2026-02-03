@@ -1,50 +1,35 @@
 /* ============================================================
-   index.js (FULL REPLACEMENT) — BASELINE 22206 (LOCKED, CLEAN)
+   index.js (FULL REPLACEMENT) — BASELINE 22206 (CLEANED)
    Flow:
-   - User uploads photo
+   - Upload photo
    - Tap bull (first) then tap shots
-   - Click "Show results" => computeCorrection()
-   - Build SEC payload (two decimals) -> pass via URL base64 to sec.html
+   - Show results -> builds payload -> passes via URL base64 to sec.html
    - localStorage is backup only
-
-   REQUIRED IDs in index.html:
-   - photoInput
-   - targetImg
-   - targetWrap
-   - dotsLayer
-   - tapCount
-   - clearTapsBtn
-   - seeResultsBtn
-   - distanceYds
-   - moaPerClick
-   - vendorLink (optional)
 ============================================================ */
 
 (() => {
   const $ = (id) => document.getElementById(id);
 
-  // ---- REQUIRED ELEMENT IDs on Target page
+  // Required IDs in index.html
   const elFile = $("photoInput");
   const elImg = $("targetImg");
   const elDots = $("dotsLayer");
   const elWrap = $("targetWrap");
-
   const elTapCount = $("tapCount");
   const elClear = $("clearTapsBtn");
   const elSee = $("seeResultsBtn");
 
-  const elVendor = $("vendorLink");     // optional
-  const elDistance = $("distanceYds");  // required by baseline
-  const elMoaClick = $("moaPerClick");  // required by baseline
+  // Optional
+  const elVendor = $("vendorLink");
+  const elDistance = $("distanceYds");
+  const elMoaClick = $("moaPerClick");
 
-  // ---- State
   const KEY = "SCZN3_SEC_PAYLOAD_V1";
+
   let objectUrl = null;
+  let bull = null;   // {x01,y01}
+  let shots = [];    // [{x01,y01},...]
 
-  let bull = null;      // {x01,y01}
-  let shots = [];       // [{x01,y01}, ...]
-
-  // ---- Helpers
   function clamp01(v) { return Math.max(0, Math.min(1, v)); }
 
   function setTapCount() {
@@ -64,7 +49,7 @@
     const d = document.createElement("div");
     d.className = "tapDot " + (kind === "bull" ? "tapDotBull" : "tapDotShot");
     d.style.left = (x01 * 100) + "%";
-    d.style.top  = (y01 * 100) + "%";
+    d.style.top = (y01 * 100) + "%";
     elDots.appendChild(d);
   }
 
@@ -80,20 +65,18 @@
     return btoa(unescape(encodeURIComponent(json)));
   }
 
-  // ---- Frontend compute (placeholder) — keeps pipeline solid
   function computeCorrection() {
     if (!bull || shots.length < 1) return null;
 
-    // Avg POI in normalized coords
     const avg = shots.reduce((acc, p) => ({ x: acc.x + p.x01, y: acc.y + p.y01 }), { x: 0, y: 0 });
     avg.x /= shots.length;
     avg.y /= shots.length;
 
-    // bull - poi (move POI to bull)
+    // bull - POI (move POI to bull)
     const dx = bull.x01 - avg.x; // + => RIGHT
-    const dy = bull.y01 - avg.y; // + => DOWN in screen space
+    const dy = bull.y01 - avg.y; // + => DOWN (screen space)
 
-    // demo scale: width=10"
+    // Demo scale (placeholder): treat full image width as 10 inches
     const inchesPerFullWidth = 10;
     const inchesX = dx * inchesPerFullWidth;
     const inchesY = dy * inchesPerFullWidth;
@@ -102,38 +85,22 @@
     const moaPerClick = Number(elMoaClick?.value ?? 0.25);
 
     const inchesPerMoa = (dist / 100) * 1.047;
-
     const moaX = inchesX / inchesPerMoa;
     const moaY = inchesY / inchesPerMoa;
 
     const clicksX = moaX / moaPerClick;
     const clicksY = moaY / moaPerClick;
 
-    const windage = {
-      dir: clicksX >= 0 ? "RIGHT" : "LEFT",
-      clicks: Math.abs(clicksX)
-    };
-
-    // Screen-space DOWN = +dy => dial DOWN
-    const elevation = {
-      dir: clicksY >= 0 ? "DOWN" : "UP",
-      clicks: Math.abs(clicksY)
-    };
-
     return {
       avgPoi: { x01: avg.x, y01: avg.y },
-      bull,
-      shots,
-      windage,
-      elevation
+      windage: { dir: clicksX >= 0 ? "RIGHT" : "LEFT", clicks: Math.abs(clicksX) },
+      elevation: { dir: clicksY >= 0 ? "DOWN" : "UP", clicks: Math.abs(clicksY) },
     };
   }
 
   function goToSEC(payload) {
-    // Backup storage
     try { localStorage.setItem(KEY, JSON.stringify(payload)); } catch {}
 
-    // Primary: URL payload
     const b64 = b64FromObj(payload);
     location.href = `./sec.html?payload=${encodeURIComponent(b64)}&fresh=${Date.now()}`;
   }
@@ -149,9 +116,6 @@
       if (objectUrl) URL.revokeObjectURL(objectUrl);
       objectUrl = URL.createObjectURL(f);
       elImg.src = objectUrl;
-
-      // snap to top so user starts at the image area clean
-      try { window.location.hash = "top"; } catch {}
     });
   }
 
@@ -185,22 +149,13 @@
       const payload = {
         sessionId: "S-" + Date.now(),
         score: 99,
-        shots: out.shots.length,
-        windage: {
-          dir: out.windage.dir,
-          clicks: Number(out.windage.clicks.toFixed(2))
-        },
-        elevation: {
-          dir: out.elevation.dir,
-          clicks: Number(out.elevation.clicks.toFixed(2))
-        },
+        shots: shots.length,
+        windage: { dir: out.windage.dir, clicks: Number(out.windage.clicks.toFixed(2)) },
+        elevation: { dir: out.elevation.dir, clicks: Number(out.elevation.clicks.toFixed(2)) },
         secPngUrl: "",
         vendorUrl: (elVendor && elVendor.href && elVendor.href !== "#") ? elVendor.href : "",
         surveyUrl: "",
-        debug: {
-          bull: out.bull,
-          avgPoi: out.avgPoi
-        }
+        debug: { bull, avgPoi: out.avgPoi }
       };
 
       goToSEC(payload);
