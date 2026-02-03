@@ -1,19 +1,25 @@
-alert("✅ index.js is loading");
-console.log("✅ index.js loaded", location.href);/* ============================================================
-   index.js (FULL REPLACEMENT) — Works with YOUR index.html
-   IDs expected (matches what you pasted):
-   - photoInput, targetImg, targetWrap, dotsLayer
-   - tapCount, clearTapsBtn, seeResultsBtn
-   - distanceYds, moaPerClick
-   - vendorLink (optional)
+/* ============================================================
+   index.js (FULL REPLACEMENT) — BASELINE 22206 (LOCKED)
+   Flow:
+   - User uploads photo
+   - Tap bull (first) then tap shots
+   - Click "Show results" → computeCorrection()
+   - Build SEC payload (two decimals) → pass via URL base64 to sec.html
+   - localStorage is backup only
 
-   Output:
-   - Builds SEC payload
-   - Saves backup to localStorage: SCZN3_SEC_PAYLOAD_V1
-   - Routes to: ./sec.html?payload=BASE64&fresh=TIMESTAMP
+   REQUIRED IDs in index.html:
+   - photoInput
+   - targetImg
+   - targetWrap
+   - dotsLayer
+   - tapCount
+   - clearTapsBtn
+   - seeResultsBtn
+   - distanceYds
+   - moaPerClick
+   (optional)
+   - vendorLink
 
-   NOTE: This is “frontend math” to keep the pipeline solid.
-   When you’re ready, we can swap compute() to call /api/calc.
 ============================================================ */
 
 (() => {
@@ -22,28 +28,26 @@ console.log("✅ index.js loaded", location.href);/* ===========================
   // ---- DOM
   const elFile = $("photoInput");
   const elImg = $("targetImg");
-  const elWrap = $("targetWrap");
   const elDots = $("dotsLayer");
-
   const elTapCount = $("tapCount");
   const elClear = $("clearTapsBtn");
   const elSee = $("seeResultsBtn");
-
   const elDistance = $("distanceYds");
   const elMoaClick = $("moaPerClick");
-
   const elVendor = $("vendorLink"); // optional
 
-  // ---- Storage
-  const SEC_KEY = "SCZN3_SEC_PAYLOAD_V1";
-
   // ---- State
+  const SEC_KEY = "SCZN3_SEC_PAYLOAD_V1";
   let objectUrl = null;
+
+  // normalized taps (0..1) in screen space (x right, y down)
   let bull = null;   // {x01,y01}
   let shots = [];    // [{x01,y01},...]
 
   // ---- Helpers
-  const clamp01 = (v) => Math.max(0, Math.min(1, v));
+  function clamp01(v) {
+    return Math.max(0, Math.min(1, v));
+  }
 
   function setTapCount() {
     if (elTapCount) elTapCount.textContent = String(shots.length);
@@ -61,8 +65,11 @@ console.log("✅ index.js loaded", location.href);/* ===========================
 
     const d = document.createElement("div");
     d.className = "tapDot " + (kind === "bull" ? "tapDotBull" : "tapDotShot");
-    d.style.left = `${x01 * 100}%`;
-    d.style.top = `${y01 * 100}%`;
+
+    // percent positioning so it stays correct with scaling
+    d.style.left = x01 * 100 + "%";
+    d.style.top = y01 * 100 + "%";
+
     elDots.appendChild(d);
   }
 
@@ -73,70 +80,80 @@ console.log("✅ index.js loaded", location.href);/* ===========================
     return { x01: clamp01(x), y01: clamp01(y) };
   }
 
-  // base64 helpers (safe for unicode)
-  function toB64(obj) {
+  function b64FromObj(obj) {
     const json = JSON.stringify(obj);
     return btoa(unescape(encodeURIComponent(json)));
   }
 
-  function round2(n) {
-    const x = Number(n);
-    if (!Number.isFinite(x)) return 0;
-    return Math.round(x * 100) / 100;
-  }
+  // ============================================================
+  // computeCorrection() — LOCKED MATH CORE (BASELINE 22206)
+  // ============================================================
+  function computeCorrection({ bull, shots, distanceYds, moaPerClick }) {
+    if (!bull || !Number.isFinite(bull.x01) || !Number.isFinite(bull.y01)) {
+      return { ok: false, error: "Missing/invalid bull" };
+    }
+    if (!Array.isArray(shots) || shots.length < 1) {
+      return { ok: false, error: "Need at least 1 shot" };
+    }
 
-  // ---- Frontend “compute” (placeholder math)
-  // Keeps directions consistent with your screen-space convention:
-  // delta = bull - avgShot
-  // dx>0 => RIGHT, dx<0 => LEFT
-  // dy>0 => DOWN,  dy<0 => UP
-  function computeFromTaps() {
-    if (!bull || shots.length < 1) return null;
+    const dist = Number.isFinite(Number(distanceYds)) ? Number(distanceYds) : 100;
+    const click = Number.isFinite(Number(moaPerClick)) ? Number(moaPerClick) : 0.25;
 
-    // avg POI (normalized)
-    let sx = 0, sy = 0;
-    for (const p of shots) { sx += p.x01; sy += p.y01; }
-    const avg = { x01: sx / shots.length, y01: sy / shots.length };
+    if (!(dist > 0)) return { ok: false, error: "distanceYds must be > 0" };
+    if (!(click > 0)) return { ok: false, error: "moaPerClick must be > 0" };
 
-    const dx01 = bull.x01 - avg.x01;
-    const dy01 = bull.y01 - avg.y01;
+    // avg POI (shots only)
+    let sx = 0, sy = 0, n = 0;
+    for (const p of shots) {
+      const x = Number(p?.x01);
+      const y = Number(p?.y01);
+      if (Number.isFinite(x) && Number.isFinite(y)) {
+        sx += x; sy += y; n += 1;
+      }
+    }
+    if (n === 0) return { ok: false, error: "No valid shots" };
 
-    // “fake inches” scale just to drive clicks until backend is wired
-    // Treat full image width as 10.00 inches (placeholder)
-    const inchesPerFullWidth = 10.0;
+    const avgPoi = { x01: sx / n, y01: sy / n };
+
+    // signed deltas: bull - avgPoi (THE LAW)
+    const dx01 = bull.x01 - avgPoi.x01; // + => RIGHT
+    const dy01 = bull.y01 - avgPoi.y01; // + => DOWN (screen-space)
+
+    // placeholder inches scale (LOCKED for baseline 22206)
+    const inchesPerFullWidth = 10;
     const inchesX = dx01 * inchesPerFullWidth;
     const inchesY = dy01 * inchesPerFullWidth;
 
-    const dist = Number(elDistance?.value ?? 100);
-    const moaPerClick = Number(elMoaClick?.value ?? 0.25);
-
-    // True MOA inches @ distance: 1 MOA = 1.047" @ 100y
-    const inchesPerMoa = 1.047 * (dist / 100);
+    // true MOA inches at distance
+    const inchesPerMoa = (dist / 100) * 1.047;
 
     const moaX = inchesX / inchesPerMoa;
     const moaY = inchesY / inchesPerMoa;
 
-    const clicksX = moaX / moaPerClick;
-    const clicksY = moaY / moaPerClick;
+    const rawClicksX = moaX / click; // signed
+    const rawClicksY = moaY / click; // signed
 
-    const windDir = clicksX === 0 ? "NONE" : (clicksX > 0 ? "RIGHT" : "LEFT");
-    const elevDir = clicksY === 0 ? "NONE" : (clicksY > 0 ? "DOWN" : "UP");
+    const windageDir = rawClicksX === 0 ? "NONE" : rawClicksX > 0 ? "RIGHT" : "LEFT";
+    const elevDir    = rawClicksY === 0 ? "NONE" : rawClicksY > 0 ? "DOWN"  : "UP";
+
+    const round2 = (v) => Math.round(v * 100) / 100;
 
     return {
-      bull,
-      avgPoi: avg,
-      windage: { dir: windDir, clicks: round2(Math.abs(clicksX)) },
-      elevation:{ dir: elevDir, clicks: round2(Math.abs(clicksY)) }
+      ok: true,
+      avgPoi,
+      delta: { dx01, dy01 },
+      windage: { dir: windageDir, clicks: round2(Math.abs(rawClicksX)) },
+      elevation: { dir: elevDir, clicks: round2(Math.abs(rawClicksY)) }
     };
   }
 
-  function routeToSEC(payload) {
-    // backup storage
-    try { localStorage.setItem(SEC_KEY, JSON.stringify(payload)); } catch {}
+  // ---- Build + route to SEC
+  function goToSEC(payload) {
+    // backup store
+    try { localStorage.setItem(SEC_KEY, JSON.stringify(payload)); } catch (e) {}
 
-    // primary: URL payload
-    const b64 = toB64(payload);
-    location.href = `./sec.html?payload=${encodeURIComponent(b64)}&fresh=${Date.now()}`;
+    const b64 = b64FromObj(payload);
+    window.location.href = `./sec.html?payload=${encodeURIComponent(b64)}&fresh=${Date.now()}`;
   }
 
   // ---- Events
@@ -145,64 +162,84 @@ console.log("✅ index.js loaded", location.href);/* ===========================
       const f = elFile.files && elFile.files[0];
       if (!f) return;
 
+      // reset taps on new photo
       clearDots();
 
       if (objectUrl) URL.revokeObjectURL(objectUrl);
       objectUrl = URL.createObjectURL(f);
-
-      if (elImg) elImg.src = objectUrl;
+      elImg.src = objectUrl;
     });
   }
 
-  // Tap on the IMAGE (dotsLayer has pointer-events:none in your HTML — perfect)
   if (elImg) {
-    elImg.addEventListener("click", (ev) => {
-      if (!elImg.src) return;
+    elImg.addEventListener(
+      "click",
+      (ev) => {
+        if (!elImg.src) return;
 
-      const { x01, y01 } = getRelative01FromEvent(ev);
+        const { x01, y01 } = getRelative01FromEvent(ev);
 
-      if (!bull) {
-        bull = { x01, y01 };
-        addDot(x01, y01, "bull");
-      } else {
-        const s = { x01, y01 };
-        shots.push(s);
-        addDot(x01, y01, "shot");
-        setTapCount();
-      }
-    }, { passive: true });
+        if (!bull) {
+          bull = { x01, y01 };
+          addDot(x01, y01, "bull");
+        } else {
+          const s = { x01, y01 };
+          shots.push(s);
+          addDot(x01, y01, "shot");
+          setTapCount();
+        }
+      },
+      { passive: true }
+    );
   }
 
   if (elClear) elClear.addEventListener("click", clearDots);
 
   if (elSee) {
     elSee.addEventListener("click", () => {
-      const out = computeFromTaps();
-      if (!out) {
+      if (!bull || shots.length < 1) {
         alert("Tap the bull first, then tap at least one shot.");
         return;
       }
 
-      // Build SEC payload (what sec.js expects)
+      const distanceYds = Number(elDistance?.value ?? 100);
+      const moaPerClick = Number(elMoaClick?.value ?? 0.25);
+
+      const r = computeCorrection({ bull, shots, distanceYds, moaPerClick });
+      if (!r.ok) {
+        alert(r.error || "Could not compute correction.");
+        return;
+      }
+
+      // SEC payload (two decimals guaranteed by computeCorrection)
       const payload = {
-        sessionId: `S-${Date.now()}`,
-        score: 99, // placeholder until backend score exists
+        sessionId: "S-" + Date.now(),
+        score: null, // placeholder (until backend scoring exists)
         shots: shots.length,
 
-        windage: { dir: out.windage.dir, clicks: round2(out.windage.clicks) },
-        elevation:{ dir: out.elevation.dir, clicks: round2(out.elevation.clicks) },
+        windage: {
+          dir: r.windage.dir,
+          clicks: Number(r.windage.clicks.toFixed(2))
+        },
+        elevation: {
+          dir: r.elevation.dir,
+          clicks: Number(r.elevation.clicks.toFixed(2))
+        },
 
-        secPngUrl: "", // optional later
-        vendorUrl: (elVendor && elVendor.href && elVendor.href !== "#") ? elVendor.href : "",
+        secPngUrl: "",
+        vendorUrl: elVendor?.href || "",
         surveyUrl: "",
 
         debug: {
-          bull: out.bull,
-          avgPoi: out.avgPoi
+          bull,
+          avgPoi: r.avgPoi,
+          delta: r.delta,
+          distanceYds,
+          moaPerClick
         }
       };
 
-      routeToSEC(payload);
+      goToSEC(payload);
     });
   }
 
