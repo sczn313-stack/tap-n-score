@@ -6,7 +6,7 @@
   <meta name="color-scheme" content="dark" />
   <meta name="theme-color" content="#06070a" />
 
-  <!-- HARD NO-CACHE -->
+  <!-- HARD NO-CACHE (iOS/Safari friendly) -->
   <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
@@ -26,12 +26,11 @@
       --red:#d64040;
       --white:#eef2f7;
       --blue:#2f66ff;
-      --green:#67f3a4;
-
       --btn: rgba(255,255,255,.07);
-      --btnHover: rgba(255,255,255,.10);
       --btnStroke: rgba(255,255,255,.14);
+      --btnHover: rgba(255,255,255,.10);
     }
+
     *{ box-sizing:border-box; }
     html,body{ height:100%; }
     body{
@@ -41,59 +40,31 @@
       background:
         radial-gradient(900px 600px at 15% 10%, rgba(47,102,255,.14), transparent 60%),
         radial-gradient(800px 500px at 85% 0%, rgba(214,64,64,.10), transparent 60%),
-        radial-gradient(900px 700px at 50% 100%, rgba(103,243,164,.08), transparent 65%),
         linear-gradient(180deg, var(--bg0), var(--bg1));
     }
+
     .wrap{ max-width: 980px; margin: 0 auto; padding: 18px 14px 34px; }
 
-    .card{
-      border: 1px solid var(--stroke);
-      background: var(--card);
-      border-radius: var(--radius);
-      box-shadow: var(--shadow);
-      overflow:hidden;
-    }
-    .head{
-      padding: 14px 14px 10px;
-      border-bottom: 1px solid rgba(255,255,255,.08);
-      background: rgba(255,255,255,.03);
+    .topbar{
       display:flex; align-items:center; justify-content:space-between; gap:12px;
+      margin-bottom: 14px;
     }
-    .title{
+    .brand{
+      display:flex; align-items:center; gap:12px;
       font-weight: 900;
       letter-spacing:.3px;
-      display:flex; align-items:center; gap:10px;
+      font-size: 18px;
     }
-    .pill{
-      display:inline-flex; gap:8px; align-items:center;
+    .brand .sec{ color: var(--red); }
+    .brand .pill{
+      font-weight: 700;
+      font-size: 13px;
       padding: 8px 12px;
+      border-radius: 999px;
       border: 1px solid var(--stroke);
       background: rgba(255,255,255,.04);
-      border-radius: 999px;
       color: var(--muted);
-      font-size: 13px;
     }
-
-    .grid{
-      display:grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 14px;
-      padding: 14px;
-    }
-    @media (max-width: 760px){
-      .grid{ grid-template-columns: 1fr; }
-    }
-
-    .box{
-      border: 1px solid rgba(255,255,255,.10);
-      background: rgba(0,0,0,.22);
-      border-radius: 18px;
-      padding: 14px;
-    }
-    .k{ color: var(--muted); font-size: 12px; margin-bottom: 6px; }
-    .v{ font-size: 22px; font-weight: 900; letter-spacing:.2px; }
-    .row2{ display:flex; gap:10px; }
-    .row2 > div{ flex:1; }
 
     .btn{
       appearance:none;
@@ -103,33 +74,98 @@
       padding: 12px 14px;
       border-radius: 16px;
       font-weight: 800;
+      letter-spacing: .2px;
       cursor:pointer;
       transition: .15s ease;
+      display:inline-flex; align-items:center; justify-content:center;
       min-height: 44px;
     }
     .btn:hover{ background: var(--btnHover); }
 
-    details.diag{
-      margin: 0 14px 14px;
-      border: 1px solid rgba(255,255,255,.10);
-      border-radius: 18px;
-      background: rgba(0,0,0,.18);
+    .card{
+      border: 1px solid var(--stroke);
+      background: var(--card);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
       overflow:hidden;
     }
-    details.diag summary{
-      cursor:pointer;
-      padding: 12px 14px;
-      color: var(--muted);
-      user-select:none;
-      font-weight: 700;
-    }
-    pre{
-      margin:0;
-      padding: 12px 14px;
-      font-size: 12px;
-      color: rgba(238,242,247,.80);
-      overflow:auto;
+
+    .rows{ display:grid; gap: 12px; }
+
+    .rowCard{
+      padding: 14px 14px;
       border-top: 1px solid rgba(255,255,255,.08);
+    }
+    .rowCard:first-child{ border-top:none; }
+
+    .label{ color: var(--muted); font-size: 13px; margin-bottom: 6px; }
+    .value{
+      font-size: 34px;
+      font-weight: 900;
+      letter-spacing: .2px;
+      line-height: 1.05;
+    }
+    .valueSmall{
+      font-size: 30px;
+      font-weight: 900;
+      letter-spacing: .2px;
+      line-height: 1.05;
+    }
+    .inline{
+      display:flex; align-items:baseline; gap:10px; flex-wrap:wrap;
+    }
+    .inline .dir{
+      font-size: 30px;
+      font-weight: 900;
+    }
+    .inline .clicks{
+      font-size: 18px;
+      color: var(--muted);
+      font-weight: 800;
+      letter-spacing:.2px;
+    }
+
+    .links{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+    @media (max-width: 640px){
+      .links{ grid-template-columns: 1fr; }
+    }
+    .linkCard{
+      padding: 14px;
+      border-top: 1px solid rgba(255,255,255,.08);
+    }
+    a{ color:#9bb7ff; text-decoration:none; font-weight:800; }
+    a:hover{ text-decoration:underline; }
+
+    /* Diagnostics hidden by default */
+    .diagHidden{ display:none !important; }
+    details{
+      border-top: 1px solid rgba(255,255,255,.08);
+      padding: 10px 14px 14px;
+    }
+    summary{
+      cursor:pointer;
+      color: var(--muted);
+      font-weight: 800;
+      letter-spacing:.2px;
+      list-style: none;
+    }
+    summary::-webkit-details-marker{ display:none; }
+    pre{
+      margin: 10px 0 0;
+      white-space: pre-wrap;
+      word-break: break-word;
+      font-size: 12px;
+      color: rgba(238,242,247,.82);
+      background: rgba(0,0,0,.18);
+      border: 1px solid rgba(255,255,255,.10);
+      border-radius: 14px;
+      padding: 12px;
+      overflow:auto;
+      max-height: 380px;
     }
 
     .foot{
@@ -139,77 +175,74 @@
       text-align:center;
       letter-spacing:.3px;
     }
-
-    a{ color: #9bb7ff; text-decoration:none; }
-    a:hover{ text-decoration:underline; }
   </style>
 </head>
 
 <body>
   <div class="wrap">
+
+    <div class="topbar">
+      <div class="brand" id="secTitle">
+        <span class="sec">SEC</span>
+        <span class="pill">Shooter Experience Card</span>
+      </div>
+      <button id="backToTargetBtn" class="btn" type="button">Back to target</button>
+    </div>
+
     <section class="card">
-      <div class="head">
-        <div class="title">
-          <span style="color:var(--red)">SEC</span>
-          <span class="pill">Shooter Experience Card</span>
+      <div class="rows">
+
+        <div class="rowCard">
+          <div class="label">Score</div>
+          <div class="value" id="score">—</div>
         </div>
-        <button id="backToTargetBtn" class="btn" type="button">Back to target</button>
+
+        <div class="rowCard">
+          <div class="label">Shots</div>
+          <div class="value" id="shots">—</div>
+        </div>
+
+        <div class="rowCard">
+          <div class="label">Windage</div>
+          <div class="inline">
+            <div class="dir" id="windDir">—</div>
+            <div class="valueSmall" id="windClicks">—</div>
+            <div class="clicks">clicks</div>
+          </div>
+        </div>
+
+        <div class="rowCard">
+          <div class="label">Elevation</div>
+          <div class="inline">
+            <div class="dir" id="elevDir">—</div>
+            <div class="valueSmall" id="elevClicks">—</div>
+            <div class="clicks">clicks</div>
+          </div>
+        </div>
+
+        <div class="links">
+          <div class="linkCard">
+            <div class="label">Vendor</div>
+            <a id="vendorLink" href="#" style="display:none">Vendor</a>
+          </div>
+          <div class="linkCard">
+            <div class="label">Survey</div>
+            <a id="surveyLink" href="#" style="display:none">Survey</a>
+          </div>
+        </div>
+
+        <!-- Diagnostics (hidden unless ?debug=1 OR long-press title unlocks in JS) -->
+        <details id="diagWrap" class="diagHidden">
+          <summary>Diagnostics</summary>
+          <pre id="secDiag">{}</pre>
+        </details>
+
       </div>
-
-      <div class="grid">
-        <div class="box">
-          <div class="k">Score</div>
-          <div class="v"><span id="scoreVal">—</span></div>
-        </div>
-
-        <div class="box">
-          <div class="k">Shots</div>
-          <div class="v"><span id="shotsCount">—</span></div>
-        </div>
-
-        <div class="box">
-          <div class="k">Windage</div>
-          <div class="v">
-            <span id="windageDir">—</span>
-            <span style="opacity:.55">/</span>
-            <span id="windageClicks">—</span>
-            <span style="font-size:14px; opacity:.6;"> clicks</span>
-          </div>
-        </div>
-
-        <div class="box">
-          <div class="k">Elevation</div>
-          <div class="v">
-            <span id="elevationDir">—</span>
-            <span style="opacity:.55">/</span>
-            <span id="elevationClicks">—</span>
-            <span style="font-size:14px; opacity:.6;"> clicks</span>
-          </div>
-        </div>
-
-        <div class="box" style="grid-column: 1 / -1;">
-          <div class="row2">
-            <div>
-              <div class="k">Vendor</div>
-              <a id="vendorLink" href="#" style="display:none">Open</a>
-            </div>
-            <div>
-              <div class="k">Survey</div>
-              <a id="surveyLink" href="#" style="display:none">Open</a>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <details class="diag">
-        <summary>Diagnostics</summary>
-        <pre id="secDiag">(none)</pre>
-      </details>
     </section>
 
     <div class="foot">SCZN3</div>
   </div>
 
-  <script src="./sec.js?v=20260202h"></script>
+  <script src="./sec.js?v=20260203a"></script>
 </body>
 </html>
