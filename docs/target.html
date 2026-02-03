@@ -9,9 +9,33 @@
   <title>Tap-n-Score™</title>
 
   <script>
-    // target.html is deprecated — keep old links working by redirecting to index.html
-    location.replace("./index.html?fresh=1");
+    // Always send users to the REAL target/tap page
+    // Prevents landing on old "TARGET loaded" junk UI.
+    (function () {
+      try {
+        var url = "./index.html?fresh=" + Date.now() + "#top";
+        window.location.replace(url);
+      } catch (e) {
+        window.location.href = "./index.html?fresh=1#top";
+      }
+    })();
   </script>
+
+  <style>
+    body{
+      margin:0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial;
+      background:#06070a;
+      color:#eef2f7;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      min-height:100vh;
+    }
+    .msg{ opacity:.7; font-size:14px; }
+  </style>
 </head>
-<body></body>
+<body>
+  <div class="msg">Redirecting…</div>
+</body>
 </html>
