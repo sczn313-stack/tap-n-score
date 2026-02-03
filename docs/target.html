@@ -3,39 +3,42 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="color-scheme" content="dark" />
+  <meta name="theme-color" content="#06070a" />
+
+  <!-- HARD NO-CACHE (iOS/Safari friendly) -->
   <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
+
   <title>Tap-n-Score™</title>
 
-  <script>
-    // Always send users to the REAL target/tap page
-    // Prevents landing on old "TARGET loaded" junk UI.
-    (function () {
-      try {
-        var url = "./index.html?fresh=" + Date.now() + "#top";
-        window.location.replace(url);
-      } catch (e) {
-        window.location.href = "./index.html?fresh=1#top";
-      }
-    })();
-  </script>
-
   <style>
-    body{
-      margin:0;
-      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial;
-      background:#06070a;
-      color:#eef2f7;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      min-height:100vh;
-    }
-    .msg{ opacity:.7; font-size:14px; }
+    html, body { height:100%; margin:0; background:#06070a; color:#eef2f7;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial; }
+    .wrap{ height:100%; display:flex; align-items:center; justify-content:center; padding:20px; }
+    .card{ max-width:520px; width:100%; border:1px solid rgba(255,255,255,.12);
+      border-radius:18px; background:rgba(255,255,255,.06); padding:18px; }
+    .muted{ opacity:.7; font-size:13px; line-height:1.35; }
   </style>
 </head>
 <body>
-  <div class="msg">Redirecting…</div>
+  <div class="wrap">
+    <div class="card">
+      <div style="font-weight:800; letter-spacing:.3px;">Redirecting…</div>
+      <div class="muted" style="margin-top:8px;">
+        Sending you to Tap-n-Score.
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Always route target.html to the real Target page.
+    // Keeps query params if any, and forces freshness.
+    (function () {
+      const qs = location.search ? (location.search + "&") : "?";
+      location.replace("./index.html" + qs + "fresh=" + Date.now());
+    })();
+  </script>
 </body>
 </html>
