@@ -6,306 +6,35 @@
   <meta name="color-scheme" content="dark" />
   <meta name="theme-color" content="#06070a" />
 
-  <!-- iOS standalone feel -->
-  <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-
-  <!-- Manifest + icons (important for Home Screen install) -->
-  <link rel="manifest" href="./manifest.webmanifest?v=1" />
-  <link rel="apple-touch-icon" href="./icons/icon-192.png?v=1" />
-  <link rel="icon" href="./icons/icon-192.png?v=1" />
-
   <!-- HARD NO-CACHE (iOS/Safari friendly) -->
   <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
 
   <title>Tap-n-Score™</title>
-
-  <style>
-    :root{
-      --bg0:#05060a; --bg1:#0a0c12;
-      --card: rgba(255,255,255,.06);
-      --stroke: rgba(255,255,255,.12);
-      --text:#eef2f7;
-      --muted: rgba(238,242,247,.65);
-      --muted2: rgba(238,242,247,.45);
-      --shadow: 0 20px 60px rgba(0,0,0,.55);
-      --radius: 22px;
-
-      --red:#d64040;
-      --white:#eef2f7;
-      --blue:#2f66ff;
-      --green:#67f3a4;
-
-      --btn: rgba(255,255,255,.07);
-      --btnHover: rgba(255,255,255,.10);
-      --btnStroke: rgba(255,255,255,.14);
-    }
-
-    *{ box-sizing:border-box; }
-    html,body{ height:100%; }
-    body{
-      margin:0;
-      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial;
-      color: var(--text);
-      background:
-        radial-gradient(900px 600px at 15% 10%, rgba(47,102,255,.14), transparent 60%),
-        radial-gradient(800px 500px at 85% 0%, rgba(214,64,64,.10), transparent 60%),
-        radial-gradient(900px 700px at 50% 100%, rgba(103,243,164,.08), transparent 65%),
-        linear-gradient(180deg, var(--bg0), var(--bg1));
-    }
-
-    .wrap{ max-width: 980px; margin: 0 auto; padding: 18px 14px 34px; }
-
-    .brand{
-      display:flex; align-items:center; justify-content:space-between;
-      gap:12px; margin-bottom: 14px;
-    }
-    .brand .title{
-      font-weight: 800; letter-spacing:.4px;
-      font-size: 20px;
-      display:flex; align-items:center; gap:10px;
-    }
-    .pill{
-      display:inline-flex; gap:8px; align-items:center;
-      padding: 8px 12px;
-      border: 1px solid var(--stroke);
-      background: rgba(255,255,255,.04);
-      border-radius: 999px;
-      color: var(--muted);
-      font-size: 13px;
-      white-space:nowrap;
-    }
-
-    .grid{
-      display:grid;
-      grid-template-columns: 1.35fr .65fr;
-      gap: 14px;
-    }
-    @media (max-width: 880px){
-      .grid{ grid-template-columns: 1fr; }
-    }
-
-    .card{
-      border: 1px solid var(--stroke);
-      background: var(--card);
-      border-radius: var(--radius);
-      box-shadow: var(--shadow);
-      overflow:hidden;
-    }
-    .cardHeader{
-      padding: 14px 14px 10px;
-      border-bottom: 1px solid rgba(255,255,255,.08);
-      background: rgba(255,255,255,.03);
-      display:flex; align-items:center; justify-content:space-between; gap:12px;
-    }
-    .cardHeader h2{
-      margin:0; font-size: 15px; letter-spacing:.2px;
-    }
-    .sub{
-      color: var(--muted);
-      font-size: 13px;
-      margin: 8px 0 0;
-      line-height: 1.35;
-    }
-    .pad{ padding: 14px; }
-
-    .row{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
-    label{ font-size:12px; color: var(--muted2); display:block; margin-bottom:6px; }
-    .field{
-      flex:1;
-      min-width: 160px;
-      background: rgba(0,0,0,.22);
-      border: 1px solid rgba(255,255,255,.10);
-      border-radius: 14px;
-      padding: 10px 10px;
-      color: var(--text);
-      outline:none;
-    }
-    select.field{ padding: 10px 8px; }
-
-    .btn{
-      appearance:none;
-      border: 1px solid var(--btnStroke);
-      background: var(--btn);
-      color: var(--text);
-      padding: 12px 14px;
-      border-radius: 16px;
-      font-weight: 800;
-      letter-spacing: .2px;
-      cursor:pointer;
-      transition: .15s ease;
-      display:inline-flex; align-items:center; justify-content:center;
-      gap:10px;
-      min-height: 44px;
-      width: 100%;
-    }
-    .btn:hover{ background: var(--btnHover); }
-
-    .btnPrimary{
-      border-color: rgba(47,102,255,.45);
-      background: rgba(47,102,255,.20);
-    }
-    .btnDanger{
-      border-color: rgba(214,64,64,.45);
-      background: rgba(214,64,64,.16);
-    }
-
-    .btnRow{
-      display:grid;
-      grid-template-columns: 1fr 1fr;
-      gap:10px;
-    }
-
-    .hint{
-      font-size: 12px;
-      color: var(--muted);
-      line-height: 1.4;
-      margin-top: 10px;
-    }
-
-    /* Image + tap overlay */
-    #targetWrap{
-      position: relative;
-      width: 100%;
-      border-top: 1px solid rgba(255,255,255,.08);
-      background: rgba(0,0,0,.18);
-      overflow:hidden;
-      min-height: 220px;
-    }
-    #targetImg{
-      width: 100%;
-      height: auto;
-      display:block;
-      user-select:none;
-      -webkit-user-drag:none;
-    }
-    #dotsLayer{
-      position:absolute;
-      left:0; top:0; right:0; bottom:0;
-      pointer-events:none;
-    }
-    .tapDot{
-      position:absolute;
-      width: 16px; height: 16px;
-      margin-left: -8px; margin-top: -8px;
-      border-radius: 999px;
-      box-shadow: 0 6px 20px rgba(0,0,0,.55);
-      border: 2px solid rgba(255,255,255,.85);
-    }
-    .tapDotBull{ background: rgba(103,243,164,.95); border-color: rgba(0,0,0,.55); }
-    .tapDotShot{ background: rgba(214,64,64,.92); border-color: rgba(0,0,0,.55); }
-
-    .statLine{
-      display:flex; align-items:center; justify-content:space-between;
-      gap:10px; padding: 10px 14px;
-      border-top: 1px solid rgba(255,255,255,.08);
-      background: rgba(255,255,255,.03);
-      color: var(--muted);
-      font-size: 13px;
-    }
-    .statLine b{ color: var(--white); }
-
-    .foot{
-      margin-top: 16px;
-      color: rgba(238,242,247,.35);
-      font-size: 12px;
-      text-align:center;
-      letter-spacing:.3px;
-    }
-
-    a{ color: #9bb7ff; text-decoration:none; }
-    a:hover{ text-decoration:underline; }
-  </style>
 </head>
 
-<body>
-  <div class="wrap">
+<body style="background:#06070a;color:#fff;font-family:system-ui;padding:24px">
+  Launching…
 
-    <div class="brand">
-      <div class="title">
-        <span style="color:var(--red)">TAP</span><span style="color:var(--white)">-N-</span><span style="color:var(--blue)">SCORE</span><span style="opacity:.85">™</span>
-        <span class="pill">Bull → taps → results</span>
-      </div>
+  <script>
+    (function () {
+      // Always force a fresh URL so iOS won't reuse stale cached JS/CSS.
+      // Landing page = index.html (this file) -> redirect to your real app page.
+      const ts = Date.now();
 
-      <!-- Optional vendor link used by JS -->
-      <a id="vendorLink" class="pill" href="#" style="display:none">Vendor</a>
-    </div>
+      // If your real landing page is index.html (and this file is also index.html),
+      // then we should redirect to the next real page (target.html).
+      // If you want it to go somewhere else, change TARGET below.
+      const TARGET = "./target.html";
 
-    <div class="grid">
+      // Preserve any existing query params + add fresh=
+      const u = new URL(TARGET, location.href);
+      u.searchParams.set("fresh", String(ts));
 
-      <!-- LEFT: Target photo + taps -->
-      <section class="card">
-        <div class="cardHeader">
-          <h2>1) Upload target photo</h2>
-          <div class="pill">Shots: <b id="tapCount">0</b></div>
-        </div>
-
-        <div class="pad">
-          <input id="photoInput" class="field" type="file" accept="image/*" />
-          <div class="sub">
-            Tap once for the <b style="color:var(--green)">bull</b>, then tap your <b style="color:var(--red)">hits</b>.
-          </div>
-        </div>
-
-        <div id="targetWrap">
-          <img id="targetImg" alt="Target" />
-          <div id="dotsLayer"></div>
-        </div>
-
-        <div class="statLine">
-          <div>Tap order: <b>Bull first</b>, then shots</div>
-          <div><span style="color:var(--green)">●</span> bull &nbsp; <span style="color:var(--red)">●</span> shots</div>
-        </div>
-      </section>
-
-      <!-- RIGHT: Settings + buttons -->
-      <aside class="card">
-        <div class="cardHeader">
-          <h2>2) Settings</h2>
-          <span class="pill">SEC handoff</span>
-        </div>
-
-        <div class="pad">
-          <div class="row" style="margin-bottom:12px;">
-            <div style="flex:1;">
-              <label for="distanceYds">Distance (yards)</label>
-              <select id="distanceYds" class="field">
-                <option value="25">25</option>
-                <option value="50">50</option>
-                <option value="100" selected>100</option>
-                <option value="200">200</option>
-              </select>
-            </div>
-
-            <div style="flex:1;">
-              <label for="moaPerClick">MOA per click</label>
-              <select id="moaPerClick" class="field">
-                <option value="0.25" selected>0.25</option>
-                <option value="0.5">0.5</option>
-                <option value="0.125">0.125</option>
-              </select>
-            </div>
-          </div>
-
-          <div class="btnRow">
-            <button id="clearTapsBtn" class="btn btnDanger" type="button">Clear taps</button>
-            <button id="seeResultsBtn" class="btn btnPrimary" type="button">Show results</button>
-          </div>
-
-          <div class="hint">
-            Baseline 22206: URL payload → SEC (localStorage backup).
-          </div>
-        </div>
-      </aside>
-
-    </div>
-
-    <div class="foot">SCZN3</div>
-  </div>
-
-  <!-- IMPORTANT: keep index.js as the authority -->
-  <script src="./index.js?v=22206"></script>
+      // Replace (not assign) so Back doesn’t bounce through the redirect page
+      location.replace(u.toString());
+    })();
+  </script>
 </body>
 </html>
