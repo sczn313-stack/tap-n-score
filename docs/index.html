@@ -18,24 +18,29 @@
 
   <title>Tap-n-Score™</title>
 
-  <!-- App CSS -->
+  <!-- CSS (load BOTH — we will clean later) -->
   <link rel="stylesheet" href="./styles.css?v=22206" />
+  <link rel="stylesheet" href="./coach.css?v=22206" />
+
+  <!-- Tiny fallback styling if BOTH CSS files fail -->
+  <style>
+    body{background:#06070a;color:#fff;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;margin:0}
+    .page{padding:18px}
+    .btnPrimary,.btnSecondary{padding:10px 14px;border-radius:12px;border:1px solid #2a2a2a;background:#111;color:#fff}
+  </style>
 </head>
 
 <body>
   <main class="page">
 
-    <!-- Top row (keep it clean; no pudding/smiley/check junk) -->
     <header class="topBar">
       <div class="topTitle">TARGET</div>
       <div id="statusLine" class="topSub">Choose a photo to begin.</div>
     </header>
 
-    <!-- Photo card -->
     <section class="card">
       <div class="cardTitle">SELECTED PHOTO</div>
 
-      <!-- iOS-friendly file input -->
       <label class="fileBtn" for="photoInput">Choose Photo</label>
       <input
         id="photoInput"
@@ -56,13 +61,8 @@
           Taps: <span id="tapCount">0</span>
         </div>
 
-        <button id="clearTapsBtn" class="btnSecondary" type="button">
-          Clear
-        </button>
-
-        <button id="seeResultsBtn" class="btnPrimary" type="button">
-          Show results
-        </button>
+        <button id="clearTapsBtn" class="btnSecondary" type="button">Clear</button>
+        <button id="seeResultsBtn" class="btnPrimary" type="button">Show results</button>
       </div>
 
       <p id="instructionLine" class="hint">
@@ -70,7 +70,6 @@
       </p>
     </section>
 
-    <!-- Settings (kept upstream; you locked this rule) -->
     <section class="card">
       <div class="cardTitle">SETTINGS</div>
 
@@ -96,7 +95,6 @@
         </label>
       </div>
 
-      <!-- Optional vendor link hook (safe if missing) -->
       <a id="vendorLink" class="vendorLink" href="#" target="_blank" rel="noopener"></a>
     </section>
 
@@ -105,7 +103,6 @@
     </footer>
   </main>
 
-  <!-- App JS -->
   <script src="./index.js?v=22206"></script>
 </body>
 </html>
