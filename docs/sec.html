@@ -5,244 +5,224 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="color-scheme" content="dark" />
   <meta name="theme-color" content="#06070a" />
+  <title>Tap-n-Score™ — Shooter Experience Card</title>
 
-  <!-- HARD NO-CACHE (iOS/Safari friendly) -->
-  <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0" />
-  <meta http-equiv="Pragma" content="no-cache" />
-  <meta http-equiv="Expires" content="0" />
-
-  <title>SEC — Tap-n-Score™</title>
-
-  <style>
-    :root{
-      --bg0:#05060a; --bg1:#0a0c12;
-      --card: rgba(255,255,255,.06);
-      --stroke: rgba(255,255,255,.12);
-      --text:#eef2f7;
-      --muted: rgba(238,242,247,.65);
-      --shadow: 0 20px 60px rgba(0,0,0,.55);
-      --radius: 22px;
-
-      --red:#d64040;
-      --white:#eef2f7;
-      --blue:#2f66ff;
-      --btn: rgba(255,255,255,.07);
-      --btnStroke: rgba(255,255,255,.14);
-      --btnHover: rgba(255,255,255,.10);
-    }
-
-    *{ box-sizing:border-box; }
-    html,body{ height:100%; }
-    body{
-      margin:0;
-      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial;
-      color: var(--text);
-      background:
-        radial-gradient(900px 600px at 15% 10%, rgba(47,102,255,.14), transparent 60%),
-        radial-gradient(800px 500px at 85% 0%, rgba(214,64,64,.10), transparent 60%),
-        linear-gradient(180deg, var(--bg0), var(--bg1));
-    }
-
-    .wrap{ max-width: 980px; margin: 0 auto; padding: 18px 14px 34px; }
-
-    .topbar{
-      display:flex; align-items:center; justify-content:space-between; gap:12px;
-      margin-bottom: 14px;
-    }
-    .brand{
-      display:flex; align-items:center; gap:12px;
-      font-weight: 900;
-      letter-spacing:.3px;
-      font-size: 18px;
-    }
-    .brand .sec{ color: var(--red); }
-    .brand .pill{
-      font-weight: 700;
-      font-size: 13px;
-      padding: 8px 12px;
-      border-radius: 999px;
-      border: 1px solid var(--stroke);
-      background: rgba(255,255,255,.04);
-      color: var(--muted);
-    }
-
-    .btn{
-      appearance:none;
-      border: 1px solid var(--btnStroke);
-      background: var(--btn);
-      color: var(--text);
-      padding: 12px 14px;
-      border-radius: 16px;
-      font-weight: 800;
-      letter-spacing: .2px;
-      cursor:pointer;
-      transition: .15s ease;
-      display:inline-flex; align-items:center; justify-content:center;
-      min-height: 44px;
-    }
-    .btn:hover{ background: var(--btnHover); }
-
-    .card{
-      border: 1px solid var(--stroke);
-      background: var(--card);
-      border-radius: var(--radius);
-      box-shadow: var(--shadow);
-      overflow:hidden;
-    }
-
-    .rows{ display:grid; gap: 12px; }
-
-    .rowCard{
-      padding: 14px 14px;
-      border-top: 1px solid rgba(255,255,255,.08);
-    }
-    .rowCard:first-child{ border-top:none; }
-
-    .label{ color: var(--muted); font-size: 13px; margin-bottom: 6px; }
-    .value{
-      font-size: 34px;
-      font-weight: 900;
-      letter-spacing: .2px;
-      line-height: 1.05;
-    }
-    .valueSmall{
-      font-size: 30px;
-      font-weight: 900;
-      letter-spacing: .2px;
-      line-height: 1.05;
-    }
-    .inline{
-      display:flex; align-items:baseline; gap:10px; flex-wrap:wrap;
-    }
-    .inline .dir{
-      font-size: 30px;
-      font-weight: 900;
-    }
-    .inline .clicks{
-      font-size: 18px;
-      color: var(--muted);
-      font-weight: 800;
-      letter-spacing:.2px;
-    }
-
-    .links{
-      display:grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 12px;
-    }
-    @media (max-width: 640px){
-      .links{ grid-template-columns: 1fr; }
-    }
-    .linkCard{
-      padding: 14px;
-      border-top: 1px solid rgba(255,255,255,.08);
-    }
-    a{ color:#9bb7ff; text-decoration:none; font-weight:800; }
-    a:hover{ text-decoration:underline; }
-
-    /* Diagnostics hidden by default */
-    .diagHidden{ display:none !important; }
-    details{
-      border-top: 1px solid rgba(255,255,255,.08);
-      padding: 10px 14px 14px;
-    }
-    summary{
-      cursor:pointer;
-      color: var(--muted);
-      font-weight: 800;
-      letter-spacing:.2px;
-      list-style: none;
-    }
-    summary::-webkit-details-marker{ display:none; }
-    pre{
-      margin: 10px 0 0;
-      white-space: pre-wrap;
-      word-break: break-word;
-      font-size: 12px;
-      color: rgba(238,242,247,.82);
-      background: rgba(0,0,0,.18);
-      border: 1px solid rgba(255,255,255,.10);
-      border-radius: 14px;
-      padding: 12px;
-      overflow:auto;
-      max-height: 380px;
-    }
-
-    .foot{
-      margin-top: 16px;
-      color: rgba(238,242,247,.35);
-      font-size: 12px;
-      text-align:center;
-      letter-spacing:.3px;
-    }
-  </style>
+  <!-- Your existing CSS -->
+  <link rel="stylesheet" href="./sec.css?v=20260206a" />
 </head>
 
 <body>
-  <div class="wrap">
+  <main class="page">
+    <section class="shell">
 
-    <div class="topbar">
-      <div class="brand" id="secTitle">
-        <span class="sec">SEC</span>
-        <span class="pill">Shooter Experience Card</span>
-      </div>
-      <button id="backToTargetBtn" class="btn" type="button">Back to target</button>
-    </div>
+      <!-- HEADER -->
+      <header class="hdr">
+        <div class="hdrTitle">
+          <!-- Title is the "press-and-hold" secret toggle target -->
+          <div class="brand" id="secTitle">
+            <span class="r">SHOOTER</span>
+            <span class="w">EXPERIENCE</span>
+            <span class="b">CARD</span>
+          </div>
 
-    <section class="card">
-      <div class="rows">
-
-        <div class="rowCard">
-          <div class="label">Score</div>
-          <div class="value" id="score">—</div>
-        </div>
-
-        <div class="rowCard">
-          <div class="label">Shots</div>
-          <div class="value" id="shots">—</div>
-        </div>
-
-        <div class="rowCard">
-          <div class="label">Windage</div>
-          <div class="inline">
-            <div class="dir" id="windDir">—</div>
-            <div class="valueSmall" id="windClicks">—</div>
-            <div class="clicks">clicks</div>
+          <div class="pillRow">
+            <div class="pill">
+              <span class="pillLabel">Session:</span>
+              <span class="pillValue" id="secSession">—</span>
+            </div>
+            <div class="pill">
+              <span class="pillLabel">Shots:</span>
+              <span class="pillValue" id="secShots">0</span>
+            </div>
           </div>
         </div>
+      </header>
 
-        <div class="rowCard">
-          <div class="label">Elevation</div>
-          <div class="inline">
-            <div class="dir" id="elevDir">—</div>
-            <div class="valueSmall" id="elevClicks">—</div>
-            <div class="clicks">clicks</div>
-          </div>
-        </div>
+      <!-- BODY GRID -->
+      <section class="grid">
 
-        <div class="links">
-          <div class="linkCard">
-            <div class="label">Vendor</div>
-            <a id="vendorLink" href="#" style="display:none">Vendor</a>
-          </div>
-          <div class="linkCard">
-            <div class="label">Survey</div>
-            <a id="surveyLink" href="#" style="display:none">Survey</a>
-          </div>
-        </div>
+        <!-- LEFT: SCORING + ADJUSTMENTS + HISTORY -->
+        <section class="leftCol">
 
-        <!-- Diagnostics (hidden unless ?debug=1 OR long-press title unlocks in JS) -->
-        <details id="diagWrap" class="diagHidden">
-          <summary>Diagnostics</summary>
-          <pre id="secDiag">{}</pre>
-        </details>
+          <!-- SCORING -->
+          <article class="card">
+            <div class="cardHead">
+              <div class="cardKicker">SCORING</div>
+            </div>
 
-      </div>
+            <div class="scoreWrap">
+              <div class="scoreLabel">SHOOTER’S SCORE</div>
+              <div class="scoreBox">
+                <div class="scoreValue" id="secScore">—</div>
+              </div>
+            </div>
+          </article>
+
+          <!-- ADJUSTMENTS -->
+          <article class="card">
+            <div class="cardHead">
+              <div class="cardKicker">ADJUSTMENTS</div>
+            </div>
+
+            <div class="adjustTitle">Target clicks</div>
+
+            <div class="adjustGrid">
+              <!-- WINDAGE -->
+              <div class="adjustItem">
+                <div class="adjustMini">WINDAGE</div>
+
+                <div class="adjustRow">
+                  <div class="adjustNum" id="secWindClicks">0.00</div>
+
+                  <div class="dirStack">
+                    <div class="dirPill" id="secWindDir">—</div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- ELEVATION -->
+              <div class="adjustItem">
+                <div class="adjustMini">ELEVATION</div>
+
+                <div class="adjustRow">
+                  <div class="adjustNum" id="secElevClicks">0.00</div>
+
+                  <div class="dirStack">
+                    <div class="dirPill" id="secElevDir">—</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </article>
+
+          <!-- HISTORY -->
+          <article class="card">
+            <div class="cardHead">
+              <div class="cardKicker">HISTORY</div>
+            </div>
+
+            <div class="historyGrid">
+              <div class="histItem">
+                <div class="histMini">PREV 1</div>
+                <div class="histVal" id="prev1">—</div>
+              </div>
+              <div class="histItem">
+                <div class="histMini">PREV 2</div>
+                <div class="histVal" id="prev2">—</div>
+              </div>
+              <div class="histItem">
+                <div class="histMini">PREV 3</div>
+                <div class="histVal" id="prev3">—</div>
+              </div>
+            </div>
+          </article>
+
+        </section>
+
+        <!-- RIGHT: ACTIONS -->
+        <aside class="rightCol">
+          <article class="card actionsCard">
+            <div class="cardHead">
+              <div class="cardKicker">ACTIONS</div>
+            </div>
+
+            <div class="btnCol">
+              <button id="downloadBtn" class="btn btnPrimary btnDisabled" aria-disabled="true">
+                Download SEC
+              </button>
+
+              <button id="vendorBtn" class="btn btnDisabled" aria-disabled="true">
+                Buy more targets
+              </button>
+
+              <button id="surveyBtn" class="btn btnDisabled" aria-disabled="true">
+                Survey
+              </button>
+
+              <button id="backToTargetBtn" class="btn">
+                Back to target
+              </button>
+            </div>
+
+            <div class="tip">
+              Tip (iPad): if download doesn’t start, you can also press-and-hold the image on the download page and save it.
+            </div>
+
+            <!-- DEBUG DIAGNOSTICS (HIDDEN BY DEFAULT) -->
+            <details class="diag" id="secDiagWrap" style="display:none">
+              <summary>Diagnostics</summary>
+              <pre id="secDiag">(none)</pre>
+            </details>
+          </article>
+        </aside>
+
+      </section>
+
+      <footer class="foot">SCZN3</footer>
     </section>
+  </main>
 
-    <div class="foot">SCZN3</div>
-  </div>
+  <!-- Your existing SEC logic -->
+  <script src="./sec.js?v=20260206a"></script>
 
-  <script src="./sec.js?v=20260203a"></script>
+  <!-- DIAGNOSTICS VISIBILITY LOCK -->
+  <script>
+    (() => {
+      const $ = (id) => document.getElementById(id);
+
+      const diagWrap = $("secDiagWrap");
+      const title = $("secTitle");
+
+      function hasDebugParam() {
+        try {
+          return new URL(location.href).searchParams.get("debug") === "1";
+        } catch {
+          return (location.search || "").includes("debug=1");
+        }
+      }
+
+      function showDiag(openIt) {
+        if (!diagWrap) return;
+        diagWrap.style.display = "";
+        if (openIt) diagWrap.open = true;
+      }
+
+      function hideDiag() {
+        if (!diagWrap) return;
+        diagWrap.open = false;
+        diagWrap.style.display = "none";
+      }
+
+      // 1) URL param: ?debug=1
+      if (hasDebugParam()) showDiag(true);
+      else hideDiag();
+
+      // 2) Secret: press-and-hold title to toggle (works even without ?debug=1)
+      let pressTimer = null;
+      function startHold() {
+        if (!diagWrap) return;
+        clearTimeout(pressTimer);
+        pressTimer = setTimeout(() => {
+          const isHidden = diagWrap.style.display === "none";
+          if (isHidden) showDiag(true);
+          else hideDiag();
+        }, 650); // hold time
+      }
+      function endHold() {
+        clearTimeout(pressTimer);
+        pressTimer = null;
+      }
+
+      if (title) {
+        title.addEventListener("mousedown", startHold);
+        title.addEventListener("touchstart", startHold, { passive: true });
+
+        title.addEventListener("mouseup", endHold);
+        title.addEventListener("mouseleave", endHold);
+        title.addEventListener("touchend", endHold);
+        title.addEventListener("touchcancel", endHold);
+      }
+    })();
+  </script>
 </body>
 </html>
