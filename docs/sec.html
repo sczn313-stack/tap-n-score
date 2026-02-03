@@ -7,7 +7,6 @@
   <meta name="theme-color" content="#06070a" />
   <title>Tap-n-Score™ — Shooter Experience Card</title>
 
-  <!-- Your existing CSS -->
   <link rel="stylesheet" href="./sec.css?v=20260206a" />
 </head>
 
@@ -18,8 +17,7 @@
       <!-- HEADER -->
       <header class="hdr">
         <div class="hdrTitle">
-          <!-- Title is the "press-and-hold" secret toggle target -->
-          <div class="brand" id="secTitle">
+          <div class="brand">
             <span class="r">SHOOTER</span>
             <span class="w">EXPERIENCE</span>
             <span class="b">CARD</span>
@@ -144,12 +142,9 @@
               </button>
             </div>
 
-            <div class="tip">
-              Tip (iPad): if download doesn’t start, you can also press-and-hold the image on the download page and save it.
-            </div>
+            <!-- Removed the yellow iPad tip box per cleanup -->
 
-            <!-- DEBUG DIAGNOSTICS (HIDDEN BY DEFAULT) -->
-            <details class="diag" id="secDiagWrap" style="display:none">
+            <details class="diag">
               <summary>Diagnostics</summary>
               <pre id="secDiag">(none)</pre>
             </details>
@@ -162,67 +157,6 @@
     </section>
   </main>
 
-  <!-- Your existing SEC logic -->
   <script src="./sec.js?v=20260206a"></script>
-
-  <!-- DIAGNOSTICS VISIBILITY LOCK -->
-  <script>
-    (() => {
-      const $ = (id) => document.getElementById(id);
-
-      const diagWrap = $("secDiagWrap");
-      const title = $("secTitle");
-
-      function hasDebugParam() {
-        try {
-          return new URL(location.href).searchParams.get("debug") === "1";
-        } catch {
-          return (location.search || "").includes("debug=1");
-        }
-      }
-
-      function showDiag(openIt) {
-        if (!diagWrap) return;
-        diagWrap.style.display = "";
-        if (openIt) diagWrap.open = true;
-      }
-
-      function hideDiag() {
-        if (!diagWrap) return;
-        diagWrap.open = false;
-        diagWrap.style.display = "none";
-      }
-
-      // 1) URL param: ?debug=1
-      if (hasDebugParam()) showDiag(true);
-      else hideDiag();
-
-      // 2) Secret: press-and-hold title to toggle (works even without ?debug=1)
-      let pressTimer = null;
-      function startHold() {
-        if (!diagWrap) return;
-        clearTimeout(pressTimer);
-        pressTimer = setTimeout(() => {
-          const isHidden = diagWrap.style.display === "none";
-          if (isHidden) showDiag(true);
-          else hideDiag();
-        }, 650); // hold time
-      }
-      function endHold() {
-        clearTimeout(pressTimer);
-        pressTimer = null;
-      }
-
-      if (title) {
-        title.addEventListener("mousedown", startHold);
-        title.addEventListener("touchstart", startHold, { passive: true });
-
-        title.addEventListener("mouseup", endHold);
-        title.addEventListener("mouseleave", endHold);
-        title.addEventListener("touchend", endHold);
-        title.addEventListener("touchcancel", endHold);
-      }
-    })();
-  </script>
 </body>
 </html>
