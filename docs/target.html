@@ -3,22 +3,21 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <meta name="theme-color" content="#06070a" />
-  <title>Tap-n-Score™</title>
-
   <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
-</head>
-<body style="background:#06070a;color:#fff;font-family:system-ui;padding:24px">
-  Redirecting…
+  <meta name="theme-color" content="#06070a" />
+  <title>Tap-n-Score™</title>
+
   <script>
+    // Always route TARGET to the landing page (index.html).
+    // Keep querystring so you can pass flags if needed.
     (function () {
-      const url = new URL(location.href);
-      const next = new URL("./index.html", url.toString());
-      next.search = url.search; // preserve any params
-      location.replace(next.toString());
+      var dest = "./index.html" + (location.search || "");
+      location.replace(dest);
     })();
   </script>
+</head>
+<body style="margin:0;background:#06070a;color:#fff;font-family:system-ui">
 </body>
 </html>
