@@ -1,11 +1,14 @@
 /* ============================================================
-   sec.js (FULL REPLACEMENT) — Clean SEC Diagnostics
+   sec.js (FULL REPLACEMENT) — Clean SEC Diagnostics (Baseline 22206)
    - Reads payload from ?payload= (primary)
    - Falls back to localStorage (backup)
    - Diagnostics hidden by default
    - Reveal diagnostics via:
        1) add ?debug=1
        2) long-press the SEC title ("SHOOTER EXPERIENCE CARD") ~0.7s
+   - Back button behavior:
+       1) Prefer real history.back() when available
+       2) Fallback to index.html with a TRUE fresh timestamp
 ============================================================ */
 
 (() => {
@@ -70,6 +73,12 @@
     }
   }
 
+  function goToIndexFresh() {
+    const t = Date.now();
+    // replace avoids building history loops
+    location.replace(`./index.html?fresh=${t}`);
+  }
+
   // ---- Diagnostics gating
   const diagBox = $("secDiagBox");
   const titleEl = $("secTitle");
@@ -79,7 +88,6 @@
   function showDiagnostics() {
     if (!diagBox) return;
     diagBox.classList.remove("diagHidden");
-    // auto-open when revealed
     diagBox.open = true;
   }
 
@@ -93,7 +101,6 @@
   else hideDiagnostics();
 
   // Long-press to reveal diagnostics (iPad friendly)
-  // ~700ms press-and-hold on the SEC title
   if (titleEl && !debugOn) {
     let pressTimer = null;
 
@@ -101,7 +108,6 @@
       clearTimeout(pressTimer);
       pressTimer = setTimeout(() => {
         showDiagnostics();
-        // small confirmation in diag (optional)
         writeDiag({ ok: true, note: "Diagnostics revealed by long-press" });
       }, 700);
     };
@@ -115,7 +121,6 @@
     titleEl.addEventListener("touchend", stop);
     titleEl.addEventListener("touchcancel", stop);
 
-    // also support mouse long-press (desktop)
     titleEl.addEventListener("mousedown", start);
     titleEl.addEventListener("mouseup", stop);
     titleEl.addEventListener("mouseleave", stop);
@@ -141,8 +146,13 @@
 
   if (backBtn) {
     backBtn.addEventListener("click", () => {
-      // your baseline entry point (keeps freshness)
-      location.href = "./index.html?fresh=1";
+      // Prefer actual back if user came from the app flow
+      if (history.length > 1) {
+        history.back();
+        return;
+      }
+      // Fallback: hard route to baseline entry with true cache-bust
+      goToIndexFresh();
     });
   }
 
@@ -152,7 +162,6 @@
     enableBtn(vendorBtn, false);
     enableBtn(surveyBtn, false);
 
-    // only write diag if diagnostics is visible
     if (debugOn) {
       writeDiag({
         ok: false,
@@ -205,9 +214,14 @@
   if (secUrl) {
     enableBtn(downloadBtn, true);
     downloadBtn.addEventListener("click", () => {
-      const from = "./index.html";
-      const target = "./index.html";
-      const u = `./download.html?img=${encodeURIComponent(secUrl)}&from=${encodeURIComponent(from)}&target=${encodeURIComponent(target)}`;
+      // Ensure return path always re-enters the baseline with true freshness
+      const t = Date.now();
+      const from = `./index.html?fresh=${t}`;
+      const target = `./index.html?fresh=${t}`;
+      const u =
+        `./download.html?img=${encodeURIComponent(secUrl)}` +
+        `&from=${encodeURIComponent(from)}` +
+        `&target=${encodeURIComponent(target)}`;
       window.location.href = u;
     });
   } else {
@@ -218,7 +232,9 @@
   const vendorUrl = String(payload.vendorUrl || "").trim();
   if (vendorUrl) {
     enableBtn(vendorBtn, true);
-    vendorBtn.addEventListener("click", () => window.open(vendorUrl, "_blank", "noopener,noreferrer"));
+    vendorBtn.addEventListener("click", () =>
+      window.open(vendorUrl, "_blank", "noopener,noreferrer")
+    );
   } else {
     enableBtn(vendorBtn, false);
   }
@@ -227,7 +243,9 @@
   const surveyUrl = String(payload.surveyUrl || "").trim();
   if (surveyUrl) {
     enableBtn(surveyBtn, true);
-    surveyBtn.addEventListener("click", () => window.open(surveyUrl, "_blank", "noopener,noreferrer"));
+    surveyBtn.addEventListener("click", () =>
+      window.open(surveyUrl, "_blank", "noopener,noreferrer")
+    );
   } else {
     enableBtn(surveyBtn, false);
   }
