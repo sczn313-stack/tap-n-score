@@ -1,7 +1,7 @@
 {
   "name": "Tap-n-Score™",
   "short_name": "Tap-n-Score",
-  "start_url": "/tap-n-score/?fresh=1",
+  "start_url": "/tap-n-score/index.html?fresh=1",
   "scope": "/tap-n-score/",
   "display": "standalone",
   "background_color": "#06070a",
