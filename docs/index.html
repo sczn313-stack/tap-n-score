@@ -6,10 +6,13 @@
   <meta name="color-scheme" content="dark" />
   <meta name="theme-color" content="#06070a" />
 
+  <!-- CRITICAL: lock ALL relative URLs to the project root -->
+  <base href="/tap-n-score/" />
+
   <!-- PWA -->
-  <link rel="manifest" href="./manifest.webmanifest" />
-  <link rel="apple-touch-icon" href="./icons/icon-192.png" />
-  <link rel="icon" href="./icons/icon-192.png" />
+  <link rel="manifest" href="/tap-n-score/manifest.webmanifest" />
+  <link rel="apple-touch-icon" href="/tap-n-score/icons/icon-192.png" />
+  <link rel="icon" href="/tap-n-score/icons/icon-192.png" />
 
   <!-- HARD NO-CACHE (Safari helpers) -->
   <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0" />
@@ -18,16 +21,8 @@
 
   <title>Tap-n-Score™</title>
 
-  <!-- CSS (load BOTH — we will clean later) -->
-  <link rel="stylesheet" href="./styles.css?v=22206" />
-  <link rel="stylesheet" href="./coach.css?v=22206" />
-
-  <!-- Tiny fallback styling if BOTH CSS files fail -->
-  <style>
-    body{background:#06070a;color:#fff;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;margin:0}
-    .page{padding:18px}
-    .btnPrimary,.btnSecondary{padding:10px 14px;border-radius:12px;border:1px solid #2a2a2a;background:#111;color:#fff}
-  </style>
+  <!-- App CSS (absolute path) -->
+  <link rel="stylesheet" href="/tap-n-score/styles.css?v=22206" />
 </head>
 
 <body>
@@ -57,17 +52,14 @@
       </div>
 
       <div class="row">
-        <div class="pill">
-          Taps: <span id="tapCount">0</span>
-        </div>
+        <div class="pill">Taps: <span id="tapCount">0</span></div>
 
         <button id="clearTapsBtn" class="btnSecondary" type="button">Clear</button>
+
         <button id="seeResultsBtn" class="btnPrimary" type="button">Show results</button>
       </div>
 
-      <p id="instructionLine" class="hint">
-        Tap the bull first, then tap each shot.
-      </p>
+      <p id="instructionLine" class="hint">Tap the bull first, then tap each shot.</p>
     </section>
 
     <section class="card">
@@ -103,6 +95,7 @@
     </footer>
   </main>
 
-  <script src="./index.js?v=22206"></script>
+  <!-- App JS (absolute path) -->
+  <script src="/tap-n-score/index.js?v=22206"></script>
 </body>
 </html>
