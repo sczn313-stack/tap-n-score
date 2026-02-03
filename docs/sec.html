@@ -8,6 +8,11 @@
   <title>Tap-n-Score™ — Shooter Experience Card</title>
 
   <link rel="stylesheet" href="./sec.css?v=20260206a" />
+
+  <!-- tiny helper: diagnostics hidden unless JS reveals -->
+  <style>
+    .diagHidden{ display:none !important; }
+  </style>
 </head>
 
 <body>
@@ -17,7 +22,8 @@
       <!-- HEADER -->
       <header class="hdr">
         <div class="hdrTitle">
-          <div class="brand">
+          <!-- LONG-PRESS THIS TITLE to reveal diagnostics -->
+          <div class="brand" id="secTitle" style="user-select:none;-webkit-user-select:none;">
             <span class="r">SHOOTER</span>
             <span class="w">EXPERIENCE</span>
             <span class="b">CARD</span>
@@ -142,12 +148,16 @@
               </button>
             </div>
 
-            <!-- Removed the yellow iPad tip box per cleanup -->
+            <div class="tip">
+              Tip (iPad): if download doesn’t start, you can also press-and-hold the image on the download page and save it.
+            </div>
 
-            <details class="diag">
+            <!-- Hidden by default. Revealed by ?debug=1 OR long-press title -->
+            <details class="diag diagHidden" id="secDiagBox">
               <summary>Diagnostics</summary>
               <pre id="secDiag">(none)</pre>
             </details>
+
           </article>
         </aside>
 
