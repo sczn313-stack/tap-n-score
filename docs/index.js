@@ -1,318 +1,213 @@
 /* ============================================================
-   docs/index.js (FULL REPLACEMENT)
-   SINGLE-PAGE FLOW:
-   - Choose Photo
-   - Tap bull (blue) + shots (red)
-   - POST to backend /api/calc (backend authority)
-   - Render SEC numbers ON THIS PAGE (no sec.html, no localStorage payload)
+   index.js (FULL REPLACEMENT) — Target Page → SEC handoff
+   Fix:
+   - SEC payload is passed via URL (base64) for reliability.
+   - localStorage used only as backup.
 ============================================================ */
 
 (() => {
   const $ = (id) => document.getElementById(id);
 
-  // ---- Backend
-  const API_BASE = "https://sczn3-backend-new.onrender.com";
-  const API_CALC = `${API_BASE}/api/calc`;
+  // ---- REQUIRED ELEMENT IDs on Target page
+  // Photo + canvas/layer
+  const elFile = $("photoInput");     // <input type="file" id="photoInput" accept="image/*">
+  const elImg = $("targetImg");       // <img id="targetImg">
+  const elDots = $("dotsLayer");      // <div id="dotsLayer"> overlay container (position:absolute)
+  const elWrap = $("targetWrap");     // <div id="targetWrap"> wrapper around img + dots
 
-  // ---- Optional: if you still use target.html elsewhere, we’ll restore an image if present
-  const KEY_IMG = "sczn3_target_image_dataurl_v1";
+  // Controls
+  const elTapCount = $("tapCount");   // <span id="tapCount">
+  const elClear = $("clearTapsBtn");  // <button id="clearTapsBtn">
+  const elSee = $("seeResultsBtn");   // <button id="seeResultsBtn">
 
-  // ---- Target size for tap->inches mapping (default 23" grid)
-  const params = new URLSearchParams(location.search);
-  const TARGET_SIZE_IN = Number(params.get("size")) || 23;
+  // Optional UI / links (safe if null)
+  const elVendor = $("vendorLink");   // <a id="vendorLink">
+  const elDistance = $("distanceYds");// <select or input id="distanceYds">
+  const elMoaClick = $("moaPerClick");// <select or input id="moaPerClick">
 
-  // ---- DOM
-  const chooseBtn = $("chooseBtn");
-  const fileInput = $("photoInput");
-  const clearBtn = $("clearTapsBtn");
-  const showBtn = $("showResultsBtn");
-
-  const img = $("targetImg");
-  const wrap = $("targetWrap");
-  const dotsLayer = $("dotsLayer");
-  const emptyState = $("emptyState");
-
-  const instructionLine = $("instructionLine");
-  const tapCount = $("tapCount");
-  const diagOut = $("diagOut");
-
-  const distanceYdsEl = $("distanceYds");
-  const clickMoaEl = $("clickMoa");
-
-  // Results (SEC on same page)
-  const resultsWrap = $("results");
-  const secScore = $("secScore");
-  const secWindClicks = $("secWindClicks");
-  const secWindDir = $("secWindDir");
-  const secElevClicks = $("secElevClicks");
-  const secElevDir = $("secElevDir");
-
-  // ---- State (in inches, screen-space: x right+, y down+)
-  let bull = null;     // {x,y}
-  let shots = [];      // [{x,y},...]
+  // ---- State
+  const KEY = "SCZN3_SEC_PAYLOAD_V1";
   let objectUrl = null;
+  let taps = []; // {x01,y01, kind:'bull'|'shot'}
+  let bull = null;
+  let shots = [];
 
   // ---- Helpers
-  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+  function clamp01(v) { return Math.max(0, Math.min(1, v)); }
 
-  function setDiag(obj) {
-    if (!diagOut) return;
-    diagOut.textContent = JSON.stringify(obj, null, 2);
-  }
-
-  function setInstruction(txt) {
-    if (instructionLine) instructionLine.textContent = txt;
-  }
-
-  function enable(el, yes) {
-    if (!el) return;
-    if (yes) {
-      el.classList.remove("btnDisabled");
-      el.disabled = false;
-      el.setAttribute("aria-disabled", "false");
-    } else {
-      el.classList.add("btnDisabled");
-      el.disabled = true;
-      el.setAttribute("aria-disabled", "true");
-    }
-  }
-
-  function readNum(el, fallback) {
-    const v = Number(el?.value);
-    return Number.isFinite(v) ? v : fallback;
-  }
-
-  function imgRect() {
-    if (!img) return null;
-    const r = img.getBoundingClientRect();
-    if (!r || r.width < 2 || r.height < 2) return null;
-    return r;
-  }
-
-  // px (inside image box) -> inches (0..TARGET_SIZE_IN)
-  function pxToInches(xPx, yPx, rect) {
-    const xIn = (xPx / rect.width) * TARGET_SIZE_IN;
-    const yIn = (yPx / rect.height) * TARGET_SIZE_IN;
-    return { x: xIn, y: yIn };
-  }
-
-  function inchesToPx(p, rect) {
-    const xPx = (p.x / TARGET_SIZE_IN) * rect.width;
-    const yPx = (p.y / TARGET_SIZE_IN) * rect.height;
-    return { xPx, yPx };
+  function setTapCount() {
+    if (elTapCount) elTapCount.textContent = String(shots.length);
   }
 
   function clearDots() {
-    if (!dotsLayer) return;
-    dotsLayer.innerHTML = "";
-  }
-
-  function addDotPx(xPx, yPx, cls) {
-    if (!dotsLayer) return;
-    const d = document.createElement("div");
-    d.className = `dot ${cls || ""}`.trim();
-    d.style.left = `${xPx}px`;
-    d.style.top = `${yPx}px`;
-    dotsLayer.appendChild(d);
-  }
-
-  function redrawDots() {
-    clearDots();
-    const r = imgRect();
-    if (!r) return;
-
-    if (bull) {
-      const { xPx, yPx } = inchesToPx(bull, r);
-      addDotPx(xPx, yPx, "dotBull");
-    }
-    for (const s of shots) {
-      const { xPx, yPx } = inchesToPx(s, r);
-      addDotPx(xPx, yPx, "dotShot");
-    }
-  }
-
-  function resetTaps() {
+    taps = [];
     bull = null;
     shots = [];
-    redrawDots();
-    if (tapCount) tapCount.textContent = "0";
-    resultsWrap.style.display = "none";
-    secScore.textContent = "—";
-    secWindClicks.textContent = "0.00";
-    secWindDir.textContent = "—";
-    secElevClicks.textContent = "0.00";
-    secElevDir.textContent = "—";
-    enable(showBtn, false);
-    setInstruction("Choose a photo. Tap the bull (blue). Tap shots (red). Then Show Results.");
+    if (elDots) elDots.innerHTML = "";
+    setTapCount();
   }
 
-  function setImageSrc(src) {
-    if (!img) return;
-    img.onload = () => {
-      img.style.display = "block";
-      if (emptyState) emptyState.style.display = "none";
-      redrawDots();
-      resetTaps(); // start clean every time photo loads
-      setInstruction("Photo loaded ✅ Tap the bull (blue).");
-      setDiag({ ok: true, imageLoaded: true });
+  function addDot(x01, y01, kind) {
+    taps.push({ x01, y01, kind });
+
+    const d = document.createElement("div");
+    d.className = "tapDot " + (kind === "bull" ? "tapDotBull" : "tapDotShot");
+
+    // percent positioning so it stays correct with scaling
+    d.style.left = (x01 * 100) + "%";
+    d.style.top = (y01 * 100) + "%";
+
+    elDots.appendChild(d);
+  }
+
+  function getRelative01FromEvent(ev) {
+    // tap coordinates relative to the displayed image box
+    const r = elImg.getBoundingClientRect();
+    const x = (ev.clientX - r.left) / r.width;
+    const y = (ev.clientY - r.top) / r.height;
+    return { x01: clamp01(x), y01: clamp01(y) };
+  }
+
+  function b64FromObj(obj) {
+    const json = JSON.stringify(obj);
+    return btoa(unescape(encodeURIComponent(json)));
+  }
+
+  // ---- Simple click math (placeholder)
+  // IMPORTANT: This only exists so the pipeline works end-to-end.
+  // Your real backend can replace this later.
+  function computeDirectionsFromTaps() {
+    // Need bull + at least 1 shot
+    if (!bull || shots.length < 1) return null;
+
+    // Compute POI average in normalized space
+    const avg = shots.reduce((acc, p) => ({ x: acc.x + p.x01, y: acc.y + p.y01 }), { x: 0, y: 0 });
+    avg.x /= shots.length;
+    avg.y /= shots.length;
+
+    // Signed deltas: bull - POI (we want to move POI to bull)
+    const dx = bull.x01 - avg.x; // + means need RIGHT
+    const dy = bull.y01 - avg.y; // + means need DOWN in screen space
+
+    // Convert to "fake inches" scale just for demo pipeline:
+    // Treat image width as 10 inches. (Replace later with real inches mapping.)
+    const inchesPerFullWidth = 10;
+    const inchesX = dx * inchesPerFullWidth;
+    const inchesY = dy * inchesPerFullWidth;
+
+    // User distance + moa/click (default safe values)
+    const dist = Number(elDistance?.value ?? 100);
+    const moaPerClick = Number(elMoaClick?.value ?? 0.25);
+
+    // Inches per MOA (true MOA) at distance
+    const inchesPerMoa = (dist / 100) * 1.047;
+    const moaX = inchesX / inchesPerMoa;
+    const moaY = inchesY / inchesPerMoa;
+
+    const clicksX = moaX / moaPerClick;
+    const clicksY = moaY / moaPerClick;
+
+    const windage = {
+      dir: clicksX >= 0 ? "RIGHT" : "LEFT",
+      clicks: Math.abs(clicksX)
     };
-    img.onerror = () => {
-      setInstruction("Image failed to load ❌");
-      setDiag({ ok: false, imageLoaded: false });
+
+    const elevation = {
+      // screen-space down is +dy, but elevation “UP” is the opposite of screen-down.
+      // If dy is positive (bull below POI), you need to move POI DOWN => dial DOWN.
+      dir: clicksY >= 0 ? "DOWN" : "UP",
+      clicks: Math.abs(clicksY)
     };
-    img.src = src;
+
+    return {
+      avgPoi: { x01: avg.x, y01: avg.y },
+      bull,
+      shots,
+      windage,
+      elevation
+    };
   }
 
-  // ---- Tap handling
-  function onTap(ev) {
-    const r = imgRect();
-    if (!r) return;
+  function goToSEC(payload) {
+    // Store backup
+    try { localStorage.setItem(KEY, JSON.stringify(payload)); } catch (e) {}
 
-    const t = ev.touches && ev.touches[0];
-    const clientX = t ? t.clientX : ev.clientX;
-    const clientY = t ? t.clientY : ev.clientY;
-
-    const xPx = clientX - r.left;
-    const yPx = clientY - r.top;
-
-    if (xPx < 0 || yPx < 0 || xPx > r.width || yPx > r.height) return;
-
-    const pIn = pxToInches(xPx, yPx, r);
-
-    if (!bull) {
-      bull = pIn;
-      redrawDots();
-      setInstruction("Bull set ✅ Now tap shots (red).");
-      return;
-    }
-
-    shots.push(pIn);
-    if (tapCount) tapCount.textContent = String(shots.length);
-    redrawDots();
-    enable(showBtn, shots.length >= 1);
+    // URL payload is primary
+    const b64 = b64FromObj(payload);
+    location.href = `./sec.html?payload=${encodeURIComponent(b64)}&fresh=${Date.now()}`;
   }
 
-  // ---- Backend calc
-  async function calcViaBackend() {
-    const distanceYds = readNum(distanceYdsEl, 100);
-    const clickMoa = readNum(clickMoaEl, 0.25);
+  // ---- Events
+  if (elFile) {
+    elFile.addEventListener("change", () => {
+      const f = elFile.files && elFile.files[0];
+      if (!f) return;
 
-    const body = { bull, shots, distanceYds, clickMoa };
+      // reset dots when new photo selected
+      clearDots();
 
-    const res = await fetch(API_CALC, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
-
-    const data = await res.json().catch(() => ({}));
-
-    if (!res.ok || !data?.ok) {
-      throw new Error(data?.error || `Backend error (${res.status})`);
-    }
-
-    return { data, bodySent: body };
-  }
-
-  function fmt2(n) {
-    const x = Number(n);
-    return Number.isFinite(x) ? x.toFixed(2) : "0.00";
-  }
-
-  // ---- Render SEC (same page)
-  function renderSEC(calcResult) {
-    const data = calcResult.data;
-
-    // Directions + clicks (backend authority)
-    const wDir = data?.directions?.windage || "—";
-    const eDir = data?.directions?.elevation || "—";
-    const wClicks = data?.clicks?.windage ?? 0;
-    const eClicks = data?.clicks?.elevation ?? 0;
-
-    secWindDir.textContent = wDir;
-    secElevDir.textContent = eDir;
-    secWindClicks.textContent = fmt2(wClicks);
-    secElevClicks.textContent = fmt2(eClicks);
-
-    // Score not implemented by backend yet -> show —
-    const scoreMaybe = Number(data?.score);
-    secScore.textContent = Number.isFinite(scoreMaybe) ? String(scoreMaybe) : "—";
-
-    resultsWrap.style.display = "block";
-
-    setInstruction("Results ready ✅");
-    setDiag({
-      ok: true,
-      bodySent: calcResult.bodySent,
-      backend: data
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+      objectUrl = URL.createObjectURL(f);
+      elImg.src = objectUrl;
     });
   }
 
-  // ---- Wire events
-  chooseBtn.addEventListener("click", () => fileInput.click());
+  if (elImg) {
+    elImg.addEventListener("click", (ev) => {
+      // Must have image loaded
+      if (!elImg.src) return;
 
-  fileInput.addEventListener("change", () => {
-    const f = fileInput.files && fileInput.files[0];
-    if (!f) return;
+      const { x01, y01 } = getRelative01FromEvent(ev);
 
-    if (objectUrl) URL.revokeObjectURL(objectUrl);
-    objectUrl = URL.createObjectURL(f);
-
-    // Save dataURL too (helps if you still bounce pages)
-    const reader = new FileReader();
-    reader.onload = () => {
-      const dataUrl = String(reader.result || "");
-      if (dataUrl.startsWith("data:image/")) {
-        try { localStorage.setItem(KEY_IMG, dataUrl); } catch {}
+      // First tap = bull, remaining taps = shots
+      if (!bull) {
+        bull = { x01, y01 };
+        addDot(x01, y01, "bull");
+      } else {
+        const s = { x01, y01 };
+        shots.push(s);
+        addDot(x01, y01, "shot");
+        setTapCount();
       }
-    };
-    reader.readAsDataURL(f);
+    }, { passive: true });
+  }
 
-    setImageSrc(objectUrl);
-    fileInput.value = "";
-  });
+  if (elClear) elClear.addEventListener("click", clearDots);
 
-  clearBtn.addEventListener("click", () => {
-    resetTaps();
-    setInstruction("Cleared ✅ Tap the bull (blue). Then tap shots (red).");
-  });
+  if (elSee) {
+    elSee.addEventListener("click", () => {
+      const out = computeDirectionsFromTaps();
+      if (!out) {
+        alert("Tap the bull first, then tap at least one shot.");
+        return;
+      }
 
-  // Tap on overlay (preferred) so dots never block image taps
-  dotsLayer.addEventListener("touchstart", (e) => { e.preventDefault(); onTap(e); }, { passive: false });
-  dotsLayer.addEventListener("click", onTap);
+      // Build SEC payload
+      const payload = {
+        sessionId: "S-" + Date.now(),
+        score: 99,                // placeholder
+        shots: out.shots.length,
+        windage: {
+          dir: out.windage.dir,
+          clicks: Number(out.windage.clicks.toFixed(2))
+        },
+        elevation: {
+          dir: out.elevation.dir,
+          clicks: Number(out.elevation.clicks.toFixed(2))
+        },
+        secPngUrl: "",            // optional
+        vendorUrl: elVendor?.href || "",
+        surveyUrl: "",            // optional
+        debug: {
+          bull: out.bull,
+          avgPoi: out.avgPoi
+        }
+      };
 
-  enable(showBtn, false);
-  showBtn.addEventListener("click", async () => {
-    if (!img.src) { setInstruction("Choose a photo first."); return; }
-    if (!bull) { setInstruction("Tap the bull first (blue)."); return; }
-    if (shots.length < 1) { setInstruction("Tap at least 1 shot (red)."); return; }
-
-    try {
-      enable(showBtn, false);
-      setInstruction("Calculating…");
-
-      const calcResult = await calcViaBackend();
-      renderSEC(calcResult);
-
-      enable(showBtn, true);
-    } catch (err) {
-      setInstruction(`Error: ${String(err?.message || err)}`);
-      setDiag({ ok: false, error: String(err?.message || err) });
-      enable(showBtn, true);
-    }
-  });
-
-  window.addEventListener("resize", () => redrawDots());
+      goToSEC(payload);
+    });
+  }
 
   // ---- Boot
-  setInstruction("Choose a photo. Tap the bull (blue). Tap shots (red). Then Show Results.");
-  setDiag({ ok: true, mode: "single-page-sec", api: API_CALC });
-
-  // If an image was stored previously (from an old target page), restore it
-  try {
-    const stored = localStorage.getItem(KEY_IMG);
-    if (stored && String(stored).startsWith("data:image/")) {
-      setImageSrc(stored);
-    }
-  } catch {}
+  clearDots();
 })();
