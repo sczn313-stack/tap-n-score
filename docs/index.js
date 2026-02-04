@@ -1,16 +1,10 @@
 /* ============================================================
-   index.js (FULL REPLACEMENT) — A + B (Picker + iPhone layout safety)
-   A:
-   - One big button triggers file input
-   - NO capture attribute => iPhone offers Library/Camera/Browse
-   B:
-   - Tap detection ignores scroll/drag (movement threshold)
-   - Dots placed in percent so they stay aligned
-   Flow:
-   - Upload photo
-   - Tap bull first, then shots
-   - Show results -> builds payload -> URL base64 to sec.html
-   - localStorage backup only
+   index.js (FULL REPLACEMENT) — Magic Sticky Results (Pause-to-show)
+   - Big photo button triggers picker (Library/Camera/Browse)
+   - Tap vs scroll guard (movement threshold)
+   - Sticky "Show results" appears ONLY when:
+       bull exists AND shots >= 1 AND user pauses tapping ~900ms
+   - Normal "Show results" button stays hidden (cleaner)
 ============================================================ */
 
 (() => {
@@ -22,7 +16,10 @@
   const elDots = $("dotsLayer");
   const elTapCount = $("tapCount");
   const elClear = $("clearTapsBtn");
-  const elSee = $("seeResultsBtn");
+  const elSee = $("seeResultsBtn"); // hidden by CSS
+  const elStickyBar = $("stickyBar");
+  const elStickyBtn = $("stickyResultsBtn");
+
   const elStatus = $("statusLine");
   const elInstruction = $("instructionLine");
 
@@ -33,21 +30,42 @@
   const KEY = "SCZN3_SEC_PAYLOAD_V1";
 
   let objectUrl = null;
-  let bull = null;   // {x01,y01}
-  let shots = [];    // [{x01,y01},...]
+  let bull = null;
+  let shots = [];
 
-  // ---- tap vs scroll guard
-  let down = null; // {x,y,t}
-  const MOVE_PX = 10; // if finger moves more than this, treat as scroll
+  // tap vs scroll guard
+  let down = null;
+  const MOVE_PX = 10;
+
+  // pause-to-show
+  let pauseTimer = null;
+  const PAUSE_MS = 900;
 
   function clamp01(v) { return Math.max(0, Math.min(1, v)); }
 
-  function setText(el, txt) {
-    if (el) el.textContent = txt;
+  function setText(el, txt) { if (el) el.textContent = txt; }
+
+  function setTapCount() { setText(elTapCount, String(shots.length)); }
+
+  function hideSticky() {
+    if (!elStickyBar) return;
+    elStickyBar.classList.add("stickyHidden");
+    elStickyBar.setAttribute("aria-hidden", "true");
   }
 
-  function setTapCount() {
-    setText(elTapCount, String(shots.length));
+  function showStickyIfReady() {
+    if (!elStickyBar) return;
+    const ready = Boolean(bull) && shots.length >= 1;
+    if (!ready) { hideSticky(); return; }
+    elStickyBar.classList.remove("stickyHidden");
+    elStickyBar.setAttribute("aria-hidden", "false");
+  }
+
+  function scheduleStickyAfterPause() {
+    clearTimeout(pauseTimer);
+    pauseTimer = setTimeout(() => {
+      showStickyIfReady();
+    }, PAUSE_MS);
   }
 
   function clearDots() {
@@ -56,6 +74,7 @@
     if (elDots) elDots.innerHTML = "";
     setTapCount();
     setText(elInstruction, "Tap bull first, then tap hits.");
+    hideSticky();
   }
 
   function addDot(x01, y01, kind) {
@@ -86,11 +105,10 @@
     avg.x /= shots.length;
     avg.y /= shots.length;
 
-    // bull - POI (move POI to bull)
     const dx = bull.x01 - avg.x; // + => RIGHT
     const dy = bull.y01 - avg.y; // + => DOWN (screen space)
 
-    // Demo scale placeholder
+    // Placeholder scale
     const inchesPerFullWidth = 10;
     const inchesX = dx * inchesPerFullWidth;
     const inchesY = dy * inchesPerFullWidth;
@@ -129,11 +147,31 @@
     }
   }
 
-  // ---- Photo button (one button, always gives choices on iPhone)
+  function doShowResults() {
+    const out = computeCorrection();
+    if (!out) {
+      alert("Tap the bull first, then tap at least one hit.");
+      return;
+    }
+
+    const payload = {
+      sessionId: "S-" + Date.now(),
+      score: 99,
+      shots: shots.length,
+      windage: { dir: out.windage.dir, clicks: Number(out.windage.clicks.toFixed(2)) },
+      elevation:{ dir: out.elevation.dir, clicks: Number(out.elevation.clicks.toFixed(2)) },
+      secPngUrl: "",
+      vendorUrl: (elVendor && elVendor.href && elVendor.href !== "#") ? elVendor.href : "",
+      surveyUrl: "",
+      debug: { bull, avgPoi: out.avgPoi }
+    };
+
+    goToSEC(payload);
+  }
+
+  // ---- Photo button
   if (elPhotoBtn && elFile) {
-    elPhotoBtn.addEventListener("click", () => {
-      elFile.click();
-    });
+    elPhotoBtn.addEventListener("click", () => elFile.click());
   }
 
   if (elFile) {
@@ -146,21 +184,27 @@
       if (objectUrl) URL.revokeObjectURL(objectUrl);
       objectUrl = URL.createObjectURL(f);
 
-      elImg.onload = () => setPhotoUiLoaded(true);
+      elImg.onload = () => {
+        setPhotoUiLoaded(true);
+        hideSticky();
+      };
+
       elImg.src = objectUrl;
 
-      // allow picking same photo again later
+      // allow re-select same file later
       elFile.value = "";
     });
   }
 
-  // ---- Tap handling with scroll guard (pointer events)
+  // ---- Tap capture
   function onDown(ev) {
     if (!elImg || !elImg.src) return;
+    hideSticky(); // while tapping, keep it out of the way
+
     const t = ev.touches && ev.touches[0];
     const x = t ? t.clientX : ev.clientX;
     const y = t ? t.clientY : ev.clientY;
-    down = { x, y, t: Date.now() };
+    down = { x, y };
   }
 
   function onUp(ev) {
@@ -171,21 +215,15 @@
     const x = t ? t.clientX : ev.clientX;
     const y = t ? t.clientY : ev.clientY;
 
-    const dx = Math.abs(x - down.x);
-    const dy = Math.abs(y - down.y);
+    const dxm = Math.abs(x - down.x);
+    const dym = Math.abs(y - down.y);
 
-    // If user moved finger -> scrolling. Ignore as tap.
-    if (dx > MOVE_PX || dy > MOVE_PX) {
-      down = null;
-      return;
-    }
+    // scroll/drag => ignore
+    if (dxm > MOVE_PX || dym > MOVE_PX) { down = null; return; }
 
-    // Must be inside image box
+    // must be inside image
     const r = elImg.getBoundingClientRect();
-    if (x < r.left || x > r.right || y < r.top || y > r.bottom) {
-      down = null;
-      return;
-    }
+    if (x < r.left || x > r.right || y < r.top || y > r.bottom) { down = null; return; }
 
     const { x01, y01 } = getRelative01(x, y);
 
@@ -200,51 +238,32 @@
     }
 
     down = null;
+
+    // pause-to-show sticky (only when shooter stops tapping)
+    scheduleStickyAfterPause();
   }
 
   if (elImg) {
-    // Touch
     elImg.addEventListener("touchstart", onDown, { passive: true });
     elImg.addEventListener("touchend", onUp, { passive: true });
 
-    // Mouse
     elImg.addEventListener("mousedown", onDown);
     elImg.addEventListener("mouseup", onUp);
   }
 
+  // ---- Buttons
   if (elClear) {
     elClear.addEventListener("click", () => {
       clearDots();
-      // keep photo loaded state
       setText(elStatus, elImg?.src ? "Tap bull, then tap hits." : "Add a target photo to begin.");
     });
   }
 
-  if (elSee) {
-    elSee.addEventListener("click", () => {
-      const out = computeCorrection();
-      if (!out) {
-        alert("Tap the bull first, then tap at least one hit.");
-        return;
-      }
-
-      const payload = {
-        sessionId: "S-" + Date.now(),
-        score: 99,
-        shots: shots.length,
-        windage: { dir: out.windage.dir, clicks: Number(out.windage.clicks.toFixed(2)) },
-        elevation:{ dir: out.elevation.dir, clicks: Number(out.elevation.clicks.toFixed(2)) },
-        secPngUrl: "",
-        vendorUrl: (elVendor && elVendor.href && elVendor.href !== "#") ? elVendor.href : "",
-        surveyUrl: "",
-        debug: { bull, avgPoi: out.avgPoi }
-      };
-
-      goToSEC(payload);
-    });
-  }
+  if (elSee) elSee.addEventListener("click", doShowResults);
+  if (elStickyBtn) elStickyBtn.addEventListener("click", doShowResults);
 
   // ---- Boot
   clearDots();
   setPhotoUiLoaded(false);
+  hideSticky();
 })();
