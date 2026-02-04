@@ -1,4 +1,4 @@
-<!-- index.html (FULL REPLACEMENT) — one button, but it yields selection options -->
+ <!-- index.html (FULL REPLACEMENT) — POLISH v1 -->
 <!doctype html>
 <html lang="en">
 <head>
@@ -12,15 +12,32 @@
   <link rel="apple-touch-icon" href="/tap-n-score/icons/icon-192.png" />
   <link rel="icon" href="/tap-n-score/icons/icon-192.png" />
 
-  <!-- HARD NO-CACHE (Safari helpers) -->
+  <!-- HARD NO-CACHE -->
   <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
 
   <title>Tap-n-Score™</title>
 
-  <!-- App CSS -->
   <link rel="stylesheet" href="/tap-n-score/styles.css?v=22206" />
+
+  <!-- Small, surgical iPhone fixes (no stylesheet edit required) -->
+  <style>
+    /* Make the target fit better on iPhone */
+    #targetWrap{
+      max-height: 58vh;
+      overflow: hidden;
+    }
+    #targetImg{
+      max-height: 58vh;
+      width: 100%;
+      height: auto;
+      object-fit: contain;
+      display: block;
+    }
+    /* Keep action buttons close to the photo */
+    .row.tight{ margin-top: 10px; }
+  </style>
 </head>
 
 <body>
@@ -34,26 +51,27 @@
     <section class="card">
       <div class="cardTitle">TARGET PHOTO</div>
 
-      <!-- ONE BUTTON (user taps this) -->
+      <!-- One button -->
       <button id="addPhotoBtn" class="fileBtn" type="button">Add target photo</button>
 
-      <!-- IMPORTANT: NO capture attribute = iOS shows options -->
-      <input
-        id="photoInput"
-        type="file"
-        accept="image/*"
-        style="display:none"
-      />
+      <!-- IMPORTANT: no capture attribute -> iOS shows Camera / Photo Library / Browse -->
+      <input id="photoInput" type="file" accept="image/*" style="display:none" />
 
       <div id="targetWrap" class="targetWrap" aria-label="Target photo area">
         <img id="targetImg" alt="Target preview" />
         <div id="dotsLayer" class="dotsLayer" aria-hidden="true"></div>
+        <!-- Tap-capture layer (enabled only when Tap Mode is ON) -->
+        <div id="tapLayer" style="position:absolute;left:0;top:0;right:0;bottom:0;display:none;"></div>
       </div>
 
-      <div class="row">
+      <div class="row tight">
         <div class="pill">
           Taps: <span id="tapCount">0</span>
         </div>
+
+        <button id="tapModeBtn" class="btnSecondary" type="button">
+          Tap mode: OFF
+        </button>
 
         <button id="clearTapsBtn" class="btnSecondary" type="button">
           Clear
@@ -65,7 +83,7 @@
       </div>
 
       <p id="instructionLine" class="hint">
-        Tap bull first, then tap shots.
+        Turn Tap mode ON when you’re ready to tap bull + shots.
       </p>
     </section>
 
@@ -73,15 +91,24 @@
       <div class="cardTitle">SETTINGS</div>
 
       <div class="row">
-        <label class="field">
+        <label class="field" style="flex:1;">
           <span class="fieldLabel">Distance (yards)</span>
-          <select id="distanceYds" class="select">
-            <option value="25">25</option>
-            <option value="50">50</option>
-            <option value="100" selected>100</option>
-            <option value="200">200</option>
-            <option value="300">300</option>
-          </select>
+
+          <!-- Clicker / stepper -->
+          <div style="display:flex; gap:8px; align-items:center;">
+            <button id="distDown" class="btnSecondary" type="button" style="min-width:52px;">−</button>
+            <input
+              id="distanceYds"
+              class="select"
+              type="number"
+              inputmode="numeric"
+              value="100"
+              min="1"
+              step="1"
+              style="width:100%; text-align:center;"
+            />
+            <button id="distUp" class="btnSecondary" type="button" style="min-width:52px;">+</button>
+          </div>
         </label>
 
         <label class="field">
