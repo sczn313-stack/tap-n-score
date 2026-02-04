@@ -1,10 +1,9 @@
 /* ============================================================
-   index.js (FULL REPLACEMENT) — Magic Sticky Results (Pause-to-show)
-   - Big photo button triggers picker (Library/Camera/Browse)
-   - Tap vs scroll guard (movement threshold)
-   - Sticky "Show results" appears ONLY when:
-       bull exists AND shots >= 1 AND user pauses tapping ~900ms
-   - Normal "Show results" button stays hidden (cleaner)
+   index.js (FULL REPLACEMENT) — Polished UX
+   - Big button label updates by state:
+       Add Target Picture -> Tap bull -> Tap hits
+   - Sticky "Show results" appears after pause ONLY when ready
+   - Instruction line becomes minimal + auto-updates
 ============================================================ */
 
 (() => {
@@ -16,12 +15,11 @@
   const elDots = $("dotsLayer");
   const elTapCount = $("tapCount");
   const elClear = $("clearTapsBtn");
-  const elSee = $("seeResultsBtn"); // hidden by CSS
-  const elStickyBar = $("stickyBar");
-  const elStickyBtn = $("stickyResultsBtn");
-
   const elStatus = $("statusLine");
   const elInstruction = $("instructionLine");
+
+  const elStickyBar = $("stickyBar");
+  const elStickyBtn = $("stickyResultsBtn");
 
   const elVendor = $("vendorLink");
   const elDistance = $("distanceYds");
@@ -42,9 +40,7 @@
   const PAUSE_MS = 900;
 
   function clamp01(v) { return Math.max(0, Math.min(1, v)); }
-
   function setText(el, txt) { if (el) el.textContent = txt; }
-
   function setTapCount() { setText(elTapCount, String(shots.length)); }
 
   function hideSticky() {
@@ -63,18 +59,7 @@
 
   function scheduleStickyAfterPause() {
     clearTimeout(pauseTimer);
-    pauseTimer = setTimeout(() => {
-      showStickyIfReady();
-    }, PAUSE_MS);
-  }
-
-  function clearDots() {
-    bull = null;
-    shots = [];
-    if (elDots) elDots.innerHTML = "";
-    setTapCount();
-    setText(elInstruction, "Tap bull first, then tap hits.");
-    hideSticky();
+    pauseTimer = setTimeout(() => showStickyIfReady(), PAUSE_MS);
   }
 
   function addDot(x01, y01, kind) {
@@ -106,9 +91,9 @@
     avg.y /= shots.length;
 
     const dx = bull.x01 - avg.x; // + => RIGHT
-    const dy = bull.y01 - avg.y; // + => DOWN (screen space)
+    const dy = bull.y01 - avg.y; // + => DOWN
 
-    // Placeholder scale
+    // Placeholder scale for baseline
     const inchesPerFullWidth = 10;
     const inchesX = dx * inchesPerFullWidth;
     const inchesY = dy * inchesPerFullWidth;
@@ -136,21 +121,10 @@
     location.href = `./sec.html?payload=${encodeURIComponent(b64)}&fresh=${Date.now()}`;
   }
 
-  function setPhotoUiLoaded(loaded) {
-    if (!elPhotoBtn) return;
-    if (loaded) {
-      elPhotoBtn.textContent = "Change photo";
-      setText(elStatus, "Tap bull, then tap hits.");
-    } else {
-      elPhotoBtn.textContent = "Add Target Picture";
-      setText(elStatus, "Add a target photo to begin.");
-    }
-  }
-
   function doShowResults() {
     const out = computeCorrection();
     if (!out) {
-      alert("Tap the bull first, then tap at least one hit.");
+      alert("Tap the bull, then at least one hit.");
       return;
     }
 
@@ -169,7 +143,47 @@
     goToSEC(payload);
   }
 
-  // ---- Photo button
+  // ---- UX State (this is the polish)
+  function refreshUx() {
+    const hasPhoto = Boolean(elImg && elImg.src);
+    const hasBull = Boolean(bull);
+    const hasShots = shots.length >= 1;
+
+    // Big button label
+    if (!hasPhoto) setText(elPhotoBtn, "Add Target Picture");
+    else if (!hasBull) setText(elPhotoBtn, "Tap bull");
+    else setText(elPhotoBtn, "Tap hits");
+
+    // Status line (short + calm)
+    if (!hasPhoto) setText(elStatus, "Add a target photo to begin.");
+    else if (!hasBull) setText(elStatus, "Tap bull.");
+    else if (!hasShots) setText(elStatus, "Tap hits.");
+    else setText(elStatus, "Pause a moment…");
+
+    // Instruction line (minimal; stop repeating)
+    if (!hasPhoto) setText(elInstruction, "");
+    else if (!hasBull) setText(elInstruction, "Tap bull.");
+    else if (!hasShots) setText(elInstruction, "Tap hits.");
+    else setText(elInstruction, "");
+
+    // Sticky bar visibility
+    if (hasBull && hasShots) {
+      // only show after pause; keep hidden while actively tapping
+    } else {
+      hideSticky();
+    }
+  }
+
+  function clearDots() {
+    bull = null;
+    shots = [];
+    if (elDots) elDots.innerHTML = "";
+    setTapCount();
+    hideSticky();
+    refreshUx();
+  }
+
+  // ---- Photo button opens picker (library/camera/files depending on iOS)
   if (elPhotoBtn && elFile) {
     elPhotoBtn.addEventListener("click", () => elFile.click());
   }
@@ -185,21 +199,22 @@
       objectUrl = URL.createObjectURL(f);
 
       elImg.onload = () => {
-        setPhotoUiLoaded(true);
         hideSticky();
+        refreshUx();
       };
 
       elImg.src = objectUrl;
 
       // allow re-select same file later
       elFile.value = "";
+      refreshUx();
     });
   }
 
-  // ---- Tap capture
+  // ---- Tap capture (scroll-safe)
   function onDown(ev) {
     if (!elImg || !elImg.src) return;
-    hideSticky(); // while tapping, keep it out of the way
+    hideSticky();
 
     const t = ev.touches && ev.touches[0];
     const x = t ? t.clientX : ev.clientX;
@@ -217,11 +232,8 @@
 
     const dxm = Math.abs(x - down.x);
     const dym = Math.abs(y - down.y);
-
-    // scroll/drag => ignore
     if (dxm > MOVE_PX || dym > MOVE_PX) { down = null; return; }
 
-    // must be inside image
     const r = elImg.getBoundingClientRect();
     if (x < r.left || x > r.right || y < r.top || y > r.bottom) { down = null; return; }
 
@@ -230,7 +242,6 @@
     if (!bull) {
       bull = { x01, y01 };
       addDot(x01, y01, "bull");
-      setText(elInstruction, "Bull set ✅ Now tap hits.");
     } else {
       shots.push({ x01, y01 });
       addDot(x01, y01, "shot");
@@ -238,32 +249,20 @@
     }
 
     down = null;
-
-    // pause-to-show sticky (only when shooter stops tapping)
+    refreshUx();
     scheduleStickyAfterPause();
   }
 
   if (elImg) {
     elImg.addEventListener("touchstart", onDown, { passive: true });
     elImg.addEventListener("touchend", onUp, { passive: true });
-
     elImg.addEventListener("mousedown", onDown);
     elImg.addEventListener("mouseup", onUp);
   }
 
-  // ---- Buttons
-  if (elClear) {
-    elClear.addEventListener("click", () => {
-      clearDots();
-      setText(elStatus, elImg?.src ? "Tap bull, then tap hits." : "Add a target photo to begin.");
-    });
-  }
-
-  if (elSee) elSee.addEventListener("click", doShowResults);
+  if (elClear) elClear.addEventListener("click", clearDots);
   if (elStickyBtn) elStickyBtn.addEventListener("click", doShowResults);
 
   // ---- Boot
   clearDots();
-  setPhotoUiLoaded(false);
-  hideSticky();
 })();
