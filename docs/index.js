@@ -1,10 +1,8 @@
 /* ============================================================
-   index.js (FULL REPLACEMENT) — BASELINE 22206 (CLEANED)
-   Updates:
-   - Distance is a stepper (minus/plus + numeric input)
-   - Photo button now supports BOTH:
-       1) Camera capture
-       2) Choose from Library
+   index.js (FULL REPLACEMENT) — BASELINE 22206 (Mobile-safe taps)
+   Fixes:
+   - iPhone scroll doesn't create phantom taps (drag/scroll ignored)
+   - Keeps existing: camera + library inputs, distance stepper
 ============================================================ */
 
 (() => {
@@ -39,7 +37,6 @@
   let shots = [];    // [{x01,y01},...]
 
   function clamp01(v) { return Math.max(0, Math.min(1, v)); }
-
   function setText(el, txt) { if (el) el.textContent = txt; }
 
   function setTapCount() {
@@ -56,7 +53,6 @@
 
   function addDot(x01, y01, kind) {
     if (!elDots) return;
-
     const d = document.createElement("div");
     d.className = "tapDot " + (kind === "bull" ? "tapDotBull" : "tapDotShot");
     d.style.left = (x01 * 100) + "%";
@@ -64,10 +60,10 @@
     elDots.appendChild(d);
   }
 
-  function getRelative01FromEvent(ev) {
+  function getRelative01FromPoint(clientX, clientY) {
     const r = elImg.getBoundingClientRect();
-    const x = (ev.clientX - r.left) / r.width;
-    const y = (ev.clientY - r.top) / r.height;
+    const x = (clientX - r.left) / r.width;
+    const y = (clientY - r.top) / r.height;
     return { x01: clamp01(x), y01: clamp01(y) };
   }
 
@@ -98,7 +94,7 @@
     const dx = bull.x01 - avg.x; // + => RIGHT
     const dy = bull.y01 - avg.y; // + => DOWN (screen space)
 
-    // Demo scale (placeholder): full image width = 10 inches
+    // Demo scale placeholder
     const inchesPerFullWidth = 10;
     const inchesX = dx * inchesPerFullWidth;
     const inchesY = dy * inchesPerFullWidth;
@@ -122,7 +118,6 @@
 
   function goToSEC(payload) {
     try { localStorage.setItem(KEY, JSON.stringify(payload)); } catch {}
-
     const b64 = b64FromObj(payload);
     location.href = `./sec.html?payload=${encodeURIComponent(b64)}&fresh=${Date.now()}`;
   }
@@ -144,7 +139,7 @@
     elCam.addEventListener("change", () => {
       const f = elCam.files && elCam.files[0];
       loadFile(f);
-      elCam.value = ""; // allow re-pick same photo
+      elCam.value = "";
     });
   }
 
@@ -152,27 +147,81 @@
     elLib.addEventListener("change", () => {
       const f = elLib.files && elLib.files[0];
       loadFile(f);
-      elLib.value = ""; // allow re-pick same photo
+      elLib.value = "";
     });
   }
 
-  // ---- Taps
+  // ============================================================
+  // Scroll-safe tap detection (works on iPhone + desktop)
+  // A "tap" must be:
+  // - small movement (<= 10px)
+  // - short press (<= 350ms)
+  // ============================================================
+  const TAP_MOVE_PX = 10;
+  const TAP_TIME_MS = 350;
+
+  let down = null; // {x,y,t}
+
+  function onDown(clientX, clientY) {
+    down = { x: clientX, y: clientY, t: Date.now() };
+  }
+
+  function onUp(clientX, clientY) {
+    if (!down) return null;
+
+    const dt = Date.now() - down.t;
+    const dx = clientX - down.x;
+    const dy = clientY - down.y;
+    const dist = Math.hypot(dx, dy);
+
+    down = null;
+
+    if (dt > TAP_TIME_MS) return null;
+    if (dist > TAP_MOVE_PX) return null;
+
+    return { clientX, clientY };
+  }
+
+  function registerTap(clientX, clientY) {
+    if (!elImg?.src) return;
+
+    const { x01, y01 } = getRelative01FromPoint(clientX, clientY);
+
+    if (!bull) {
+      bull = { x01, y01 };
+      addDot(x01, y01, "bull");
+      setText(elInstruction, "Bull set. Now tap shots.");
+    } else {
+      shots.push({ x01, y01 });
+      addDot(x01, y01, "shot");
+      setTapCount();
+    }
+  }
+
+  // Touch
   if (elImg) {
-    elImg.addEventListener("click", (ev) => {
-      if (!elImg.src) return;
-
-      const { x01, y01 } = getRelative01FromEvent(ev);
-
-      if (!bull) {
-        bull = { x01, y01 };
-        addDot(x01, y01, "bull");
-        setText(elInstruction, "Bull set. Now tap shots.");
-      } else {
-        shots.push({ x01, y01 });
-        addDot(x01, y01, "shot");
-        setTapCount();
-      }
+    elImg.addEventListener("touchstart", (ev) => {
+      const t = ev.touches && ev.touches[0];
+      if (!t) return;
+      onDown(t.clientX, t.clientY);
     }, { passive: true });
+
+    elImg.addEventListener("touchend", (ev) => {
+      const t = ev.changedTouches && ev.changedTouches[0];
+      if (!t) return;
+      const hit = onUp(t.clientX, t.clientY);
+      if (hit) registerTap(hit.clientX, hit.clientY);
+    }, { passive: true });
+
+    elImg.addEventListener("touchcancel", () => { down = null; }, { passive: true });
+
+    // Mouse
+    elImg.addEventListener("mousedown", (ev) => onDown(ev.clientX, ev.clientY));
+    elImg.addEventListener("mouseup", (ev) => {
+      const hit = onUp(ev.clientX, ev.clientY);
+      if (hit) registerTap(hit.clientX, hit.clientY);
+    });
+    elImg.addEventListener("mouseleave", () => { down = null; });
   }
 
   // ---- Clear
@@ -181,13 +230,12 @@
     setText(elStatus, "Cleared. Tap bull, then shots.");
   });
 
-  // ---- Stepper
+  // ---- Distance stepper
   function stepDistance(delta) {
     const cur = readDistance();
     const next = Math.max(5, Math.min(1000, cur + delta));
     if (elDistance) elDistance.value = String(next);
   }
-
   if (elMinus) elMinus.addEventListener("click", () => stepDistance(-5));
   if (elPlus) elPlus.addEventListener("click", () => stepDistance(+5));
   if (elDistance) {
@@ -214,7 +262,12 @@
         secPngUrl: "",
         vendorUrl: (elVendor && elVendor.href && elVendor.href !== "#") ? elVendor.href : "",
         surveyUrl: "",
-        debug: { bull, avgPoi: out.avgPoi, distanceYds: readDistance(), moaPerClick: readMoaPerClick() }
+        debug: {
+          bull,
+          avgPoi: out.avgPoi,
+          distanceYds: readDistance(),
+          moaPerClick: readMoaPerClick()
+        }
       };
 
       goToSEC(payload);
