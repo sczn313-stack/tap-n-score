@@ -1,202 +1,249 @@
 :root{
-  --bg0:#05060a;
-  --bg1:#0a0c12;
+  --bg:#06070a;
+  --panel: rgba(255,255,255,.06);
+  --stroke: rgba(255,255,255,.12);
+  --text: #eef2f7;
+  --muted: rgba(238,242,247,.65);
 
-  --text:#eef2f7;
-  --muted: rgba(238,242,247,.78);
-  --muted2: rgba(238,242,247,.55);
-
-  --red:#d21f2b;
+  --red:#d64040;
+  --white:#eef2f7;
   --blue:#2f66ff;
+  --green:#67f3a4;
 
-  --shadow: 0 22px 70px rgba(0,0,0,.58);
+  --btn: rgba(255,255,255,.08);
+  --btn2: rgba(255,255,255,.06);
+  --btnStroke: rgba(255,255,255,.16);
+
+  --radius: 18px;
 }
 
 *{ box-sizing:border-box; }
 html,body{ height:100%; }
 body{
   margin:0;
-  font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+  background: radial-gradient(900px 600px at 15% 10%, rgba(47,102,255,.14), transparent 60%),
+              radial-gradient(800px 500px at 85% 0%, rgba(214,64,64,.10), transparent 60%),
+              radial-gradient(900px 700px at 50% 100%, rgba(103,243,164,.08), transparent 65%),
+              linear-gradient(180deg, #05060a, #0a0c12);
   color: var(--text);
-  background:
-    radial-gradient(1200px 800px at 18% 14%, rgba(47,102,255,.18), transparent 55%),
-    radial-gradient(1200px 800px at 78% 28%, rgba(210,31,43,.18), transparent 58%),
-    radial-gradient(1200px 900px at 50% 88%, rgba(255,255,255,.06), transparent 60%),
-    linear-gradient(180deg, var(--bg0), var(--bg1));
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial;
 }
 
-.lp{
-  min-height:100vh;
-  display:flex;
-  flex-direction:column;
-  padding: 18px 16px 16px;
-  gap: 12px;
+.page{
+  max-width: 980px;
+  margin: 0 auto;
+  padding: 14px 12px 28px;
 }
 
-/* BRAND */
-.lpBrand{ padding-top: 6px; }
-.lpLogo{
-  font-weight: 950;
-  letter-spacing: .10em;
-  text-transform: uppercase;
-  line-height: 1;
-  font-size: clamp(32px, 5.6vw, 56px);
+.topBar{
+  padding: 10px 6px 14px;
+}
+
+.brandLine{
+  font-weight: 900;
+  letter-spacing: .5px;
+  font-size: 22px;
   display:flex;
-  align-items:baseline;
-  gap: 2px;
+  align-items:center;
+  gap:0;
 }
-.lpTap{ color: var(--red); }
-.lpDash{ color: var(--text); opacity: .95; }
-.lpN{ color: var(--text); opacity: .95; }
-.lpScore{ color: var(--blue); }
-.lpTm{
-  font-size: .55em;
-  letter-spacing: .06em;
-  margin-left: 4px;
-  opacity: .9;
-}
-.lpTag{
-  margin-top: 8px;
-  font-size: clamp(16px, 2.5vw, 26px);
-  font-weight: 800;
+.brandR{ color: var(--red); }
+.brandW{ color: var(--white); }
+.brandB{ color: var(--blue); }
+.brandTm{ opacity:.85; margin-left:2px; }
+
+.topSub{
+  margin-top: 6px;
   color: var(--muted);
+  font-size: 14px;
 }
 
-/* HERO */
-.lpHero{
-  flex: 1;
-  display:flex;
-  flex-direction:column;
-  align-items:center;
-  justify-content:center;
-  gap: 18px;
-  padding: 10px 0 6px;
+.card{
+  border: 1px solid var(--stroke);
+  background: var(--panel);
+  border-radius: var(--radius);
+  padding: 12px;
+  margin: 10px 0;
 }
 
-/* Big red pill button */
-.lpBigBtn{
-  width: min(860px, 94vw);
-  display:flex;
-  justify-content:center;
+.cardTitle{
+  font-size: 12px;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: rgba(238,242,247,.70);
+  font-weight: 800;
+  margin-bottom: 10px;
+}
+
+.fileBtn{
+  display:inline-flex;
   align-items:center;
-  text-align:center;
-
-  background: linear-gradient(180deg, rgba(210,31,43,1), rgba(180,18,28,1));
-  color: white;
-  border: 1px solid rgba(255,255,255,.14);
-  border-radius: 999px;
-  box-shadow: 0 18px 60px rgba(0,0,0,.55);
-
-  padding: 18px 22px;
-  font-size: clamp(18px, 2.6vw, 26px);
-  font-weight: 950;
-  letter-spacing: .02em;
-
+  justify-content:center;
+  width: 100%;
+  border: 1px solid var(--btnStroke);
+  background: var(--btn);
+  color: var(--text);
+  border-radius: 16px;
+  font-weight: 900;
+  cursor: pointer;
   user-select:none;
   -webkit-tap-highlight-color: transparent;
-  cursor: pointer;
-}
-.lpBigBtn:active{
-  transform: translateY(1px);
-  filter: brightness(.98);
 }
 
-/* Glow pulse (tasteful, not cheesy) */
-.lpPulse{
-  position: relative;
-  isolation: isolate;
-}
-.lpPulse::after{
-  content:"";
-  position:absolute;
-  inset: -10px;
-  border-radius: 999px;
-  background:
-    radial-gradient(closest-side, rgba(210,31,43,.28), transparent 70%);
-  filter: blur(6px);
-  z-index: -1;
-  opacity: .65;
-  animation: lpPulse 2.2s ease-in-out infinite;
-}
-@keyframes lpPulse{
-  0%   { transform: scale(0.98); opacity: .45; }
-  50%  { transform: scale(1.03); opacity: .85; }
-  100% { transform: scale(0.98); opacity: .45; }
-}
-
-.lpTip{
-  width: min(860px, 94vw);
-  text-align:center;
-  font-size: clamp(18px, 3vw, 34px);
-  font-weight: 900;
-  color: var(--text);
-  opacity: .95;
-  line-height: 1.15;
-  text-shadow: 0 10px 30px rgba(0,0,0,.45);
-}
-
-/* FOOT */
-.lpFooter{
-  display:flex;
-  align-items:flex-end;
-  justify-content:space-between;
-  gap: 12px;
-  padding-top: 10px;
-}
-
-.lpSession{
-  font-weight: 850;
-  letter-spacing: .08em;
-  color: rgba(238,242,247,.70);
-  font-size: 13px;
-}
-
-.lpBuyBtn{
-  text-decoration:none;
-  color: var(--text);
-  background: rgba(255,255,255,.06);
-  border: 1px solid rgba(255,255,255,.12);
-  border-radius: 999px;
-  padding: 14px 18px;
-  min-width: 220px;
-  text-align:center;
-  box-shadow: 0 18px 60px rgba(0,0,0,.45);
-  transition: opacity .2s ease, transform .12s ease;
-}
-.lpBuyBtn:active{ transform: translateY(1px); }
-
-.lpBuyTop{
-  font-weight: 950;
-  letter-spacing: .08em;
-  color: rgba(47,102,255,.95);
+.fileBtnBig{
   font-size: 18px;
-  text-transform: uppercase;
-}
-.lpBuyBottom{
-  margin-top: 2px;
-  font-weight: 900;
-  font-size: 20px;
-  color: rgba(238,242,247,.92);
+  padding: 16px 14px;
+  min-height: 56px;
 }
 
-.lpBuyDisabled{
-  opacity: .45;
+.fileBtnSmall{
+  font-size: 14px;
+  padding: 12px 14px;
+  min-height: 46px;
+  background: var(--btn2);
+}
+
+.targetWrap{
+  margin-top: 12px;
+  border-radius: 16px;
+  overflow: hidden;
+  background: rgba(0,0,0,.20);
+  border: 1px solid rgba(255,255,255,.10);
+
+  /* make it slimmer + give scroll margin on phone */
+  max-width: 92vw;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+#targetImg{
+  display:block;
+  width: 100%;
+  height: auto;
+  user-select:none;
+  -webkit-user-drag:none;
+}
+
+.dotsLayer{
+  position:absolute;
+  inset: 0;
   pointer-events:none;
 }
 
-/* Hidden until photo exists */
-.lpHidden{
-  opacity: 0;
-  pointer-events: none;
-  transform: translateY(6px);
+.targetWrap{
+  position: relative;
 }
 
-/* --------- Compatibility (if old UI routes still exist) --------- */
-.page{ padding: 18px 14px 24px; }
-.card{ background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.10); border-radius: 18px; padding: 14px; }
-.cardTitle{ color: rgba(238,242,247,.65); font-weight: 900; letter-spacing: .12em; text-transform: uppercase; font-size: 12px; margin-bottom: 10px; }
-.fileBtn{ display:inline-block; padding: 12px 14px; border-radius: 14px; border: 1px solid rgba(255,255,255,.14); background: rgba(255,255,255,.07); color: rgba(238,242,247,.92); font-weight: 850; text-decoration:none; }
-.btnPrimary{ padding: 12px 14px; border-radius: 14px; border: 1px solid rgba(255,255,255,.14); background: rgba(103,243,164,.12); color: rgba(238,242,247,.92); font-weight: 900; }
-.btnSecondary{ padding: 12px 14px; border-radius: 14px; border: 1px solid rgba(255,255,255,.14); background: rgba(255,255,255,.06); color: rgba(238,242,247,.92); font-weight: 850; }
-.hint{ color: rgba(238,242,247,.65); }
-.vendorLink{ display:none; }
+.tapDot{
+  position:absolute;
+  width: 16px;
+  height: 16px;
+  margin-left: -8px;
+  margin-top: -8px;
+  border-radius: 999px;
+  border: 2px solid rgba(0,0,0,.55);
+  box-shadow: 0 10px 30px rgba(0,0,0,.45);
+}
+
+.tapDotBull{ background: rgba(103,243,164,.95); }
+.tapDotShot{ background: rgba(214,64,64,.92); }
+
+.actionBar{
+  display:flex;
+  gap: 10px;
+  align-items:center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  margin-top: 12px;
+}
+
+.pill{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  padding: 10px 12px;
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 999px;
+  background: rgba(0,0,0,.18);
+  color: rgba(238,242,247,.82);
+  font-weight: 800;
+}
+
+.btnPrimary, .btnSecondary{
+  appearance:none;
+  border: 1px solid var(--btnStroke);
+  border-radius: 14px;
+  padding: 12px 14px;
+  min-height: 46px;
+  font-weight: 900;
+  color: var(--text);
+  cursor:pointer;
+  background: var(--btn);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.btnPrimary{
+  border-color: rgba(47,102,255,.45);
+  background: rgba(47,102,255,.18);
+}
+
+.btnSecondary{
+  background: rgba(255,255,255,.06);
+}
+
+.hint{
+  margin: 10px 2px 2px;
+  color: rgba(238,242,247,.70);
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.row{
+  display:flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.field{
+  flex:1;
+  min-width: 170px;
+}
+
+.fieldLabel{
+  display:block;
+  color: rgba(238,242,247,.55);
+  font-size: 12px;
+  margin: 2px 0 6px;
+  font-weight: 700;
+}
+
+.select, .input{
+  width:100%;
+  padding: 12px 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,.12);
+  background: rgba(0,0,0,.22);
+  color: var(--text);
+  outline:none;
+}
+
+.vendorLink{
+  display:inline-block;
+  margin-top: 10px;
+  color: #9bb7ff;
+  text-decoration:none;
+  font-weight: 800;
+}
+
+.footer{
+  margin-top: 14px;
+  text-align:center;
+}
+
+.footerMark{
+  color: rgba(238,242,247,.28);
+  letter-spacing: .24em;
+  font-weight: 900;
+  text-transform: uppercase;
+  font-size: 12px;
+}
