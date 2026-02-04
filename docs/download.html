@@ -231,9 +231,9 @@
           <div class="previewBox" id="previewBox">
             <div class="empty" id="emptyState">
               <strong>No SEC image loaded.</strong><br/>
-              This page expects a link like:<br/>
+              This page expects:<br/>
               <code>?img=https://.../sec.png</code><br/>
-              or a <code>data:image/png...</code> URL.
+              or <code>data:image/png...</code>
             </div>
             <img id="secImg" alt="Shooter Experience Card preview" />
           </div>
@@ -249,8 +249,8 @@
 
           <div class="actions">
             <button id="downloadBtn" class="btn btnPrimary btnDisabled">Download SEC PNG</button>
-            <a id="scoreAnotherLink" class="btn" href="./sec.html">Score another</a>
-            <a id="backToTargetLink" class="btn" href="./target.html">Back to setup</a>
+            <a id="scoreAnotherLink" class="btn" href="#">Score another</a>
+            <a id="backToTargetLink" class="btn" href="#">Back to setup</a>
           </div>
 
           <div class="hint" id="hintLine">
@@ -282,98 +282,187 @@
       const scoreAnotherLink = $("scoreAnotherLink");
       const backToTargetLink = $("backToTargetLink");
 
-      const params = new URLSearchParams(window.location.search);
-      const imgUrl = params.get("img") || "";
-      const from = params.get("from") || "";
-      const target = params.get("target") || "";
+      // ----------------------------
+      // Base lock: keep everything inside /tap-n-score/
+      // ----------------------------
+      const urlNow = new URL(location.href);
 
-      if (from) scoreAnotherLink.href = from;
-      if (target) backToTargetLink.href = target;
+      // basePath = "/tap-n-score/" (or whatever folder we are in)
+      const basePath = urlNow.pathname.endsWith("/")
+        ? urlNow.pathname
+        : urlNow.pathname.slice(0, urlNow.pathname.lastIndexOf("/") + 1);
+
+      const baseOrigin = urlNow.origin;
+      const baseLockedPrefix = baseOrigin + basePath;
+
+      function freshIndexUrl() {
+        return `./index.html?fresh=${Date.now()}`;
+      }
 
       function setDiag(obj) {
-        diagOut.textContent = JSON.stringify(obj, null, 2);
+        try { diagOut.textContent = JSON.stringify(obj, null, 2); }
+        catch { diagOut.textContent = String(obj); }
       }
 
-      function isDataUrl(url) {
-        return typeof url === "string" && url.startsWith("data:image/");
+      function isDataUrl(u) {
+        return typeof u === "string" && u.startsWith("data:image/");
       }
 
-      function guessFileName(url) {
-        if (isDataUrl(url)) return "SEC.png";
+      function guessFileName(u) {
+        if (isDataUrl(u)) return "SEC.png";
         try {
-          const u = new URL(url);
-          const p = u.pathname.split("/").filter(Boolean).pop() || "SEC.png";
+          const uu = new URL(u);
+          const p = uu.pathname.split("/").filter(Boolean).pop() || "SEC.png";
           return p.toLowerCase().endsWith(".png") ? p : (p + ".png");
         } catch {
           return "SEC.png";
         }
       }
 
-      async function downloadAsFile(url) {
-        // If it's a data URL, we can download directly without fetch/CORS.
-        if (isDataUrl(url)) {
+      // Allow only:
+      //  - "./something" (relative)
+      //  - "/tap-n-score/something" (same base path)
+      //  - "https://same-origin/tap-n-score/something" (same origin + same base path)
+      function sanitizeNav(raw) {
+        const s = String(raw || "").trim();
+        if (!s) return "";
+
+        // Relative is safe
+        if (s.startsWith("./")) return s;
+
+        // Absolute path: must start with our basePath
+        if (s.startsWith("/")) {
+          if (s.startsWith(basePath)) return s;
+          return "";
+        }
+
+        // Full URL: must match origin and basePath
+        try {
+          const u = new URL(s);
+          if (u.origin !== baseOrigin) return "";
+          if (!u.pathname.startsWith(basePath)) return "";
+          return u.href;
+        } catch {
+          return "";
+        }
+      }
+
+      async function downloadAsFile(imgUrl) {
+        if (isDataUrl(imgUrl)) {
           const a = document.createElement("a");
-          a.href = url;
-          a.download = guessFileName(url);
+          a.href = imgUrl;
+          a.download = guessFileName(imgUrl);
           document.body.appendChild(a);
           a.click();
           a.remove();
           return;
         }
 
-        // Otherwise fetch as blob to force download
-        const res = await fetch(url, { mode: "cors" });
+        // Remote fetch -> blob (may fail due to CORS)
+        const res = await fetch(imgUrl, { mode: "cors" });
         if (!res.ok) throw new Error("Fetch failed: " + res.status);
         const blob = await res.blob();
 
         const a = document.createElement("a");
         const obj = URL.createObjectURL(blob);
         a.href = obj;
-        a.download = guessFileName(url);
+        a.download = guessFileName(imgUrl);
         document.body.appendChild(a);
         a.click();
         a.remove();
         setTimeout(() => URL.revokeObjectURL(obj), 1500);
       }
 
-      if (!imgUrl) {
+      // ----------------------------
+      // Params
+      // ----------------------------
+      const params = new URLSearchParams(window.location.search);
+      const imgParam = params.get("img") || "";
+      const fromParam = params.get("from") || "";
+      const targetParam = params.get("target") || "";
+
+      // ----------------------------
+      // Default safe nav (always inside app)
+      // ----------------------------
+      const safeScoreAnother = sanitizeNav(fromParam) || freshIndexUrl();
+      const safeBackToSetup  = sanitizeNav(targetParam) || freshIndexUrl();
+
+      scoreAnotherLink.href = safeScoreAnother;
+      backToTargetLink.href = safeBackToSetup;
+
+      // ----------------------------
+      // No image?
+      // ----------------------------
+      if (!imgParam) {
         subLine.textContent = "Download your SEC PNG.";
         hintLine.textContent = "No image provided. Open with ?img=YOUR_PNG_URL";
         setDiag({
-          ok:false,
-          reason:"missing img param",
-          example: window.location.origin + window.location.pathname + "?img=https://example.com/sec.png"
+          ok: false,
+          reason: "missing img param",
+          baseLocked: basePath,
+          nav: { scoreAnother: safeScoreAnother, backToSetup: safeBackToSetup },
+          example: baseLockedPrefix + "download.html?img=https://example.com/sec.png&from=./index.html&target=./index.html"
         });
         return;
       }
 
+      // ----------------------------
+      // Show image
+      // ----------------------------
       subLine.textContent = "SEC ready to download.";
       emptyState.style.display = "none";
       secImg.style.display = "block";
-      secImg.src = imgUrl;
+      secImg.src = imgParam;
 
       secImg.onload = () => {
         downloadBtn.classList.remove("btnDisabled");
         hintLine.textContent = "Tap Download SEC PNG. (iPad tip: press-and-hold image to Save to Photos.)";
-        setDiag({ ok:true, imgProvided:true, imgType: isDataUrl(imgUrl) ? "dataUrl" : "remoteUrl" });
+        setDiag({
+          ok: true,
+          baseLocked: basePath,
+          imgType: isDataUrl(imgParam) ? "dataUrl" : "remoteUrl",
+          nav: { scoreAnother: safeScoreAnother, backToSetup: safeBackToSetup },
+          raw: { fromParam, targetParam }
+        });
       };
 
       secImg.onerror = () => {
         downloadBtn.classList.add("btnDisabled");
         hintLine.textContent = "Could not load the SEC image. (Check the img= URL.)";
-        setDiag({ ok:false, img: imgUrl, error:"image failed to load" });
+        setDiag({
+          ok: false,
+          reason: "image failed to load",
+          baseLocked: basePath,
+          img: imgParam,
+          nav: { scoreAnother: safeScoreAnother, backToSetup: safeBackToSetup }
+        });
       };
 
+      // ----------------------------
+      // Download action
+      // ----------------------------
       downloadBtn.addEventListener("click", async () => {
         if (downloadBtn.classList.contains("btnDisabled")) return;
+
+        const imgUrl = String(imgParam).trim();
         downloadBtn.textContent = "Downloading…";
+
         try {
           await downloadAsFile(imgUrl);
           downloadBtn.textContent = "Download SEC PNG";
         } catch (e) {
-          setDiag({ ok:false, img: imgUrl, error:String(e), fallback:"opening image" });
+          // Fallback: open image in a new tab (works even when blob/CORS fails)
+          setDiag({
+            ok: false,
+            reason: "download failed (likely CORS)",
+            img: imgUrl,
+            error: String(e),
+            fallback: "opening image in new tab",
+            nav: { scoreAnother: safeScoreAnother, backToSetup: safeBackToSetup }
+          });
+
           downloadBtn.textContent = "Open image (fallback)";
-          window.open(imgUrl, "_blank", "noopener");
+          window.open(imgUrl, "_blank", "noopener,noreferrer");
           setTimeout(() => (downloadBtn.textContent = "Download SEC PNG"), 1200);
         }
       });
