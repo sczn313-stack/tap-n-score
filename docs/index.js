@@ -1,10 +1,9 @@
 /* ============================================================
-   index.js (FULL REPLACEMENT) — BASELINE 22206 (CLEANED)
-   Flow:
-   - Upload photo
-   - Tap bull (first) then tap shots
-   - Show results -> builds payload -> passes via URL base64 to sec.html
-   - localStorage is backup only
+   index.js (FULL REPLACEMENT) — BASELINE 22206 + Hide Add Photo
+   Behavior:
+   - "Add target photo" is visible until an image loads
+   - Once image loads, hide Add Photo control (clean UI)
+   - If user taps Clear, show Add Photo again (optional, but requested)
 ============================================================ */
 
 (() => {
@@ -14,10 +13,14 @@
   const elFile = $("photoInput");
   const elImg = $("targetImg");
   const elDots = $("dotsLayer");
-  const elWrap = $("targetWrap");
   const elTapCount = $("tapCount");
   const elClear = $("clearTapsBtn");
   const elSee = $("seeResultsBtn");
+  const elStatus = $("statusLine");
+  const elInstruction = $("instructionLine");
+
+  // New wrapper we added in index.html
+  const elAddPhotoWrap = $("addPhotoWrap");
 
   // Optional
   const elVendor = $("vendorLink");
@@ -32,8 +35,17 @@
 
   function clamp01(v) { return Math.max(0, Math.min(1, v)); }
 
+  function setText(el, txt) {
+    if (el) el.textContent = txt;
+  }
+
   function setTapCount() {
     if (elTapCount) elTapCount.textContent = String(shots.length);
+  }
+
+  function showAddPhoto(yes) {
+    if (!elAddPhotoWrap) return;
+    elAddPhotoWrap.style.display = yes ? "" : "none";
   }
 
   function clearDots() {
@@ -41,6 +53,12 @@
     shots = [];
     if (elDots) elDots.innerHTML = "";
     setTapCount();
+
+    // When cleared, we show Add Photo again (your request)
+    showAddPhoto(true);
+
+    setText(elStatus, "Choose a photo to begin.");
+    setText(elInstruction, "Tap the bull first, then tap each shot.");
   }
 
   function addDot(x01, y01, kind) {
@@ -111,11 +129,32 @@
       const f = elFile.files && elFile.files[0];
       if (!f) return;
 
-      clearDots();
+      // New photo = reset tap state
+      bull = null;
+      shots = [];
+      if (elDots) elDots.innerHTML = "";
+      setTapCount();
 
+      // Load image
       if (objectUrl) URL.revokeObjectURL(objectUrl);
       objectUrl = URL.createObjectURL(f);
+
+      // Hide Add Photo AFTER image actually loads
+      elImg.onload = () => {
+        showAddPhoto(false);
+        setText(elStatus, "Photo loaded. Tap bull, then shots.");
+      };
+
+      elImg.onerror = () => {
+        showAddPhoto(true);
+        setText(elStatus, "Photo failed to load. Try again.");
+      };
+
       elImg.src = objectUrl;
+      setText(elInstruction, "Tap the bull first, then tap each shot.");
+
+      // iOS: allow selecting same file again
+      elFile.value = "";
     });
   }
 
@@ -128,6 +167,7 @@
       if (!bull) {
         bull = { x01, y01 };
         addDot(x01, y01, "bull");
+        setText(elStatus, "Bull set. Tap shots.");
       } else {
         shots.push({ x01, y01 });
         addDot(x01, y01, "shot");
@@ -163,5 +203,6 @@
   }
 
   // ---- Boot
+  showAddPhoto(true);
   clearDots();
 })();
