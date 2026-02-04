@@ -6,11 +6,6 @@
   <meta name="color-scheme" content="dark" />
   <meta name="theme-color" content="#06070a" />
 
-  <!-- PWA -->
-  <link rel="manifest" href="./manifest.webmanifest" />
-  <link rel="apple-touch-icon" href="./icons/icon-192.png" />
-  <link rel="icon" href="./icons/icon-192.png" />
-
   <!-- HARD NO-CACHE (Safari helpers) -->
   <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0" />
   <meta http-equiv="Pragma" content="no-cache" />
@@ -18,7 +13,7 @@
 
   <title>Tap-n-Score™</title>
 
-  <link rel="stylesheet" href="./styles.css?v=22206c" />
+  <link rel="stylesheet" href="/tap-n-score/styles.css?v=22206d1" />
 </head>
 
 <body>
@@ -32,14 +27,20 @@
     <section class="card">
       <div class="cardTitle">PHOTO</div>
 
-      <!-- 800lb gorilla -->
-      <button id="photoBtn" class="btnGorilla" type="button">
-        Add Target Picture
-      </button>
+      <!-- One 800lb gorilla button -->
+      <button id="photoBtn" class="btnBig" type="button">Add Target Picture</button>
 
-      <input id="photoInput" type="file" accept="image/*" style="display:none" />
+      <!-- hidden input (button triggers this) -->
+      <input
+        id="photoInput"
+        type="file"
+        accept="image/*"
+        inputmode="none"
+        capture="environment"
+        style="display:none"
+      />
 
-      <div id="targetWrap" class="targetWrap" aria-label="Photo area">
+      <div id="targetWrap" class="targetWrap" aria-label="Target photo area">
         <img id="targetImg" alt="Target preview" />
         <div id="dotsLayer" class="dotsLayer" aria-hidden="true"></div>
       </div>
@@ -52,16 +53,10 @@
         <button id="clearTapsBtn" class="btnSecondary" type="button">
           Clear
         </button>
-
-        <!-- Normal button stays, but we’ll hide it until “pause magic” -->
-        <button id="seeResultsBtn" class="btnPrimary btnHidden" type="button">
-          Show results
-        </button>
       </div>
 
-      <p id="instructionLine" class="hint">
-        Tap bull first, then tap hits.
-      </p>
+      <!-- This will be mostly blank now (JS fills only when needed) -->
+      <p id="instructionLine" class="hint"></p>
     </section>
 
     <section class="card">
@@ -70,7 +65,14 @@
       <div class="row">
         <label class="field">
           <span class="fieldLabel">Distance (yards)</span>
-          <input id="distanceYds" class="input" type="number" inputmode="numeric" min="1" step="1" value="100" />
+          <!-- we’ll convert to a stepper later; leaving as-is for now -->
+          <select id="distanceYds" class="select">
+            <option value="25">25</option>
+            <option value="50">50</option>
+            <option value="100" selected>100</option>
+            <option value="200">200</option>
+            <option value="300">300</option>
+          </select>
         </label>
 
         <label class="field">
@@ -89,15 +91,16 @@
     <footer class="footer">
       <span class="footerMark">SCZN3</span>
     </footer>
+
+    <!-- Sticky “magic” results bar -->
+    <div id="stickyBar" class="stickyBar stickyHidden" aria-hidden="true">
+      <button id="stickyResultsBtn" class="stickyBtn" type="button">
+        Show results
+      </button>
+    </div>
+
   </main>
 
-  <!-- Sticky “magic” results bar (only shows when ready + paused) -->
-  <div id="stickyBar" class="stickyBar stickyHidden" aria-hidden="true">
-    <button id="stickyResultsBtn" class="stickyBtn" type="button">
-      Show results
-    </button>
-  </div>
-
-  <script src="./index.js?v=22206c"></script>
+  <script src="/tap-n-score/index.js?v=22206d1"></script>
 </body>
 </html>
