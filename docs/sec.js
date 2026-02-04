@@ -1,14 +1,12 @@
 /* ============================================================
    sec.js (FULL REPLACEMENT) — Clean SEC Diagnostics (Baseline 22206)
-   - Reads payload from ?payload= (primary)
-   - Falls back to localStorage (backup)
-   - Diagnostics hidden by default
-   - Reveal diagnostics via:
-       1) add ?debug=1
-       2) long-press the SEC title ("SHOOTER EXPERIENCE CARD") ~0.7s
-   - Back button behavior:
-       1) Prefer real history.back() when available
-       2) Fallback to index.html with a TRUE fresh timestamp
+   FIXED ROUTING for GitHub Pages project sites:
+   - Uses ABSOLUTE project paths (/tap-n-score/...) so it never
+     “falls out” of the folder when navigating.
+   - Back button:
+       1) Prefer history.back() when available
+       2) Fallback to /tap-n-score/index.html with true cache-bust
+   - Download routing also hard-locked to /tap-n-score/download.html
 ============================================================ */
 
 (() => {
@@ -16,6 +14,9 @@
 
   const KEY = "SCZN3_SEC_PAYLOAD_V1";
   const HIST_KEY = "SCZN3_SEC_HISTORY_V1";
+
+  // ---- GitHub Pages project base (LOCK)
+  const BASE = "/tap-n-score/";
 
   // ---- Helpers
   function safeJsonParse(s) {
@@ -76,7 +77,7 @@
   function goToIndexFresh() {
     const t = Date.now();
     // replace avoids building history loops
-    location.replace(`./index.html?fresh=${t}`);
+    location.replace(`${BASE}index.html?fresh=${t}`);
   }
 
   // ---- Diagnostics gating
@@ -167,7 +168,8 @@
         ok: false,
         reason: "Missing SEC payload in URL or localStorage",
         expected: { urlParam: "payload", localStorageKey: KEY },
-        url: location.href
+        url: location.href,
+        baseLocked: BASE
       });
     }
     return;
@@ -216,12 +218,14 @@
     downloadBtn.addEventListener("click", () => {
       // Ensure return path always re-enters the baseline with true freshness
       const t = Date.now();
-      const from = `./index.html?fresh=${t}`;
-      const target = `./index.html?fresh=${t}`;
+      const from = `${BASE}index.html?fresh=${t}`;
+      const target = `${BASE}index.html?fresh=${t}`;
+
       const u =
-        `./download.html?img=${encodeURIComponent(secUrl)}` +
+        `${BASE}download.html?img=${encodeURIComponent(secUrl)}` +
         `&from=${encodeURIComponent(from)}` +
         `&target=${encodeURIComponent(target)}`;
+
       window.location.href = u;
     });
   } else {
@@ -256,6 +260,7 @@
       ok: true,
       loadedFrom: rawPayloadParam ? "url.payload" : "localStorage",
       key: KEY,
+      baseLocked: BASE,
       payloadSummary: {
         sessionId: payload.sessionId,
         score: payload.score,
