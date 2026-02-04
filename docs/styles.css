@@ -32,12 +32,10 @@ body{
 .page{
   max-width: 980px;
   margin: 0 auto;
-  padding: 14px 12px 28px;
+  padding: 14px 12px 90px; /* extra bottom room for sticky bar */
 }
 
-.topBar{
-  padding: 10px 6px 14px;
-}
+.topBar{ padding: 10px 6px 14px; }
 
 .brandLine{
   font-weight: 900;
@@ -45,7 +43,6 @@ body{
   font-size: 22px;
   display:flex;
   align-items:center;
-  gap:0;
 }
 .brandR{ color: var(--red); }
 .brandW{ color: var(--white); }
@@ -110,10 +107,12 @@ body{
   background: rgba(0,0,0,.20);
   border: 1px solid rgba(255,255,255,.10);
 
-  /* make it slimmer + give scroll margin on phone */
+  /* slimmer + scroll margin */
   max-width: 92vw;
   margin-left: auto;
   margin-right: auto;
+
+  position: relative;
 }
 
 #targetImg{
@@ -130,10 +129,6 @@ body{
   pointer-events:none;
 }
 
-.targetWrap{
-  position: relative;
-}
-
 .tapDot{
   position:absolute;
   width: 16px;
@@ -144,7 +139,6 @@ body{
   border: 2px solid rgba(0,0,0,.55);
   box-shadow: 0 10px 30px rgba(0,0,0,.45);
 }
-
 .tapDotBull{ background: rgba(103,243,164,.95); }
 .tapDotShot{ background: rgba(214,64,64,.92); }
 
@@ -187,9 +181,7 @@ body{
   background: rgba(47,102,255,.18);
 }
 
-.btnSecondary{
-  background: rgba(255,255,255,.06);
-}
+.btnSecondary{ background: rgba(255,255,255,.06); }
 
 .hint{
   margin: 10px 2px 2px;
@@ -198,16 +190,8 @@ body{
   line-height: 1.35;
 }
 
-.row{
-  display:flex;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-
-.field{
-  flex:1;
-  min-width: 170px;
-}
+.row{ display:flex; gap: 10px; flex-wrap: wrap; }
+.field{ flex:1; min-width: 170px; }
 
 .fieldLabel{
   display:block;
@@ -235,15 +219,63 @@ body{
   font-weight: 800;
 }
 
-.footer{
-  margin-top: 14px;
-  text-align:center;
-}
-
+.footer{ margin-top: 14px; text-align:center; }
 .footerMark{
   color: rgba(238,242,247,.28);
   letter-spacing: .24em;
   font-weight: 900;
   text-transform: uppercase;
   font-size: 12px;
+}
+
+/* =======================
+   MAGIC STICKY CTA BAR
+   ======================= */
+.stickyCta{
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 12px 12px calc(12px + env(safe-area-inset-bottom));
+  background: linear-gradient(180deg, rgba(6,7,10,0), rgba(6,7,10,.72) 25%, rgba(6,7,10,.92));
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  z-index: 9999;
+  transition: transform .22s ease, opacity .22s ease;
+}
+
+.stickyHidden{
+  transform: translateY(110%);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.stickyInner{
+  max-width: 980px;
+  margin: 0 auto;
+  border: 1px solid rgba(255,255,255,.12);
+  background: rgba(255,255,255,.08);
+  border-radius: 18px;
+  padding: 12px 12px;
+  display:flex;
+  align-items:center;
+  justify-content: space-between;
+  gap: 12px;
+  box-shadow: 0 20px 60px rgba(0,0,0,.55);
+}
+
+.stickyLeft{ display:flex; flex-direction:column; gap:2px; }
+.stickyLabel{ font-weight: 900; letter-spacing:.2px; }
+.stickySub{ color: rgba(238,242,247,.70); font-size: 13px; }
+
+.stickyBtn{
+  appearance:none;
+  border: 1px solid rgba(47,102,255,.55);
+  background: rgba(47,102,255,.22);
+  color: var(--text);
+  padding: 12px 14px;
+  border-radius: 16px;
+  font-weight: 950;
+  min-height: 46px;
+  cursor:pointer;
 }
