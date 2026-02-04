@@ -6,10 +6,10 @@
   <meta name="color-scheme" content="dark" />
   <meta name="theme-color" content="#06070a" />
 
-  <!-- PWA -->
-  <link rel="manifest" href="/tap-n-score/manifest.webmanifest" />
-  <link rel="apple-touch-icon" href="/tap-n-score/icons/icon-192.png" />
-  <link rel="icon" href="/tap-n-score/icons/icon-192.png" />
+  <!-- PWA (RELATIVE paths so GitHub Pages subfolder works) -->
+  <link rel="manifest" href="./manifest.webmanifest" />
+  <link rel="apple-touch-icon" href="./icons/icon-192.png" />
+  <link rel="icon" href="./icons/icon-192.png" />
 
   <!-- HARD NO-CACHE (Safari helpers) -->
   <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0" />
@@ -18,44 +18,55 @@
 
   <title>Tap-n-Score™</title>
 
-  <link rel="stylesheet" href="/tap-n-score/styles.css?v=22206p2" />
+  <link rel="stylesheet" href="./styles.css?v=22206b" />
 </head>
 
 <body>
   <main class="page">
 
     <header class="topBar">
-      <div class="brandLine">
-        <span class="brandR">TAP</span><span class="brandW">-N-</span><span class="brandB">SCORE</span><span class="brandTm">™</span>
-      </div>
-      <div id="statusLine" class="topSub">Add a photo to begin.</div>
+      <div class="topTitle">TAP-N-SCORE™</div>
+      <div id="statusLine" class="topSub">Add a target photo to begin.</div>
     </header>
 
     <section class="card">
       <div class="cardTitle">PHOTO</div>
 
-      <label id="addPhotoBtn" class="fileBtn fileBtnBig" for="photoInput">Add Target Picture</label>
-      <label id="changePhotoBtn" class="fileBtn fileBtnSmall" for="photoInput" style="display:none;">Change photo</label>
+      <!-- ONE BUTTON (800lb gorilla) -->
+      <button id="photoBtn" class="btnGorilla" type="button">
+        Add Target Picture
+      </button>
 
-      <input id="photoInput" type="file" accept="image/*" style="display:none" />
+      <!-- Real picker (NO capture attribute so iPhone offers Library/Camera/Browse) -->
+      <input
+        id="photoInput"
+        type="file"
+        accept="image/*"
+        style="display:none"
+      />
 
       <div id="targetWrap" class="targetWrap" aria-label="Photo area">
-        <img id="targetImg" alt="Photo preview" />
+        <img id="targetImg" alt="Target preview" />
         <div id="dotsLayer" class="dotsLayer" aria-hidden="true"></div>
       </div>
 
-      <div class="actionBar">
+      <div class="row rowTight">
         <div class="pill">
           Taps: <span id="tapCount">0</span>
         </div>
 
-        <button id="clearTapsBtn" class="btnSecondary" type="button">Clear</button>
+        <button id="clearTapsBtn" class="btnSecondary" type="button">
+          Clear
+        </button>
 
-        <!-- Desktop / non-sticky fallback -->
-        <button id="seeResultsBtn" class="btnPrimary" type="button">Show results</button>
+        <button id="seeResultsBtn" class="btnPrimary" type="button">
+          Show results
+        </button>
       </div>
 
-      <p id="instructionLine" class="hint">Add a photo to start.</p>
+      <p id="instructionLine" class="hint">
+        Tap bull first, then tap hits.
+      </p>
     </section>
 
     <section class="card">
@@ -64,6 +75,7 @@
       <div class="row">
         <label class="field">
           <span class="fieldLabel">Distance (yards)</span>
+          <!-- You asked for a clicker, not preset only -->
           <input id="distanceYds" class="input" type="number" inputmode="numeric" min="1" step="1" value="100" />
         </label>
 
@@ -77,7 +89,7 @@
         </label>
       </div>
 
-      <a id="vendorLink" class="vendorLink" href="#" target="_blank" rel="noopener" style="display:none;">Vendor</a>
+      <a id="vendorLink" class="vendorLink" href="#" target="_blank" rel="noopener"></a>
     </section>
 
     <footer class="footer">
@@ -85,17 +97,6 @@
     </footer>
   </main>
 
-  <!-- MAGIC STICKY BAR (hidden until idle) -->
-  <div id="stickyCta" class="stickyCta stickyHidden" aria-hidden="true">
-    <div class="stickyInner">
-      <div class="stickyLeft">
-        <div class="stickyLabel">Ready?</div>
-        <div class="stickySub" id="stickySub">Tap “Show results”.</div>
-      </div>
-      <button id="stickyShowBtn" class="stickyBtn" type="button">Show results</button>
-    </div>
-  </div>
-
-  <script src="/tap-n-score/index.js?v=22206p2"></script>
+  <script src="./index.js?v=22206b"></script>
 </body>
 </html>
