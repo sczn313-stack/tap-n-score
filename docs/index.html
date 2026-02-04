@@ -33,15 +33,18 @@
     <section class="card">
       <div class="cardTitle">SELECTED PHOTO</div>
 
-      <label class="fileBtn" for="photoInput">Choose Photo</label>
-      <input
-        id="photoInput"
-        type="file"
-        accept="image/*"
-        inputmode="none"
-        capture="environment"
-        style="display:none"
-      />
+      <!-- ✅ WRAP THIS so JS can hide it after photo loads -->
+      <div id="addPhotoWrap">
+        <label class="fileBtn" for="photoInput" id="addPhotoBtn">Add target photo</label>
+        <input
+          id="photoInput"
+          type="file"
+          accept="image/*"
+          inputmode="none"
+          capture="environment"
+          style="display:none"
+        />
+      </div>
 
       <div id="targetWrap" class="targetWrap" aria-label="Target photo area">
         <img id="targetImg" alt="Target preview" />
