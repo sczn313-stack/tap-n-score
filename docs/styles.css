@@ -1,18 +1,17 @@
 :root{
   --bg:#06070a;
-  --panel: rgba(255,255,255,.06);
+  --card: rgba(255,255,255,.06);
   --stroke: rgba(255,255,255,.12);
-  --text: #eef2f7;
+  --text:#eef2f7;
   --muted: rgba(238,242,247,.65);
 
   --red:#d64040;
-  --white:#eef2f7;
   --blue:#2f66ff;
   --green:#67f3a4;
 
   --btn: rgba(255,255,255,.08);
-  --btn2: rgba(255,255,255,.06);
-  --btnStroke: rgba(255,255,255,.16);
+  --btnHover: rgba(255,255,255,.12);
+  --btnStroke: rgba(255,255,255,.14);
 
   --radius: 18px;
 }
@@ -21,261 +20,198 @@
 html,body{ height:100%; }
 body{
   margin:0;
-  background: radial-gradient(900px 600px at 15% 10%, rgba(47,102,255,.14), transparent 60%),
-              radial-gradient(800px 500px at 85% 0%, rgba(214,64,64,.10), transparent 60%),
-              radial-gradient(900px 700px at 50% 100%, rgba(103,243,164,.08), transparent 65%),
-              linear-gradient(180deg, #05060a, #0a0c12);
+  background: var(--bg);
   color: var(--text);
-  font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial;
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
 }
 
 .page{
   max-width: 980px;
   margin: 0 auto;
-  padding: 14px 12px 90px; /* extra bottom room for sticky bar */
+  padding: 14px 12px 26px;
 }
 
-.topBar{ padding: 10px 6px 14px; }
+.topBar{
+  border: 1px solid var(--stroke);
+  background: rgba(255,255,255,.04);
+  border-radius: var(--radius);
+  padding: 12px 12px 10px;
+  margin-bottom: 12px;
+}
 
-.brandLine{
+.topTitle{
   font-weight: 900;
-  letter-spacing: .5px;
-  font-size: 22px;
-  display:flex;
-  align-items:center;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  font-size: 14px;
 }
-.brandR{ color: var(--red); }
-.brandW{ color: var(--white); }
-.brandB{ color: var(--blue); }
-.brandTm{ opacity:.85; margin-left:2px; }
 
 .topSub{
   margin-top: 6px;
   color: var(--muted);
-  font-size: 14px;
+  font-size: 13px;
+  line-height: 1.25;
 }
 
 .card{
   border: 1px solid var(--stroke);
-  background: var(--panel);
+  background: var(--card);
   border-radius: var(--radius);
   padding: 12px;
-  margin: 10px 0;
+  margin-bottom: 12px;
 }
 
 .cardTitle{
-  font-size: 12px;
+  font-weight: 900;
   letter-spacing: .12em;
   text-transform: uppercase;
-  color: rgba(238,242,247,.70);
-  font-weight: 800;
+  color: var(--muted);
+  font-size: 12px;
   margin-bottom: 10px;
 }
 
-.fileBtn{
-  display:inline-flex;
-  align-items:center;
-  justify-content:center;
+/* 800lb gorilla button */
+.btnGorilla{
   width: 100%;
-  border: 1px solid var(--btnStroke);
-  background: var(--btn);
+  appearance:none;
+  border: 1px solid rgba(47,102,255,.50);
+  background: rgba(47,102,255,.22);
   color: var(--text);
+  padding: 16px 16px;
   border-radius: 16px;
+  font-size: 18px;
   font-weight: 900;
+  letter-spacing: .02em;
   cursor: pointer;
-  user-select:none;
+  margin-bottom: 12px;
   -webkit-tap-highlight-color: transparent;
 }
+.btnGorilla:active{ transform: translateY(1px); }
+.btnGorilla:hover{ background: rgba(47,102,255,.28); }
 
-.fileBtnBig{
-  font-size: 18px;
-  padding: 16px 14px;
-  min-height: 56px;
-}
-
-.fileBtnSmall{
-  font-size: 14px;
-  padding: 12px 14px;
-  min-height: 46px;
-  background: var(--btn2);
-}
-
+/* Photo area: slimmer + iPhone-friendly height */
 .targetWrap{
-  margin-top: 12px;
+  position: relative;
+  width: 100%;
+  border: 1px solid rgba(255,255,255,.10);
   border-radius: 16px;
   overflow: hidden;
   background: rgba(0,0,0,.20);
-  border: 1px solid rgba(255,255,255,.10);
-
-  /* slimmer + scroll margin */
-  max-width: 92vw;
-  margin-left: auto;
-  margin-right: auto;
-
-  position: relative;
+  /* key: show whole photo on iPhone */
+  max-height: 58vh;
 }
 
+/* Make image fit inside wrapper without forcing huge scroll */
 #targetImg{
-  display:block;
   width: 100%;
-  height: auto;
+  height: 100%;
+  max-height: 58vh;
+  object-fit: contain;
+  display: block;
   user-select:none;
   -webkit-user-drag:none;
 }
 
+/* dots overlay */
 .dotsLayer{
   position:absolute;
-  inset: 0;
+  left:0; top:0; right:0; bottom:0;
   pointer-events:none;
 }
 
 .tapDot{
   position:absolute;
-  width: 16px;
-  height: 16px;
-  margin-left: -8px;
-  margin-top: -8px;
+  width: 16px; height: 16px;
+  margin-left: -8px; margin-top: -8px;
   border-radius: 999px;
+  box-shadow: 0 10px 22px rgba(0,0,0,.55);
   border: 2px solid rgba(0,0,0,.55);
-  box-shadow: 0 10px 30px rgba(0,0,0,.45);
 }
 .tapDotBull{ background: rgba(103,243,164,.95); }
 .tapDotShot{ background: rgba(214,64,64,.92); }
 
-.actionBar{
+.row{
   display:flex;
   gap: 10px;
   align-items:center;
-  justify-content: space-between;
   flex-wrap: wrap;
   margin-top: 12px;
 }
+.rowTight{ margin-top: 10px; }
 
 .pill{
-  display:inline-flex;
-  align-items:center;
-  gap:8px;
-  padding: 10px 12px;
   border: 1px solid rgba(255,255,255,.12);
+  background: rgba(255,255,255,.05);
+  padding: 8px 10px;
   border-radius: 999px;
-  background: rgba(0,0,0,.18);
-  color: rgba(238,242,247,.82);
-  font-weight: 800;
+  color: var(--muted);
+  font-size: 13px;
 }
 
 .btnPrimary, .btnSecondary{
   appearance:none;
   border: 1px solid var(--btnStroke);
-  border-radius: 14px;
-  padding: 12px 14px;
-  min-height: 46px;
-  font-weight: 900;
-  color: var(--text);
-  cursor:pointer;
   background: var(--btn);
+  color: var(--text);
+  padding: 12px 14px;
+  border-radius: 14px;
+  font-weight: 850;
+  cursor:pointer;
   -webkit-tap-highlight-color: transparent;
 }
-
 .btnPrimary{
-  border-color: rgba(47,102,255,.45);
-  background: rgba(47,102,255,.18);
+  border-color: rgba(103,243,164,.40);
+  background: rgba(103,243,164,.12);
 }
-
-.btnSecondary{ background: rgba(255,255,255,.06); }
+.btnPrimary:hover{ background: rgba(103,243,164,.16); }
+.btnSecondary:hover{ background: var(--btnHover); }
+.btnPrimary:active,.btnSecondary:active{ transform: translateY(1px); }
 
 .hint{
-  margin: 10px 2px 2px;
-  color: rgba(238,242,247,.70);
+  margin: 10px 2px 0;
+  color: var(--muted);
   font-size: 13px;
   line-height: 1.35;
 }
 
-.row{ display:flex; gap: 10px; flex-wrap: wrap; }
-.field{ flex:1; min-width: 170px; }
-
+.field{
+  flex: 1;
+  min-width: 160px;
+  display:block;
+}
 .fieldLabel{
   display:block;
-  color: rgba(238,242,247,.55);
+  color: var(--muted);
   font-size: 12px;
-  margin: 2px 0 6px;
-  font-weight: 700;
+  margin-bottom: 6px;
 }
 
 .select, .input{
-  width:100%;
-  padding: 12px 12px;
-  border-radius: 14px;
-  border: 1px solid rgba(255,255,255,.12);
+  width: 100%;
   background: rgba(0,0,0,.22);
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 14px;
   color: var(--text);
-  outline:none;
+  padding: 12px 12px;
+  outline: none;
+  font-size: 15px;
 }
 
 .vendorLink{
-  display:inline-block;
+  display:none;
   margin-top: 10px;
-  color: #9bb7ff;
+  color: rgba(155,183,255,.95);
   text-decoration:none;
-  font-weight: 800;
 }
 
-.footer{ margin-top: 14px; text-align:center; }
+.footer{
+  text-align:center;
+  margin-top: 8px;
+}
 .footerMark{
-  color: rgba(238,242,247,.28);
-  letter-spacing: .24em;
+  color: rgba(238,242,247,.30);
+  font-size: 12px;
+  letter-spacing: .22em;
   font-weight: 900;
   text-transform: uppercase;
-  font-size: 12px;
-}
-
-/* =======================
-   MAGIC STICKY CTA BAR
-   ======================= */
-.stickyCta{
-  position: fixed;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  padding: 12px 12px calc(12px + env(safe-area-inset-bottom));
-  background: linear-gradient(180deg, rgba(6,7,10,0), rgba(6,7,10,.72) 25%, rgba(6,7,10,.92));
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  z-index: 9999;
-  transition: transform .22s ease, opacity .22s ease;
-}
-
-.stickyHidden{
-  transform: translateY(110%);
-  opacity: 0;
-  pointer-events: none;
-}
-
-.stickyInner{
-  max-width: 980px;
-  margin: 0 auto;
-  border: 1px solid rgba(255,255,255,.12);
-  background: rgba(255,255,255,.08);
-  border-radius: 18px;
-  padding: 12px 12px;
-  display:flex;
-  align-items:center;
-  justify-content: space-between;
-  gap: 12px;
-  box-shadow: 0 20px 60px rgba(0,0,0,.55);
-}
-
-.stickyLeft{ display:flex; flex-direction:column; gap:2px; }
-.stickyLabel{ font-weight: 900; letter-spacing:.2px; }
-.stickySub{ color: rgba(238,242,247,.70); font-size: 13px; }
-
-.stickyBtn{
-  appearance:none;
-  border: 1px solid rgba(47,102,255,.55);
-  background: rgba(47,102,255,.22);
-  color: var(--text);
-  padding: 12px 14px;
-  border-radius: 16px;
-  font-weight: 950;
-  min-height: 46px;
-  cursor:pointer;
 }
