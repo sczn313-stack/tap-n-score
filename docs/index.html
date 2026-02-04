@@ -18,13 +18,12 @@
 
   <title>Tap-n-Score™</title>
 
-  <link rel="stylesheet" href="/tap-n-score/styles.css?v=22206p1" />
+  <link rel="stylesheet" href="/tap-n-score/styles.css?v=22206p2" />
 </head>
 
 <body>
   <main class="page">
 
-    <!-- Clean header (no “TARGET” spam) -->
     <header class="topBar">
       <div class="brandLine">
         <span class="brandR">TAP</span><span class="brandW">-N-</span><span class="brandB">SCORE</span><span class="brandTm">™</span>
@@ -32,30 +31,19 @@
       <div id="statusLine" class="topSub">Add a photo to begin.</div>
     </header>
 
-    <!-- BIG PHOTO CTA -->
     <section class="card">
       <div class="cardTitle">PHOTO</div>
 
-      <!-- 800lb gorilla button (shown until a photo is loaded) -->
       <label id="addPhotoBtn" class="fileBtn fileBtnBig" for="photoInput">Add Target Picture</label>
-
-      <!-- smaller change button (shown after photo is loaded) -->
       <label id="changePhotoBtn" class="fileBtn fileBtnSmall" for="photoInput" style="display:none;">Change photo</label>
 
-      <!-- iOS-friendly: no capture attribute so user gets Camera OR Library options -->
-      <input
-        id="photoInput"
-        type="file"
-        accept="image/*"
-        style="display:none"
-      />
+      <input id="photoInput" type="file" accept="image/*" style="display:none" />
 
       <div id="targetWrap" class="targetWrap" aria-label="Photo area">
         <img id="targetImg" alt="Photo preview" />
         <div id="dotsLayer" class="dotsLayer" aria-hidden="true"></div>
       </div>
 
-      <!-- Action bar close to photo (mobile friendly) -->
       <div class="actionBar">
         <div class="pill">
           Taps: <span id="tapCount">0</span>
@@ -63,22 +51,19 @@
 
         <button id="clearTapsBtn" class="btnSecondary" type="button">Clear</button>
 
+        <!-- Desktop / non-sticky fallback -->
         <button id="seeResultsBtn" class="btnPrimary" type="button">Show results</button>
       </div>
 
-      <p id="instructionLine" class="hint">
-        Add a photo to start.
-      </p>
+      <p id="instructionLine" class="hint">Add a photo to start.</p>
     </section>
 
-    <!-- Settings (kept upstream, clean) -->
     <section class="card">
       <div class="cardTitle">SETTINGS</div>
 
       <div class="row">
         <label class="field">
           <span class="fieldLabel">Distance (yards)</span>
-          <!-- user wants a clicker vs preset: use number input + stepper -->
           <input id="distanceYds" class="input" type="number" inputmode="numeric" min="1" step="1" value="100" />
         </label>
 
@@ -100,6 +85,17 @@
     </footer>
   </main>
 
-  <script src="/tap-n-score/index.js?v=22206p1"></script>
+  <!-- MAGIC STICKY BAR (hidden until idle) -->
+  <div id="stickyCta" class="stickyCta stickyHidden" aria-hidden="true">
+    <div class="stickyInner">
+      <div class="stickyLeft">
+        <div class="stickyLabel">Ready?</div>
+        <div class="stickySub" id="stickySub">Tap “Show results”.</div>
+      </div>
+      <button id="stickyShowBtn" class="stickyBtn" type="button">Show results</button>
+    </div>
+  </div>
+
+  <script src="/tap-n-score/index.js?v=22206p2"></script>
 </body>
 </html>
