@@ -1,4 +1,4 @@
- <!-- index.html (FULL REPLACEMENT) — POLISH v1 -->
+<!-- index.html (FULL REPLACEMENT) — POLISH v2 (sticky actions + less nag text) -->
 <!doctype html>
 <html lang="en">
 <head>
@@ -21,22 +21,35 @@
 
   <link rel="stylesheet" href="/tap-n-score/styles.css?v=22206" />
 
-  <!-- Small, surgical iPhone fixes (no stylesheet edit required) -->
+  <!-- Surgical mobile polish (no stylesheet edits) -->
   <style>
-    /* Make the target fit better on iPhone */
+    /* Target fits on iPhone */
     #targetWrap{
+      position: relative;
       max-height: 58vh;
       overflow: hidden;
     }
     #targetImg{
-      max-height: 58vh;
       width: 100%;
       height: auto;
+      max-height: 58vh;
       object-fit: contain;
       display: block;
     }
-    /* Keep action buttons close to the photo */
-    .row.tight{ margin-top: 10px; }
+
+    /* Keep actions close + visible (sticky within card) */
+    .actionBar{
+      position: sticky;
+      bottom: 0;
+      z-index: 20;
+      padding-top: 10px;
+      background: linear-gradient(180deg, rgba(6,7,10,0), rgba(6,7,10,.85) 35%, rgba(6,7,10,1));
+    }
+
+    /* Slightly slimmer pill block on small screens */
+    @media (max-width: 420px){
+      .pill{ padding: 8px 10px; }
+    }
   </style>
 </head>
 
@@ -45,7 +58,7 @@
 
     <header class="topBar">
       <div class="topTitle">TARGET</div>
-      <div id="statusLine" class="topSub">Add a target photo to begin.</div>
+      <div id="statusLine" class="topSub">Add a target photo.</div>
     </header>
 
     <section class="card">
@@ -54,7 +67,7 @@
       <!-- One button -->
       <button id="addPhotoBtn" class="fileBtn" type="button">Add target photo</button>
 
-      <!-- IMPORTANT: no capture attribute -> iOS shows Camera / Photo Library / Browse -->
+      <!-- No capture attribute -> iOS shows Camera / Photo Library / Browse -->
       <input id="photoInput" type="file" accept="image/*" style="display:none" />
 
       <div id="targetWrap" class="targetWrap" aria-label="Target photo area">
@@ -64,27 +77,31 @@
         <div id="tapLayer" style="position:absolute;left:0;top:0;right:0;bottom:0;display:none;"></div>
       </div>
 
-      <div class="row tight">
-        <div class="pill">
-          Taps: <span id="tapCount">0</span>
+      <!-- Sticky action bar -->
+      <div class="actionBar">
+        <div class="row">
+          <div class="pill">
+            Taps: <span id="tapCount">0</span>
+          </div>
+
+          <button id="tapModeBtn" class="btnSecondary" type="button">
+            Tap mode: OFF
+          </button>
+
+          <button id="clearTapsBtn" class="btnSecondary" type="button">
+            Clear
+          </button>
+
+          <button id="seeResultsBtn" class="btnPrimary" type="button">
+            Show results
+          </button>
         </div>
 
-        <button id="tapModeBtn" class="btnSecondary" type="button">
-          Tap mode: OFF
-        </button>
-
-        <button id="clearTapsBtn" class="btnSecondary" type="button">
-          Clear
-        </button>
-
-        <button id="seeResultsBtn" class="btnPrimary" type="button">
-          Show results
-        </button>
+        <!-- One clean instruction line (no repeats) -->
+        <p id="instructionLine" class="hint">
+          Turn Tap mode ON when you’re ready.
+        </p>
       </div>
-
-      <p id="instructionLine" class="hint">
-        Turn Tap mode ON when you’re ready to tap bull + shots.
-      </p>
     </section>
 
     <section class="card">
@@ -94,7 +111,6 @@
         <label class="field" style="flex:1;">
           <span class="fieldLabel">Distance (yards)</span>
 
-          <!-- Clicker / stepper -->
           <div style="display:flex; gap:8px; align-items:center;">
             <button id="distDown" class="btnSecondary" type="button" style="min-width:52px;">−</button>
             <input
