@@ -1,3 +1,4 @@
+<!-- index.html (FULL REPLACEMENT) — one button, but it yields selection options -->
 <!doctype html>
 <html lang="en">
 <head>
@@ -6,7 +7,7 @@
   <meta name="color-scheme" content="dark" />
   <meta name="theme-color" content="#06070a" />
 
-  <!-- PWA (GitHub Pages path) -->
+  <!-- PWA -->
   <link rel="manifest" href="/tap-n-score/manifest.webmanifest" />
   <link rel="apple-touch-icon" href="/tap-n-score/icons/icon-192.png" />
   <link rel="icon" href="/tap-n-score/icons/icon-192.png" />
@@ -27,40 +28,29 @@
 
     <header class="topBar">
       <div class="topTitle">TARGET</div>
-      <div id="statusLine" class="topSub">Add target photo to begin.</div>
+      <div id="statusLine" class="topSub">Add a target photo to begin.</div>
     </header>
 
-    <!-- PHOTO / TAPS -->
     <section class="card">
       <div class="cardTitle">TARGET PHOTO</div>
 
-      <!-- Two inputs: Camera + Library -->
-      <div class="row" style="margin-bottom:10px;">
-        <label class="fileBtn" for="photoInputCamera">Take Photo</label>
-        <input
-          id="photoInputCamera"
-          type="file"
-          accept="image/*"
-          capture="environment"
-          style="display:none"
-        />
+      <!-- ONE BUTTON (user taps this) -->
+      <button id="addPhotoBtn" class="fileBtn" type="button">Add target photo</button>
 
-        <label class="fileBtn" for="photoInputLibrary">Add Photo</label>
-        <input
-          id="photoInputLibrary"
-          type="file"
-          accept="image/*"
-          style="display:none"
-        />
-      </div>
+      <!-- IMPORTANT: NO capture attribute = iOS shows options -->
+      <input
+        id="photoInput"
+        type="file"
+        accept="image/*"
+        style="display:none"
+      />
 
       <div id="targetWrap" class="targetWrap" aria-label="Target photo area">
         <img id="targetImg" alt="Target preview" />
         <div id="dotsLayer" class="dotsLayer" aria-hidden="true"></div>
       </div>
 
-      <!-- Sticky action row (keeps Show Results close on iPhone) -->
-      <div class="row actionsSticky">
+      <div class="row">
         <div class="pill">
           Taps: <span id="tapCount">0</span>
         </div>
@@ -74,42 +64,24 @@
         </button>
       </div>
 
-      <!-- Keep this short (no repeated instructions) -->
       <p id="instructionLine" class="hint">
-        Tap bull, then tap hits.
+        Tap bull first, then tap shots.
       </p>
     </section>
 
-    <!-- SETTINGS (upstream; not shown on SEC) -->
     <section class="card">
       <div class="cardTitle">SETTINGS</div>
 
       <div class="row">
         <label class="field">
           <span class="fieldLabel">Distance (yards)</span>
-
-          <!-- Stepper row -->
-          <div class="row" style="gap:8px; flex-wrap:nowrap; width:100%;">
-            <button id="distMinus" class="btnSecondary" type="button" style="padding:10px 12px; min-width:56px;">
-              −
-            </button>
-
-            <input
-              id="distanceYds"
-              class="select"
-              type="number"
-              inputmode="numeric"
-              min="5"
-              max="1000"
-              step="1"
-              value="100"
-              style="width:100%;"
-            />
-
-            <button id="distPlus" class="btnSecondary" type="button" style="padding:10px 12px; min-width:56px;">
-              +
-            </button>
-          </div>
+          <select id="distanceYds" class="select">
+            <option value="25">25</option>
+            <option value="50">50</option>
+            <option value="100" selected>100</option>
+            <option value="200">200</option>
+            <option value="300">300</option>
+          </select>
         </label>
 
         <label class="field">
@@ -122,7 +94,6 @@
         </label>
       </div>
 
-      <!-- Optional vendor link hook (safe if empty) -->
       <a id="vendorLink" class="vendorLink" href="#" target="_blank" rel="noopener"></a>
     </section>
 
