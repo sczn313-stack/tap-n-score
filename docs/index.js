@@ -1,9 +1,13 @@
 /* ============================================================
-   index.js (FULL REPLACEMENT) — BASELINE 22206 + Hide Add Photo
-   Behavior:
-   - "Add target photo" is visible until an image loads
-   - Once image loads, hide Add Photo control (clean UI)
-   - If user taps Clear, show Add Photo again (optional, but requested)
+   index.js (FULL REPLACEMENT) — BASELINE 22206 (iPhone Fit + Scroll Safe)
+   Flow:
+   - Add target photo
+   - Tap aim point (first) then tap hits
+   - Show results -> payload -> URL base64 -> sec.html
+   - localStorage backup only
+   Fixes:
+   - iPhone scroll-safe: drag/scroll does NOT count as a tap
+   - “Add target photo” button hides after photo is loaded
 ============================================================ */
 
 (() => {
@@ -11,16 +15,16 @@
 
   // Required IDs in index.html
   const elFile = $("photoInput");
+  const elFileBtn = $("fileBtnLabel");
+  const elStatus = $("statusLine");
+
   const elImg = $("targetImg");
   const elDots = $("dotsLayer");
+  const elWrap = $("targetWrap");
+
   const elTapCount = $("tapCount");
   const elClear = $("clearTapsBtn");
   const elSee = $("seeResultsBtn");
-  const elStatus = $("statusLine");
-  const elInstruction = $("instructionLine");
-
-  // New wrapper we added in index.html
-  const elAddPhotoWrap = $("addPhotoWrap");
 
   // Optional
   const elVendor = $("vendorLink");
@@ -35,17 +39,8 @@
 
   function clamp01(v) { return Math.max(0, Math.min(1, v)); }
 
-  function setText(el, txt) {
-    if (el) el.textContent = txt;
-  }
-
   function setTapCount() {
     if (elTapCount) elTapCount.textContent = String(shots.length);
-  }
-
-  function showAddPhoto(yes) {
-    if (!elAddPhotoWrap) return;
-    elAddPhotoWrap.style.display = yes ? "" : "none";
   }
 
   function clearDots() {
@@ -53,12 +48,7 @@
     shots = [];
     if (elDots) elDots.innerHTML = "";
     setTapCount();
-
-    // When cleared, we show Add Photo again (your request)
-    showAddPhoto(true);
-
-    setText(elStatus, "Choose a photo to begin.");
-    setText(elInstruction, "Tap the bull first, then tap each shot.");
+    if (elStatus) elStatus.textContent = elImg && elImg.src ? "Tap aim point, then tap hits." : "Add a target photo to begin.";
   }
 
   function addDot(x01, y01, kind) {
@@ -71,10 +61,10 @@
     elDots.appendChild(d);
   }
 
-  function getRelative01FromEvent(ev) {
+  function getRelative01FromClientXY(clientX, clientY) {
     const r = elImg.getBoundingClientRect();
-    const x = (ev.clientX - r.left) / r.width;
-    const y = (ev.clientY - r.top) / r.height;
+    const x = (clientX - r.left) / r.width;
+    const y = (clientY - r.top) / r.height;
     return { x01: clamp01(x), y01: clamp01(y) };
   }
 
@@ -83,6 +73,7 @@
     return btoa(unescape(encodeURIComponent(json)));
   }
 
+  // Placeholder correction math (baseline pipeline)
   function computeCorrection() {
     if (!bull || shots.length < 1) return null;
 
@@ -94,7 +85,7 @@
     const dx = bull.x01 - avg.x; // + => RIGHT
     const dy = bull.y01 - avg.y; // + => DOWN (screen space)
 
-    // Demo scale (placeholder): treat full image width as 10 inches
+    // Demo scale: treat full image width as 10 inches
     const inchesPerFullWidth = 10;
     const inchesX = dx * inchesPerFullWidth;
     const inchesY = dy * inchesPerFullWidth;
@@ -103,6 +94,7 @@
     const moaPerClick = Number(elMoaClick?.value ?? 0.25);
 
     const inchesPerMoa = (dist / 100) * 1.047;
+
     const moaX = inchesX / inchesPerMoa;
     const moaY = inchesY / inchesPerMoa;
 
@@ -123,66 +115,107 @@
     location.href = `./sec.html?payload=${encodeURIComponent(b64)}&fresh=${Date.now()}`;
   }
 
-  // ---- Events
+  // ---- Photo input
   if (elFile) {
     elFile.addEventListener("change", () => {
       const f = elFile.files && elFile.files[0];
       if (!f) return;
 
-      // New photo = reset tap state
-      bull = null;
-      shots = [];
-      if (elDots) elDots.innerHTML = "";
-      setTapCount();
+      clearDots();
 
-      // Load image
       if (objectUrl) URL.revokeObjectURL(objectUrl);
       objectUrl = URL.createObjectURL(f);
 
-      // Hide Add Photo AFTER image actually loads
-      elImg.onload = () => {
-        showAddPhoto(false);
-        setText(elStatus, "Photo loaded. Tap bull, then shots.");
-      };
+      if (elImg) elImg.src = objectUrl;
 
-      elImg.onerror = () => {
-        showAddPhoto(true);
-        setText(elStatus, "Photo failed to load. Try again.");
-      };
+      // Hide the "Add target photo" button after selection
+      if (elFileBtn) elFileBtn.style.display = "none";
 
-      elImg.src = objectUrl;
-      setText(elInstruction, "Tap the bull first, then tap each shot.");
-
-      // iOS: allow selecting same file again
-      elFile.value = "";
+      if (elStatus) elStatus.textContent = "Tap aim point, then tap hits.";
     });
   }
 
+  // ---- iPhone-safe tap detection:
+  // If finger moves (drag/scroll), ignore (do not count as tap).
   if (elImg) {
-    elImg.addEventListener("click", (ev) => {
-      if (!elImg.src) return;
+    let start = null; // {x,y}
+    let moved = false;
+    const MOVE_PX = 10;
 
-      const { x01, y01 } = getRelative01FromEvent(ev);
+    const onStart = (x, y) => {
+      start = { x, y };
+      moved = false;
+    };
+
+    const onMove = (x, y) => {
+      if (!start) return;
+      const dx = Math.abs(x - start.x);
+      const dy = Math.abs(y - start.y);
+      if (dx > MOVE_PX || dy > MOVE_PX) moved = true;
+    };
+
+    const onEnd = (x, y) => {
+      if (!elImg.src) return;
+      if (!start) return;
+
+      // Drag/scroll => ignore
+      if (moved) {
+        start = null;
+        moved = false;
+        return;
+      }
+
+      // True tap
+      const { x01, y01 } = getRelative01FromClientXY(x, y);
 
       if (!bull) {
         bull = { x01, y01 };
         addDot(x01, y01, "bull");
-        setText(elStatus, "Bull set. Tap shots.");
+        if (elStatus) elStatus.textContent = "Aim point set. Tap hits.";
       } else {
         shots.push({ x01, y01 });
         addDot(x01, y01, "shot");
         setTapCount();
       }
+
+      start = null;
+      moved = false;
+    };
+
+    // Touch
+    elImg.addEventListener("touchstart", (ev) => {
+      const t = ev.touches && ev.touches[0];
+      if (!t) return;
+      onStart(t.clientX, t.clientY);
     }, { passive: true });
+
+    elImg.addEventListener("touchmove", (ev) => {
+      const t = ev.touches && ev.touches[0];
+      if (!t) return;
+      onMove(t.clientX, t.clientY);
+    }, { passive: true });
+
+    elImg.addEventListener("touchend", (ev) => {
+      const t = ev.changedTouches && ev.changedTouches[0];
+      if (!t) return;
+      onEnd(t.clientX, t.clientY);
+    }, { passive: true });
+
+    // Mouse (desktop)
+    elImg.addEventListener("mousedown", (ev) => onStart(ev.clientX, ev.clientY));
+    elImg.addEventListener("mousemove", (ev) => onMove(ev.clientX, ev.clientY));
+    elImg.addEventListener("mouseup", (ev) => onEnd(ev.clientX, ev.clientY));
   }
 
+  // ---- Clear
   if (elClear) elClear.addEventListener("click", clearDots);
 
+  // ---- Show results
   if (elSee) {
     elSee.addEventListener("click", () => {
       const out = computeCorrection();
       if (!out) {
-        alert("Tap the bull first, then tap at least one shot.");
+        alert("Add a photo, then tap your aim point and at least one hit.");
         return;
       }
 
@@ -203,6 +236,5 @@
   }
 
   // ---- Boot
-  showAddPhoto(true);
   clearDots();
 })();
