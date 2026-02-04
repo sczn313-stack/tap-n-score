@@ -19,7 +19,7 @@
   <title>Tap-n-Score™</title>
 
   <!-- App CSS -->
-  <link rel="stylesheet" href="/tap-n-score/styles.css?v=22206" />
+  <link rel="stylesheet" href="/tap-n-score/styles.css?v=22206m" />
 </head>
 
 <body>
@@ -27,46 +27,38 @@
 
     <header class="topBar">
       <div class="topTitle">TARGET</div>
-      <div id="statusLine" class="topSub">Choose a photo to begin.</div>
+      <div id="statusLine" class="topSub">Add a target photo to begin.</div>
     </header>
 
     <section class="card">
-      <div class="cardTitle">SELECTED PHOTO</div>
+      <div class="cardTitle">TARGET PHOTO</div>
 
-      <!-- ✅ WRAP THIS so JS can hide it after photo loads -->
-      <div id="addPhotoWrap">
-        <label class="fileBtn" for="photoInput" id="addPhotoBtn">Add target photo</label>
-        <input
-          id="photoInput"
-          type="file"
-          accept="image/*"
-          inputmode="none"
-          capture="environment"
-          style="display:none"
-        />
-      </div>
+      <label id="fileBtnLabel" class="fileBtn" for="photoInput">Add target photo</label>
+      <input
+        id="photoInput"
+        type="file"
+        accept="image/*"
+        inputmode="none"
+        capture="environment"
+        style="display:none"
+      />
 
       <div id="targetWrap" class="targetWrap" aria-label="Target photo area">
         <img id="targetImg" alt="Target preview" />
         <div id="dotsLayer" class="dotsLayer" aria-hidden="true"></div>
       </div>
 
-      <div class="row">
-        <div class="pill">
-          Taps: <span id="tapCount">0</span>
-        </div>
+      <!-- ACTION ROW (sticky on iPhone) -->
+      <div class="row actionRow">
+        <div class="pill">Taps: <span id="tapCount">0</span></div>
 
-        <button id="clearTapsBtn" class="btnSecondary" type="button">
-          Clear
-        </button>
+        <button id="clearTapsBtn" class="btnSecondary" type="button">Clear</button>
 
-        <button id="seeResultsBtn" class="btnPrimary" type="button">
-          Show results
-        </button>
+        <button id="seeResultsBtn" class="btnPrimary" type="button">Show results</button>
       </div>
 
       <p id="instructionLine" class="hint">
-        Tap the bull first, then tap each shot.
+        Tap your aim point, then tap your hits.
       </p>
     </section>
 
@@ -103,6 +95,6 @@
     </footer>
   </main>
 
-  <script src="/tap-n-score/index.js?v=22206"></script>
+  <script src="/tap-n-score/index.js?v=22206m"></script>
 </body>
 </html>
