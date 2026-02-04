@@ -1,254 +1,181 @@
-/* ============================================================
-   styles.css (FULL REPLACEMENT) — Mobile-first (Baseline 22206+)
-   Goals:
-   - iPhone: target image fits better (no "half target" view)
-   - Buttons stay close (sticky action row inside photo card)
-   - Comfortable margins for scrolling
-============================================================ */
-
 :root{
-  --bg:#06070a;
-  --card: rgba(255,255,255,.06);
-  --stroke: rgba(255,255,255,.12);
+  --bg0:#05060a;
+  --bg1:#0a0c12;
+
   --text:#eef2f7;
-  --muted: rgba(238,242,247,.65);
-  --muted2: rgba(238,242,247,.45);
+  --muted: rgba(238,242,247,.78);
+  --muted2: rgba(238,242,247,.55);
 
-  --btn: rgba(255,255,255,.08);
-  --btnHover: rgba(255,255,255,.12);
-
-  --primary: rgba(47,102,255,.22);
-  --primaryStroke: rgba(47,102,255,.45);
-
-  --danger: rgba(214,64,64,.18);
-  --dangerStroke: rgba(214,64,64,.45);
-
-  --radius: 18px;
-  --shadow: 0 14px 40px rgba(0,0,0,.45);
-
-  --red:#d64040;
-  --white:#eef2f7;
+  --red:#d21f2b;
   --blue:#2f66ff;
-  --green:#67f3a4;
+
+  --card: rgba(255,255,255,.06);
+  --stroke: rgba(255,255,255,.14);
+
+  --shadow: 0 22px 70px rgba(0,0,0,.58);
+  --radius: 22px;
 }
 
 *{ box-sizing:border-box; }
-html, body{ height:100%; }
+html,body{ height:100%; }
 body{
   margin:0;
   font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
   color: var(--text);
   background:
-    radial-gradient(1000px 700px at 18% 10%, rgba(47,102,255,.14), transparent 60%),
-    radial-gradient(900px 650px at 85% 0%, rgba(214,64,64,.10), transparent 60%),
-    radial-gradient(900px 700px at 50% 100%, rgba(103,243,164,.08), transparent 65%),
-    linear-gradient(180deg, #05060a, #0a0c12);
-  -webkit-font-smoothing: antialiased;
+    radial-gradient(1200px 800px at 18% 14%, rgba(47,102,255,.18), transparent 55%),
+    radial-gradient(1200px 800px at 78% 28%, rgba(210,31,43,.18), transparent 58%),
+    radial-gradient(1200px 900px at 50% 88%, rgba(255,255,255,.06), transparent 60%),
+    linear-gradient(180deg, var(--bg0), var(--bg1));
 }
 
-.page{
-  max-width: 980px;
-  margin: 0 auto;
-  padding: 14px 12px 22px;
-}
-
-/* Top header */
-.topBar{
+.lp{
+  min-height:100vh;
   display:flex;
-  flex-direction: column;
-  gap: 4px;
-  margin-bottom: 12px;
-}
-.topTitle{
-  letter-spacing: .18em;
-  font-weight: 850;
-  font-size: 13px;
-  opacity: .92;
-}
-.topSub{
-  color: var(--muted);
-  font-size: 13px;
+  flex-direction:column;
+  padding: 18px 16px 16px;
+  gap: 12px;
 }
 
-/* Cards */
-.card{
-  border: 1px solid var(--stroke);
-  background: var(--card);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow);
-  padding: 12px;
-  margin-bottom: 12px;
-  overflow: hidden;
+/* BRAND */
+.lpBrand{
+  padding-top: 6px;
 }
-.cardTitle{
-  letter-spacing: .18em;
-  font-weight: 850;
-  font-size: 12px;
-  color: var(--muted);
+.lpLogo{
+  font-weight: 950;
+  letter-spacing: .10em;
   text-transform: uppercase;
-  margin-bottom: 10px;
+  line-height: 1;
+  font-size: clamp(32px, 5.6vw, 56px);
+  display:flex;
+  align-items:baseline;
+  gap: 2px;
+}
+.lpTap{ color: var(--red); }
+.lpDash{ color: var(--text); opacity: .95; }
+.lpN{ color: var(--text); opacity: .95; }
+.lpScore{ color: var(--blue); }
+.lpTm{
+  font-size: .55em;
+  letter-spacing: .06em;
+  margin-left: 4px;
+  opacity: .9;
+}
+.lpTag{
+  margin-top: 8px;
+  font-size: clamp(16px, 2.5vw, 26px);
+  font-weight: 800;
+  color: var(--muted);
 }
 
-/* Buttons */
-.fileBtn, .btnPrimary, .btnSecondary{
-  appearance: none;
+/* HERO */
+.lpHero{
+  flex: 1;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap: 18px;
+  padding: 10px 0 6px;
+}
+
+/* Big red pill button */
+.lpBigBtn{
+  width: min(860px, 94vw);
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  text-align:center;
+
+  background: linear-gradient(180deg, rgba(210,31,43,1), rgba(180,18,28,1));
+  color: white;
   border: 1px solid rgba(255,255,255,.14);
-  background: var(--btn);
-  color: var(--text);
-  border-radius: 14px;
-  padding: 12px 14px;
-  font-weight: 800;
-  letter-spacing: .2px;
-  cursor: pointer;
-  text-decoration: none;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 44px;
+  border-radius: 999px;
+  box-shadow: 0 18px 60px rgba(0,0,0,.55);
+
+  padding: 18px 22px;
+  font-size: clamp(18px, 2.6vw, 26px);
+  font-weight: 950;
+  letter-spacing: .02em;
+
+  user-select:none;
   -webkit-tap-highlight-color: transparent;
+  cursor: pointer;
 }
-.fileBtn:hover, .btnPrimary:hover, .btnSecondary:hover{
-  background: var(--btnHover);
+.lpBigBtn:active{
+  transform: translateY(1px);
+  filter: brightness(.98);
 }
-.btnPrimary{
-  border-color: var(--primaryStroke);
-  background: var(--primary);
+
+.lpTip{
+  width: min(860px, 94vw);
+  text-align:center;
+  font-size: clamp(18px, 3vw, 34px);
+  font-weight: 900;
+  color: var(--text);
+  opacity: .95;
+  line-height: 1.15;
+  text-shadow: 0 10px 30px rgba(0,0,0,.45);
 }
-.btnSecondary{
-  border-color: var(--dangerStroke);
-  background: var(--danger);
+
+/* FOOT */
+.lpFooter{
+  display:flex;
+  align-items:flex-end;
+  justify-content:space-between;
+  gap: 12px;
+  padding-top: 10px;
 }
-.btnDisabled{
+
+.lpSession{
+  font-weight: 850;
+  letter-spacing: .08em;
+  color: rgba(238,242,247,.70);
+  font-size: 13px;
+  text-transform: none;
+}
+
+.lpBuyBtn{
+  text-decoration:none;
+  color: var(--text);
+  background: rgba(255,255,255,.06);
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 999px;
+  padding: 14px 18px;
+  min-width: 220px;
+  text-align:center;
+  box-shadow: 0 18px 60px rgba(0,0,0,.45);
+}
+.lpBuyBtn:active{ transform: translateY(1px); }
+
+.lpBuyTop{
+  font-weight: 950;
+  letter-spacing: .08em;
+  color: rgba(47,102,255,.95);
+  font-size: 18px;
+  text-transform: uppercase;
+}
+.lpBuyBottom{
+  margin-top: 2px;
+  font-weight: 900;
+  font-size: 20px;
+  color: rgba(238,242,247,.92);
+}
+
+.lpBuyDisabled{
   opacity: .45;
   pointer-events:none;
 }
 
-/* Rows */
-.row{
-  display:flex;
-  gap: 10px;
-  align-items: center;
-  flex-wrap: wrap;
-}
-.pill{
-  border: 1px solid rgba(255,255,255,.12);
-  background: rgba(255,255,255,.04);
-  border-radius: 999px;
-  padding: 8px 12px;
-  color: var(--muted);
-  font-size: 13px;
-  display:flex;
-  align-items:center;
-  gap: 8px;
-}
-.hint{
-  margin: 10px 0 0;
-  color: var(--muted);
-  font-size: 13px;
-  line-height: 1.35;
-}
+/* --------- Keep compatibility with your existing app classes ---------
+   (So if you navigate into the old flow, nothing explodes)
+--------------------------------------------------------------------- */
 
-/* Target image area: fits better on iPhone */
-.targetWrap{
-  position: relative;
-  width: 100%;
-  margin: 10px 0 10px;
-  border-radius: 14px;
-  border: 1px solid rgba(255,255,255,.10);
-  background: rgba(0,0,0,.22);
-
-  /* Key: keep it from eating the whole screen on phones */
-  max-height: 52vh;
-
-  overflow: hidden;
-  touch-action: pan-y; /* allows vertical scroll gestures */
-}
-
-#targetImg{
-  width: 100%;
-  height: 100%;
-  display:block;
-
-  /* Key: don't crop, just fit */
-  object-fit: contain;
-
-  user-select:none;
-  -webkit-user-drag:none;
-}
-
-/* Tap dots overlay */
-.dotsLayer{
-  position:absolute;
-  left:0; top:0; right:0; bottom:0;
-  pointer-events:none;
-}
-.tapDot{
-  position:absolute;
-  width: 16px;
-  height: 16px;
-  margin-left: -8px;
-  margin-top: -8px;
-  border-radius: 999px;
-  box-shadow: 0 10px 28px rgba(0,0,0,.55);
-  border: 2px solid rgba(0,0,0,.55);
-}
-.tapDotBull{ background: rgba(103,243,164,.95); }
-.tapDotShot{ background: rgba(214,64,64,.92); }
-
-/* Sticky action bar keeps buttons close to target on iPhone */
-.actionsSticky{
-  position: sticky;
-  bottom: 10px;
-  z-index: 5;
-  padding-top: 10px;
-  background: linear-gradient(180deg, rgba(0,0,0,0), rgba(6,7,10,.92) 35%, rgba(6,7,10,.98));
-  margin-top: -6px;
-}
-
-/* Settings fields */
-.field{
-  flex:1;
-  min-width: 160px;
-  display:flex;
-  flex-direction: column;
-  gap: 6px;
-}
-.fieldLabel{
-  font-size: 12px;
-  color: var(--muted2);
-}
-.select{
-  height: 44px;
-  border-radius: 12px;
-  border: 1px solid rgba(255,255,255,.14);
-  background: rgba(0,0,0,.25);
-  color: var(--text);
-  padding: 0 10px;
-}
-
-/* Vendor link */
-.vendorLink{
-  display:none;
-  margin-top: 10px;
-  color: #9bb7ff;
-  text-decoration:none;
-  font-weight: 750;
-}
-.vendorLink:hover{ text-decoration:underline; }
-
-/* Footer */
-.footer{
-  margin-top: 10px;
-  text-align:center;
-  color: rgba(238,242,247,.28);
-  letter-spacing: .22em;
-  font-weight: 850;
-  font-size: 12px;
-  text-transform: uppercase;
-}
-.footerMark{ opacity: .9; }
-
-/* Slightly larger max-height on bigger screens */
-@media (min-width: 900px){
-  .targetWrap{ max-height: 62vh; }
-}
+.page{ padding: 18px 14px 24px; }
+.card{ background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.10); border-radius: 18px; padding: 14px; }
+.cardTitle{ color: rgba(238,242,247,.65); font-weight: 900; letter-spacing: .12em; text-transform: uppercase; font-size: 12px; margin-bottom: 10px; }
+.fileBtn{ display:inline-block; padding: 12px 14px; border-radius: 14px; border: 1px solid rgba(255,255,255,.14); background: rgba(255,255,255,.07); color: rgba(238,242,247,.92); font-weight: 850; text-decoration:none; }
+.btnPrimary{ padding: 12px 14px; border-radius: 14px; border: 1px solid rgba(255,255,255,.14); background: rgba(103,243,164,.12); color: rgba(238,242,247,.92); font-weight: 900; }
+.btnSecondary{ padding: 12px 14px; border-radius: 14px; border: 1px solid rgba(255,255,255,.14); background: rgba(255,255,255,.06); color: rgba(238,242,247,.92); font-weight: 850; }
+.hint{ color: rgba(238,242,247,.65); }
+.vendorLink{ display:none; }
