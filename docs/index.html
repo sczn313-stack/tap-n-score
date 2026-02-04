@@ -1,3 +1,14 @@
+<!-- ==========================================================
+     index.html (FULL REPLACEMENT) — CLEAN LANDING (Baseline 22206+)
+     Goal:
+     - Clean landing page
+     - ONE 800-lb gorilla button: "Add Target Picture"
+     - No repeated "target" wording
+     - Photo button opens camera OR library chooser (iOS/Android)
+     - Tapping only becomes relevant AFTER a photo exists (handled by index.js)
+     Notes:
+     - Paths are absolute for GitHub Pages subfolder reliability: /tap-n-score/...
+     ========================================================== -->
 <!doctype html>
 <html lang="en">
 <head>
@@ -18,112 +29,432 @@
 
   <title>Tap-n-Score™</title>
 
-  <link rel="stylesheet" href="/tap-n-score/styles.css?v=LP-hero-2" />
+  <!-- App CSS (keep your baseline stylesheet) -->
+  <link rel="stylesheet" href="/tap-n-score/styles.css?v=22206" />
+
+  <!-- Landing-only polish (safe, scoped) -->
+  <style>
+    :root{
+      --bg0:#05060a; --bg1:#0a0c12;
+      --card: rgba(255,255,255,.06);
+      --stroke: rgba(255,255,255,.12);
+      --text:#eef2f7;
+      --muted: rgba(238,242,247,.62);
+      --muted2: rgba(238,242,247,.40);
+      --shadow: 0 20px 60px rgba(0,0,0,.55);
+      --radius: 22px;
+
+      --red:#d64040;
+      --white:#eef2f7;
+      --blue:#2f66ff;
+      --green:#67f3a4;
+
+      --btnStroke: rgba(255,255,255,.18);
+      --btnBg: rgba(255,255,255,.08);
+      --btnBgHover: rgba(255,255,255,.12);
+    }
+
+    html,body{ height:100%; }
+    body{
+      margin:0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+      color: var(--text);
+      background:
+        radial-gradient(900px 600px at 15% 10%, rgba(47,102,255,.14), transparent 60%),
+        radial-gradient(800px 500px at 85% 0%, rgba(214,64,64,.10), transparent 60%),
+        radial-gradient(900px 700px at 50% 100%, rgba(103,243,164,.08), transparent 65%),
+        linear-gradient(180deg, var(--bg0), var(--bg1));
+    }
+
+    .wrap{ max-width: 980px; margin: 0 auto; padding: 18px 14px 32px; }
+    .shell{
+      border: 1px solid rgba(255,255,255,.10);
+      background: rgba(255,255,255,.04);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow:hidden;
+    }
+
+    .top{
+      padding: 18px 18px 14px;
+      border-bottom: 1px solid rgba(255,255,255,.08);
+      background: linear-gradient(180deg, rgba(255,255,255,.035), rgba(255,255,255,.02));
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:12px;
+      flex-wrap:wrap;
+    }
+
+    .brand{
+      display:flex; align-items:center; gap:10px;
+      font-weight: 900;
+      letter-spacing:.18em;
+      text-transform: uppercase;
+      font-size: 14px;
+      user-select:none;
+      -webkit-user-select:none;
+    }
+    .brand .r{ color: var(--red); }
+    .brand .w{ color: var(--white); }
+    .brand .b{ color: var(--blue); }
+
+    .subline{
+      margin: 8px 0 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.35;
+      max-width: 54ch;
+    }
+
+    .pill{
+      display:inline-flex; gap:8px; align-items:center;
+      padding: 8px 12px;
+      border: 1px solid rgba(255,255,255,.14);
+      background: rgba(255,255,255,.05);
+      border-radius: 999px;
+      color: var(--muted);
+      font-size: 12px;
+      white-space: nowrap;
+    }
+
+    .grid{
+      display:grid;
+      grid-template-columns: 1.25fr .75fr;
+      gap: 14px;
+      padding: 16px;
+    }
+    @media (max-width: 880px){
+      .grid{ grid-template-columns: 1fr; }
+    }
+
+    .card{
+      border: 1px solid rgba(255,255,255,.10);
+      background: var(--card);
+      border-radius: 18px;
+      overflow:hidden;
+    }
+    .cardHead{
+      padding: 12px 14px 10px;
+      border-bottom: 1px solid rgba(255,255,255,.08);
+      background: rgba(255,255,255,.03);
+      display:flex; align-items:center; justify-content:space-between; gap:12px;
+    }
+    .cardHead h2{
+      margin:0;
+      font-size: 12px;
+      letter-spacing:.18em;
+      text-transform: uppercase;
+      color: rgba(238,242,247,.70);
+      font-weight: 900;
+    }
+    .pad{ padding: 14px; }
+
+    /* Big gorilla button */
+    .gorillaBtn{
+      width: 100%;
+      appearance:none;
+      border: 1px solid rgba(214,64,64,.45);
+      background: rgba(214,64,64,.18);
+      color: var(--text);
+      padding: 16px 16px;
+      border-radius: 18px;
+      font-weight: 950;
+      letter-spacing: .04em;
+      font-size: 18px;
+      cursor:pointer;
+      min-height: 54px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      gap: 10px;
+      -webkit-tap-highlight-color: transparent;
+      user-select:none;
+    }
+    .gorillaBtn:active{ transform: translateY(1px); }
+    .gorillaBtn:hover{ background: rgba(214,64,64,.24); }
+
+    .btnSub{
+      color: rgba(238,242,247,.70);
+      font-size: 12px;
+      margin-top: 10px;
+      line-height: 1.35;
+      text-align:center;
+    }
+
+    /* Hide file input, keep accessible */
+    .fileInput{ position:absolute; left:-9999px; width:1px; height:1px; opacity:0; }
+
+    /* Image + tap overlay (kept exactly as baseline IDs expect) */
+    #targetWrap{
+      position: relative;
+      width: 100%;
+      background: rgba(0,0,0,.18);
+      overflow:hidden;
+      border-top: 1px solid rgba(255,255,255,.08);
+    }
+
+    /* Slimmer, more margin, and lets page scroll naturally */
+    #targetImg{
+      width: 92%;
+      max-width: 520px;
+      height: auto;
+      display:block;
+      margin: 14px auto 18px;
+      border-radius: 14px;
+      box-shadow: 0 14px 40px rgba(0,0,0,.45);
+      user-select:none;
+      -webkit-user-drag:none;
+      touch-action: manipulation;
+    }
+
+    #dotsLayer{
+      position:absolute;
+      left:0; top:0; right:0; bottom:0;
+      pointer-events:none;
+    }
+
+    .tapDot{
+      position:absolute;
+      width: 16px; height: 16px;
+      margin-left: -8px; margin-top: -8px;
+      border-radius: 999px;
+      box-shadow: 0 6px 20px rgba(0,0,0,.55);
+      border: 2px solid rgba(255,255,255,.85);
+    }
+    .tapDotBull{ background: rgba(103,243,164,.95); border-color: rgba(0,0,0,.55); }
+    .tapDotShot{ background: rgba(214,64,64,.92); border-color: rgba(0,0,0,.55); }
+
+    /* Controls row (bring closer to image on mobile) */
+    .row{
+      display:flex; gap:10px; flex-wrap:wrap; align-items:center;
+      padding: 12px 14px 14px;
+      border-top: 1px solid rgba(255,255,255,.08);
+      background: rgba(255,255,255,.03);
+    }
+    .pill2{
+      display:inline-flex;
+      gap:8px;
+      align-items:center;
+      padding: 10px 12px;
+      border: 1px solid rgba(255,255,255,.12);
+      background: rgba(0,0,0,.18);
+      border-radius: 999px;
+      color: rgba(238,242,247,.72);
+      font-size: 13px;
+      font-weight: 700;
+    }
+    .btn{
+      appearance:none;
+      border: 1px solid var(--btnStroke);
+      background: var(--btnBg);
+      color: var(--text);
+      padding: 12px 14px;
+      border-radius: 14px;
+      font-weight: 850;
+      letter-spacing: .02em;
+      cursor:pointer;
+      min-height: 44px;
+      flex:1;
+      min-width: 140px;
+      text-align:center;
+      -webkit-tap-highlight-color: transparent;
+      user-select:none;
+    }
+    .btn:hover{ background: var(--btnBgHover); }
+
+    .btnPrimary{
+      border-color: rgba(47,102,255,.45);
+      background: rgba(47,102,255,.18);
+    }
+    .btnPrimary:hover{ background: rgba(47,102,255,.24); }
+
+    .btnDanger{
+      border-color: rgba(214,64,64,.45);
+      background: rgba(214,64,64,.14);
+    }
+    .btnDanger:hover{ background: rgba(214,64,64,.20); }
+
+    .hint{
+      margin: 10px 14px 14px;
+      color: rgba(238,242,247,.55);
+      font-size: 13px;
+      line-height: 1.35;
+    }
+
+    .fieldRow{ display:flex; gap:10px; flex-wrap:wrap; }
+    .field{
+      flex:1;
+      min-width: 150px;
+      background: rgba(0,0,0,.22);
+      border: 1px solid rgba(255,255,255,.10);
+      border-radius: 14px;
+      padding: 10px 10px;
+      color: var(--text);
+      outline:none;
+    }
+    .fieldLabel{
+      display:block;
+      font-size: 12px;
+      color: rgba(238,242,247,.45);
+      margin-bottom: 6px;
+      font-weight: 800;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+    select.field{ padding: 10px 8px; }
+
+    .footer{
+      padding: 10px 16px 14px;
+      color: rgba(238,242,247,.30);
+      text-align:center;
+      letter-spacing: .22em;
+      font-weight: 900;
+      text-transform: uppercase;
+      font-size: 12px;
+      border-top: 1px solid rgba(255,255,255,.06);
+      background: rgba(255,255,255,.02);
+    }
+
+    /* Optional vendor link hook */
+    a#vendorLink{ display:none; }
+  </style>
 </head>
 
 <body>
-  <main class="lp">
+  <div class="wrap">
+    <div class="shell">
 
-    <!-- BRAND -->
-    <header class="lpBrand">
-      <div class="lpLogo">
-        <span class="lpTap">TAP</span><span class="lpDash">-</span><span class="lpN">N</span><span class="lpDash">-</span><span class="lpScore">SCORE</span><span class="lpTm">™</span>
+      <!-- CLEAN HEADER -->
+      <div class="top">
+        <div>
+          <div class="brand" aria-label="Tap-n-Score brand">
+            <span class="r">TAP</span><span class="w">-N-</span><span class="b">SCORE</span><span style="opacity:.9">™</span>
+          </div>
+          <div class="subline" id="statusLine">Ready when you are.</div>
+        </div>
+
+        <div class="pill">Baseline <b style="color:rgba(238,242,247,.92)">22206</b></div>
       </div>
-      <div class="lpTag">After-Shot Intelligence</div>
-    </header>
 
-    <!-- HERO ACTION -->
-    <section class="lpHero">
-      <!-- One “gorilla” button -->
-      <label class="lpBigBtn lpPulse" for="photoInput" id="addPhotoBtn">
-        Add Target Picture
-      </label>
+      <div class="grid">
 
-      <!-- IMPORTANT: no capture attribute so iOS shows Camera + Photo Library -->
-      <input
-        id="photoInput"
-        type="file"
-        accept="image/*"
-        style="display:none"
-      />
+        <!-- LEFT: IMAGE + OVERLAY + CONTROLS -->
+        <section class="card">
+          <div class="cardHead">
+            <h2>Photo</h2>
+            <div class="pill">Taps: <b id="tapCount">0</b></div>
+          </div>
 
-      <div class="lpTip">
-        Tip: Straight-on photos give the most accurate results.
+          <div class="pad">
+            <!-- 800-lb gorilla button -->
+            <button id="addPhotoBtn" class="gorillaBtn" type="button">
+              Add Target Picture
+            </button>
+
+            <div class="btnSub" id="addPhotoSub">
+              Camera or photo library
+            </div>
+
+            <!-- One input. iOS shows options when capture is NOT forced. -->
+            <input
+              id="photoInput"
+              class="fileInput"
+              type="file"
+              accept="image/*"
+            />
+          </div>
+
+          <div id="targetWrap" class="targetWrap" aria-label="Photo area">
+            <img id="targetImg" alt="Photo preview" />
+            <div id="dotsLayer" class="dotsLayer" aria-hidden="true"></div>
+          </div>
+
+          <!-- Controls closer to the image -->
+          <div class="row">
+            <button id="clearTapsBtn" class="btn btnDanger" type="button">Clear</button>
+            <button id="seeResultsBtn" class="btn btnPrimary" type="button">Show results</button>
+          </div>
+
+          <!-- Keep this line minimal (no repeats) -->
+          <p id="instructionLine" class="hint">Tap the bull once, then tap your hits.</p>
+        </section>
+
+        <!-- RIGHT: SETTINGS -->
+        <aside class="card">
+          <div class="cardHead">
+            <h2>Settings</h2>
+            <div class="pill">Quick</div>
+          </div>
+
+          <div class="pad">
+            <div class="fieldRow" style="margin-bottom:10px;">
+              <label style="flex:1; min-width:150px;">
+                <span class="fieldLabel">Distance (yards)</span>
+                <!-- User asked: make distance a clicker (not fixed list) -->
+                <input id="distanceYds" class="field" type="number" inputmode="numeric" min="1" step="1" value="100" />
+              </label>
+
+              <label style="flex:1; min-width:150px;">
+                <span class="fieldLabel">MOA / click</span>
+                <select id="moaPerClick" class="field">
+                  <option value="0.25" selected>0.25</option>
+                  <option value="0.5">0.5</option>
+                  <option value="0.125">0.125</option>
+                </select>
+              </label>
+            </div>
+
+            <div style="color:rgba(238,242,247,.55); font-size:13px; line-height:1.35;">
+              Keep it simple. Add a picture and you’re in business.
+            </div>
+
+            <!-- Optional vendor link hook (kept for JS compatibility) -->
+            <a id="vendorLink" href="#" target="_blank" rel="noopener"></a>
+          </div>
+        </aside>
+
       </div>
-    </section>
 
-    <!-- FOOT BAR (bottom left + bottom right) -->
-    <footer class="lpFooter">
-      <div class="lpSession" id="sessionLine">Session: —</div>
+      <div class="footer">SCZN3</div>
+    </div>
+  </div>
 
-      <a
-        class="lpBuyBtn lpHidden"
-        id="buyMoreBtn"
-        href="#"
-        target="_blank"
-        rel="noopener"
-        aria-hidden="true"
-      >
-        <div class="lpBuyTop">BUY MORE</div>
-        <div class="lpBuyBottom">Targets Like This</div>
-      </a>
-    </footer>
-
-  </main>
-
-  <!-- Keep your existing app JS -->
-  <script src="/tap-n-score/index.js?v=22206"></script>
-
-  <!-- Landing helper: session label + show BUY MORE after photo -->
+  <!-- Landing wiring: big button triggers file chooser -->
   <script>
     (() => {
-      const sessionEl = document.getElementById("sessionLine");
-      const buyBtn = document.getElementById("buyMoreBtn");
-      const photoInput = document.getElementById("photoInput");
+      const btn = document.getElementById("addPhotoBtn");
+      const file = document.getElementById("photoInput");
+      const status = document.getElementById("statusLine");
+      const img = document.getElementById("targetImg");
+      const sub = document.getElementById("addPhotoSub");
 
-      // Session label (cheap + stable)
-      const sid =
-        "SEC-" +
-        Math.random().toString(16).slice(2, 6).toUpperCase() +
-        Math.random().toString(16).slice(2, 10).toUpperCase();
-      sessionEl.textContent = "Session: " + sid;
-
-      // Mirror vendorLink -> BUY MORE when available (optional, safe)
-      function syncBuyUrl() {
-        const v = document.getElementById("vendorLink");
-        if (v && v.href && v.href !== "#" && v.href !== location.href) {
-          buyBtn.href = v.href;
-          buyBtn.classList.remove("lpBuyDisabled");
-          return true;
-        }
-        buyBtn.href = "#";
-        buyBtn.classList.add("lpBuyDisabled");
-        return false;
+      if (btn && file) {
+        btn.addEventListener("click", () => file.click());
       }
 
-      // Show BUY MORE only AFTER a photo is selected
-      function revealBuy() {
-        buyBtn.classList.remove("lpHidden");
-        buyBtn.setAttribute("aria-hidden", "false");
-        // If we still don't have a URL, keep it disabled-looking
-        syncBuyUrl();
-      }
-
-      // Start hidden
-      buyBtn.classList.add("lpHidden");
-      buyBtn.setAttribute("aria-hidden", "true");
-
-      // If your old UI exists on this page someday, keep in sync after load
-      window.addEventListener("load", syncBuyUrl);
-
-      if (photoInput) {
-        photoInput.addEventListener("change", () => {
-          const f = photoInput.files && photoInput.files[0];
+      // When a photo is chosen, hide the gorilla button area so the photo becomes the star
+      if (file && img) {
+        file.addEventListener("change", () => {
+          const f = file.files && file.files[0];
           if (!f) return;
-          revealBuy();
+
+          // hide the big CTA once we have a photo
+          btn.style.display = "none";
+          if (sub) sub.style.display = "none";
+          if (status) status.textContent = "Photo loaded.";
+
+          // keep UI clean even if browser blocks objectURL on reload
+          try {
+            const url = URL.createObjectURL(f);
+            img.src = url;
+          } catch (_) {}
         });
       }
     })();
   </script>
+
+  <!-- Your baseline app logic -->
+  <script src="/tap-n-score/index.js?v=22206"></script>
 </body>
 </html>
