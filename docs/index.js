@@ -1,9 +1,9 @@
 /* ============================================================
-   index.js (FULL REPLACEMENT) — Polished UX
-   - Big button label updates by state:
-       Add Target Picture -> Tap bull -> Tap hits
-   - Sticky "Show results" appears after pause ONLY when ready
-   - Instruction line becomes minimal + auto-updates
+   index.js (FULL REPLACEMENT) — Polished UX v22206d1
+   - Big button label updates:
+       Add Target Picture -> Tap Aim Point -> Tap hits (GREEN)
+   - Sticky "Show results" slides up after a pause when ready
+   - Minimal instruction text (no nagging)
 ============================================================ */
 
 (() => {
@@ -28,14 +28,14 @@
   const KEY = "SCZN3_SEC_PAYLOAD_V1";
 
   let objectUrl = null;
-  let bull = null;
-  let shots = [];
+  let bull = null;   // {x01,y01}
+  let shots = [];    // [{x01,y01},...]
 
-  // tap vs scroll guard
+  // scroll-safe tap guard
   let down = null;
   const MOVE_PX = 10;
 
-  // pause-to-show
+  // “pause then show” magic
   let pauseTimer = null;
   const PAUSE_MS = 900;
 
@@ -90,10 +90,11 @@
     avg.x /= shots.length;
     avg.y /= shots.length;
 
+    // bull - POI (move POI to bull)
     const dx = bull.x01 - avg.x; // + => RIGHT
     const dy = bull.y01 - avg.y; // + => DOWN
 
-    // Placeholder scale for baseline
+    // Placeholder scale (baseline)
     const inchesPerFullWidth = 10;
     const inchesX = dx * inchesPerFullWidth;
     const inchesY = dy * inchesPerFullWidth;
@@ -124,7 +125,7 @@
   function doShowResults() {
     const out = computeCorrection();
     if (!out) {
-      alert("Tap the bull, then at least one hit.");
+      alert("Set the aim point, then tap at least one hit.");
       return;
     }
 
@@ -143,35 +144,37 @@
     goToSEC(payload);
   }
 
-  // ---- UX State (this is the polish)
   function refreshUx() {
     const hasPhoto = Boolean(elImg && elImg.src);
     const hasBull = Boolean(bull);
     const hasShots = shots.length >= 1;
 
-    // Big button label
-    if (!hasPhoto) setText(elPhotoBtn, "Add Target Picture");
-    else if (!hasBull) setText(elPhotoBtn, "Tap bull");
-    else setText(elPhotoBtn, "Tap hits");
+    // Big button label + green emphasis on "Tap hits"
+    if (!hasPhoto) {
+      setText(elPhotoBtn, "Add Target Picture");
+      elPhotoBtn?.classList.remove("btnBigGreen");
+    } else if (!hasBull) {
+      setText(elPhotoBtn, "Tap Aim Point");
+      elPhotoBtn?.classList.remove("btnBigGreen");
+    } else {
+      setText(elPhotoBtn, "Tap hits");
+      elPhotoBtn?.classList.add("btnBigGreen"); // ✅ bright green emphasis
+    }
 
-    // Status line (short + calm)
+    // Status line (short)
     if (!hasPhoto) setText(elStatus, "Add a target photo to begin.");
-    else if (!hasBull) setText(elStatus, "Tap bull.");
+    else if (!hasBull) setText(elStatus, "Tap Aim Point.");
     else if (!hasShots) setText(elStatus, "Tap hits.");
     else setText(elStatus, "Pause a moment…");
 
-    // Instruction line (minimal; stop repeating)
+    // Instruction line (minimal / mostly blank)
     if (!hasPhoto) setText(elInstruction, "");
-    else if (!hasBull) setText(elInstruction, "Tap bull.");
+    else if (!hasBull) setText(elInstruction, "Tap Aim Point.");
     else if (!hasShots) setText(elInstruction, "Tap hits.");
     else setText(elInstruction, "");
 
-    // Sticky bar visibility
-    if (hasBull && hasShots) {
-      // only show after pause; keep hidden while actively tapping
-    } else {
-      hideSticky();
-    }
+    // Sticky only after pause (while tapping, keep hidden)
+    if (!(hasBull && hasShots)) hideSticky();
   }
 
   function clearDots() {
@@ -183,7 +186,7 @@
     refreshUx();
   }
 
-  // ---- Photo button opens picker (library/camera/files depending on iOS)
+  // ---- Photo button triggers picker
   if (elPhotoBtn && elFile) {
     elPhotoBtn.addEventListener("click", () => elFile.click());
   }
