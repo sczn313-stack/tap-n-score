@@ -1,12 +1,12 @@
 /* ============================================================
-   sec.js (FULL REPLACEMENT) — Clean SEC Diagnostics (Baseline 22206)
-   FIXED ROUTING for GitHub Pages project sites:
-   - Uses ABSOLUTE project paths (/tap-n-score/...) so it never
-     “falls out” of the folder when navigating.
+   sec.js (FULL REPLACEMENT) — GitHub Pages SAFE ROUTING + Clean Diag
+   - Reads payload from ?payload= (primary)
+   - Falls back to localStorage (backup)
+   - Diagnostics hidden by default:
+       ?debug=1  OR long-press title ~0.7s
    - Back button:
-       1) Prefer history.back() when available
-       2) Fallback to /tap-n-score/index.html with true cache-bust
-   - Download routing also hard-locked to /tap-n-score/download.html
+       Always routes to /tap-n-score/index.html?fresh=TIMESTAMP
+       (Fixes misrouting when sec.html opened directly)
 ============================================================ */
 
 (() => {
@@ -15,8 +15,12 @@
   const KEY = "SCZN3_SEC_PAYLOAD_V1";
   const HIST_KEY = "SCZN3_SEC_HISTORY_V1";
 
-  // ---- GitHub Pages project base (LOCK)
+  // ---- Base path for GitHub Pages project site
+  // If your repo is /tap-n-score/, keep this:
   const BASE = "/tap-n-score/";
+  const INDEX_URL = () => `${BASE}index.html?fresh=${Date.now()}`;
+  const DOWNLOAD_URL = (qs) => `${BASE}download.html${qs}`;
+  const SEC_URL = () => `${BASE}sec.html`;
 
   // ---- Helpers
   function safeJsonParse(s) {
@@ -74,10 +78,8 @@
     }
   }
 
-  function goToIndexFresh() {
-    const t = Date.now();
-    // replace avoids building history loops
-    location.replace(`${BASE}index.html?fresh=${t}`);
+  function goToIndexHard() {
+    location.href = INDEX_URL();
   }
 
   // ---- Diagnostics gating
@@ -101,7 +103,7 @@
   if (debugOn) showDiagnostics();
   else hideDiagnostics();
 
-  // Long-press to reveal diagnostics (iPad friendly)
+  // Long-press title to reveal diagnostics
   if (titleEl && !debugOn) {
     let pressTimer = null;
 
@@ -147,17 +149,12 @@
 
   if (backBtn) {
     backBtn.addEventListener("click", () => {
-      // Prefer actual back if user came from the app flow
-      if (history.length > 1) {
-        history.back();
-        return;
-      }
-      // Fallback: hard route to baseline entry with true cache-bust
-      goToIndexFresh();
+      // Always hard-route to the real landing page (fixes “SEC direct open” cases)
+      goToIndexHard();
     });
   }
 
-  // ---- If no payload, keep page clean + only back works
+  // ---- If no payload, disable actions and keep only Back working
   if (!payload) {
     enableBtn(downloadBtn, false);
     enableBtn(vendorBtn, false);
@@ -169,7 +166,7 @@
         reason: "Missing SEC payload in URL or localStorage",
         expected: { urlParam: "payload", localStorageKey: KEY },
         url: location.href,
-        baseLocked: BASE
+        fix: "Run flow from index.html → Show results (payload gets passed)."
       });
     }
     return;
@@ -181,18 +178,15 @@
   // ---- Hydrate UI
   setText("secSession", payload.sessionId || "—");
   setText("secShots", payload.shots ?? 0);
-
-  // Score (null => "—")
   setText("secScore", (payload.score === null || payload.score === undefined) ? "—" : payload.score);
 
-  // Direction + clicks
   setText("secWindDir", payload.windage?.dir || "—");
   setNum2("secWindClicks", payload.windage?.clicks ?? 0);
 
   setText("secElevDir", payload.elevation?.dir || "—");
   setNum2("secElevClicks", payload.elevation?.clicks ?? 0);
 
-  // ---- History PREV 1–3 (optional)
+  // ---- History (optional)
   try {
     const hist = JSON.parse(localStorage.getItem(HIST_KEY) || "[]");
     const fmt = (h) => {
@@ -209,24 +203,22 @@
     setText("prev3", "—");
   }
 
-  // ---- Download enable (only if we have a URL)
-  // Supports either payload.secPngUrl OR payload.secUrl
+  // ---- Download button enable (only if we have a URL)
   const secUrl = String(payload.secPngUrl || payload.secUrl || "").trim();
 
   if (secUrl) {
     enableBtn(downloadBtn, true);
     downloadBtn.addEventListener("click", () => {
-      // Ensure return path always re-enters the baseline with true freshness
-      const t = Date.now();
-      const from = `${BASE}index.html?fresh=${t}`;
-      const target = `${BASE}index.html?fresh=${t}`;
+      // Always return to the real landing page with fresh timestamp
+      const from = INDEX_URL();
+      const target = INDEX_URL();
 
-      const u =
-        `${BASE}download.html?img=${encodeURIComponent(secUrl)}` +
+      const qs =
+        `?img=${encodeURIComponent(secUrl)}` +
         `&from=${encodeURIComponent(from)}` +
         `&target=${encodeURIComponent(target)}`;
 
-      window.location.href = u;
+      window.location.href = DOWNLOAD_URL(qs);
     });
   } else {
     enableBtn(downloadBtn, false);
@@ -258,9 +250,9 @@
   if (debugOn) {
     writeDiag({
       ok: true,
+      base: BASE,
       loadedFrom: rawPayloadParam ? "url.payload" : "localStorage",
       key: KEY,
-      baseLocked: BASE,
       payloadSummary: {
         sessionId: payload.sessionId,
         score: payload.score,
@@ -270,6 +262,10 @@
         hasSecUrl: Boolean(secUrl),
         hasVendorUrl: Boolean(vendorUrl),
         hasSurveyUrl: Boolean(surveyUrl)
+      },
+      urls: {
+        index: INDEX_URL(),
+        sec: SEC_URL()
       },
       debug: payload.debug || null
     });
