@@ -1,4 +1,4 @@
- <!doctype html>
+<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
@@ -6,7 +6,7 @@
   <meta name="color-scheme" content="dark" />
   <meta name="theme-color" content="#06070a" />
 
-  <!-- PWA -->
+  <!-- PWA (GitHub Pages path) -->
   <link rel="manifest" href="/tap-n-score/manifest.webmanifest" />
   <link rel="apple-touch-icon" href="/tap-n-score/icons/icon-192.png" />
   <link rel="icon" href="/tap-n-score/icons/icon-192.png" />
@@ -20,47 +20,6 @@
 
   <!-- App CSS -->
   <link rel="stylesheet" href="/tap-n-score/styles.css?v=22206" />
-
-  <style>
-    /* small, safe add-ons (no dependency on styles.css structure) */
-    .fileRow{
-      display:flex;
-      gap:10px;
-      flex-wrap:wrap;
-      align-items:center;
-      margin: 10px 0 12px;
-    }
-    .stepper{
-      display:flex;
-      align-items:center;
-      gap:8px;
-      width:100%;
-    }
-    .stepBtn{
-      min-width:44px;
-      height:44px;
-      border-radius: 12px;
-      border: 1px solid rgba(255,255,255,.14);
-      background: rgba(255,255,255,.06);
-      color:#fff;
-      font-weight: 800;
-      font-size:18px;
-    }
-    .stepInput{
-      flex:1;
-      height:44px;
-      border-radius: 12px;
-      border: 1px solid rgba(255,255,255,.14);
-      background: rgba(0,0,0,.25);
-      color:#fff;
-      padding: 0 12px;
-      font-size: 16px;
-      text-align:center;
-    }
-    .hideInput{
-      display:none !important;
-    }
-  </style>
 </head>
 
 <body>
@@ -71,38 +30,37 @@
       <div id="statusLine" class="topSub">Add target photo to begin.</div>
     </header>
 
+    <!-- PHOTO / TAPS -->
     <section class="card">
       <div class="cardTitle">TARGET PHOTO</div>
 
-      <!-- Two buttons: camera + library -->
-      <div class="fileRow">
+      <!-- Two inputs: Camera + Library -->
+      <div class="row" style="margin-bottom:10px;">
         <label class="fileBtn" for="photoInputCamera">Take Photo</label>
-        <label class="fileBtn" for="photoInputLibrary">Choose from Library</label>
+        <input
+          id="photoInputCamera"
+          type="file"
+          accept="image/*"
+          capture="environment"
+          style="display:none"
+        />
+
+        <label class="fileBtn" for="photoInputLibrary">Add Photo</label>
+        <input
+          id="photoInputLibrary"
+          type="file"
+          accept="image/*"
+          style="display:none"
+        />
       </div>
-
-      <!-- Camera input -->
-      <input
-        id="photoInputCamera"
-        type="file"
-        accept="image/*"
-        capture="environment"
-        class="hideInput"
-      />
-
-      <!-- Library input (NO capture) -->
-      <input
-        id="photoInputLibrary"
-        type="file"
-        accept="image/*"
-        class="hideInput"
-      />
 
       <div id="targetWrap" class="targetWrap" aria-label="Target photo area">
         <img id="targetImg" alt="Target preview" />
         <div id="dotsLayer" class="dotsLayer" aria-hidden="true"></div>
       </div>
 
-      <div class="row">
+      <!-- Sticky action row (keeps Show Results close on iPhone) -->
+      <div class="row actionsSticky">
         <div class="pill">
           Taps: <span id="tapCount">0</span>
         </div>
@@ -116,36 +74,44 @@
         </button>
       </div>
 
+      <!-- Keep this short (no repeated instructions) -->
       <p id="instructionLine" class="hint">
-        Tap bull once, then tap each shot.
+        Tap bull, then tap hits.
       </p>
     </section>
 
+    <!-- SETTINGS (upstream; not shown on SEC) -->
     <section class="card">
       <div class="cardTitle">SETTINGS</div>
 
       <div class="row">
-        <!-- Distance stepper -->
-        <label class="field" style="flex:1;">
+        <label class="field">
           <span class="fieldLabel">Distance (yards)</span>
 
-          <div class="stepper">
-            <button id="distMinus" class="stepBtn" type="button">−</button>
+          <!-- Stepper row -->
+          <div class="row" style="gap:8px; flex-wrap:nowrap; width:100%;">
+            <button id="distMinus" class="btnSecondary" type="button" style="padding:10px 12px; min-width:56px;">
+              −
+            </button>
+
             <input
               id="distanceYds"
-              class="stepInput"
+              class="select"
               type="number"
               inputmode="numeric"
               min="5"
               max="1000"
               step="1"
               value="100"
+              style="width:100%;"
             />
-            <button id="distPlus" class="stepBtn" type="button">+</button>
+
+            <button id="distPlus" class="btnSecondary" type="button" style="padding:10px 12px; min-width:56px;">
+              +
+            </button>
           </div>
         </label>
 
-        <!-- MOA per click stays dropdown -->
         <label class="field">
           <span class="fieldLabel">MOA / click</span>
           <select id="moaPerClick" class="select">
@@ -156,6 +122,7 @@
         </label>
       </div>
 
+      <!-- Optional vendor link hook (safe if empty) -->
       <a id="vendorLink" class="vendorLink" href="#" target="_blank" rel="noopener"></a>
     </section>
 
