@@ -1,62 +1,287 @@
 /* ============================================================
-   SEC ADJUSTMENTS (C) — LEFT-SIDE VISUAL GUIDANCE
-   Paste into styles.css (replaces prior C block)
+   styles.css (FULL REPLACEMENT) — Baseline 22206 Mobile Fit
+   Goals:
+   - iPhone shows full target (no half-cut)
+   - Target slimmer with margin
+   - Buttons close + sticky on small screens
+   - Clean, readable, fast
 ============================================================ */
 
-/* --- 1) HIDE UPSTREAM PROMPTS AFTER PROGRESS --- */
-body.sec-active [data-step="pre"]{
-  display:none !important;
+:root{
+  --bg0:#05060a;
+  --bg1:#0a0c12;
+  --card: rgba(255,255,255,.06);
+  --stroke: rgba(255,255,255,.12);
+  --text:#eef2f7;
+  --muted: rgba(238,242,247,.65);
+  --muted2: rgba(238,242,247,.45);
+
+  --red:#d64040;
+  --white:#eef2f7;
+  --blue:#2f66ff;
+  --green:#67f3a4;
+
+  --btn: rgba(255,255,255,.07);
+  --btnHover: rgba(255,255,255,.10);
+  --btnStroke: rgba(255,255,255,.14);
+
+  --shadow: 0 20px 60px rgba(0,0,0,.55);
+  --radius: 18px;
 }
 
-/* --- 2) THUMBNAIL CONFIRMATION CALLOUT (LEFT) --- */
-.thumbWrap{
-  position: relative;
+*{ box-sizing:border-box; }
+html,body{ height:100%; }
+
+body{
+  margin:0;
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+  color: var(--text);
+  background:
+    radial-gradient(900px 600px at 15% 10%, rgba(47,102,255,.14), transparent 60%),
+    radial-gradient(800px 500px at 85% 0%, rgba(214,64,64,.10), transparent 60%),
+    radial-gradient(900px 700px at 50% 100%, rgba(103,243,164,.08), transparent 65%),
+    linear-gradient(180deg, var(--bg0), var(--bg1));
 }
 
-/* Green arrow + smile pointing from the LEFT */
-.thumbWrap.is-active::before{
-  content: "😊 ⇦";
-  position: absolute;
-  left: -22px;
-  top: 50%;
-  transform: translateY(-50%);
-  color: #67f3a4;                 /* friendly green */
-  font-size: 22px;
+/* Layout container */
+.page{
+  max-width: 980px;
+  margin: 0 auto;
+  padding: 14px 12px 92px; /* space for sticky bar on phones */
+}
+
+/* Top bar */
+.topBar{
+  padding: 10px 6px 14px;
+}
+.topTitle{
   font-weight: 900;
-  text-shadow: 0 6px 16px rgba(0,0,0,.35);
-  pointer-events: none;
+  letter-spacing: .14em;
+  font-size: 13px;
+  opacity: .92;
+}
+.topSub{
+  margin-top: 6px;
+  color: var(--muted);
+  font-size: 13px;
 }
 
-/* Gentle one-time nudge */
-@keyframes nudgeOnceLeft{
-  0%{
-    transform: translateY(-50%) translateX(0);
-    opacity: 0;
+/* Cards */
+.card{
+  border: 1px solid var(--stroke);
+  background: var(--card);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 14px;
+  margin-bottom: 12px;
+}
+
+.cardTitle{
+  font-size: 12px;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-weight: 900;
+  margin-bottom: 12px;
+}
+
+/* File button */
+.fileBtn{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:10px;
+  border: 1px solid var(--btnStroke);
+  background: var(--btn);
+  color: var(--text);
+  padding: 12px 14px;
+  border-radius: 14px;
+  font-weight: 850;
+  letter-spacing: .2px;
+  cursor:pointer;
+  user-select:none;
+  -webkit-tap-highlight-color: transparent;
+  min-height: 46px;
+}
+.fileBtn:hover{ background: var(--btnHover); }
+
+/* Target wrapper: slimmer + centered */
+.targetWrap{
+  position: relative;
+  width: 100%;
+  max-width: 560px;      /* slimmer than full card */
+  margin: 12px auto 0;
+  border-radius: 14px;
+  overflow: hidden;
+  background: rgba(0,0,0,.18);
+  border: 1px solid rgba(255,255,255,.08);
+}
+
+/* Image: always fully visible on iPhone */
+#targetImg{
+  width: 100%;
+  height: auto;
+  max-height: 58vh;      /* KEY: prevents “half target” on iPhone */
+  object-fit: contain;   /* do not crop */
+  display:block;
+  user-select:none;
+  -webkit-user-drag:none;
+}
+
+/* Dots overlay */
+.dotsLayer{
+  position:absolute;
+  left:0; top:0; right:0; bottom:0;
+  pointer-events:none;
+}
+
+.tapDot{
+  position:absolute;
+  width: 16px; height: 16px;
+  margin-left: -8px; margin-top: -8px;
+  border-radius: 999px;
+  box-shadow: 0 6px 20px rgba(0,0,0,.55);
+  border: 2px solid rgba(255,255,255,.85);
+}
+.tapDotBull{
+  background: rgba(103,243,164,.95);
+  border-color: rgba(0,0,0,.55);
+}
+.tapDotShot{
+  background: rgba(214,64,64,.92);
+  border-color: rgba(0,0,0,.55);
+}
+
+/* Rows / controls */
+.row{
+  display:flex;
+  gap:10px;
+  align-items:center;
+  flex-wrap:wrap;
+  margin-top: 12px;
+}
+
+.pill{
+  border: 1px solid rgba(255,255,255,.12);
+  background: rgba(255,255,255,.04);
+  padding: 10px 12px;
+  border-radius: 999px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 750;
+}
+
+/* Buttons */
+.btnPrimary, .btnSecondary{
+  appearance:none;
+  border: 1px solid var(--btnStroke);
+  background: var(--btn);
+  color: var(--text);
+  padding: 12px 14px;
+  border-radius: 14px;
+  font-size: 15px;
+  font-weight: 850;
+  cursor:pointer;
+  user-select:none;
+  -webkit-tap-highlight-color: transparent;
+  min-height: 46px;
+}
+.btnPrimary:hover, .btnSecondary:hover{ background: var(--btnHover); }
+.btnPrimary{
+  border-color: rgba(47,102,255,.45);
+  background: rgba(47,102,255,.20);
+}
+.btnPrimary:hover{ background: rgba(47,102,255,.26); }
+.btnSecondary{
+  border-color: rgba(214,64,64,.35);
+  background: rgba(214,64,64,.14);
+}
+.btnSecondary:hover{ background: rgba(214,64,64,.18); }
+
+/* Hint */
+.hint{
+  margin: 10px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+/* Settings fields */
+.field{
+  flex: 1;
+  min-width: 160px;
+}
+.fieldLabel{
+  display:block;
+  font-size: 12px;
+  color: var(--muted2);
+  margin-bottom: 6px;
+  font-weight: 750;
+}
+.select{
+  width:100%;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,.10);
+  background: rgba(0,0,0,.22);
+  color: var(--text);
+  padding: 12px 10px;
+  outline:none;
+}
+
+/* Vendor link (optional) */
+.vendorLink{
+  display:none;
+  margin-top: 10px;
+  color: #9bb7ff;
+  text-decoration:none;
+  font-weight: 750;
+}
+.vendorLink:hover{ text-decoration:underline; }
+
+/* Footer */
+.footer{
+  text-align:center;
+  margin-top: 12px;
+}
+.footerMark{
+  color: rgba(238,242,247,.35);
+  font-size: 12px;
+  letter-spacing: .22em;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+/* ============================================================
+   MOBILE: sticky action row near the target
+============================================================ */
+@media (max-width: 520px){
+  .row.actionRow{
+    position: sticky;
+    bottom: 10px;
+    z-index: 50;
+
+    background: rgba(6,7,10,0.88);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+
+    border: 1px solid rgba(255,255,255,0.10);
+    border-radius: 14px;
+    padding: 10px;
+    margin-top: 10px;
   }
-  30%{ opacity: 1; }
-  60%{
-    transform: translateY(-50%) translateX(-6px);
+
+  /* Hide taps pill on tiny screens to keep buttons tight */
+  .row.actionRow .pill{
+    display:none;
   }
-  100%{
-    transform: translateY(-50%) translateX(0);
+
+  .row.actionRow .btnPrimary,
+  .row.actionRow .btnSecondary{
+    flex: 1;
   }
-}
 
-.thumbWrap.is-active::before{
-  animation: nudgeOnceLeft .9s ease-out 1;
-}
-
-/* --- 3) CHECKMARK EMPHASIS (SUBTLE) --- */
-.thumbWrap.is-active .checkmark{
-  background: rgba(103,243,164,.18);
-  border-color: rgba(103,243,164,.55);
-  box-shadow: 0 10px 28px rgba(103,243,164,.25);
-}
-
-/* --- 4) MOBILE TIGHTENING --- */
-@media (max-width:420px){
-  .thumbWrap.is-active::before{
-    left: -16px;
-    font-size: 20px;
+  /* Slightly slimmer target on phones */
+  .targetWrap{
+    max-width: 440px;
   }
 }
