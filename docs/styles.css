@@ -1,67 +1,71 @@
 /* ============================================================
-   styles.css (FULL REPLACEMENT) — Baseline 22206 Mobile Fit
+   styles.css (FULL REPLACEMENT) — Mobile-first (Baseline 22206+)
    Goals:
-   - iPhone shows full target (no half-cut)
-   - Target slimmer with margin
-   - Buttons close + sticky on small screens
-   - Clean, readable, fast
+   - iPhone: target image fits better (no "half target" view)
+   - Buttons stay close (sticky action row inside photo card)
+   - Comfortable margins for scrolling
 ============================================================ */
 
 :root{
-  --bg0:#05060a;
-  --bg1:#0a0c12;
+  --bg:#06070a;
   --card: rgba(255,255,255,.06);
   --stroke: rgba(255,255,255,.12);
   --text:#eef2f7;
   --muted: rgba(238,242,247,.65);
   --muted2: rgba(238,242,247,.45);
 
+  --btn: rgba(255,255,255,.08);
+  --btnHover: rgba(255,255,255,.12);
+
+  --primary: rgba(47,102,255,.22);
+  --primaryStroke: rgba(47,102,255,.45);
+
+  --danger: rgba(214,64,64,.18);
+  --dangerStroke: rgba(214,64,64,.45);
+
+  --radius: 18px;
+  --shadow: 0 14px 40px rgba(0,0,0,.45);
+
   --red:#d64040;
   --white:#eef2f7;
   --blue:#2f66ff;
   --green:#67f3a4;
-
-  --btn: rgba(255,255,255,.07);
-  --btnHover: rgba(255,255,255,.10);
-  --btnStroke: rgba(255,255,255,.14);
-
-  --shadow: 0 20px 60px rgba(0,0,0,.55);
-  --radius: 18px;
 }
 
 *{ box-sizing:border-box; }
-html,body{ height:100%; }
-
+html, body{ height:100%; }
 body{
   margin:0;
   font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
   color: var(--text);
   background:
-    radial-gradient(900px 600px at 15% 10%, rgba(47,102,255,.14), transparent 60%),
-    radial-gradient(800px 500px at 85% 0%, rgba(214,64,64,.10), transparent 60%),
+    radial-gradient(1000px 700px at 18% 10%, rgba(47,102,255,.14), transparent 60%),
+    radial-gradient(900px 650px at 85% 0%, rgba(214,64,64,.10), transparent 60%),
     radial-gradient(900px 700px at 50% 100%, rgba(103,243,164,.08), transparent 65%),
-    linear-gradient(180deg, var(--bg0), var(--bg1));
+    linear-gradient(180deg, #05060a, #0a0c12);
+  -webkit-font-smoothing: antialiased;
 }
 
-/* Layout container */
 .page{
   max-width: 980px;
   margin: 0 auto;
-  padding: 14px 12px 92px; /* space for sticky bar on phones */
+  padding: 14px 12px 22px;
 }
 
-/* Top bar */
+/* Top header */
 .topBar{
-  padding: 10px 6px 14px;
+  display:flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 12px;
 }
 .topTitle{
-  font-weight: 900;
-  letter-spacing: .14em;
+  letter-spacing: .18em;
+  font-weight: 850;
   font-size: 13px;
   opacity: .92;
 }
 .topSub{
-  margin-top: 6px;
   color: var(--muted);
   font-size: 13px;
 }
@@ -72,133 +76,71 @@ body{
   background: var(--card);
   border-radius: var(--radius);
   box-shadow: var(--shadow);
-  padding: 14px;
+  padding: 12px;
   margin-bottom: 12px;
-}
-
-.cardTitle{
-  font-size: 12px;
-  letter-spacing: .14em;
-  text-transform: uppercase;
-  color: var(--muted);
-  font-weight: 900;
-  margin-bottom: 12px;
-}
-
-/* File button */
-.fileBtn{
-  display:inline-flex;
-  align-items:center;
-  justify-content:center;
-  gap:10px;
-  border: 1px solid var(--btnStroke);
-  background: var(--btn);
-  color: var(--text);
-  padding: 12px 14px;
-  border-radius: 14px;
-  font-weight: 850;
-  letter-spacing: .2px;
-  cursor:pointer;
-  user-select:none;
-  -webkit-tap-highlight-color: transparent;
-  min-height: 46px;
-}
-.fileBtn:hover{ background: var(--btnHover); }
-
-/* Target wrapper: slimmer + centered */
-.targetWrap{
-  position: relative;
-  width: 100%;
-  max-width: 560px;      /* slimmer than full card */
-  margin: 12px auto 0;
-  border-radius: 14px;
   overflow: hidden;
-  background: rgba(0,0,0,.18);
-  border: 1px solid rgba(255,255,255,.08);
 }
-
-/* Image: always fully visible on iPhone */
-#targetImg{
-  width: 100%;
-  height: auto;
-  max-height: 58vh;      /* KEY: prevents “half target” on iPhone */
-  object-fit: contain;   /* do not crop */
-  display:block;
-  user-select:none;
-  -webkit-user-drag:none;
-}
-
-/* Dots overlay */
-.dotsLayer{
-  position:absolute;
-  left:0; top:0; right:0; bottom:0;
-  pointer-events:none;
-}
-
-.tapDot{
-  position:absolute;
-  width: 16px; height: 16px;
-  margin-left: -8px; margin-top: -8px;
-  border-radius: 999px;
-  box-shadow: 0 6px 20px rgba(0,0,0,.55);
-  border: 2px solid rgba(255,255,255,.85);
-}
-.tapDotBull{
-  background: rgba(103,243,164,.95);
-  border-color: rgba(0,0,0,.55);
-}
-.tapDotShot{
-  background: rgba(214,64,64,.92);
-  border-color: rgba(0,0,0,.55);
-}
-
-/* Rows / controls */
-.row{
-  display:flex;
-  gap:10px;
-  align-items:center;
-  flex-wrap:wrap;
-  margin-top: 12px;
-}
-
-.pill{
-  border: 1px solid rgba(255,255,255,.12);
-  background: rgba(255,255,255,.04);
-  padding: 10px 12px;
-  border-radius: 999px;
+.cardTitle{
+  letter-spacing: .18em;
+  font-weight: 850;
+  font-size: 12px;
   color: var(--muted);
-  font-size: 13px;
-  font-weight: 750;
+  text-transform: uppercase;
+  margin-bottom: 10px;
 }
 
 /* Buttons */
-.btnPrimary, .btnSecondary{
-  appearance:none;
-  border: 1px solid var(--btnStroke);
+.fileBtn, .btnPrimary, .btnSecondary{
+  appearance: none;
+  border: 1px solid rgba(255,255,255,.14);
   background: var(--btn);
   color: var(--text);
-  padding: 12px 14px;
   border-radius: 14px;
-  font-size: 15px;
-  font-weight: 850;
-  cursor:pointer;
-  user-select:none;
+  padding: 12px 14px;
+  font-weight: 800;
+  letter-spacing: .2px;
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
   -webkit-tap-highlight-color: transparent;
-  min-height: 46px;
 }
-.btnPrimary:hover, .btnSecondary:hover{ background: var(--btnHover); }
+.fileBtn:hover, .btnPrimary:hover, .btnSecondary:hover{
+  background: var(--btnHover);
+}
 .btnPrimary{
-  border-color: rgba(47,102,255,.45);
-  background: rgba(47,102,255,.20);
+  border-color: var(--primaryStroke);
+  background: var(--primary);
 }
-.btnPrimary:hover{ background: rgba(47,102,255,.26); }
 .btnSecondary{
-  border-color: rgba(214,64,64,.35);
-  background: rgba(214,64,64,.14);
+  border-color: var(--dangerStroke);
+  background: var(--danger);
 }
-.btnSecondary:hover{ background: rgba(214,64,64,.18); }
+.btnDisabled{
+  opacity: .45;
+  pointer-events:none;
+}
 
-/* Hint */
+/* Rows */
+.row{
+  display:flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.pill{
+  border: 1px solid rgba(255,255,255,.12);
+  background: rgba(255,255,255,.04);
+  border-radius: 999px;
+  padding: 8px 12px;
+  color: var(--muted);
+  font-size: 13px;
+  display:flex;
+  align-items:center;
+  gap: 8px;
+}
 .hint{
   margin: 10px 0 0;
   color: var(--muted);
@@ -206,29 +148,85 @@ body{
   line-height: 1.35;
 }
 
-/* Settings fields */
-.field{
-  flex: 1;
-  min-width: 160px;
-}
-.fieldLabel{
-  display:block;
-  font-size: 12px;
-  color: var(--muted2);
-  margin-bottom: 6px;
-  font-weight: 750;
-}
-.select{
-  width:100%;
+/* Target image area: fits better on iPhone */
+.targetWrap{
+  position: relative;
+  width: 100%;
+  margin: 10px 0 10px;
   border-radius: 14px;
   border: 1px solid rgba(255,255,255,.10);
   background: rgba(0,0,0,.22);
-  color: var(--text);
-  padding: 12px 10px;
-  outline:none;
+
+  /* Key: keep it from eating the whole screen on phones */
+  max-height: 52vh;
+
+  overflow: hidden;
+  touch-action: pan-y; /* allows vertical scroll gestures */
 }
 
-/* Vendor link (optional) */
+#targetImg{
+  width: 100%;
+  height: 100%;
+  display:block;
+
+  /* Key: don't crop, just fit */
+  object-fit: contain;
+
+  user-select:none;
+  -webkit-user-drag:none;
+}
+
+/* Tap dots overlay */
+.dotsLayer{
+  position:absolute;
+  left:0; top:0; right:0; bottom:0;
+  pointer-events:none;
+}
+.tapDot{
+  position:absolute;
+  width: 16px;
+  height: 16px;
+  margin-left: -8px;
+  margin-top: -8px;
+  border-radius: 999px;
+  box-shadow: 0 10px 28px rgba(0,0,0,.55);
+  border: 2px solid rgba(0,0,0,.55);
+}
+.tapDotBull{ background: rgba(103,243,164,.95); }
+.tapDotShot{ background: rgba(214,64,64,.92); }
+
+/* Sticky action bar keeps buttons close to target on iPhone */
+.actionsSticky{
+  position: sticky;
+  bottom: 10px;
+  z-index: 5;
+  padding-top: 10px;
+  background: linear-gradient(180deg, rgba(0,0,0,0), rgba(6,7,10,.92) 35%, rgba(6,7,10,.98));
+  margin-top: -6px;
+}
+
+/* Settings fields */
+.field{
+  flex:1;
+  min-width: 160px;
+  display:flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.fieldLabel{
+  font-size: 12px;
+  color: var(--muted2);
+}
+.select{
+  height: 44px;
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,.14);
+  background: rgba(0,0,0,.25);
+  color: var(--text);
+  padding: 0 10px;
+}
+
+/* Vendor link */
 .vendorLink{
   display:none;
   margin-top: 10px;
@@ -240,48 +238,17 @@ body{
 
 /* Footer */
 .footer{
+  margin-top: 10px;
   text-align:center;
-  margin-top: 12px;
-}
-.footerMark{
-  color: rgba(238,242,247,.35);
-  font-size: 12px;
+  color: rgba(238,242,247,.28);
   letter-spacing: .22em;
-  font-weight: 900;
+  font-weight: 850;
+  font-size: 12px;
   text-transform: uppercase;
 }
+.footerMark{ opacity: .9; }
 
-/* ============================================================
-   MOBILE: sticky action row near the target
-============================================================ */
-@media (max-width: 520px){
-  .row.actionRow{
-    position: sticky;
-    bottom: 10px;
-    z-index: 50;
-
-    background: rgba(6,7,10,0.88);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-
-    border: 1px solid rgba(255,255,255,0.10);
-    border-radius: 14px;
-    padding: 10px;
-    margin-top: 10px;
-  }
-
-  /* Hide taps pill on tiny screens to keep buttons tight */
-  .row.actionRow .pill{
-    display:none;
-  }
-
-  .row.actionRow .btnPrimary,
-  .row.actionRow .btnSecondary{
-    flex: 1;
-  }
-
-  /* Slightly slimmer target on phones */
-  .targetWrap{
-    max-width: 440px;
-  }
+/* Slightly larger max-height on bigger screens */
+@media (min-width: 900px){
+  .targetWrap{ max-height: 62vh; }
 }
