@@ -18,7 +18,7 @@
 
   <title>Tap-n-Score™</title>
 
-  <link rel="stylesheet" href="/tap-n-score/styles.css?v=LP-hero-1" />
+  <link rel="stylesheet" href="/tap-n-score/styles.css?v=LP-hero-2" />
 </head>
 
 <body>
@@ -35,8 +35,8 @@
     <!-- HERO ACTION -->
     <section class="lpHero">
       <!-- One “gorilla” button -->
-      <label class="lpBigBtn" for="photoInput" id="addPhotoBtn">
-        Take or Select Target Photo
+      <label class="lpBigBtn lpPulse" for="photoInput" id="addPhotoBtn">
+        Add Target Picture
       </label>
 
       <!-- IMPORTANT: no capture attribute so iOS shows Camera + Photo Library -->
@@ -57,11 +57,12 @@
       <div class="lpSession" id="sessionLine">Session: —</div>
 
       <a
-        class="lpBuyBtn"
+        class="lpBuyBtn lpHidden"
         id="buyMoreBtn"
         href="#"
         target="_blank"
         rel="noopener"
+        aria-hidden="true"
       >
         <div class="lpBuyTop">BUY MORE</div>
         <div class="lpBuyBottom">Targets Like This</div>
@@ -73,172 +74,56 @@
   <!-- Keep your existing app JS -->
   <script src="/tap-n-score/index.js?v=22206"></script>
 
-  <!-- Tiny landing helper: session label + buy link hookup (safe) -->
+  <!-- Landing helper: session label + show BUY MORE after photo -->
   <script>
     (() => {
       const sessionEl = document.getElementById("sessionLine");
       const buyBtn = document.getElementById("buyMoreBtn");
+      const photoInput = document.getElementById("photoInput");
 
       // Session label (cheap + stable)
-      const sid = "SEC-" + Math.random().toString(16).slice(2, 6).toUpperCase() + Math.random().toString(16).slice(2, 10).toUpperCase();
+      const sid =
+        "SEC-" +
+        Math.random().toString(16).slice(2, 6).toUpperCase() +
+        Math.random().toString(16).slice(2, 10).toUpperCase();
       sessionEl.textContent = "Session: " + sid;
 
-      // If your page already has vendorLink in the DOM later, mirror it here when present
-      // (does not break anything if vendorLink doesn’t exist)
-      const tryMirrorVendor = () => {
+      // Mirror vendorLink -> BUY MORE when available (optional, safe)
+      function syncBuyUrl() {
         const v = document.getElementById("vendorLink");
         if (v && v.href && v.href !== "#" && v.href !== location.href) {
           buyBtn.href = v.href;
+          buyBtn.classList.remove("lpBuyDisabled");
           return true;
         }
-        return false;
-      };
-
-      if (!tryMirrorVendor()) {
-        // Default: keep it disabled-looking if no URL
-        buyBtn.classList.add("lpBuyDisabled");
         buyBtn.href = "#";
+        buyBtn.classList.add("lpBuyDisabled");
+        return false;
       }
 
-      // Re-check once after load
-      window.addEventListener("load", () => { tryMirrorVendor(); if (buyBtn.href !== "#" ) buyBtn.classList.remove("lpBuyDisabled"); });
+      // Show BUY MORE only AFTER a photo is selected
+      function revealBuy() {
+        buyBtn.classList.remove("lpHidden");
+        buyBtn.setAttribute("aria-hidden", "false");
+        // If we still don't have a URL, keep it disabled-looking
+        syncBuyUrl();
+      }
+
+      // Start hidden
+      buyBtn.classList.add("lpHidden");
+      buyBtn.setAttribute("aria-hidden", "true");
+
+      // If your old UI exists on this page someday, keep in sync after load
+      window.addEventListener("load", syncBuyUrl);
+
+      if (photoInput) {
+        photoInput.addEventListener("change", () => {
+          const f = photoInput.files && photoInput.files[0];
+          if (!f) return;
+          revealBuy();
+        });
+      }
     })();
   </script>
-</body>
-</html><!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <meta name="color-scheme" content="dark" />
-  <meta name="theme-color" content="#06070a" />
-
-  <!-- PWA -->
-  <link rel="manifest" href="/tap-n-score/manifest.webmanifest" />
-  <link rel="apple-touch-icon" href="/tap-n-score/icons/icon-192.png" />
-  <link rel="icon" href="/tap-n-score/icons/icon-192.png" />
-
-  <!-- HARD NO-CACHE (Safari helpers) -->
-  <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0" />
-  <meta http-equiv="Pragma" content="no-cache" />
-  <meta http-equiv="Expires" content="0" />
-
-  <title>Tap-n-Score™</title>
-
-  <!-- App CSS -->
-  <link rel="stylesheet" href="/tap-n-score/styles.css?v=22206" />
-</head>
-
-<body>
-  <main class="page">
-
-    <header class="topBar">
-      <div class="topTitle">SETUP</div>
-      <div id="statusLine" class="topSub">Add a photo to start.</div>
-    </header>
-
-    <section class="card">
-      <div class="cardTitle">PHOTO</div>
-
-      <!-- ONE BIG “GORILLA” BUTTON -->
-      <label
-        id="addPhotoBtn"
-        class="fileBtn"
-        for="photoInput"
-        style="
-          display:block;
-          width:100%;
-          text-align:center;
-          padding:18px 16px;
-          font-size:20px;
-          font-weight:900;
-          letter-spacing:.06em;
-          border-radius:18px;
-          margin:10px 0 12px;
-        "
-      >
-        ADD PHOTO
-      </label>
-
-      <!-- IMPORTANT: no capture=environment (so iOS offers Camera + Library) -->
-      <input
-        id="photoInput"
-        type="file"
-        accept="image/*"
-        style="display:none"
-      />
-
-      <!-- “Change photo” appears after load -->
-      <button
-        id="changePhotoBtn"
-        class="btnSecondary"
-        type="button"
-        style="display:none; margin: 0 0 12px;"
-      >
-        Change photo
-      </button>
-
-      <div id="targetWrap" class="targetWrap" aria-label="Photo area">
-        <img id="targetImg" alt="Photo preview" />
-        <div id="dotsLayer" class="dotsLayer" aria-hidden="true"></div>
-      </div>
-
-      <!-- Actions close to the image -->
-      <div class="row">
-        <div class="pill">
-          Taps: <span id="tapCount">0</span>
-        </div>
-
-        <button id="clearTapsBtn" class="btnSecondary" type="button">
-          Clear
-        </button>
-
-        <button id="seeResultsBtn" class="btnPrimary" type="button">
-          Show results
-        </button>
-      </div>
-
-      <!-- Short + clean -->
-      <p id="instructionLine" class="hint">
-        Add photo → tap bull → tap hits → show results.
-      </p>
-    </section>
-
-    <section class="card">
-      <div class="cardTitle">SETTINGS</div>
-
-      <div class="row">
-        <label class="field">
-          <span class="fieldLabel">Distance (yards)</span>
-          <input
-            id="distanceYds"
-            class="select"
-            type="number"
-            inputmode="numeric"
-            min="1"
-            step="1"
-            value="100"
-          />
-        </label>
-
-        <label class="field">
-          <span class="fieldLabel">MOA / click</span>
-          <select id="moaPerClick" class="select">
-            <option value="0.25" selected>0.25</option>
-            <option value="0.5">0.5</option>
-            <option value="0.125">0.125</option>
-          </select>
-        </label>
-      </div>
-
-      <a id="vendorLink" class="vendorLink" href="#" target="_blank" rel="noopener"></a>
-    </section>
-
-    <footer class="footer">
-      <span class="footerMark">SCZN3</span>
-    </footer>
-  </main>
-
-  <script src="/tap-n-score/index.js?v=22206"></script>
 </body>
 </html>
