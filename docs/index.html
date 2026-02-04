@@ -6,7 +6,7 @@
   <meta name="color-scheme" content="dark" />
   <meta name="theme-color" content="#06070a" />
 
-  <!-- PWA (RELATIVE paths so GitHub Pages subfolder works) -->
+  <!-- PWA -->
   <link rel="manifest" href="./manifest.webmanifest" />
   <link rel="apple-touch-icon" href="./icons/icon-192.png" />
   <link rel="icon" href="./icons/icon-192.png" />
@@ -18,7 +18,7 @@
 
   <title>Tap-n-Score™</title>
 
-  <link rel="stylesheet" href="./styles.css?v=22206b" />
+  <link rel="stylesheet" href="./styles.css?v=22206c" />
 </head>
 
 <body>
@@ -32,18 +32,12 @@
     <section class="card">
       <div class="cardTitle">PHOTO</div>
 
-      <!-- ONE BUTTON (800lb gorilla) -->
+      <!-- 800lb gorilla -->
       <button id="photoBtn" class="btnGorilla" type="button">
         Add Target Picture
       </button>
 
-      <!-- Real picker (NO capture attribute so iPhone offers Library/Camera/Browse) -->
-      <input
-        id="photoInput"
-        type="file"
-        accept="image/*"
-        style="display:none"
-      />
+      <input id="photoInput" type="file" accept="image/*" style="display:none" />
 
       <div id="targetWrap" class="targetWrap" aria-label="Photo area">
         <img id="targetImg" alt="Target preview" />
@@ -59,7 +53,8 @@
           Clear
         </button>
 
-        <button id="seeResultsBtn" class="btnPrimary" type="button">
+        <!-- Normal button stays, but we’ll hide it until “pause magic” -->
+        <button id="seeResultsBtn" class="btnPrimary btnHidden" type="button">
           Show results
         </button>
       </div>
@@ -75,7 +70,6 @@
       <div class="row">
         <label class="field">
           <span class="fieldLabel">Distance (yards)</span>
-          <!-- You asked for a clicker, not preset only -->
           <input id="distanceYds" class="input" type="number" inputmode="numeric" min="1" step="1" value="100" />
         </label>
 
@@ -97,6 +91,13 @@
     </footer>
   </main>
 
-  <script src="./index.js?v=22206b"></script>
+  <!-- Sticky “magic” results bar (only shows when ready + paused) -->
+  <div id="stickyBar" class="stickyBar stickyHidden" aria-hidden="true">
+    <button id="stickyResultsBtn" class="stickyBtn" type="button">
+      Show results
+    </button>
+  </div>
+
+  <script src="./index.js?v=22206c"></script>
 </body>
 </html>
