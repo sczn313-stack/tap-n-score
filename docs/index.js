@@ -1,68 +1,75 @@
 /* ============================================================
-   index.js (FULL REPLACEMENT) — POLISH v2
-   Adds:
-   - Less repetitive instruction text
-   - Action bar already sticky via HTML/CSS (no JS needed)
-   Keeps:
-   - One photo button w/ iOS options
-   - Tap Mode OFF lets you scroll safely
-   - Distance stepper (+/-) and editable number
+   index.js (FULL REPLACEMENT) — BASELINE 22206 (NO “TAP MODE”)
+   Fixes:
+   - One photo button offers Camera OR Photo Library on iOS
+     (capture= removed in HTML)
+   - Tapping automatically “turns on” once photo is loaded
+   - Swipe/scroll does NOT create shots (movement threshold)
+   - Show Results becomes usable only after bull + 1 shot
+   - Keeps copy minimal (no repeated bull-first everywhere)
 ============================================================ */
 
 (() => {
   const $ = (id) => document.getElementById(id);
 
-  const addPhotoBtn = $("addPhotoBtn");
+  // Required IDs
   const elFile = $("photoInput");
-  const statusLine = $("statusLine");
+  const elAddPhotoBtn = $("addPhotoBtn");
+  const elChangePhotoBtn = $("changePhotoBtn");
 
   const elImg = $("targetImg");
   const elDots = $("dotsLayer");
-  const tapLayer = $("tapLayer");
+  const elWrap = $("targetWrap");
 
   const elTapCount = $("tapCount");
-  const elTapModeBtn = $("tapModeBtn");
   const elClear = $("clearTapsBtn");
   const elSee = $("seeResultsBtn");
-  const elInstruction = $("instructionLine");
 
+  const elStatus = $("statusLine");
+  const elHint = $("instructionLine");
+
+  // Optional
   const elVendor = $("vendorLink");
-
   const elDistance = $("distanceYds");
-  const distDown = $("distDown");
-  const distUp = $("distUp");
   const elMoaClick = $("moaPerClick");
 
   const KEY = "SCZN3_SEC_PAYLOAD_V1";
 
   let objectUrl = null;
-  let bull = null;
-  let shots = [];
-  let tapMode = false;
 
-  function setStatus(txt) { if (statusLine) statusLine.textContent = txt; }
-  function setInstruction(txt) { if (elInstruction) elInstruction.textContent = txt; }
-  function setTapCount() { if (elTapCount) elTapCount.textContent = String(shots.length); }
+  let tappingEnabled = false;
+  let bull = null; // {x01,y01}
+  let shots = [];  // [{x01,y01},...]
+
+  // touch/scroll guard
+  let touchStart = null; // {x,y,t}
+  const MOVE_PX = 12;     // move threshold to treat as scroll/swipe
+
   function clamp01(v) { return Math.max(0, Math.min(1, v)); }
+
+  function setText(el, txt) {
+    if (el) el.textContent = String(txt);
+  }
+
+  function setTapCount() {
+    setText(elTapCount, shots.length);
+  }
+
+  function setHint(txt) { setText(elHint, txt); }
+  function setStatus(txt) { setText(elStatus, txt); }
 
   function clearDotsOnly() {
     bull = null;
     shots = [];
     if (elDots) elDots.innerHTML = "";
     setTapCount();
-  }
-
-  function resetAll() {
-    clearDotsOnly();
-    if (elImg) elImg.removeAttribute("src");
-    if (addPhotoBtn) addPhotoBtn.style.display = "";
-    setTapMode(false);
-    setStatus("Add a target photo.");
-    setInstruction("Turn Tap mode ON when you’re ready.");
+    setHint("Tap bull → tap hits → show results.");
+    setStatus(tappingEnabled ? "Tap the bull." : "Add a target photo to start.");
   }
 
   function addDot(x01, y01, kind) {
     if (!elDots) return;
+
     const d = document.createElement("div");
     d.className = "tapDot " + (kind === "bull" ? "tapDotBull" : "tapDotShot");
     d.style.left = (x01 * 100) + "%";
@@ -70,10 +77,10 @@
     elDots.appendChild(d);
   }
 
-  function getRelative01FromPoint(pt) {
+  function getRelative01FromClientXY(clientX, clientY) {
     const r = elImg.getBoundingClientRect();
-    const x = (pt.clientX - r.left) / r.width;
-    const y = (pt.clientY - r.top) / r.height;
+    const x = (clientX - r.left) / r.width;
+    const y = (clientY - r.top) / r.height;
     return { x01: clamp01(x), y01: clamp01(y) };
   }
 
@@ -82,22 +89,18 @@
     return btoa(unescape(encodeURIComponent(json)));
   }
 
-  function goToSEC(payload) {
-    try { localStorage.setItem(KEY, JSON.stringify(payload)); } catch {}
-    const b64 = b64FromObj(payload);
-    location.href = `./sec.html?payload=${encodeURIComponent(b64)}&fresh=${Date.now()}`;
-  }
-
-  function computeCorrection() {
+  function computeCorrectionDemo() {
     if (!bull || shots.length < 1) return null;
 
     const avg = shots.reduce((acc, p) => ({ x: acc.x + p.x01, y: acc.y + p.y01 }), { x: 0, y: 0 });
     avg.x /= shots.length;
     avg.y /= shots.length;
 
-    const dx = bull.x01 - avg.x; // + RIGHT
-    const dy = bull.y01 - avg.y; // + DOWN (screen-space)
+    // bull - POI (move POI to bull)
+    const dx = bull.x01 - avg.x; // + => RIGHT
+    const dy = bull.y01 - avg.y; // + => DOWN (screen space)
 
+    // Placeholder scale: treat full image width as 10 inches
     const inchesPerFullWidth = 10;
     const inchesX = dx * inchesPerFullWidth;
     const inchesY = dy * inchesPerFullWidth;
@@ -115,80 +118,111 @@
     return {
       avgPoi: { x01: avg.x, y01: avg.y },
       windage: { dir: clicksX >= 0 ? "RIGHT" : "LEFT", clicks: Math.abs(clicksX) },
-      elevation: { dir: clicksY >= 0 ? "DOWN" : "UP", clicks: Math.abs(clicksY) }
+      elevation: { dir: clicksY >= 0 ? "DOWN" : "UP", clicks: Math.abs(clicksY) },
     };
   }
 
-  function setTapMode(on) {
-    tapMode = !!on;
-    if (tapLayer) tapLayer.style.display = tapMode ? "block" : "none";
+  function goToSEC(payload) {
+    try { localStorage.setItem(KEY, JSON.stringify(payload)); } catch {}
 
-    if (elTapModeBtn) elTapModeBtn.textContent = tapMode ? "Tap mode: ON" : "Tap mode: OFF";
-
-    if (!elImg?.src) {
-      setInstruction("Turn Tap mode ON when you’re ready.");
-      return;
-    }
-
-    if (!tapMode) {
-      setStatus("Scroll-safe (Tap mode OFF).");
-      setInstruction("Turn Tap mode ON when you’re ready.");
-      return;
-    }
-
-    setStatus("Tap mode ON.");
-    setInstruction(!bull ? "Tap the bull." : "Tap each shot.");
+    const b64 = b64FromObj(payload);
+    window.location.href = `/tap-n-score/sec.html?payload=${encodeURIComponent(b64)}&fresh=${Date.now()}`;
   }
 
-  // Photo button (iOS options)
-  if (addPhotoBtn && elFile) {
-    addPhotoBtn.addEventListener("click", () => {
-      try {
-        if (typeof elFile.showPicker === "function") elFile.showPicker();
-        else elFile.click();
-      } catch {
-        elFile.click();
-      }
-    });
+  function openPicker() {
+    if (!elFile) return;
+    elFile.click();
   }
 
-  // Photo chosen
+  // ---- Photo handling
+  if (elChangePhotoBtn) elChangePhotoBtn.addEventListener("click", openPicker);
+
   if (elFile) {
     elFile.addEventListener("change", () => {
       const f = elFile.files && elFile.files[0];
       if (!f) return;
 
+      // Reset taps but keep photo
       clearDotsOnly();
 
       if (objectUrl) URL.revokeObjectURL(objectUrl);
       objectUrl = URL.createObjectURL(f);
-      if (elImg) elImg.src = objectUrl;
 
-      if (addPhotoBtn) addPhotoBtn.style.display = "none";
+      tappingEnabled = false; // enable only after image loads
+      setStatus("Loading photo…");
 
-      setTapMode(false);
-      setStatus("Photo loaded.");
-      setInstruction("Turn Tap mode ON when you’re ready.");
+      elImg.onload = () => {
+        tappingEnabled = true;
+        setStatus("Tap the bull.");
+        setHint("Tap bull → tap hits → show results.");
 
-      // allow picking same image later
+        // hide “Add target photo” and show “Change photo”
+        if (elAddPhotoBtn) elAddPhotoBtn.style.display = "none";
+        if (elChangePhotoBtn) elChangePhotoBtn.style.display = "inline-flex";
+      };
+
+      elImg.onerror = () => {
+        tappingEnabled = false;
+        setStatus("Photo failed to load.");
+        setHint("Try adding the photo again.");
+        if (elAddPhotoBtn) elAddPhotoBtn.style.display = "inline-flex";
+        if (elChangePhotoBtn) elChangePhotoBtn.style.display = "none";
+      };
+
+      elImg.src = objectUrl;
+
+      // allow selecting same file again
       elFile.value = "";
     });
   }
 
-  // Tap capture only when Tap Mode ON
-  function handleTap(ev) {
-    if (!tapMode) return;
-    if (!elImg?.src) return;
+  // ---- Tap handling (NO tap-mode toggle)
+  function onTouchStart(e) {
+    if (!tappingEnabled) return;
+    const t = e.touches && e.touches[0];
+    if (!t) return;
+    touchStart = { x: t.clientX, y: t.clientY, t: Date.now() };
+  }
 
-    ev.preventDefault();
+  function onTouchEnd(e) {
+    if (!tappingEnabled) return;
+    const t = (e.changedTouches && e.changedTouches[0]) || (e.touches && e.touches[0]);
+    if (!t) return;
 
-    const pt = (ev.touches && ev.touches[0]) ? ev.touches[0] : ev;
-    const { x01, y01 } = getRelative01FromPoint(pt);
+    if (touchStart) {
+      const dx = Math.abs(t.clientX - touchStart.x);
+      const dy = Math.abs(t.clientY - touchStart.y);
+      if (dx > MOVE_PX || dy > MOVE_PX) {
+        // This was a scroll/swipe — ignore
+        touchStart = null;
+        return;
+      }
+    }
+    touchStart = null;
+
+    placeTapAt(t.clientX, t.clientY);
+  }
+
+  function onClick(e) {
+    if (!tappingEnabled) return;
+    placeTapAt(e.clientX, e.clientY);
+  }
+
+  function placeTapAt(clientX, clientY) {
+    if (!elImg || !elImg.src) return;
+
+    const r = elImg.getBoundingClientRect();
+    if (r.width < 2 || r.height < 2) return;
+
+    // Only accept taps inside the image rectangle
+    if (clientX < r.left || clientX > r.right || clientY < r.top || clientY > r.bottom) return;
+
+    const { x01, y01 } = getRelative01FromClientXY(clientX, clientY);
 
     if (!bull) {
       bull = { x01, y01 };
       addDot(x01, y01, "bull");
-      setInstruction("Tap each shot.");
+      setStatus("Now tap your hits.");
       return;
     }
 
@@ -197,22 +231,36 @@
     setTapCount();
   }
 
-  if (tapLayer) {
-    tapLayer.addEventListener("touchstart", handleTap, { passive: false });
-    tapLayer.addEventListener("click", handleTap);
+  if (elWrap) {
+    // These allow “tap” but still let scroll gestures pass through (we ignore moved touches)
+    elWrap.addEventListener("touchstart", onTouchStart, { passive: true });
+    elWrap.addEventListener("touchend", onTouchEnd, { passive: true });
+    elWrap.addEventListener("click", onClick, { passive: true });
   }
 
-  if (elTapModeBtn) elTapModeBtn.addEventListener("click", () => setTapMode(!tapMode));
+  // ---- Clear
+  if (elClear) {
+    elClear.addEventListener("click", () => {
+      clearDotsOnly();
+      // Do NOT bring back “Add photo” — clear should keep current photo
+      if (tappingEnabled) setStatus("Cleared. Tap the bull.");
+    });
+  }
 
-  if (elClear) elClear.addEventListener("click", resetAll);
-
+  // ---- Show results
   if (elSee) {
     elSee.addEventListener("click", () => {
-      const out = computeCorrection();
-      if (!out) {
-        alert("Turn Tap mode ON, tap bull, then tap at least one shot.");
+      if (!tappingEnabled || !elImg?.src) {
+        alert("Add a target photo first.");
         return;
       }
+      if (!bull || shots.length < 1) {
+        alert("Tap the bull, then tap at least one hit.");
+        return;
+      }
+
+      const out = computeCorrectionDemo();
+      if (!out) return;
 
       const payload = {
         sessionId: "S-" + Date.now(),
@@ -230,18 +278,8 @@
     });
   }
 
-  // Distance stepper
-  function bumpDistance(delta) {
-    const cur = Number(elDistance?.value ?? 100);
-    const next = Math.max(1, Math.round(cur + delta));
-    if (elDistance) elDistance.value = String(next);
-  }
-  if (distDown) distDown.addEventListener("click", () => bumpDistance(-1));
-  if (distUp) distUp.addEventListener("click", () => bumpDistance(+1));
-
-  // Boot
+  // ---- Boot
+  tappingEnabled = false;
   clearDotsOnly();
-  setTapMode(false);
-  setStatus("Add a target photo.");
-  setInstruction("Turn Tap mode ON when you’re ready.");
+  setStatus("Add a target photo to start.");
 })();
