@@ -26,17 +26,34 @@
   <main class="page">
 
     <header class="topBar">
-      <div class="topTitle">TARGET</div>
-      <div id="statusLine" class="topSub">Add a target photo to start.</div>
+      <div class="topTitle">SETUP</div>
+      <div id="statusLine" class="topSub">Add a photo to start.</div>
     </header>
 
     <section class="card">
-      <div class="cardTitle">TARGET PHOTO</div>
+      <div class="cardTitle">PHOTO</div>
 
-      <!-- ONE BUTTON that allows Camera OR Library (iOS) -->
-      <label id="addPhotoBtn" class="fileBtn" for="photoInput">Add target photo</label>
+      <!-- ONE BIG “GORILLA” BUTTON -->
+      <label
+        id="addPhotoBtn"
+        class="fileBtn"
+        for="photoInput"
+        style="
+          display:block;
+          width:100%;
+          text-align:center;
+          padding:18px 16px;
+          font-size:20px;
+          font-weight:900;
+          letter-spacing:.06em;
+          border-radius:18px;
+          margin:10px 0 12px;
+        "
+      >
+        ADD PHOTO
+      </label>
 
-      <!-- IMPORTANT: no capture=environment (that forces camera only on iOS) -->
+      <!-- IMPORTANT: no capture=environment (so iOS offers Camera + Library) -->
       <input
         id="photoInput"
         type="file"
@@ -44,17 +61,22 @@
         style="display:none"
       />
 
-      <!-- Optional “Change photo” button (hidden until photo loaded) -->
-      <button id="changePhotoBtn" class="btnSecondary" type="button" style="display:none;margin-top:10px;">
+      <!-- “Change photo” appears after load -->
+      <button
+        id="changePhotoBtn"
+        class="btnSecondary"
+        type="button"
+        style="display:none; margin: 0 0 12px;"
+      >
         Change photo
       </button>
 
-      <div id="targetWrap" class="targetWrap" aria-label="Target photo area">
-        <img id="targetImg" alt="Target preview" />
+      <div id="targetWrap" class="targetWrap" aria-label="Photo area">
+        <img id="targetImg" alt="Photo preview" />
         <div id="dotsLayer" class="dotsLayer" aria-hidden="true"></div>
       </div>
 
-      <!-- Keep actions close to the target -->
+      <!-- Actions close to the image -->
       <div class="row">
         <div class="pill">
           Taps: <span id="tapCount">0</span>
@@ -69,21 +91,18 @@
         </button>
       </div>
 
-      <!-- Keep this short (no repeated “tap bull first” everywhere) -->
+      <!-- Short + clean -->
       <p id="instructionLine" class="hint">
         Add photo → tap bull → tap hits → show results.
       </p>
     </section>
 
-    <!-- Settings (upstream only; SEC stays clean) -->
     <section class="card">
       <div class="cardTitle">SETTINGS</div>
 
       <div class="row">
         <label class="field">
           <span class="fieldLabel">Distance (yards)</span>
-
-          <!-- Clicker instead of fixed list -->
           <input
             id="distanceYds"
             class="select"
