@@ -18,6 +18,113 @@
 
   <title>Tap-n-Score™</title>
 
+  <link rel="stylesheet" href="/tap-n-score/styles.css?v=LP-hero-1" />
+</head>
+
+<body>
+  <main class="lp">
+
+    <!-- BRAND -->
+    <header class="lpBrand">
+      <div class="lpLogo">
+        <span class="lpTap">TAP</span><span class="lpDash">-</span><span class="lpN">N</span><span class="lpDash">-</span><span class="lpScore">SCORE</span><span class="lpTm">™</span>
+      </div>
+      <div class="lpTag">After-Shot Intelligence</div>
+    </header>
+
+    <!-- HERO ACTION -->
+    <section class="lpHero">
+      <!-- One “gorilla” button -->
+      <label class="lpBigBtn" for="photoInput" id="addPhotoBtn">
+        Take or Select Target Photo
+      </label>
+
+      <!-- IMPORTANT: no capture attribute so iOS shows Camera + Photo Library -->
+      <input
+        id="photoInput"
+        type="file"
+        accept="image/*"
+        style="display:none"
+      />
+
+      <div class="lpTip">
+        Tip: Straight-on photos give the most accurate results.
+      </div>
+    </section>
+
+    <!-- FOOT BAR (bottom left + bottom right) -->
+    <footer class="lpFooter">
+      <div class="lpSession" id="sessionLine">Session: —</div>
+
+      <a
+        class="lpBuyBtn"
+        id="buyMoreBtn"
+        href="#"
+        target="_blank"
+        rel="noopener"
+      >
+        <div class="lpBuyTop">BUY MORE</div>
+        <div class="lpBuyBottom">Targets Like This</div>
+      </a>
+    </footer>
+
+  </main>
+
+  <!-- Keep your existing app JS -->
+  <script src="/tap-n-score/index.js?v=22206"></script>
+
+  <!-- Tiny landing helper: session label + buy link hookup (safe) -->
+  <script>
+    (() => {
+      const sessionEl = document.getElementById("sessionLine");
+      const buyBtn = document.getElementById("buyMoreBtn");
+
+      // Session label (cheap + stable)
+      const sid = "SEC-" + Math.random().toString(16).slice(2, 6).toUpperCase() + Math.random().toString(16).slice(2, 10).toUpperCase();
+      sessionEl.textContent = "Session: " + sid;
+
+      // If your page already has vendorLink in the DOM later, mirror it here when present
+      // (does not break anything if vendorLink doesn’t exist)
+      const tryMirrorVendor = () => {
+        const v = document.getElementById("vendorLink");
+        if (v && v.href && v.href !== "#" && v.href !== location.href) {
+          buyBtn.href = v.href;
+          return true;
+        }
+        return false;
+      };
+
+      if (!tryMirrorVendor()) {
+        // Default: keep it disabled-looking if no URL
+        buyBtn.classList.add("lpBuyDisabled");
+        buyBtn.href = "#";
+      }
+
+      // Re-check once after load
+      window.addEventListener("load", () => { tryMirrorVendor(); if (buyBtn.href !== "#" ) buyBtn.classList.remove("lpBuyDisabled"); });
+    })();
+  </script>
+</body>
+</html><!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="color-scheme" content="dark" />
+  <meta name="theme-color" content="#06070a" />
+
+  <!-- PWA -->
+  <link rel="manifest" href="/tap-n-score/manifest.webmanifest" />
+  <link rel="apple-touch-icon" href="/tap-n-score/icons/icon-192.png" />
+  <link rel="icon" href="/tap-n-score/icons/icon-192.png" />
+
+  <!-- HARD NO-CACHE (Safari helpers) -->
+  <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
+
+  <title>Tap-n-Score™</title>
+
   <!-- App CSS -->
   <link rel="stylesheet" href="/tap-n-score/styles.css?v=22206" />
 </head>
