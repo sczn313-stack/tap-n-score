@@ -13,7 +13,8 @@
 
   <title>Tap-n-Score™</title>
 
-  <link rel="stylesheet" href="/tap-n-score/styles.css?v=22206d1" />
+  <!-- CSS -->
+  <link rel="stylesheet" href="/tap-n-score/styles.css?v=22206p1" />
 </head>
 
 <body>
@@ -27,16 +28,17 @@
     <section class="card">
       <div class="cardTitle">PHOTO</div>
 
-      <!-- One 800lb gorilla button -->
+      <!-- 800lb gorilla -->
       <button id="photoBtn" class="btnBig" type="button">Add Target Picture</button>
 
-      <!-- hidden input (button triggers this) -->
+      <!-- IMPORTANT:
+           - NO capture attribute (allows Camera OR Photo Library)
+           - keep accept only
+      -->
       <input
         id="photoInput"
         type="file"
         accept="image/*"
-        inputmode="none"
-        capture="environment"
         style="display:none"
       />
 
@@ -47,7 +49,7 @@
 
       <div class="row rowTight">
         <div class="pill">
-          Taps: <span id="tapCount">0</span>
+          Hits: <span id="tapCount">0</span>
         </div>
 
         <button id="clearTapsBtn" class="btnSecondary" type="button">
@@ -55,7 +57,6 @@
         </button>
       </div>
 
-      <!-- This will be mostly blank now (JS fills only when needed) -->
       <p id="instructionLine" class="hint"></p>
     </section>
 
@@ -65,7 +66,6 @@
       <div class="row">
         <label class="field">
           <span class="fieldLabel">Distance (yards)</span>
-          <!-- we’ll convert to a stepper later; leaving as-is for now -->
           <select id="distanceYds" class="select">
             <option value="25">25</option>
             <option value="50">50</option>
@@ -85,6 +85,7 @@
         </label>
       </div>
 
+      <!-- optional hook (safe empty) -->
       <a id="vendorLink" class="vendorLink" href="#" target="_blank" rel="noopener"></a>
     </section>
 
@@ -92,7 +93,7 @@
       <span class="footerMark">SCZN3</span>
     </footer>
 
-    <!-- Sticky “magic” results bar -->
+    <!-- Sticky results -->
     <div id="stickyBar" class="stickyBar stickyHidden" aria-hidden="true">
       <button id="stickyResultsBtn" class="stickyBtn" type="button">
         Show results
@@ -101,6 +102,6 @@
 
   </main>
 
-  <script src="/tap-n-score/index.js?v=22206d1"></script>
+  <script src="/tap-n-score/index.js?v=22206p1"></script>
 </body>
 </html>
