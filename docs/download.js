@@ -1,292 +1,178 @@
-/* ============================================================
-   download.js (FULL REPLACEMENT) — 22206d5
-   Fix:
-   - iOS Safari often blocks programmatic downloads (data URL + download attr)
-   New behavior:
-   - Create PNG from SVG
-   - Try download attribute (works on desktop)
-   - If blocked, OPEN PNG in new tab so user can press-hold -> Save to Photos
-============================================================ */
-
 (() => {
   const $ = (id) => document.getElementById(id);
 
+  const elStatus = $("statusLine");
   const elImg = $("secImg");
-  const elMsg = $("msgLine");
-  const elDiag = $("diag");
-  const elDl = $("downloadBtn");
+  const elEmpty = $("emptyState");
+  const elDownload = $("downloadBtn");
   const elScoreAnother = $("scoreAnotherBtn");
-  const elBack = $("backBtn");
+  const elBack = $("backToSetupBtn");
+  const elTiny = $("tinyNote");
+  const elDiag = $("diag");
 
-  const KEY = "SCZN3_SEC_PAYLOAD_V1";
+  // -----------------------------
+  // URL helpers
+  // -----------------------------
+  const url = new URL(window.location.href);
+  const qp = (k) => url.searchParams.get(k);
 
-  function qs(name) {
-    const u = new URL(window.location.href);
-    return u.searchParams.get(name);
+  // expected params (optional)
+  const imgParam = qp("img");          // http(s) OR data:image/png;base64,...
+  const payloadParam = qp("payload");  // base64 JSON (optional)
+  const fromParam = qp("from");        // return link (optional)
+  const targetParam = qp("target");    // return link (optional)
+
+  // localStorage keys (fallback)
+  const LS_IMG = "SCZN3_SEC_PNG";          // dataURL recommended
+  const LS_IMG_URL = "SCZN3_SEC_IMG_URL";  // url fallback
+  const LS_PAYLOAD = "SCZN3_SEC_PAYLOAD_V1";
+
+  function safeJsonParse(s) {
+    try { return JSON.parse(s); } catch { return null; }
   }
 
-  function safeParsePayload() {
-    const p = qs("payload");
-    if (p) {
-      try {
-        const json = decodeURIComponent(escape(atob(p)));
-        return JSON.parse(json);
-      } catch {}
-    }
+  function decodePayloadB64(b64) {
     try {
-      const raw = localStorage.getItem(KEY);
-      if (raw) return JSON.parse(raw);
-    } catch {}
-    return null;
-  }
-
-  function clamp(n, a, b) {
-    return Math.max(a, Math.min(b, n));
-  }
-
-  function setMsg(t) {
-    if (elMsg) elMsg.textContent = t || "";
-  }
-
-  // --- Detect iOS Safari-ish environment
-  function isIOS() {
-    const ua = navigator.userAgent || "";
-    const iOS = /iPad|iPhone|iPod/.test(ua);
-    const iPadOS13Plus = navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1;
-    return iOS || iPadOS13Plus;
-  }
-
-  // --- LED digit SVG (same as before)
-  function ledDigitSVG(d, x, y, s, color) {
-    const seg = {
-      0: [1,1,1,1,1,1,0],
-      1: [0,1,1,0,0,0,0],
-      2: [1,1,0,1,1,0,1],
-      3: [1,1,1,1,0,0,1],
-      4: [0,1,1,0,0,1,1],
-      5: [1,0,1,1,0,1,1],
-      6: [1,0,1,1,1,1,1],
-      7: [1,1,1,0,0,0,0],
-      8: [1,1,1,1,1,1,1],
-      9: [1,1,1,1,0,1,1],
-    }[d];
-
-    const on = seg || [0,0,0,0,0,0,0];
-
-    const w = 60 * s, h = 110 * s;
-    const t = 12 * s;
-    const r = 6 * s;
-
-    const A = [x + t, y, w - 2*t, t];
-    const B = [x + w - t, y + t, t, (h/2) - (1.5*t)];
-    const C = [x + w - t, y + (h/2) + (0.5*t), t, (h/2) - (1.5*t)];
-    const D = [x + t, y + h - t, w - 2*t, t];
-    const E = [x, y + (h/2) + (0.5*t), t, (h/2) - (1.5*t)];
-    const F = [x, y + t, t, (h/2) - (1.5*t)];
-    const G = [x + t, y + (h/2) - (t/2), w - 2*t, t];
-
-    const rect = ([rx, ry, rw, rh], isOn) => {
-      const op = isOn ? 1 : 0.10;
-      const glow = isOn ? `filter="url(#glow)"` : "";
-      return `<rect x="${rx}" y="${ry}" width="${rw}" height="${rh}" rx="${r}" ry="${r}"
-        fill="${color}" opacity="${op}" ${glow} />`;
-    };
-
-    return [
-      rect(A, on[0]),
-      rect(B, on[1]),
-      rect(C, on[2]),
-      rect(D, on[3]),
-      rect(E, on[4]),
-      rect(F, on[5]),
-      rect(G, on[6]),
-    ].join("\n");
-  }
-
-  function buildSECsvg(payload) {
-    const scoreRaw = Number(payload?.score ?? 0);
-    const score = clamp(Math.round(scoreRaw), 0, 100);
-
-    const wDir = payload?.windage?.dir ?? "RIGHT";
-    const wClicks = Number(payload?.windage?.clicks ?? 0).toFixed(2);
-
-    const eDir = payload?.elevation?.dir ?? "UP";
-    const eClicks = Number(payload?.elevation?.clicks ?? 0).toFixed(2);
-
-    const shots = payload?.shots ?? 0;
-
-    const ledColor = "#F6E79A"; // pale warm yellow
-
-    const scoreStr = score === 100 ? "100" : String(score).padStart(2, "0");
-
-    const canvasW = 1200;
-    const canvasH = 700;
-
-    const s = 3.2;
-    const digitW = 60*s;
-    const gap = 26*s;
-
-    const totalW = (scoreStr.length === 3)
-      ? (digitW*3 + gap*2)
-      : (digitW*2 + gap);
-
-    const startX = (canvasW - totalW) / 2;
-    const startY = 180;
-
-    const digits = scoreStr.split("").map((ch, i) => {
-      const x = startX + i*(digitW + gap);
-      return ledDigitSVG(Number(ch), x, startY, s, ledColor);
-    }).join("\n");
-
-    return `
-<svg xmlns="http://www.w3.org/2000/svg" width="${canvasW}" height="${canvasH}" viewBox="0 0 ${canvasW} ${canvasH}">
-  <defs>
-    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
-      <feGaussianBlur stdDeviation="6" result="blur"/>
-      <feMerge>
-        <feMergeNode in="blur"/>
-        <feMergeNode in="SourceGraphic"/>
-      </feMerge>
-    </filter>
-
-    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#0b0f18"/>
-      <stop offset="1" stop-color="#06070a"/>
-    </linearGradient>
-
-    <linearGradient id="card" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="rgba(255,255,255,0.08)"/>
-      <stop offset="1" stop-color="rgba(255,255,255,0.03)"/>
-    </linearGradient>
-  </defs>
-
-  <rect width="100%" height="100%" fill="url(#bg)"/>
-
-  <text x="70" y="95" font-family="system-ui, -apple-system, Segoe UI, Roboto, Arial"
-        font-size="64" font-weight="800" fill="#ffffff" opacity="0.95">TAP-N-SCORE™</text>
-  <text x="70" y="145" font-family="system-ui, -apple-system, Segoe UI, Roboto, Arial"
-        font-size="40" font-weight="700" fill="#cfd6e6" opacity="0.85">After-Shot Intelligence</text>
-
-  <rect x="70" y="185" width="1060" height="420" rx="36" fill="url(#card)" stroke="rgba(255,255,255,0.10)"/>
-
-  ${digits}
-
-  <text x="600" y="545" text-anchor="middle"
-        font-family="system-ui, -apple-system, Segoe UI, Roboto, Arial"
-        font-size="40" font-weight="800" fill="#ffffff" opacity="0.92">U R Here!  Keep Going.</text>
-
-  <text x="110" y="635" font-family="system-ui, -apple-system, Segoe UI, Roboto, Arial"
-        font-size="32" font-weight="700" fill="#cfd6e6" opacity="0.9">
-    Windage: ${wDir} ${wClicks}  •  Elevation: ${eDir} ${eClicks}  •  Shots: ${shots}
-  </text>
-
-  <text x="1090" y="670" text-anchor="end"
-        font-family="system-ui, -apple-system, Segoe UI, Roboto, Arial"
-        font-size="26" font-weight="800" fill="#ffffff" opacity="0.35">SCZN3</text>
-</svg>
-`.trim();
-  }
-
-  function svgToDataUrl(svg) {
-    return "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg);
-  }
-
-  async function svgToPngDataUrl(svg, outW = 1200, outH = 700) {
-    return new Promise((resolve, reject) => {
-      const img = new Image();
-      img.onload = () => {
-        const c = document.createElement("canvas");
-        c.width = outW;
-        c.height = outH;
-        const ctx = c.getContext("2d");
-        ctx.clearRect(0, 0, outW, outH);
-        ctx.drawImage(img, 0, 0, outW, outH);
-        try {
-          resolve(c.toDataURL("image/png"));
-        } catch (e) {
-          reject(e);
-        }
-      };
-      img.onerror = reject;
-      img.src = svgToDataUrl(svg);
-    });
-  }
-
-  function tryDownload(dataUrl, filename) {
-    // Works on most desktop browsers, often fails on iOS
-    const a = document.createElement("a");
-    a.href = dataUrl;
-    a.download = filename;
-    a.rel = "noopener";
-    a.target = "_self";
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-  }
-
-  function openInNewTab(dataUrl) {
-    // iOS-safe: opens the image; user can press-hold -> Save to Photos
-    window.open(dataUrl, "_blank", "noopener,noreferrer");
-  }
-
-  // ---- Boot
-  const payload = safeParsePayload();
-
-  const diag = {
-    ok: !!payload,
-    reason: payload ? "loaded payload" : "missing payload",
-    gotQueryPayload: !!qs("payload"),
-    gotLocalStoragePayload: (() => {
-      try { return !!localStorage.getItem(KEY); } catch { return false; }
-    })(),
-    isIOS: isIOS(),
-    baseLocked: "/tap-n-score/",
-    nav: {
-      scoreAnother: "./index.html?fresh=" + Date.now(),
-      backToSetup: "./index.html?fresh=" + Date.now(),
+      const json = decodeURIComponent(escape(atob(b64)));
+      return safeJsonParse(json);
+    } catch {
+      return null;
     }
-  };
-  if (elDiag) elDiag.textContent = JSON.stringify(diag, null, 2);
+  }
 
-  if (!payload) {
-    setMsg("No SEC payload found. Go back and hit Show results first.");
-    if (elImg) elImg.removeAttribute("src");
-    if (elDl) elDl.disabled = true;
+  // -----------------------------
+  // Resolve image source
+  // -----------------------------
+  let resolvedImgSrc = null;
+
+  if (imgParam && imgParam.trim()) {
+    resolvedImgSrc = imgParam.trim();
   } else {
-    const svg = buildSECsvg(payload);
-    elImg.src = svgToDataUrl(svg);
-    setMsg("Preview ready. Tap Download. On iPhone/iPad you may need press-and-hold the image → Save to Photos.");
+    // localStorage fallback
+    const ls1 = localStorage.getItem(LS_IMG);
+    const ls2 = localStorage.getItem(LS_IMG_URL);
+    resolvedImgSrc = (ls1 && ls1.trim()) ? ls1.trim() : ((ls2 && ls2.trim()) ? ls2.trim() : null);
   }
 
-  if (elScoreAnother) elScoreAnother.addEventListener("click", () => {
-    window.location.href = "./index.html?fresh=" + Date.now();
-  });
+  // -----------------------------
+  // Resolve payload (diagnostics only)
+  // -----------------------------
+  let payloadObj = null;
 
-  if (elBack) elBack.addEventListener("click", () => {
-    window.location.href = "./index.html?fresh=" + Date.now();
-  });
+  if (payloadParam && payloadParam.trim()) {
+    payloadObj = decodePayloadB64(payloadParam.trim());
+  }
+  if (!payloadObj) {
+    payloadObj = safeJsonParse(localStorage.getItem(LS_PAYLOAD) || "");
+  }
 
-  if (elDl) elDl.addEventListener("click", async () => {
+  // -----------------------------
+  // UI rendering
+  // -----------------------------
+  function setDiag(obj) {
+    elDiag.textContent = JSON.stringify(obj, null, 2);
+  }
+
+  function showLoaded(src) {
+    elEmpty.style.display = "none";
+    elImg.style.display = "block";
+    elImg.src = src;
+
+    elStatus.textContent = "SEC loaded. Ready to download.";
+    elTiny.textContent = "If download doesn’t start on iOS, use press-and-hold on the opened PNG → Save to Photos.";
+  }
+
+  function showMissing(reason) {
+    elEmpty.style.display = "block";
+    elImg.style.display = "none";
+    elStatus.textContent = "SEC not found.";
+    elTiny.textContent = reason || "No image provided. Return and generate a SEC first.";
+  }
+
+  // -----------------------------
+  // Download behavior (iOS safe)
+  // -----------------------------
+  function isDataUrl(s) {
+    return typeof s === "string" && s.startsWith("data:image/");
+  }
+
+  function tryProgrammaticDownload(src) {
+    // Works on many browsers, often ignored on iOS for dataURLs.
     try {
-      const payloadNow = safeParsePayload();
-      if (!payloadNow) {
-        alert("No SEC payload found. Go back and hit Show results first.");
-        return;
-      }
+      const a = document.createElement("a");
+      a.href = src;
+      a.download = "SEC.png";
+      a.rel = "noopener";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      return true;
+    } catch {
+      return false;
+    }
+  }
 
-      const svg = buildSECsvg(payloadNow);
-      const pngUrl = await svgToPngDataUrl(svg, 1200, 700);
+  function openImageInNewTab(src) {
+    // iOS friendly: open the PNG so user can Save to Photos.
+    // Must be called from a user gesture (button tap) to avoid popup blocking.
+    try {
+      const w = window.open(src, "_blank", "noopener,noreferrer");
+      return !!w;
+    } catch {
+      return false;
+    }
+  }
 
-      // Attempt normal download first (desktop/Android)
-      tryDownload(pngUrl, "SEC.png");
+  elDownload.addEventListener("click", () => {
+    if (!resolvedImgSrc) return;
 
-      // iOS fallback: open the PNG so the user can Save to Photos
-      if (isIOS()) {
-        setMsg("iPhone/iPad: opening image… press-and-hold → Save to Photos.");
-        openInNewTab(pngUrl);
-      }
-    } catch (e) {
-      alert("Download blocked. Press-and-hold the preview image → Save to Photos.");
+    // Attempt normal download first
+    const ok = tryProgrammaticDownload(resolvedImgSrc);
+
+    // iOS fallback: open image tab for press-and-hold save
+    // (even if "ok" is true, iOS may still do nothing)
+    const opened = openImageInNewTab(resolvedImgSrc);
+
+    if (!ok && !opened) {
+      alert("Download was blocked. Try pressing and holding the preview image to save it.");
     }
   });
+
+  // Return buttons
+  function goBack(where) {
+    const fallback = "/tap-n-score/index.html?fresh=" + Date.now();
+    window.location.href = where || fallback;
+  }
+
+  elScoreAnother.addEventListener("click", () => {
+    goBack(fromParam || targetParam);
+  });
+
+  elBack.addEventListener("click", () => {
+    goBack(targetParam || fromParam);
+  });
+
+  // -----------------------------
+  // Boot
+  // -----------------------------
+  const diag = {
+    ok: !!resolvedImgSrc,
+    reason: resolvedImgSrc ? "resolved img" : "missing img",
+    baseLocked: "/tap-n-score/",
+    imgSource: imgParam ? "querystring" : (resolvedImgSrc ? "localStorage" : "none"),
+    hasPayload: !!payloadObj,
+    nav: {
+      scoreAnother: fromParam || "./index.html?fresh=" + Date.now(),
+      backToSetup: targetParam || "./index.html?fresh=" + Date.now(),
+    },
+    example: "https://sczn313-stack.github.io/tap-n-score/download.html?img=https://example.com/sec.png&from=./index.html&target=./index.html"
+  };
+
+  setDiag({ ...diag, payloadPreview: payloadObj ? payloadObj : null });
+
+  if (resolvedImgSrc) {
+    showLoaded(resolvedImgSrc);
+  } else {
+    showMissing("No image provided. Open this page with ?img=YOUR_PNG_URL or store SCZN3_SEC_PNG in localStorage.");
+  }
 })();
