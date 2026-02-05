@@ -1,11 +1,17 @@
 /* ============================================================
-   tap-n-score/download.js (FULL REPLACEMENT) — AUTO OPEN + iOS FRIENDLY
+   tap-n-score/download.js (FULL REPLACEMENT) — PREVIEW + DIAG + iOS FRIENDLY
    Reads SEC PNG from localStorage:
      SCZN3_SEC_PNG_DATAURL_V1
      SCZN3_SEC_PNG_BLOBURL_V1
-   Shows preview image and supports:
-   - Auto open on load when ?auto=1
-   - Download button (fallback instructions for iOS)
+   Optional:
+     SCZN3_SEC_FROM_V1  (back-to-sec route)
+   Behavior:
+   - Shows preview (hides empty state)
+   - Download button:
+       1) tries programmatic download
+       2) falls back to opening image (best on iOS: press-and-hold -> Save)
+   - Auto mode (?auto=1):
+       attempts download flow, but if popup blocked, shows clear instruction
 ============================================================ */
 
 (() => {
@@ -16,29 +22,55 @@
   const $ = (id) => document.getElementById(id);
 
   const elImg = $("secImg");
+  const elEmpty = $("emptyState");
   const elMsg = $("msgLine");
+  const elDiag = $("diag");
+
   const btnDownload = $("downloadBtn");
   const btnScoreAnother = $("scoreAnotherBtn");
   const btnBack = $("backBtn");
 
   function getParam(name) {
-    const u = new URL(window.location.href);
-    return u.searchParams.get(name);
+    try {
+      return new URL(window.location.href).searchParams.get(name);
+    } catch {
+      return null;
+    }
   }
 
   function setMsg(t) {
-    if (!elMsg) return;
-    elMsg.textContent = String(t || "");
+    if (elMsg) elMsg.textContent = String(t || "");
+  }
+
+  function setDiag(obj) {
+    if (!elDiag) return;
+    try { elDiag.textContent = JSON.stringify(obj, null, 2); }
+    catch { elDiag.textContent = String(obj); }
   }
 
   function bestSrc() {
-    const blob = localStorage.getItem(KEY_PNG_BLOB);
+    let blob = "";
+    let data = "";
+    try { blob = localStorage.getItem(KEY_PNG_BLOB) || ""; } catch {}
+    try { data = localStorage.getItem(KEY_PNG_DATA) || ""; } catch {}
+
     if (blob && blob.startsWith("blob:")) return { src: blob, kind: "blob" };
-
-    const data = localStorage.getItem(KEY_PNG_DATA);
     if (data && data.startsWith("data:image/png")) return { src: data, kind: "data" };
-
     return { src: "", kind: "none" };
+  }
+
+  function showPreview(src) {
+    if (elEmpty) elEmpty.style.display = src ? "none" : "block";
+    if (!elImg) return;
+
+    if (!src) {
+      elImg.style.display = "none";
+      elImg.removeAttribute("src");
+      return;
+    }
+
+    elImg.style.display = "block";
+    elImg.src = src;
   }
 
   function navToIndex() {
@@ -46,23 +78,30 @@
   }
 
   function navBackToFrom() {
-    const from = localStorage.getItem(KEY_FROM);
+    let from = "";
+    try { from = localStorage.getItem(KEY_FROM) || ""; } catch {}
     if (from && typeof from === "string" && from.includes("sec.html")) {
       window.location.href = from;
-    } else {
-      navToIndex();
+      return;
     }
+    navToIndex();
   }
 
-  // iOS Safari won't always "download" on click for data/blob URLs.
-  // Best approach: open the image in a new tab and let user Save to Photos.
-  function openImageNewTab(src) {
+  // iOS: "download" often fails; opening the image is most reliable.
+  function openImage(src) {
+    // try new tab first
     try {
-      window.open(src, "_blank", "noopener,noreferrer");
+      const w = window.open(src, "_blank", "noopener,noreferrer");
+      if (w) return true;
+    } catch {}
+
+    // fallback: same-tab navigation
+    try {
+      window.location.href = src;
       return true;
-    } catch {
-      return false;
-    }
+    } catch {}
+
+    return false;
   }
 
   function tryProgrammaticDownload(src) {
@@ -79,36 +118,37 @@
     }
   }
 
-  function doDownloadFlow(src) {
+  function doDownloadFlow(src, meta = {}) {
     if (!src) {
-      setMsg("No SEC image found. Re-score to generate a PNG.");
+      setMsg("No SEC image found. Go back and re-score.");
+      setDiag({ ok: false, reason: "missing_src", ...meta });
       return;
     }
 
-    // Try direct download first (works on many desktop browsers)
-    const ok = tryProgrammaticDownload(src);
-    if (ok) {
+    // Try classic download (desktop-friendly)
+    const okDl = tryProgrammaticDownload(src);
+    if (okDl) {
       setMsg("Downloading SEC.png…");
+      setDiag({ ok: true, method: "anchor_download", ...meta });
       return;
     }
 
-    // Fallback: open image in new tab (best for iOS Save to Photos)
-    const opened = openImageNewTab(src);
+    // Fallback: open image (best for iOS save-to-photos)
+    const opened = openImage(src);
     if (opened) {
-      setMsg("If download doesn’t start: press-and-hold the image and choose Save to Photos.");
+      setMsg("If it opens as an image: press-and-hold it and choose Save to Photos.");
+      setDiag({ ok: true, method: "open_image", ...meta });
       return;
     }
 
-    setMsg("Could not start download. Try again or re-score.");
+    setMsg("Could not start download. Re-score and try again.");
+    setDiag({ ok: false, reason: "download_failed", ...meta });
   }
 
   function boot() {
-    const { src } = bestSrc();
+    const { src, kind } = bestSrc();
 
-    if (elImg) {
-      elImg.src = src || "";
-      elImg.alt = src ? "SEC Preview" : "No SEC image loaded";
-    }
+    showPreview(src);
 
     if (!src) {
       setMsg("No SEC image found. Go back and re-score.");
@@ -116,15 +156,28 @@
       setMsg("Tip (iPhone/iPad): press-and-hold the image to Save to Photos.");
     }
 
-    // Buttons
-    if (btnDownload) btnDownload.addEventListener("click", () => doDownloadFlow(src));
+    setDiag({
+      ok: !!src,
+      kind,
+      keys: {
+        blob: KEY_PNG_BLOB,
+        data: KEY_PNG_DATA,
+        from: KEY_FROM
+      },
+      hasBlob: kind === "blob",
+      hasData: kind === "data",
+      auto: getParam("auto")
+    });
+
+    if (btnDownload) btnDownload.addEventListener("click", () => doDownloadFlow(src, { trigger: "click" }));
     if (btnScoreAnother) btnScoreAnother.addEventListener("click", navToIndex);
     if (btnBack) btnBack.addEventListener("click", navBackToFrom);
 
-    // Auto-open
+    // Auto mode: may be blocked by popup rules — we still try, then message user.
     if (getParam("auto") === "1" && src) {
-      // Small delay helps iOS allow the popup/open more reliably
-      setTimeout(() => doDownloadFlow(src), 350);
+      setTimeout(() => {
+        doDownloadFlow(src, { trigger: "auto" });
+      }, 350);
     }
   }
 
