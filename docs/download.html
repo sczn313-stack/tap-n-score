@@ -13,52 +13,72 @@
 
   <title>Download SEC</title>
 
-  <link rel="stylesheet" href="/tap-n-score/styles.css?v=22206d4" />
+  <link rel="stylesheet" href="/tap-n-score/styles.css?v=22206d2" />
 </head>
 
 <body>
   <main class="page">
 
+    <header class="topBar">
+      <div class="topTitle">Download your SEC PNG</div>
+      <div id="statusLine" class="topSub">Preview then download.</div>
+    </header>
+
     <section class="card">
       <div class="cardTitle">PREVIEW</div>
 
-      <div class="targetWrap" style="padding:14px;">
-        <img id="secImg" alt="SEC Preview" style="width:100%; height:auto; display:block; border-radius:14px;" />
+      <div id="previewBox" class="targetWrap" style="min-height:260px; display:flex; align-items:center; justify-content:center;">
+        <div id="emptyState" style="text-align:center; padding:18px;">
+          <div style="font-size:20px; font-weight:800; margin-bottom:6px;">No SEC image loaded.</div>
+          <div style="opacity:.75; margin-bottom:10px;">
+            This page accepts:
+            <div style="margin-top:6px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size:12px; opacity:.85;">
+              ?img=https://.../sec.png<br/>
+              or a data:image/png...<br/>
+              or localStorage fallback
+            </div>
+          </div>
+        </div>
+
+        <img id="secImg" alt="SEC Preview" style="display:none; max-width:100%; height:auto; border-radius:16px;" />
       </div>
 
-      <p id="msgLine" class="hint" style="margin-top:8px;"></p>
+      <p class="hint" style="margin-top:10px;">
+        Tip (iPhone/iPad): If the download doesn’t start, tap <b>Download</b> to open the PNG, then <b>press-and-hold</b> the image and choose <b>Save to Photos</b>.
+      </p>
     </section>
 
     <section class="card">
       <div class="cardTitle">DOWNLOAD</div>
 
-      <button id="downloadBtn" class="btnPrimary" type="button">
-        Download SEC PNG
-      </button>
+      <div class="row" style="display:block;">
+        <button id="downloadBtn" class="btnPrimary" type="button" style="width:100%; margin-bottom:10px;">
+          Download SEC PNG
+        </button>
 
-      <button id="scoreAnotherBtn" class="btnSecondary" type="button" style="margin-top:10px;">
-        Score another
-      </button>
+        <button id="scoreAnotherBtn" class="btnSecondary" type="button" style="width:100%; margin-bottom:10px;">
+          Score another
+        </button>
 
-      <button id="backBtn" class="btnSecondary" type="button" style="margin-top:10px;">
-        Back to setup
-      </button>
+        <button id="backToSetupBtn" class="btnSecondary" type="button" style="width:100%;">
+          Back to setup
+        </button>
 
-      <p class="hint" style="margin-top:10px;">
-        Tip (iPad/iPhone): If download doesn’t start, press-and-hold the image and choose <b>Save to Photos</b>.
-      </p>
+        <div id="tinyNote" class="hint" style="margin-top:10px; opacity:.75;"></div>
+      </div>
 
-      <details id="diagWrap" style="margin-top:12px;">
-        <summary style="cursor:pointer;">DIAGNOSTICS</summary>
-        <pre id="diag" style="white-space:pre-wrap; font-size:12px; opacity:.85;"></pre>
+      <details id="diagWrap" style="margin-top:14px;">
+        <summary style="cursor:pointer; font-weight:800; letter-spacing:.08em;">DIAGNOSTICS</summary>
+        <pre id="diag" style="white-space:pre-wrap; margin-top:10px; font-size:12px; line-height:1.35;"></pre>
       </details>
     </section>
 
     <footer class="footer">
       <span class="footerMark">SCZN3</span>
     </footer>
+
   </main>
 
-  <script src="/tap-n-score/download.js?v=22206d4"></script>
+  <script src="/tap-n-score/download.js?v=22206d2"></script>
 </body>
 </html>
