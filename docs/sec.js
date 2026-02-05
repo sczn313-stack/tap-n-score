@@ -1,11 +1,20 @@
 /* ============================================================
-   tap-n-score/sec.js (FULL REPLACEMENT) — NO PHOTO + SHOW ALL HITS
-   Changes:
-   - Remove target photo rendering completely
-   - Draw AIM + ALL hits + AVG POI
-   - Dot size = 10 (radius)
-   - Ensure LED score is never clipped at the top
-   - Keep PNG generation + download.html auto-open
+   tap-n-score/sec.js (FULL REPLACEMENT) — SEC (NO TARGET PHOTO) + DOTS SIZE 10
+   Does:
+   - Reads payload from ?payload= (base64 JSON) or localStorage SCZN3_SEC_PAYLOAD_V1
+   - Renders SEC canvas WITHOUT drawing the target photo
+   - Draws dots:
+       - AIM (green)
+       - HITS (bright green) if provided
+       - Otherwise falls back to AVG POI (bright green) if hits not provided
+     Dot size = 10px diameter (radius 5)
+   - LED score (pale yellow) with COLOR SHIFT by score value
+   - Places LED with safe top padding so it never clips
+   - Saves PNG to localStorage:
+       SCZN3_SEC_PNG_DATAURL_V1
+       SCZN3_SEC_PNG_BLOBURL_V1
+       SCZN3_SEC_FROM_V1
+   - Download button routes to download.html?auto=1
 ============================================================ */
 
 (() => {
@@ -32,13 +41,17 @@
   // -----------------------
   // Helpers
   // -----------------------
-  function safeJsonParse(s) { try { return JSON.parse(s); } catch { return null; } }
+  function safeJsonParse(s) {
+    try { return JSON.parse(s); } catch { return null; }
+  }
 
   function fromB64Payload(param) {
     try {
       const json = decodeURIComponent(escape(atob(param)));
       return JSON.parse(json);
-    } catch { return null; }
+    } catch {
+      return null;
+    }
   }
 
   function getParam(name) {
@@ -58,7 +71,11 @@
     elErr.textContent = "";
   }
 
-  function clamp01(v) { return Math.max(0, Math.min(1, v)); }
+  function clamp01(v) {
+    const n = Number(v);
+    if (!Number.isFinite(n)) return 0;
+    return Math.max(0, Math.min(1, n));
+  }
 
   function dprScaleCanvas(cssW, cssH) {
     const dpr = Math.max(1, Math.floor(window.devicePixelRatio || 1));
@@ -82,20 +99,25 @@
   }
 
   // -----------------------
-  // Score color by value
+  // Score color logic
   // -----------------------
-  function scorePalette(score) {
+  function scoreTheme(score) {
     const s = Math.max(0, Math.min(100, Math.round(Number(score) || 0)));
-    if (s >= 90) return { on:"#67f3a4", glow:"rgba(103,243,164,.55)", off:"rgba(103,243,164,.10)" };
-    if (s >= 75) return { on:"#f5f0b3", glow:"rgba(245,240,179,.55)", off:"rgba(245,240,179,.10)" };
-    if (s >= 55) return { on:"#ffb85c", glow:"rgba(255,184,92,.55)",  off:"rgba(255,184,92,.10)"  };
-    return          { on:"#ff6b6b", glow:"rgba(255,107,107,.55)", off:"rgba(255,107,107,.10)" };
+
+    // Calm + readable score colors (still “LED-ish”)
+    if (s >= 90) return { on: "#b7ff3c", glow: "rgba(183,255,60,.55)" };    // green
+    if (s >= 75) return { on: "#f5f0b3", glow: "rgba(245,240,179,.55)" };   // pale yellow
+    if (s >= 60) return { on: "#ffd166", glow: "rgba(255,209,102,.55)" };   // amber
+    return { on: "#ff6b6b", glow: "rgba(255,107,107,.55)" };                // red
   }
 
   // -----------------------
-  // Seven-seg LED drawing
+  // Seven-seg LED drawing (uses theme colors)
   // -----------------------
+  const LED_OFF = "rgba(245,240,179,.08)";
+
   function segMap(d) {
+    // segments: a b c d e f g
     const m = {
       "0": [1,1,1,1,1,1,0],
       "1": [0,1,1,0,0,0,0],
@@ -111,120 +133,108 @@
     return m[String(d)] || [0,0,0,0,0,0,0];
   }
 
-  function drawSeg(x, y, w, h, on, pal) {
+  function drawSeg(x, y, w, h, on, LED_ON, LED_GLOW) {
     ctx.save();
-    ctx.fillStyle = on ? pal.on : pal.off;
-    ctx.shadowColor = on ? pal.glow : "transparent";
+    ctx.fillStyle = on ? LED_ON : LED_OFF;
+    ctx.shadowColor = on ? LED_GLOW : "transparent";
     ctx.shadowBlur = on ? Math.max(6, Math.floor(w * 0.08)) : 0;
     drawRoundedRect(x, y, w, h, Math.min(10, h / 2));
     ctx.fill();
     ctx.restore();
   }
 
-  function drawDigit(x, y, size, digit, pal) {
+  function drawDigit(x, y, size, digit, LED_ON, LED_GLOW) {
+    // digit box: size wide, size*1.8 tall
     const W = size;
     const H = size * 1.8;
-    const t = Math.max(5, Math.floor(size * 0.18));
+    const t = Math.max(5, Math.floor(size * 0.18)); // segment thickness
     const gap = Math.max(5, Math.floor(size * 0.12));
+
     const seg = segMap(digit);
 
-    drawSeg(x + gap, y,               W - 2 * gap, t,                      seg[0], pal); // a
-    drawSeg(x + W - t, y + gap,       t, (H/2) - gap - t/2,                seg[1], pal); // b
-    drawSeg(x + W - t, y + (H/2)+t/2, t, (H/2) - gap - t/2,                seg[2], pal); // c
-    drawSeg(x + gap, y + H - t,       W - 2 * gap, t,                      seg[3], pal); // d
-    drawSeg(x,         y + (H/2)+t/2, t, (H/2) - gap - t/2,                seg[4], pal); // e
-    drawSeg(x,         y + gap,       t, (H/2) - gap - t/2,                seg[5], pal); // f
-    drawSeg(x + gap, y + (H/2)-(t/2), W - 2 * gap, t,                      seg[6], pal); // g
+    // a (top)
+    drawSeg(x + gap, y, W - 2 * gap, t, seg[0], LED_ON, LED_GLOW);
+    // b (top-right)
+    drawSeg(x + W - t, y + gap, t, (H / 2) - gap - t / 2, seg[1], LED_ON, LED_GLOW);
+    // c (bottom-right)
+    drawSeg(x + W - t, y + (H / 2) + t / 2, t, (H / 2) - gap - t / 2, seg[2], LED_ON, LED_GLOW);
+    // d (bottom)
+    drawSeg(x + gap, y + H - t, W - 2 * gap, t, seg[3], LED_ON, LED_GLOW);
+    // e (bottom-left)
+    drawSeg(x, y + (H / 2) + t / 2, t, (H / 2) - gap - t / 2, seg[4], LED_ON, LED_GLOW);
+    // f (top-left)
+    drawSeg(x, y + gap, t, (H / 2) - gap - t / 2, seg[5], LED_ON, LED_GLOW);
+    // g (middle)
+    drawSeg(x + gap, y + (H / 2) - (t / 2), W - 2 * gap, t, seg[6], LED_ON, LED_GLOW);
   }
 
-  // Safer LED: respects maxHeight so it never clips
-  function drawLedNumberCentered(score, cx, cy, totalWidth, maxHeight) {
-    const s = Math.round(Number(score) || 0);
-    const str = String(Math.max(0, Math.min(100, s)));
+  function drawLedNumberCentered(score, cx, cy, totalWidth) {
+    const s = Math.max(0, Math.min(100, Math.round(Number(score) || 0)));
+    const str = String(s);
+
+    // 2 digits unless 100
     const digits = (str === "100") ? ["1","0","0"] : str.padStart(2, "0").split("");
-    const pal = scorePalette(s);
-
     const digitCount = digits.length;
-    const spacing = Math.max(10, Math.floor(totalWidth * 0.05));
 
-    // width-based size
-    let size = Math.floor((totalWidth - spacing * (digitCount - 1)) / digitCount);
-
-    // height limit: digit block is size*1.8
-    const maxSizeByH = Math.floor((maxHeight || 99999) / 1.8);
-    size = Math.max(24, Math.min(size, maxSizeByH));
+    const spacing = Math.max(12, Math.floor(totalWidth * 0.035));
+    const size = Math.floor((totalWidth - spacing * (digitCount - 1)) / digitCount);
 
     const blockH = size * 1.8;
     const startX = cx - ((size * digitCount) + (spacing * (digitCount - 1))) / 2;
     const startY = cy - blockH / 2;
 
+    const th = scoreTheme(s);
     digits.forEach((d, i) => {
       const x = startX + i * (size + spacing);
-      drawDigit(x, startY, size, d, pal);
+      drawDigit(x, startY, size, d, th.on, th.glow);
     });
   }
 
   // -----------------------
-  // Dots: AIM + hits + POI
+  // Dots (AIM + HITS) — size 10px diameter
   // -----------------------
-  function getAim(payload) {
-    return payload?.debug?.aim || payload?.aim || payload?.anchor || null;
-  }
+  function drawDotAt01(p, rect, color) {
+    if (!p) return;
+    const x01 = clamp01(p.x01);
+    const y01 = clamp01(p.y01);
+    const x = rect.x + x01 * rect.w;
+    const y = rect.y + y01 * rect.h;
 
-  function getAvgPoi(payload) {
-    return payload?.debug?.avgPoi || payload?.avgPoi || payload?.poi || null;
-  }
-
-  function getHits(payload) {
-    // Try multiple known shapes (we don't assume)
-    const candidates = [
-      payload?.hits,
-      payload?.hits01,
-      payload?.debug?.hits,
-      payload?.debug?.hits01,
-      payload?.taps,
-      payload?.taps01,
-      payload?.debug?.taps,
-      payload?.debug?.taps01,
-      payload?.points,
-      payload?.debug?.points,
-    ];
-
-    const arr = candidates.find((x) => Array.isArray(x) && x.length);
-    if (!arr) return [];
-
-    // Normalize to {x01,y01}
-    const norm = [];
-    for (const p of arr) {
-      if (!p) continue;
-
-      // common shapes: {x01,y01} OR {x,y} already normalized 0..1
-      const x01 = (p.x01 ?? p.x);
-      const y01 = (p.y01 ?? p.y);
-
-      if (Number.isFinite(Number(x01)) && Number.isFinite(Number(y01))) {
-        norm.push({ x01: clamp01(Number(x01)), y01: clamp01(Number(y01)) });
-      }
-    }
-    return norm;
-  }
-
-  function drawDot(p01, rect, fill, radius) {
-    const x = rect.x + clamp01(Number(p01.x01)) * rect.w;
-    const y = rect.y + clamp01(Number(p01.y01)) * rect.h;
+    const r = 5; // radius => 10px diameter
 
     ctx.save();
-    ctx.shadowColor = "rgba(0,0,0,.55)";
+    ctx.shadowColor = "rgba(0,0,0,.45)";
     ctx.shadowBlur = 10;
-    ctx.fillStyle = fill;
-    ctx.strokeStyle = "rgba(0,0,0,.75)";
+    ctx.fillStyle = color;
+    ctx.strokeStyle = "rgba(0,0,0,.60)";
     ctx.lineWidth = 2;
-
     ctx.beginPath();
-    ctx.arc(x, y, radius, 0, Math.PI * 2);
+    ctx.arc(x, y, r, 0, Math.PI * 2);
     ctx.fill();
     ctx.stroke();
     ctx.restore();
+  }
+
+  function drawDots(payload, rect) {
+    const aim = payload?.debug?.aim;
+
+    // Prefer hits if present
+    const hits = payload?.debug?.hits;
+    const avgPoi = payload?.debug?.avgPoi;
+
+    // AIM always (if present)
+    if (aim && typeof aim === "object") drawDotAt01(aim, rect, "#67f3a4");
+
+    // HITS
+    if (Array.isArray(hits) && hits.length) {
+      hits.forEach(h => {
+        if (h && typeof h === "object") drawDotAt01(h, rect, "#b7ff3c");
+      });
+      return;
+    }
+
+    // Fallback: AVG POI only
+    if (avgPoi && typeof avgPoi === "object") drawDotAt01(avgPoi, rect, "#b7ff3c");
   }
 
   // -----------------------
@@ -241,27 +251,6 @@
     ctx.restore();
   }
 
-  function drawSubtleGrid(rect) {
-    ctx.save();
-    ctx.strokeStyle = "rgba(255,255,255,.07)";
-    ctx.lineWidth = 1;
-
-    const step = Math.max(22, Math.floor(rect.w / 12)); // adaptive grid
-    for (let x = rect.x; x <= rect.x + rect.w; x += step) {
-      ctx.beginPath();
-      ctx.moveTo(x, rect.y);
-      ctx.lineTo(x, rect.y + rect.h);
-      ctx.stroke();
-    }
-    for (let y = rect.y; y <= rect.y + rect.h; y += step) {
-      ctx.beginPath();
-      ctx.moveTo(rect.x, y);
-      ctx.lineTo(rect.x + rect.w, y);
-      ctx.stroke();
-    }
-    ctx.restore();
-  }
-
   async function renderSec(payload) {
     hideErr();
 
@@ -274,80 +263,50 @@
     ctx.fillStyle = "rgba(6,7,10,1)";
     ctx.fillRect(0, 0, cssW, cssH);
 
-    // Glass frame
+    // Outer glass panel
     ctx.save();
     ctx.fillStyle = "rgba(255,255,255,.04)";
     ctx.strokeStyle = "rgba(255,255,255,.10)";
     ctx.lineWidth = 1;
-    drawRoundedRect(12, 12, cssW - 24, cssH - 24, 18);
+    drawRoundedRect(16, 16, cssW - 32, cssH - 32, 18);
     ctx.fill();
     ctx.stroke();
     ctx.restore();
 
-    // Safe layout zones
-    const topPad = Math.max(18, Math.floor(cssH * 0.05));
+    // Safe top region so LED never clips
+    const topSafe = 26;
+    const ledCenterY = topSafe + 96; // keeps full digit height inside frame
 
-    // Score zone (guaranteed not clipped)
-    const scoreCenterY = Math.max(96, Math.floor(cssH * 0.18));
-    const scoreWidth = Math.min(420, Math.floor(cssW * 0.60)); // smaller than before
-    const scoreMaxH = Math.max(90, Math.floor(cssH * 0.22));   // hard height limit
+    // LED score centered (safe)
+    const score = Math.round(Number(payload?.score ?? 0));
+    drawLedNumberCentered(score, cssW / 2, ledCenterY, Math.min(520, cssW - 90));
 
-    // Explanation line
-    const explY = Math.floor(cssH * 0.33);
+    // Dot field area (no photo, but consistent “target area” frame)
+    const pad = 26;
+    const fieldTop = topSafe + 170;
+    const fieldH = cssH - fieldTop - 90;
+    const field = { x: pad, y: fieldTop, w: cssW - pad * 2, h: Math.max(160, fieldH) };
 
-    // “Plot area” for dots (replaces photo)
-    const plotTop = Math.floor(cssH * 0.38);
-    const plotBottom = Math.floor(cssH * 0.88);
-    const padX = 22;
-
-    const plotRect = {
-      x: padX,
-      y: plotTop,
-      w: cssW - padX * 2,
-      h: Math.max(140, plotBottom - plotTop)
-    };
-
-    // Plot frame
+    // Inner field frame
     ctx.save();
-    ctx.fillStyle = "rgba(0,0,0,.20)";
+    ctx.fillStyle = "rgba(0,0,0,.18)";
     ctx.strokeStyle = "rgba(255,255,255,.10)";
     ctx.lineWidth = 1;
-    drawRoundedRect(plotRect.x, plotRect.y, plotRect.w, plotRect.h, 16);
+    drawRoundedRect(field.x, field.y, field.w, field.h, 16);
     ctx.fill();
     ctx.stroke();
-    ctx.clip();
-
-    // subtle grid so dots feel grounded
-    drawSubtleGrid(plotRect);
-
-    // Draw dots
-    const DOT_R = 10; // ✅ requested size
-    const aim = getAim(payload);
-    const avg = getAvgPoi(payload);
-    const hits = getHits(payload);
-
-    // hits (white)
-    for (const h of hits) drawDot(h, plotRect, "rgba(238,242,247,.95)", DOT_R);
-
-    // aim (green)
-    if (aim) drawDot(aim, plotRect, "#67f3a4", DOT_R);
-
-    // avg poi (lime)
-    if (avg) drawDot(avg, plotRect, "#b7ff3c", DOT_R);
-
     ctx.restore();
 
-    // LED score
-    const score = Math.round(Number(payload?.score ?? 0));
-    drawLedNumberCentered(score, cssW / 2, scoreCenterY, scoreWidth, scoreMaxH);
+    // Dots inside field (01 mapped to field)
+    drawDots(payload, field);
 
-    // Explanation line
+    // Simple explanation (replacing “you are here”)
     drawOverlayText(
-      "Tighter group + closer to Aim Point = higher score.",
+      "Tighter group + closer to aim point = higher score",
       cssW / 2,
-      explY,
-      Math.max(14, Math.floor(cssW * 0.030)),
-      "rgba(238,242,247,.86)",
+      cssH - 62,
+      18,
+      "rgba(238,242,247,.90)",
       1
     );
 
@@ -357,25 +316,19 @@
     ctx.font = "900 14px system-ui, -apple-system, Segoe UI, Roboto, Arial";
     ctx.textAlign = "center";
     ctx.textBaseline = "bottom";
-    ctx.fillText("SCZN3", cssW / 2, cssH - topPad);
+    ctx.fillText("SEC", cssW / 2, cssH - 18);
     ctx.restore();
-
-    // If we still have no hits and no aim, tell you why
-    if (!hits.length && !aim) {
-      showErr("No hits found in payload. If this persists, your results page isn’t sending hits into the SEC payload yet.");
-    }
-
-    return { ok: true };
   }
 
   // -----------------------
-  // Save PNG (data + blob)
+  // Save PNG for download page (data + blob)
   // -----------------------
   async function savePngToStorage() {
     try {
       const dataUrl = elCanvas.toDataURL("image/png");
       localStorage.setItem(KEY_PNG_DATA, dataUrl);
 
+      // Convert to blob URL (iOS friendlier)
       const res = await fetch(dataUrl);
       const blob = await res.blob();
       const blobUrl = URL.createObjectURL(blob);
@@ -383,7 +336,7 @@
       try { localStorage.setItem(KEY_PNG_BLOB, blobUrl); } catch {}
       try { localStorage.setItem(KEY_FROM, "./sec.html?fresh=" + Date.now()); } catch {}
 
-      return { ok: true };
+      return { ok: true, dataUrl, blobUrl };
     } catch (e) {
       return { ok: false, error: String(e?.message || e) };
     }
@@ -397,6 +350,9 @@
     window.location.href = `./index.html?fresh=${Date.now()}`;
   }
 
+  // -----------------------
+  // Boot
+  // -----------------------
   function loadPayload() {
     const p = getParam("payload");
     if (p) {
@@ -409,7 +365,7 @@
   async function boot() {
     const payload = loadPayload();
     if (!payload) {
-      showErr("Missing payload. Open from results.");
+      showErr("Missing payload. Open from scoring results.");
       return;
     }
 
@@ -418,10 +374,14 @@
 
     await renderSec(payload);
 
+    // Always generate PNG immediately so download page ALWAYS has it
     const saved = await savePngToStorage();
-    if (!saved.ok) showErr("SEC rendered, but PNG could not be saved. Try again or clear storage.");
+    if (!saved.ok) {
+      showErr("SEC rendered, but PNG could not be saved. Try again or clear storage.");
+    }
   }
 
+  // Buttons
   if (btnDownload) {
     btnDownload.addEventListener("click", async () => {
       const saved = await savePngToStorage();
