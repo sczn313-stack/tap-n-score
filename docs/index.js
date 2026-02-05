@@ -1,8 +1,9 @@
 /* ============================================================
-   index.js (FULL REPLACEMENT) — BASELINE 22206d2
+   index.js (FULL REPLACEMENT) — BASELINE 22206d3
    Adds:
-   - Distance clicker (+/-) with live display
+   - Real score computed from cluster offset distance (inches)
    Keeps:
+   - Distance clicker (+/-)
    - One big photo button
    - iOS double-tap prevention (touch+click)
    - Aim Point green, Hits bright green
@@ -59,7 +60,6 @@
   }
 
   function setDistance(v) {
-    // keep reasonable bounds
     let n = Math.round(Number(v));
     if (!Number.isFinite(n)) n = 100;
     n = Math.max(5, Math.min(1000, n));
@@ -131,11 +131,11 @@
     d.style.top = (y01 * 100) + "%";
 
     if (kind === "aim") {
-      d.style.background = "#67f3a4";
+      d.style.background = "#67f3a4"; // aim point green
       d.style.border = "2px solid rgba(0,0,0,.55)";
       d.style.boxShadow = "0 10px 28px rgba(0,0,0,.55)";
     } else {
-      d.style.background = "#b7ff3c"; // bright green
+      d.style.background = "#b7ff3c"; // hits bright green
       d.style.border = "2px solid rgba(0,0,0,.55)";
       d.style.boxShadow = "0 10px 28px rgba(0,0,0,.55)";
     }
@@ -155,33 +155,65 @@
     return btoa(unescape(encodeURIComponent(json)));
   }
 
-  function computeCorrection() {
+  // ------------------------------------------------------------
+  // SCORING (REAL) — inches-based using current placeholder scale
+  // Placeholder scale: full image width = 10 inches
+  // Later: replace inchesPerFullWidth with real inches mapping.
+  // ------------------------------------------------------------
+  const inchesPerFullWidth = 10;
+
+  function scoreFromRadiusInches(rIn) {
+    // Calm + consistent ring scoring.
+    // You can tune these thresholds anytime.
+    if (rIn <= 0.25) return 100;
+    if (rIn <= 0.50) return 95;
+    if (rIn <= 1.00) return 90;
+    if (rIn <= 1.50) return 85;
+    if (rIn <= 2.00) return 80;
+    if (rIn <= 2.50) return 75;
+    if (rIn <= 3.00) return 70;
+    if (rIn <= 3.50) return 65;
+    if (rIn <= 4.00) return 60;
+    return 50;
+  }
+
+  function computeCorrectionAndScore() {
     if (!aim || hits.length < 1) return null;
 
+    // Average POI
     const avg = hits.reduce((acc, p) => ({ x: acc.x + p.x01, y: acc.y + p.y01 }), { x: 0, y: 0 });
     avg.x /= hits.length;
     avg.y /= hits.length;
 
+    // bull/aim - POI (move POI to aim)
     const dx = aim.x01 - avg.x; // + => RIGHT
     const dy = aim.y01 - avg.y; // + => DOWN (screen space)
 
-    // Demo scale placeholder
-    const inchesPerFullWidth = 10;
+    // Convert to inches (placeholder width = 10 inches)
     const inchesX = dx * inchesPerFullWidth;
     const inchesY = dy * inchesPerFullWidth;
+
+    // Radius in inches (distance from aim to average POI)
+    const rIn = Math.sqrt(inchesX * inchesX + inchesY * inchesY);
 
     const dist = getDistance();
     const moaPerClick = Number(elMoaClick?.value ?? 0.25);
 
+    // True MOA inches at distance
     const inchesPerMoa = (dist / 100) * 1.047;
+
     const moaX = inchesX / inchesPerMoa;
     const moaY = inchesY / inchesPerMoa;
 
     const clicksX = moaX / moaPerClick;
     const clicksY = moaY / moaPerClick;
 
+    const score = scoreFromRadiusInches(rIn);
+
     return {
       avgPoi: { x01: avg.x, y01: avg.y },
+      inches: { x: inchesX, y: inchesY, r: rIn },
+      score,
       windage: { dir: clicksX >= 0 ? "RIGHT" : "LEFT", clicks: Math.abs(clicksX) },
       elevation: { dir: clicksY >= 0 ? "DOWN" : "UP", clicks: Math.abs(clicksY) },
     };
@@ -194,7 +226,7 @@
   }
 
   function onShowResults() {
-    const out = computeCorrection();
+    const out = computeCorrectionAndScore();
     if (!out) {
       alert("Tap Aim Point first, then tap at least one hit.");
       return;
@@ -207,14 +239,19 @@
 
     const payload = {
       sessionId: "S-" + Date.now(),
-      score: 25, // placeholder until real score
+      score: out.score,                // ✅ REAL score now
       shots: hits.length,
       windage: { dir: out.windage.dir, clicks: Number(out.windage.clicks.toFixed(2)) },
       elevation: { dir: out.elevation.dir, clicks: Number(out.elevation.clicks.toFixed(2)) },
       secPngUrl: "",
       vendorUrl,
       surveyUrl: "",
-      debug: { aim, avgPoi: out.avgPoi, distanceYds: getDistance() }
+      debug: {
+        aim,
+        avgPoi: out.avgPoi,
+        distanceYds: getDistance(),
+        inches: out.inches
+      }
     };
 
     goToSEC(payload);
@@ -223,8 +260,6 @@
   // ---- Distance clicker (+/-)
   if (elDistUp) elDistUp.addEventListener("click", () => setDistance(getDistance() + 5));
   if (elDistDown) elDistDown.addEventListener("click", () => setDistance(getDistance() - 5));
-
-  // Long-press optional? (not needed now) — keep it simple.
 
   // ---- Photo picker
   if (elPhotoBtn && elFile) {
