@@ -2,19 +2,31 @@
    tap-n-score/sec.js (FULL REPLACEMENT) — OPTION A (SEC renders + generates PNG)
    Goal:
    - Read payload from ?payload= (base64 JSON) or localStorage SCZN3_SEC_PAYLOAD_V1
-   - Draw SEC canvas: target image + aim/hits + LED score (pale yellow) + “U R Here! Do better.”
-   - Save PNG to localStorage key: SCZN3_SEC_PNG
-   - Route to download.html (no img param needed) + optionally auto-download
+   - Draw SEC canvas: target image + aim/poi dots + LED score (pale yellow) + “U R Here! Do better.”
+   - Save PNG to localStorage:
+       SCZN3_SEC_PNG_DATAURL_V1
+       SCZN3_SEC_PNG_BLOBURL_V1
+   - Route to download.html (no img param needed) + auto-open with ?auto=1
 ============================================================ */
 
 (() => {
+  // ---- Payload key
   const KEY_PAYLOAD = "SCZN3_SEC_PAYLOAD_V1";
-  const KEY_PNG = "SCZN3_SEC_PNG";
+
+  // ---- Target photo handoff keys (from index page)
+  const KEY_TARGET_IMG_DATA = "SCZN3_TARGET_IMG_DATAURL_V1"; // data:image/...
+  const KEY_TARGET_IMG_BLOB = "SCZN3_TARGET_IMG_BLOBURL_V1"; // blob:...
+
+  // ---- PNG keys (consumed by download.js FULL REPLACEMENT)
+  const KEY_PNG_DATA = "SCZN3_SEC_PNG_DATAURL_V1";
+  const KEY_PNG_BLOB = "SCZN3_SEC_PNG_BLOBURL_V1";
+  const KEY_FROM = "SCZN3_SEC_FROM_V1";
 
   const $ = (id) => document.getElementById(id);
 
   const elCanvas = $("secCanvas");
   const ctx = elCanvas.getContext("2d");
+
   const elSession = $("sessionLine");
   const elErr = $("errLine");
 
@@ -141,10 +153,8 @@
     const s = Math.round(Number(score) || 0);
     const str = String(Math.max(0, Math.min(100, s)));
 
-    // Render as 2 digits unless 100
     const digits = (str === "100") ? ["1","0","0"] : str.padStart(2, "0").split("");
 
-    // Choose size from available width
     const digitCount = digits.length;
     const spacing = Math.max(16, Math.floor(totalWidth * 0.04));
     const size = Math.floor((totalWidth - spacing * (digitCount - 1)) / digitCount);
@@ -160,7 +170,7 @@
   }
 
   // -----------------------
-  // Draw SEC Canvas
+  // Text + Dots
   // -----------------------
   function drawOverlayText(text, x, y, size, color, alpha = 1) {
     ctx.save();
@@ -174,8 +184,7 @@
   }
 
   function drawDotsFromPayload(payload, imgRect) {
-    // payload.debug.aim and payload.debug.avgPoi exist now, but hits are not shipped.
-    // We’ll show AIM dot + AVG POI dot for now (clean + true).
+    // Show AIM dot + AVG POI dot (truthful + clean)
     const aim = payload?.debug?.aim;
     const avg = payload?.debug?.avgPoi;
 
@@ -199,7 +208,6 @@
       ctx.fill();
       ctx.stroke();
 
-      // small label
       ctx.shadowBlur = 0;
       ctx.fillStyle = "rgba(238,242,247,.90)";
       ctx.font = "900 12px system-ui, -apple-system, Segoe UI, Roboto, Arial";
@@ -214,10 +222,59 @@
     dotAt(avg, "#b7ff3c", "POI");
   }
 
+  async function loadImage(src) {
+    if (!src) return null;
+
+    // If we got a data URL, we can draw it directly.
+    // If we got a blob URL, also fine.
+    // If we got https, needs CORS to allow canvas export; GitHub Pages images may taint.
+    const img = new Image();
+    img.decoding = "async";
+
+    // Try to reduce CORS canvas-tainting when possible
+    if (typeof src === "string" && src.startsWith("http")) {
+      img.crossOrigin = "anonymous";
+    }
+
+    img.src = src;
+
+    await new Promise((resolve) => {
+      img.onload = resolve;
+      img.onerror = resolve;
+    });
+
+    // If it failed, naturalWidth will be 0
+    if (!img.naturalWidth) return null;
+    return img;
+  }
+
+  // -----------------------
+  // Determine the best target photo source
+  // -----------------------
+  function getBestTargetPhoto(payload) {
+    // Priority:
+    // 1) payload.sourceImg
+    // 2) localStorage data URL
+    // 3) localStorage blob URL
+    const p = payload?.sourceImg;
+    if (p && typeof p === "string" && p.length > 20) return p;
+
+    const data = localStorage.getItem(KEY_TARGET_IMG_DATA);
+    if (data && data.startsWith("data:image/")) return data;
+
+    const blob = localStorage.getItem(KEY_TARGET_IMG_BLOB);
+    if (blob && blob.startsWith("blob:")) return blob;
+
+    return "";
+  }
+
+  // -----------------------
+  // Render SEC
+  // -----------------------
   async function renderSec(payload) {
     hideErr();
 
-    // Canvas size (16:9 for now, looks great on iPhone)
+    // Canvas size (16:9)
     const cssW = Math.min(980, Math.floor(window.innerWidth * 0.96));
     const cssH = Math.floor(cssW * 9 / 16);
     dprScaleCanvas(cssW, cssH);
@@ -227,9 +284,8 @@
     ctx.fillStyle = "rgba(6,7,10,1)";
     ctx.fillRect(0, 0, cssW, cssH);
 
-    // Glass panel behind image
+    // Glass panel
     ctx.save();
-    ctx.globalAlpha = 1;
     ctx.fillStyle = "rgba(255,255,255,.04)";
     ctx.strokeStyle = "rgba(255,255,255,.10)";
     ctx.lineWidth = 1;
@@ -240,51 +296,48 @@
 
     // Image rect
     const pad = 26;
-    const imgRect = { x: pad, y: pad + 24, w: cssW - pad * 2, h: cssH - pad * 2 - 84 };
+    const imgRectOuter = { x: pad, y: pad + 24, w: cssW - pad * 2, h: cssH - pad * 2 - 84 };
 
-    // draw target photo if we have it
-    const src = payload?.sourceImg || "";
+    // Target photo
+    const src = getBestTargetPhoto(payload);
+    let drawnImgRect = null;
+
     if (!src) {
-      // No image available — still show LED score and coaching text
       showErr("No target photo provided to SEC. Go back and re-score (the capture image must be included).");
     } else {
-      const img = new Image();
-      img.decoding = "async";
-      img.src = src;
+      const img = await loadImage(src);
 
-      await new Promise((resolve) => {
-        img.onload = resolve;
-        img.onerror = resolve;
-      });
+      if (!img) {
+        showErr("Target photo failed to load in SEC. Go back and re-score.");
+      } else {
+        // Fit image into imgRectOuter (contain)
+        const iw = img.naturalWidth || 1;
+        const ih = img.naturalHeight || 1;
+        const scale = Math.min(imgRectOuter.w / iw, imgRectOuter.h / ih);
+        const dw = iw * scale;
+        const dh = ih * scale;
+        const dx = imgRectOuter.x + (imgRectOuter.w - dw) / 2;
+        const dy = imgRectOuter.y + (imgRectOuter.h - dh) / 2;
 
-      // Fit image into imgRect (contain)
-      const iw = img.naturalWidth || 1;
-      const ih = img.naturalHeight || 1;
-      const scale = Math.min(imgRect.w / iw, imgRect.h / ih);
-      const dw = iw * scale;
-      const dh = ih * scale;
-      const dx = imgRect.x + (imgRect.w - dw) / 2;
-      const dy = imgRect.y + (imgRect.h - dh) / 2;
+        // Frame + clip
+        ctx.save();
+        ctx.fillStyle = "rgba(0,0,0,.22)";
+        ctx.strokeStyle = "rgba(255,255,255,.10)";
+        ctx.lineWidth = 1;
+        drawRoundedRect(imgRectOuter.x, imgRectOuter.y, imgRectOuter.w, imgRectOuter.h, 16);
+        ctx.fill();
+        ctx.stroke();
+        ctx.clip();
 
-      // Photo frame
-      ctx.save();
-      ctx.fillStyle = "rgba(0,0,0,.22)";
-      ctx.strokeStyle = "rgba(255,255,255,.10)";
-      ctx.lineWidth = 1;
-      drawRoundedRect(imgRect.x, imgRect.y, imgRect.w, imgRect.h, 16);
-      ctx.fill();
-      ctx.stroke();
+        ctx.drawImage(img, dx, dy, dw, dh);
 
-      // Clip to rounded rect
-      ctx.clip();
+        drawnImgRect = { x: dx, y: dy, w: dw, h: dh };
 
-      // Draw image
-      ctx.drawImage(img, dx, dy, dw, dh);
+        // Dots (AIM + POI)
+        drawDotsFromPayload(payload, drawnImgRect);
 
-      // Dots (AIM + POI)
-      drawDotsFromPayload(payload, { x: dx, y: dy, w: dw, h: dh });
-
-      ctx.restore();
+        ctx.restore();
+      }
     }
 
     // LED score centered
@@ -294,7 +347,7 @@
     // Coaching line
     drawOverlayText("U R Here!   Do better.", cssW / 2, cssH - 62, 24, "rgba(238,242,247,.90)", 1);
 
-    // Small footer mark
+    // Footer
     ctx.save();
     ctx.fillStyle = "rgba(238,242,247,.25)";
     ctx.font = "900 14px system-ui, -apple-system, Segoe UI, Roboto, Arial";
@@ -302,20 +355,34 @@
     ctx.textBaseline = "bottom";
     ctx.fillText("SCZN3", cssW / 2, cssH - 18);
     ctx.restore();
+
+    return { ok: true, hasTarget: !!drawnImgRect };
   }
 
-  function savePngToLocalStorage() {
+  // -----------------------
+  // Save PNG for download page (data + blob)
+  // -----------------------
+  async function savePngToStorage() {
     try {
       const dataUrl = elCanvas.toDataURL("image/png");
-      localStorage.setItem(KEY_PNG, dataUrl);
-      return true;
+      localStorage.setItem(KEY_PNG_DATA, dataUrl);
+
+      // Convert to blob URL (iOS friendlier)
+      const res = await fetch(dataUrl);
+      const blob = await res.blob();
+      const blobUrl = URL.createObjectURL(blob);
+
+      try { localStorage.setItem(KEY_PNG_BLOB, blobUrl); } catch {}
+      try { localStorage.setItem(KEY_FROM, "./sec.html?fresh=" + Date.now()); } catch {}
+
+      return { ok: true, dataUrl, blobUrl };
     } catch (e) {
-      return false;
+      return { ok: false, error: String(e?.message || e) };
     }
   }
 
-  function navToDownload() {
-    window.location.href = `./download.html?fresh=${Date.now()}`;
+  function navToDownloadAuto() {
+    window.location.href = `./download.html?auto=1&fresh=${Date.now()}`;
   }
 
   function navToIndex() {
@@ -342,28 +409,27 @@
       return;
     }
 
-    // session line
     const sid = payload.sessionId || "—";
     if (elSession) elSession.textContent = `Session: ${sid}`;
 
     await renderSec(payload);
 
-    // Generate PNG immediately so download page has it
-    const ok = savePngToLocalStorage();
-    if (!ok) {
+    // Always generate PNG immediately so download page ALWAYS has it
+    const saved = await savePngToStorage();
+    if (!saved.ok) {
       showErr("SEC rendered, but PNG could not be saved. Try again or clear storage.");
     }
   }
 
   // Buttons
   if (btnDownload) {
-    btnDownload.addEventListener("click", () => {
-      const ok = savePngToLocalStorage();
-      if (!ok) {
+    btnDownload.addEventListener("click", async () => {
+      const saved = await savePngToStorage();
+      if (!saved.ok) {
         showErr("Could not generate PNG. Try again.");
         return;
       }
-      navToDownload();
+      navToDownloadAuto();
     });
   }
 
