@@ -1,3 +1,4 @@
+<!-- tap-n-score/sec.html (FULL REPLACEMENT) — OPTION A (render + generate SEC PNG here) -->
 <!doctype html>
 <html lang="en">
 <head>
@@ -11,373 +12,176 @@
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
 
-  <title>Tap-n-Score™ — Score</title>
+  <title>SEC — Tap-n-Score™</title>
 
-  <!-- Keep using your existing global styles -->
-  <link rel="stylesheet" href="/tap-n-score/styles.css?v=22206d2" />
+  <link rel="stylesheet" href="/tap-n-score/styles.css?v=SEC-A1" />
 
-  <!-- SCORE / LED STYLES -->
   <style>
-    :root{
-      --bg0:#05060a;
-      --bg1:#0a0c12;
-
-      --text:#eef2f7;
-      --muted: rgba(238,242,247,.70);
-
-      /* Pale yellow “LED” */
-      --led: #ffeaa0;
-      --ledHot: #fff2bf;
-      --ledDotOff: rgba(255,234,160,.09);
-
-      --card: rgba(255,255,255,.06);
-      --stroke: rgba(255,255,255,.12);
-      --shadow: 0 20px 60px rgba(0,0,0,.55);
-      --radius: 22px;
-    }
-
-    body{
-      background:
-        radial-gradient(1200px 800px at 25% 15%, rgba(255,234,160,.06), transparent 55%),
-        radial-gradient(1200px 800px at 70% 15%, rgba(47,102,255,.06), transparent 55%),
-        linear-gradient(180deg, var(--bg0), var(--bg1));
-    }
-
+    /* Keep it consistent with your dark glass style, but SEC-specific layout */
     .secWrap{
-      max-width: 980px;
+      width: min(980px, 96vw);
       margin: 0 auto;
-      padding: 18px 14px 28px;
-    }
-
-    .secShell{
-      background: rgba(255,255,255,.04);
-      border: 1px solid rgba(255,255,255,.10);
-      border-radius: var(--radius);
-      box-shadow: var(--shadow);
-      overflow: hidden;
-    }
-
-    .secTop{
-      padding: 18px 18px 14px;
-      border-bottom: 1px solid rgba(255,255,255,.08);
-      background: linear-gradient(180deg, rgba(255,255,255,.035), rgba(255,255,255,.02));
-    }
-
-    .brandTitle{
-      margin: 0;
-      letter-spacing: .10em;
-      font-weight: 900;
-      font-size: clamp(24px, 4vw, 42px);
-      text-transform: uppercase;
-      line-height: 1.05;
-    }
-    .brandTitle .r{ color:#d64040; }
-    .brandTitle .w{ color:#eef2f7; }
-    .brandTitle .b{ color:#2f66ff; }
-
-    .subTitle{
-      margin: 10px 0 0;
-      color: var(--muted);
-      font-size: 14px;
-    }
-
-    .secGrid{
-      display:grid;
-      grid-template-columns: 1fr;
+      padding: 18px 12px 40px;
+      display: flex;
+      flex-direction: column;
       gap: 14px;
-      padding: 16px;
     }
-    @media (min-width: 900px){
-      .secGrid{
-        grid-template-columns: 1.05fr .95fr;
-        align-items: start;
-      }
+
+    .heroBrand{
+      display:flex;
+      align-items:flex-end;
+      justify-content:space-between;
+      gap:12px;
+      padding: 8px 4px 2px;
+    }
+    .heroLeft{
+      display:flex;
+      flex-direction:column;
+      gap:4px;
+    }
+    .heroTitle{
+      font-weight: 900;
+      letter-spacing: .06em;
+      font-size: clamp(26px, 5vw, 44px);
+      line-height: 1.02;
+    }
+    .heroSub{
+      font-size: clamp(14px, 2.2vw, 18px);
+      color: rgba(238,242,247,.72);
+      font-weight: 800;
+      letter-spacing: .02em;
+    }
+
+    .heroRight{
+      display:flex;
+      flex-direction:column;
+      align-items:flex-end;
+      gap:6px;
+      min-width: 180px;
+    }
+
+    .sessionLine{
+      font-size: 12px;
+      color: rgba(238,242,247,.55);
+      letter-spacing: .04em;
+      font-weight: 800;
+      text-transform: uppercase;
     }
 
     .secCard{
-      background: var(--card);
-      border: 1px solid var(--stroke);
+      background: rgba(255,255,255,.04);
+      border: 1px solid rgba(255,255,255,.10);
       border-radius: 18px;
       padding: 14px;
-    }
-    .secCard h2{
-      margin: 0 0 10px;
-      font-size: 13px;
-      letter-spacing: .12em;
-      text-transform: uppercase;
-      color: rgba(238,242,247,.70);
-      font-weight: 850;
+      box-shadow: 0 18px 60px rgba(0,0,0,.35);
     }
 
-    /* ===== LED SCORE PANEL ===== */
-    .scorePanel{
-      border-radius: 18px;
-      border: 1px solid rgba(255,255,255,.10);
-      background:
-        radial-gradient(1000px 700px at 50% 30%, rgba(255,234,160,.07), transparent 60%),
-        rgba(0,0,0,.25);
-      padding: 18px 14px 16px;
-    }
-
-    /* Fertilizer 1: gentle float */
-    @keyframes floatSoft{
-      0%{ transform: translateY(0px); opacity: 1; }
-      50%{ transform: translateY(-3px); opacity: .98; }
-      100%{ transform: translateY(0px); opacity: 1; }
-    }
-
-    .scoreCopyTop{
-      display:flex;
-      justify-content:center;
-      text-align:center;
-      gap: 10px;
-      flex-wrap: wrap;
-      margin-bottom: 12px;
-      animation: floatSoft 3.8s ease-in-out infinite;
-      will-change: transform;
-    }
-
-    .urHere{
-      font-weight: 950;
-      letter-spacing: .06em;
-      text-transform: uppercase;
-      color: rgba(238,242,247,.92);
-      font-size: 18px;
-    }
-    .keepGoing{
-      font-weight: 850;
-      letter-spacing: .06em;
-      text-transform: uppercase;
-      color: rgba(238,242,247,.70);
-      font-size: 18px;
-    }
-
-    .ledStage{
-      display:flex;
-      justify-content:center;
-      align-items:center;
-      padding: 10px 8px 12px;
-    }
-
-    .ledBox{
-      width: min(560px, 100%);
-      border-radius: 18px;
-      border: 1px solid rgba(255,255,255,.10);
-      background: rgba(0,0,0,.28);
-      padding: 14px 10px;
+    .secCanvasWrap{
       position: relative;
-      overflow: hidden;
-    }
-
-    /* Subtle shimmer */
-    .ledBox::after{
-      content:"";
-      position:absolute;
-      inset:-40% -60%;
-      background: linear-gradient(110deg,
-        transparent 40%,
-        rgba(255,234,160,.07) 50%,
-        transparent 60%);
-      transform: rotate(8deg);
-      animation: ledSweep 6.2s linear infinite; /* slower = calmer */
-      pointer-events:none;
-      opacity: .45;
-    }
-    @keyframes ledSweep{
-      0%{ transform: translateX(-22%) rotate(8deg); }
-      100%{ transform: translateX(22%) rotate(8deg); }
-    }
-
-    .ledDigits{
-      display:flex;
-      justify-content:center;
-      align-items:center;
-      gap: clamp(10px, 2.8vw, 24px);
       width: 100%;
-    }
-
-    .ledDigit{
-      --dot: clamp(6px, 1.1vw, 10px);
-      --gap: clamp(2px, .55vw, 5px);
-
-      display:grid;
-      grid-template-columns: repeat(10, var(--dot));
-      grid-template-rows: repeat(14, var(--dot));
-      gap: var(--gap);
-      padding: 6px;
-      border-radius: 14px;
-
-      background: rgba(255,255,255,.02);
-      box-shadow: inset 0 0 0 1px rgba(255,255,255,.06);
-    }
-
-    .dot{
-      width: var(--dot);
-      height: var(--dot);
-      border-radius: 999px;
-      background: var(--ledDotOff);
-    }
-
-    /* Base ON glow */
-    .dot.on{
-      background: radial-gradient(circle at 35% 35%, var(--ledHot), var(--led) 55%, rgba(255,234,160,.55));
-      filter: drop-shadow(0 0 6px rgba(255,234,160,.35)) drop-shadow(0 0 14px rgba(255,234,160,.18));
-      will-change: filter, opacity;
-    }
-
-    /* Fertilizer 2: micro-twinkle (JS will randomize delay/duration) */
-    @keyframes twinkle{
-      0%{ opacity: 1; filter: drop-shadow(0 0 6px rgba(255,234,160,.34)) drop-shadow(0 0 14px rgba(255,234,160,.18)); }
-      50%{ opacity: .92; filter: drop-shadow(0 0 9px rgba(255,234,160,.42)) drop-shadow(0 0 18px rgba(255,234,160,.22)); }
-      100%{ opacity: 1; filter: drop-shadow(0 0 6px rgba(255,234,160,.34)) drop-shadow(0 0 14px rgba(255,234,160,.18)); }
-    }
-
-    .dot.on.twinkle{
-      animation-name: twinkle;
-      animation-timing-function: ease-in-out;
-      animation-iteration-count: infinite;
-    }
-
-    .scoreHint{
-      margin: 10px 0 0;
-      text-align:center;
-      color: rgba(238,242,247,.68);
-      font-size: 14px;
-      line-height: 1.35;
-    }
-
-    .actions{
-      display:flex;
-      flex-direction: column;
-      gap: 10px;
-    }
-    .btn{
-      width:100%;
-      appearance:none;
-      border: 1px solid rgba(255,255,255,.14);
-      background: rgba(255,255,255,.07);
-      color: rgba(238,242,247,.92);
-      padding: 12px 14px;
-      border-radius: 14px;
-      font-size: 15px;
-      font-weight: 850;
-      cursor: pointer;
-      text-align:center;
-      text-decoration:none;
-      user-select:none;
-      -webkit-tap-highlight-color: transparent;
-    }
-    .btn:hover{ background: rgba(255,255,255,.10); }
-    .btn:active{ transform: translateY(1px); }
-
-    .btnPrimary{
-      border-color: rgba(255,234,160,.35);
-      background: rgba(255,234,160,.10);
-    }
-    .btnPrimary:hover{ background: rgba(255,234,160,.14); }
-
-    .mutedLine{
-      color: rgba(238,242,247,.60);
-      font-size: 13px;
-      line-height: 1.35;
-      margin-top: 6px;
-    }
-
-    details{
-      background: rgba(255,255,255,.045);
-      border: 1px solid rgba(255,255,255,.10);
       border-radius: 16px;
-      padding: 10px 12px;
-      margin-top: 12px;
-    }
-    summary{
-      cursor:pointer;
-      font-weight: 850;
-      color: rgba(238,242,247,.65);
-      letter-spacing: .06em;
-      text-transform: uppercase;
-      font-size: 12px;
-      outline:none;
-    }
-    pre{
-      margin: 10px 0 0;
-      white-space: pre-wrap;
-      word-break: break-word;
-      color: rgba(238,242,247,.82);
-      font-size: 12px;
-      line-height: 1.35;
+      overflow: hidden;
+      border: 1px solid rgba(255,255,255,.10);
+      background: rgba(0,0,0,.25);
     }
 
-    .foot{
-      padding: 10px 16px 14px;
-      color: rgba(238,242,247,.30);
-      text-align:center;
-      letter-spacing: .22em;
+    canvas#secCanvas{
+      display:block;
+      width:100%;
+      height:auto;
+    }
+
+    .rowBtns{
+      display:flex;
+      gap:12px;
+      flex-wrap:wrap;
+    }
+
+    .btnWide{
+      flex:1;
+      min-width: 220px;
+      height: 54px;
+      border-radius: 16px;
+      border: 1px solid rgba(255,255,255,.14);
+      background: rgba(255,255,255,.08);
+      color: #eef2f7;
       font-weight: 900;
-      text-transform: uppercase;
-      font-size: 12px;
+      font-size: 16px;
+      letter-spacing: .02em;
+      cursor:pointer;
+    }
+    .btnWide:active{ transform: translateY(1px); }
+
+    .btnPrimaryWide{
+      flex: 2;
+      min-width: 260px;
+      height: 58px;
+      border-radius: 18px;
+      border: 1px solid rgba(255,255,255,.18);
+      background: rgba(103,243,164,.15);
+      color: #eafff2;
+      font-weight: 1000;
+      font-size: 16px;
+      letter-spacing: .03em;
+      cursor:pointer;
+    }
+    .btnPrimaryWide:active{ transform: translateY(1px); }
+
+    .note{
+      color: rgba(238,242,247,.68);
+      font-size: 13px;
+      line-height: 1.4;
+      margin-top: 8px;
+      font-weight: 700;
+    }
+
+    .err{
+      color: rgba(255,210,210,.92);
+      font-weight: 900;
+      letter-spacing: .02em;
+      margin: 8px 0 0;
     }
   </style>
 </head>
 
 <body>
-  <div class="secWrap">
-    <div class="secShell">
-      <div class="secTop">
-        <h1 class="brandTitle">
-          <span class="r">TAP</span><span class="w">-N-</span><span class="b">SCORE</span><span class="w">™</span>
-        </h1>
-        <p class="subTitle" id="subLine">After-Shot Intelligence</p>
+  <main class="secWrap">
+
+    <div class="heroBrand">
+      <div class="heroLeft">
+        <div class="heroTitle">TAP-N-SCORE™</div>
+        <div class="heroSub">After-Shot Intelligence</div>
       </div>
 
-      <div class="secGrid">
-        <!-- LEFT: SCORE -->
-        <div class="secCard">
-          <h2>Score</h2>
-
-          <div class="scorePanel">
-            <div class="scoreCopyTop">
-              <div class="urHere">U R Here!</div>
-              <div class="keepGoing">Keep going!</div>
-            </div>
-
-            <div class="ledStage">
-              <div class="ledBox" aria-label="LED score display">
-                <div id="ledDigits" class="ledDigits"></div>
-              </div>
-            </div>
-
-            <div class="scoreHint" id="scoreHint">
-              Calm LED score — soft glow with a tiny twinkle.
-            </div>
-          </div>
-
-          <details>
-            <summary>Diagnostics</summary>
-            <pre id="diagOut">(none)</pre>
-          </details>
-        </div>
-
-        <!-- RIGHT: ACTIONS -->
-        <div class="secCard">
-          <h2>Next</h2>
-
-          <div class="actions">
-            <a class="btn btnPrimary" id="backBtn" href="/tap-n-score/index.html?fresh=1">Score another</a>
-            <a class="btn" id="downloadBtn" href="/tap-n-score/download.html">Download SEC PNG</a>
-          </div>
-
-          <div class="mutedLine">
-            Test LED style:
-            <code>?score=25</code> or <code>?score=100</code>
-          </div>
-        </div>
+      <div class="heroRight">
+        <div class="sessionLine" id="sessionLine">Session: —</div>
       </div>
-
-      <div class="foot">SCZN3</div>
     </div>
-  </div>
 
-  <script src="/tap-n-score/sec.js?v=22206d2"></script>
+    <section class="secCard">
+      <div class="secCanvasWrap">
+        <canvas id="secCanvas" width="1200" height="675"></canvas>
+      </div>
+
+      <div id="errLine" class="err" style="display:none;"></div>
+
+      <div class="rowBtns" style="margin-top:14px;">
+        <button id="downloadBtn" class="btnPrimaryWide" type="button">Download SEC PNG</button>
+        <button id="scoreAnotherBtn" class="btnWide" type="button">Score another</button>
+        <button id="backBtn" class="btnWide" type="button">Back to setup</button>
+      </div>
+
+      <div class="note">
+        Tip (iPhone/iPad): if download doesn’t start, press-and-hold the image in the next screen and choose <b>Save to Photos</b>.
+      </div>
+    </section>
+
+    <footer class="footer" style="margin-top:8px;">
+      <span class="footerMark">SCZN3</span>
+    </footer>
+
+  </main>
+
+  <script src="/tap-n-score/sec.js?v=SEC-A1"></script>
 </body>
 </html>
