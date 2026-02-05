@@ -1,52 +1,54 @@
 /* ============================================================
-   /tap-n-score/index.js (FULL REPLACEMENT) — “LOCK-N-ROLL” Polish
+   index.js (FULL REPLACEMENT) — Tap Behavior Polish
    Goals:
-   - One photo button -> opens picker
-   - Tap Aim Point (first) in GREEN, then tap Hits (bright green)
-   - Prevent “2 hits per tap” (no touch+click double fire)
-   - “Confidence Lock” feedback:
-       • status text updates
-       • subtle aim-point pulse
-       • small haptic (where supported)
-   - Sticky “Show results” appears after a short pause (magic)
-   - URL payload (base64) to sec.html; localStorage backup
+   - One “Add Target Picture” button that opens Camera OR Library (iOS friendly)
+   - No double-counting taps (fixes the 2-hits-per-tap issue)
+   - Aim point wording: "Tap Aim Point" (AIM = GREEN)
+   - Hits are BRIGHT GREEN (easy “mode switch”)
+   - Sticky "Show results" appears like magic after user pauses (idle reveal)
+   - Works with your existing index.html IDs:
+       photoBtn, photoInput, targetImg, targetWrap, dotsLayer,
+       tapCount, clearTapsBtn, instructionLine,
+       stickyBar, stickyResultsBtn,
+       distanceYds, moaPerClick, vendorLink
 ============================================================ */
 
 (() => {
   const $ = (id) => document.getElementById(id);
 
-  // ---- REQUIRED IDs
+  // ---- DOM (required)
   const elPhotoBtn = $("photoBtn");
   const elFile = $("photoInput");
   const elImg = $("targetImg");
+  const elWrap = $("targetWrap");
   const elDots = $("dotsLayer");
   const elTapCount = $("tapCount");
   const elClear = $("clearTapsBtn");
   const elInstruction = $("instructionLine");
   const elStatus = $("statusLine");
 
+  // Sticky results
   const elStickyBar = $("stickyBar");
-  const elStickyResultsBtn = $("stickyResultsBtn");
+  const elStickyBtn = $("stickyResultsBtn");
 
-  // Optional
-  const elVendor = $("vendorLink");
+  // Settings
   const elDistance = $("distanceYds");
   const elMoaClick = $("moaPerClick");
+  const elVendor = $("vendorLink");
 
-  // ---- Storage / routing
+  // ---- Storage + routing
   const SEC_KEY = "SCZN3_SEC_PAYLOAD_V1";
 
   // ---- State
   let objectUrl = null;
+  let hasPhoto = false;
 
-  // Normalized 0..1 points (screen-space): x right +, y down +
-  let aim = null;      // {x01,y01}
-  let hits = [];       // [{x01,y01}...]
+  // normalized 0..1 (image box)
+  let aim = null;            // {x01,y01}
+  let hits = [];             // [{x01,y01}, ...]
 
-  // Tap control / anti-double-fire
-  let lastPointerTs = 0;
-
-  // Sticky “magic” timer
+  // tap handling guard
+  let lastTapAt = 0;
   let idleTimer = null;
 
   // ---- Helpers
@@ -60,10 +62,23 @@
     if (elTapCount) elTapCount.textContent = String(hits.length);
   }
 
-  function haptic(ms = 10) {
-    try {
-      if (navigator.vibrate) navigator.vibrate(ms);
-    } catch (_) {}
+  function showSticky(yes) {
+    if (!elStickyBar) return;
+    if (yes) {
+      elStickyBar.classList.remove("stickyHidden");
+      elStickyBar.setAttribute("aria-hidden", "false");
+    } else {
+      elStickyBar.classList.add("stickyHidden");
+      elStickyBar.setAttribute("aria-hidden", "true");
+    }
+  }
+
+  function setInstruction(msg) {
+    setText(elInstruction, msg);
+  }
+
+  function setStatus(msg) {
+    setText(elStatus, msg);
   }
 
   function clearDots() {
@@ -71,65 +86,39 @@
     hits = [];
     if (elDots) elDots.innerHTML = "";
     setTapCount();
-    hideSticky();
-    setText(elInstruction, "");
-    setText(elStatus, "Add a target photo to begin.");
-    if (elPhotoBtn) elPhotoBtn.style.display = "";
+    showSticky(false);
+    if (hasPhoto) {
+      setInstruction("Tap Aim Point (green), then tap hits (green).");
+      setStatus("Tap Aim Point first.");
+    } else {
+      setInstruction("");
+      setStatus("Add a picture to begin.");
+    }
   }
 
-  function makeDot(x01, y01, kind) {
-    if (!elDots) return null;
+  function addDot(x01, y01, kind) {
+    if (!elDots) return;
 
     const d = document.createElement("div");
-    d.className = "tapDot";
+    // Use existing classes but we’ll override colors in JS inline for clarity
+    d.className = "tapDot " + (kind === "aim" ? "tapDotBull" : "tapDotShot");
+    d.style.left = (x01 * 100) + "%";
+    d.style.top = (y01 * 100) + "%";
 
-    // Position (percent so it scales)
-    d.style.left = `${x01 * 100}%`;
-    d.style.top = `${y01 * 100}%`;
-
-    // Style (inline so we don’t depend on CSS classes)
-    d.style.position = "absolute";
-    d.style.width = "16px";
-    d.style.height = "16px";
-    d.style.marginLeft = "-8px";
-    d.style.marginTop = "-8px";
-    d.style.borderRadius = "999px";
-    d.style.boxShadow = "0 6px 20px rgba(0,0,0,.55)";
-    d.style.border = "2px solid rgba(0,0,0,.55)";
-
+    // Force colors regardless of CSS:
+    // Aim = GREEN, Hits = BRIGHT GREEN
     if (kind === "aim") {
-      // Aim Point = GREEN
       d.style.background = "rgba(103,243,164,.98)";
-      d.style.borderColor = "rgba(0,0,0,.70)";
+      d.style.borderColor = "rgba(0,0,0,.55)";
     } else {
-      // Hits = BRIGHT GREEN (slightly different so the switch is obvious)
-      d.style.background = "rgba(67,255,160,.98)";
-      d.style.borderColor = "rgba(0,0,0,.70)";
+      d.style.background = "rgba(110,255,90,.98)";   // bright green hits
+      d.style.borderColor = "rgba(0,0,0,.55)";
     }
 
     elDots.appendChild(d);
-    return d;
   }
 
-  function pulse(el) {
-    if (!el || !el.animate) return;
-    try {
-      el.animate(
-        [
-          { transform: "translateZ(0) scale(1)", opacity: 1 },
-          { transform: "translateZ(0) scale(1.35)", opacity: 0.85 },
-          { transform: "translateZ(0) scale(1)", opacity: 1 }
-        ],
-        { duration: 420, iterations: 1, easing: "ease-out" }
-      );
-    } catch (_) {}
-  }
-
-  function imgReady() {
-    return elImg && elImg.src && String(elImg.src).length > 8;
-  }
-
-  function getRelative01FromPointer(ev) {
+  function getRelative01FromEvent(ev) {
     const r = elImg.getBoundingClientRect();
     const x = (ev.clientX - r.left) / r.width;
     const y = (ev.clientY - r.top) / r.height;
@@ -141,48 +130,19 @@
     return btoa(unescape(encodeURIComponent(json)));
   }
 
-  function hideSticky() {
-    if (!elStickyBar) return;
-    elStickyBar.classList.add("stickyHidden");
-    elStickyBar.setAttribute("aria-hidden", "true");
-  }
-
-  function showSticky() {
-    if (!elStickyBar) return;
-    elStickyBar.classList.remove("stickyHidden");
-    elStickyBar.setAttribute("aria-hidden", "false");
-  }
-
-  function scheduleStickyMagic() {
-    // Show results only when: aim is set + at least 1 hit
-    if (!aim || hits.length < 1) {
-      hideSticky();
-      return;
-    }
-
-    clearTimeout(idleTimer);
-    idleTimer = setTimeout(() => {
-      showSticky();
-      setText(elStatus, "Ready when you are.");
-    }, 850); // “pause & ponder” moment
-  }
-
-  // ---- Compute correction (placeholder scale, TRUE MOA)
+  // Placeholder correction math (kept from baseline so directions stay correct)
   function computeCorrection() {
     if (!aim || hits.length < 1) return null;
 
-    const avg = hits.reduce(
-      (acc, p) => ({ x: acc.x + p.x01, y: acc.y + p.y01 }),
-      { x: 0, y: 0 }
-    );
+    const avg = hits.reduce((acc, p) => ({ x: acc.x + p.x01, y: acc.y + p.y01 }), { x: 0, y: 0 });
     avg.x /= hits.length;
     avg.y /= hits.length;
 
-    // bull/aim - POI
+    // aim - POI (move POI to aim)
     const dx = aim.x01 - avg.x; // + => RIGHT
     const dy = aim.y01 - avg.y; // + => DOWN (screen space)
 
-    // Demo scale: full image width = 10 inches (replace later with real inches mapping)
+    // Demo scale (placeholder): treat full image width as 10 inches
     const inchesPerFullWidth = 10;
     const inchesX = dx * inchesPerFullWidth;
     const inchesY = dy * inchesPerFullWidth;
@@ -190,7 +150,7 @@
     const dist = Number(elDistance?.value ?? 100);
     const moaPerClick = Number(elMoaClick?.value ?? 0.25);
 
-    const inchesPerMoa = (dist / 100) * 1.047; // TRUE MOA
+    const inchesPerMoa = (dist / 100) * 1.047; // true MOA
     const moaX = inchesX / inchesPerMoa;
     const moaY = inchesY / inchesPerMoa;
 
@@ -205,131 +165,172 @@
   }
 
   function goToSEC(payload) {
-    try { localStorage.setItem(SEC_KEY, JSON.stringify(payload)); } catch (_) {}
+    try { localStorage.setItem(SEC_KEY, JSON.stringify(payload)); } catch {}
 
     const b64 = b64FromObj(payload);
-    // Use replace to avoid “back stack weirdness”
+    // Keep sec.html baseline routing
     location.href = `./sec.html?payload=${encodeURIComponent(b64)}&fresh=${Date.now()}`;
   }
 
-  // ---- Photo picker wiring
-  if (elPhotoBtn && elFile) {
-    elPhotoBtn.addEventListener("click", () => {
-      // NOTE: iOS will still show options depending on device/settings.
-      // If you want ALWAYS “Photo Library”, remove capture="environment" in HTML.
-      elFile.click();
-    });
+  function buildAndShowResults() {
+    const out = computeCorrection();
+    if (!out) {
+      if (!aim) {
+        setStatus("Tap Aim Point first.");
+        setInstruction("Tap Aim Point (green), then tap hits (green).");
+      } else {
+        setStatus("Tap at least 1 hit.");
+        setInstruction("Now tap your hits (green).");
+      }
+      showSticky(false);
+      return;
+    }
+
+    const payload = {
+      sessionId: "S-" + Date.now(),
+      score: 99,
+      shots: hits.length,
+      windage: { dir: out.windage.dir, clicks: Number(out.windage.clicks.toFixed(2)) },
+      elevation: { dir: out.elevation.dir, clicks: Number(out.elevation.clicks.toFixed(2)) },
+      secPngUrl: "",
+      vendorUrl: (elVendor && elVendor.href && elVendor.href !== "#") ? elVendor.href : "",
+      surveyUrl: "",
+      debug: { aim, avgPoi: out.avgPoi }
+    };
+
+    goToSEC(payload);
+  }
+
+  function scheduleIdleReveal() {
+    clearTimeout(idleTimer);
+
+    // Only reveal when:
+    // - photo exists
+    // - aim is set
+    // - at least 1 hit
+    if (!hasPhoto || !aim || hits.length < 1) {
+      showSticky(false);
+      return;
+    }
+
+    // “magic pause” reveal after ~650ms of no tapping
+    idleTimer = setTimeout(() => {
+      showSticky(true);
+      setStatus("Ready when you are.");
+      setInstruction(""); // keep it clean
+    }, 650);
+  }
+
+  // ---- Photo selection behavior
+  function openPicker() {
+    if (!elFile) return;
+
+    // iOS sometimes “sticks” to last selection unless you reset value
+    elFile.value = "";
+    elFile.click();
+  }
+
+  function loadFile(file) {
+    if (!file) return;
+
+    // Reset tap state
+    clearDots();
+
+    // Render image
+    if (objectUrl) URL.revokeObjectURL(objectUrl);
+    objectUrl = URL.createObjectURL(file);
+    elImg.src = objectUrl;
+
+    hasPhoto = true;
+    setStatus("Tap Aim Point first.");
+    setInstruction("Tap Aim Point (green), then tap hits (green).");
+  }
+
+  // ---- Tap handler (single-source; prevents double-fire)
+  function handleTap(ev) {
+    if (!hasPhoto || !elImg || !elImg.src) return;
+
+    // Debounce double-fire (touch+click)
+    const now = Date.now();
+    if (now - lastTapAt < 250) return;
+    lastTapAt = now;
+
+    const { x01, y01 } = getRelative01FromEvent(ev);
+
+    if (!aim) {
+      aim = { x01, y01 };
+      addDot(x01, y01, "aim");
+      setStatus("Now tap hits.");
+      setInstruction("Tap hits (green).");
+      showSticky(false);
+      scheduleIdleReveal();
+      return;
+    }
+
+    hits.push({ x01, y01 });
+    addDot(x01, y01, "hit");
+    setTapCount();
+    setStatus(`Hits: ${hits.length}`);
+    showSticky(false);
+    scheduleIdleReveal();
+  }
+
+  // ---- Wire events
+  if (elPhotoBtn) {
+    elPhotoBtn.addEventListener("click", openPicker);
   }
 
   if (elFile) {
     elFile.addEventListener("change", () => {
       const f = elFile.files && elFile.files[0];
-      if (!f) return;
-
-      clearDots();
-
-      if (objectUrl) URL.revokeObjectURL(objectUrl);
-      objectUrl = URL.createObjectURL(f);
-
-      // Hide the big button once a photo is selected
-      if (elPhotoBtn) elPhotoBtn.style.display = "none";
-
-      setText(elStatus, "Tap Aim Point.");
-      setText(elInstruction, "Tap Aim Point (green). Then tap hits.");
-      elImg.src = objectUrl;
-
-      // Allow re-selecting same file later
-      try { elFile.value = ""; } catch (_) {}
+      loadFile(f);
+      // allow re-select same file
+      elFile.value = "";
     });
   }
 
-  // ---- Tap handling (POINTER ONLY to stop double-fire)
-  // We listen on the IMAGE, and stop click/touch duplicates by:
-  // - using pointerdown
-  // - ignoring very-close repeats
-  if (elImg) {
-    elImg.style.touchAction = "manipulation"; // reduce browser gesture weirdness
-
-    elImg.addEventListener("pointerdown", (ev) => {
-      if (!imgReady()) return;
-      if (ev.pointerType === "mouse" && ev.button !== 0) return;
-
-      const now = Date.now();
-      if (now - lastPointerTs < 120) return; // tiny guard
-      lastPointerTs = now;
-
-      // Hide sticky while actively tapping
-      hideSticky();
-      clearTimeout(idleTimer);
-
-      const { x01, y01 } = getRelative01FromPointer(ev);
-
-      if (!aim) {
-        aim = { x01, y01 };
-        const dot = makeDot(x01, y01, "aim");
-        pulse(dot);
-        haptic(10);
-
-        setText(elStatus, "Aim point locked. Add hits.");
-        setText(elInstruction, "Now tap hits (bright green).");
-      } else {
-        hits.push({ x01, y01 });
-        makeDot(x01, y01, "hit");
-        setTapCount();
-        haptic(6);
-
-        // After each hit, set a calm “ponder” window
-        scheduleStickyMagic();
-      }
+  // IMPORTANT: Use ONE event path.
+  // iOS: touchend is reliable; desktop: click works.
+  // We’ll attach both but stop duplicates via debounce.
+  if (elWrap) {
+    elWrap.addEventListener("touchend", (e) => {
+      // translate to a mouse-like event using changedTouches
+      const t = e.changedTouches && e.changedTouches[0];
+      if (!t) return;
+      handleTap({ clientX: t.clientX, clientY: t.clientY });
     }, { passive: true });
 
-    // Hard-block click as a second channel (prevents 2-per-tap on iOS)
-    elImg.addEventListener("click", (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      return false;
-    }, true);
+    elWrap.addEventListener("click", (e) => handleTap(e), { passive: true });
+  } else if (elImg) {
+    elImg.addEventListener("touchend", (e) => {
+      const t = e.changedTouches && e.changedTouches[0];
+      if (!t) return;
+      handleTap({ clientX: t.clientX, clientY: t.clientY });
+    }, { passive: true });
+
+    elImg.addEventListener("click", (e) => handleTap(e), { passive: true });
   }
 
-  // ---- Clear
   if (elClear) {
     elClear.addEventListener("click", () => {
       clearDots();
-      setText(elStatus, "Tap-n-Score™ ready.");
-      setText(elInstruction, "");
-      // If a photo is still showing, keep the button hidden
-      if (imgReady() && elPhotoBtn) elPhotoBtn.style.display = "none";
-      if (imgReady()) setText(elStatus, "Tap Aim Point.");
+      if (hasPhoto) {
+        setStatus("Tap Aim Point first.");
+        setInstruction("Tap Aim Point (green), then tap hits (green).");
+      }
     });
   }
 
-  // ---- Sticky results (the “magic” CTA)
-  if (elStickyResultsBtn) {
-    elStickyResultsBtn.addEventListener("click", () => {
-      const out = computeCorrection();
-      if (!out) {
-        setText(elStatus, "Tap Aim Point, then add at least one hit.");
-        setText(elInstruction, "Tap Aim Point (green) first, then tap hits.");
-        hideSticky();
-        return;
-      }
-
-      const payload = {
-        sessionId: "S-" + Date.now(),
-        score: null, // keep it clean; score comes later when real scoring lands
-        shots: hits.length,
-        windage: { dir: out.windage.dir, clicks: Number(out.windage.clicks.toFixed(2)) },
-        elevation: { dir: out.elevation.dir, clicks: Number(out.elevation.clicks.toFixed(2)) },
-        secPngUrl: "",
-        vendorUrl: (elVendor && elVendor.href && elVendor.href !== "#") ? elVendor.href : "",
-        surveyUrl: "",
-        debug: { aim, avgPoi: out.avgPoi }
-      };
-
-      goToSEC(payload);
+  if (elStickyBtn) {
+    elStickyBtn.addEventListener("click", () => {
+      buildAndShowResults();
     });
   }
 
   // ---- Boot
-  clearDots();
+  hasPhoto = false;
+  showSticky(false);
+  setTapCount();
+  setInstruction("");
+  setStatus("Add a picture to begin.");
 })();
