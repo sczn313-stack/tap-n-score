@@ -1,30 +1,29 @@
 /* ============================================================
-   tap-n-score/sec.js (FULL REPLACEMENT) — SEC (NO TARGET PHOTO) + DOTS SIZE 10
-   Does:
-   - Reads payload from ?payload= (base64 JSON) or localStorage SCZN3_SEC_PAYLOAD_V1
-   - Renders SEC canvas WITHOUT drawing the target photo
-   - Draws dots:
-       - AIM (green)
-       - HITS (bright green) if provided
-       - Otherwise falls back to AVG POI (bright green) if hits not provided
-     Dot size = 10px diameter (radius 5)
-   - LED score (pale yellow) with COLOR SHIFT by score value
-   - Places LED with safe top padding so it never clips
-   - Saves PNG to localStorage:
-       SCZN3_SEC_PNG_DATAURL_V1
-       SCZN3_SEC_PNG_BLOBURL_V1
-       SCZN3_SEC_FROM_V1
-   - Download button routes to download.html?auto=1
+   tap-n-score/sec.js (FULL REPLACEMENT) — SEC RENDERS + PNG + CLICKS + HISTORY
+   Fix/Adds:
+   - Header text handled by sec.html (you already changed to Shooter Experience Card)
+   - Draws: target photo + AIM + ALL HITS + AVG POI dots (radius = 10)
+   - Shows score (colored by value)
+   - Shows Windage/Elevation clicks on-card (so clicks are not “gone”)
+   - Stores & shows LAST 3 SCORES + AVG
+   - Saves PNG to localStorage for download.html
 ============================================================ */
 
 (() => {
   // ---- Payload key
   const KEY_PAYLOAD = "SCZN3_SEC_PAYLOAD_V1";
 
+  // ---- Target photo handoff keys (from index page)
+  const KEY_TARGET_IMG_DATA = "SCZN3_TARGET_IMG_DATAURL_V1"; // data:image/...
+  const KEY_TARGET_IMG_BLOB = "SCZN3_TARGET_IMG_BLOBURL_V1"; // blob:...
+
   // ---- PNG keys (consumed by download.js)
   const KEY_PNG_DATA = "SCZN3_SEC_PNG_DATAURL_V1";
   const KEY_PNG_BLOB = "SCZN3_SEC_PNG_BLOBURL_V1";
   const KEY_FROM = "SCZN3_SEC_FROM_V1";
+
+  // ---- Score history
+  const KEY_SCORE_HIST = "SCZN3_SCORE_HISTORY_V1"; // JSON array [{score,ts,sessionId}...]
 
   const $ = (id) => document.getElementById(id);
 
@@ -71,11 +70,7 @@
     elErr.textContent = "";
   }
 
-  function clamp01(v) {
-    const n = Number(v);
-    if (!Number.isFinite(n)) return 0;
-    return Math.max(0, Math.min(1, n));
-  }
+  function clamp01(v) { return Math.max(0, Math.min(1, v)); }
 
   function dprScaleCanvas(cssW, cssH) {
     const dpr = Math.max(1, Math.floor(window.devicePixelRatio || 1));
@@ -98,23 +93,17 @@
     ctx.closePath();
   }
 
-  // -----------------------
-  // Score color logic
-  // -----------------------
-  function scoreTheme(score) {
-    const s = Math.max(0, Math.min(100, Math.round(Number(score) || 0)));
-
-    // Calm + readable score colors (still “LED-ish”)
-    if (s >= 90) return { on: "#b7ff3c", glow: "rgba(183,255,60,.55)" };    // green
-    if (s >= 75) return { on: "#f5f0b3", glow: "rgba(245,240,179,.55)" };   // pale yellow
-    if (s >= 60) return { on: "#ffd166", glow: "rgba(255,209,102,.55)" };   // amber
-    return { on: "#ff6b6b", glow: "rgba(255,107,107,.55)" };                // red
+  function scoreColor(score) {
+    const s = Number(score) || 0;
+    if (s >= 90) return { on: "#7CFF7C", glow: "rgba(124,255,124,.55)" };     // green
+    if (s >= 75) return { on: "#f5f0b3", glow: "rgba(245,240,179,.55)" };     // pale yellow
+    return { on: "#ff7a7a", glow: "rgba(255,122,122,.55)" };                 // red
   }
 
   // -----------------------
-  // Seven-seg LED drawing (uses theme colors)
+  // Seven-seg LED drawing
   // -----------------------
-  const LED_OFF = "rgba(245,240,179,.08)";
+  const LED_OFF = "rgba(255,255,255,.08)";
 
   function segMap(d) {
     // segments: a b c d e f g
@@ -144,116 +133,178 @@
   }
 
   function drawDigit(x, y, size, digit, LED_ON, LED_GLOW) {
-    // digit box: size wide, size*1.8 tall
     const W = size;
     const H = size * 1.8;
-    const t = Math.max(5, Math.floor(size * 0.18)); // segment thickness
-    const gap = Math.max(5, Math.floor(size * 0.12));
+    const t = Math.max(6, Math.floor(size * 0.18)); // thickness
+    const gap = Math.max(6, Math.floor(size * 0.12));
 
     const seg = segMap(digit);
 
-    // a (top)
-    drawSeg(x + gap, y, W - 2 * gap, t, seg[0], LED_ON, LED_GLOW);
-    // b (top-right)
-    drawSeg(x + W - t, y + gap, t, (H / 2) - gap - t / 2, seg[1], LED_ON, LED_GLOW);
-    // c (bottom-right)
-    drawSeg(x + W - t, y + (H / 2) + t / 2, t, (H / 2) - gap - t / 2, seg[2], LED_ON, LED_GLOW);
-    // d (bottom)
-    drawSeg(x + gap, y + H - t, W - 2 * gap, t, seg[3], LED_ON, LED_GLOW);
-    // e (bottom-left)
-    drawSeg(x, y + (H / 2) + t / 2, t, (H / 2) - gap - t / 2, seg[4], LED_ON, LED_GLOW);
-    // f (top-left)
-    drawSeg(x, y + gap, t, (H / 2) - gap - t / 2, seg[5], LED_ON, LED_GLOW);
-    // g (middle)
-    drawSeg(x + gap, y + (H / 2) - (t / 2), W - 2 * gap, t, seg[6], LED_ON, LED_GLOW);
+    drawSeg(x + gap, y, W - 2 * gap, t, seg[0], LED_ON, LED_GLOW);                       // a
+    drawSeg(x + W - t, y + gap, t, (H / 2) - gap - t / 2, seg[1], LED_ON, LED_GLOW);    // b
+    drawSeg(x + W - t, y + (H / 2) + t / 2, t, (H / 2) - gap - t / 2, seg[2], LED_ON, LED_GLOW); // c
+    drawSeg(x + gap, y + H - t, W - 2 * gap, t, seg[3], LED_ON, LED_GLOW);               // d
+    drawSeg(x, y + (H / 2) + t / 2, t, (H / 2) - gap - t / 2, seg[4], LED_ON, LED_GLOW); // e
+    drawSeg(x, y + gap, t, (H / 2) - gap - t / 2, seg[5], LED_ON, LED_GLOW);            // f
+    drawSeg(x + gap, y + (H / 2) - (t / 2), W - 2 * gap, t, seg[6], LED_ON, LED_GLOW);  // g
   }
 
   function drawLedNumberCentered(score, cx, cy, totalWidth) {
-    const s = Math.max(0, Math.min(100, Math.round(Number(score) || 0)));
-    const str = String(s);
-
-    // 2 digits unless 100
+    const s = Math.round(Number(score) || 0);
+    const str = String(Math.max(0, Math.min(100, s)));
     const digits = (str === "100") ? ["1","0","0"] : str.padStart(2, "0").split("");
-    const digitCount = digits.length;
 
-    const spacing = Math.max(12, Math.floor(totalWidth * 0.035));
+    const { on: LED_ON, glow: LED_GLOW } = scoreColor(s);
+
+    const digitCount = digits.length;
+    const spacing = Math.max(16, Math.floor(totalWidth * 0.04));
     const size = Math.floor((totalWidth - spacing * (digitCount - 1)) / digitCount);
 
     const blockH = size * 1.8;
     const startX = cx - ((size * digitCount) + (spacing * (digitCount - 1))) / 2;
     const startY = cy - blockH / 2;
 
-    const th = scoreTheme(s);
     digits.forEach((d, i) => {
       const x = startX + i * (size + spacing);
-      drawDigit(x, startY, size, d, th.on, th.glow);
+      drawDigit(x, startY, size, d, LED_ON, LED_GLOW);
     });
   }
 
   // -----------------------
-  // Dots (AIM + HITS) — size 10px diameter
+  // Text + Dots
   // -----------------------
-  function drawDotAt01(p, rect, color) {
-    if (!p) return;
-    const x01 = clamp01(p.x01);
-    const y01 = clamp01(p.y01);
-    const x = rect.x + x01 * rect.w;
-    const y = rect.y + y01 * rect.h;
-
-    const r = 5; // radius => 10px diameter
-
+  function drawText(text, x, y, size, color, weight = 900, align = "center") {
     ctx.save();
-    ctx.shadowColor = "rgba(0,0,0,.45)";
-    ctx.shadowBlur = 10;
     ctx.fillStyle = color;
-    ctx.strokeStyle = "rgba(0,0,0,.60)";
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.arc(x, y, r, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.stroke();
-    ctx.restore();
-  }
-
-  function drawDots(payload, rect) {
-    const aim = payload?.debug?.aim;
-
-    // Prefer hits if present
-    const hits = payload?.debug?.hits;
-    const avgPoi = payload?.debug?.avgPoi;
-
-    // AIM always (if present)
-    if (aim && typeof aim === "object") drawDotAt01(aim, rect, "#67f3a4");
-
-    // HITS
-    if (Array.isArray(hits) && hits.length) {
-      hits.forEach(h => {
-        if (h && typeof h === "object") drawDotAt01(h, rect, "#b7ff3c");
-      });
-      return;
-    }
-
-    // Fallback: AVG POI only
-    if (avgPoi && typeof avgPoi === "object") drawDotAt01(avgPoi, rect, "#b7ff3c");
-  }
-
-  // -----------------------
-  // Render SEC (NO PHOTO)
-  // -----------------------
-  function drawOverlayText(text, x, y, size, color, alpha = 1) {
-    ctx.save();
-    ctx.globalAlpha = alpha;
-    ctx.fillStyle = color;
-    ctx.font = `900 ${size}px system-ui, -apple-system, Segoe UI, Roboto, Arial`;
-    ctx.textAlign = "center";
+    ctx.font = `${weight} ${size}px system-ui, -apple-system, Segoe UI, Roboto, Arial`;
+    ctx.textAlign = align;
     ctx.textBaseline = "middle";
     ctx.fillText(text, x, y);
     ctx.restore();
   }
 
-  async function renderSec(payload) {
+  function dotAt(imgRect, p, color, label, r = 10) {
+    if (!p) return;
+    const x01 = clamp01(Number(p.x01));
+    const y01 = clamp01(Number(p.y01));
+    const x = imgRect.x + x01 * imgRect.w;
+    const y = imgRect.y + y01 * imgRect.h;
+
+    ctx.save();
+    ctx.shadowColor = "rgba(0,0,0,.55)";
+    ctx.shadowBlur = 16;
+
+    ctx.fillStyle = color;
+    ctx.strokeStyle = "rgba(0,0,0,.65)";
+    ctx.lineWidth = 3;
+
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+
+    if (label) {
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = "rgba(238,242,247,.92)";
+      ctx.font = "900 12px system-ui, -apple-system, Segoe UI, Roboto, Arial";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "bottom";
+      ctx.fillText(label, x, y - (r + 6));
+    }
+
+    ctx.restore();
+  }
+
+  function drawHits(payload, imgRect) {
+    const aim = payload?.debug?.aim || null;
+    const hits = Array.isArray(payload?.debug?.hits) ? payload.debug.hits : [];
+    const avg = payload?.debug?.avgPoi || null;
+
+    // AIM (green)
+    dotAt(imgRect, aim, "#67f3a4", "AIM", 10);
+
+    // HITS (bright green) — no label per-dot (clean)
+    hits.forEach((h) => dotAt(imgRect, h, "#b7ff3c", "", 10));
+
+    // AVG POI (white ring + green center)
+    if (avg) {
+      dotAt(imgRect, avg, "#e9eef6", "AVG", 10);
+      dotAt(imgRect, avg, "#b7ff3c", "", 6);
+    }
+  }
+
+  async function loadImage(src) {
+    if (!src) return null;
+    const img = new Image();
+    img.decoding = "async";
+    if (typeof src === "string" && src.startsWith("http")) img.crossOrigin = "anonymous";
+    img.src = src;
+
+    await new Promise((resolve) => {
+      img.onload = resolve;
+      img.onerror = resolve;
+    });
+
+    if (!img.naturalWidth) return null;
+    return img;
+  }
+
+  function getBestTargetPhoto(payload) {
+    const p = payload?.sourceImg;
+    if (p && typeof p === "string" && p.length > 20) return p;
+
+    const data = localStorage.getItem(KEY_TARGET_IMG_DATA);
+    if (data && data.startsWith("data:image/")) return data;
+
+    const blob = localStorage.getItem(KEY_TARGET_IMG_BLOB);
+    if (blob && blob.startsWith("blob:")) return blob;
+
+    return "";
+  }
+
+  // -----------------------
+  // Score history (last 3 + avg)
+  // -----------------------
+  function loadHistory() {
+    const arr = safeJsonParse(localStorage.getItem(KEY_SCORE_HIST) || "[]");
+    return Array.isArray(arr) ? arr : [];
+  }
+
+  function saveHistory(arr) {
+    try { localStorage.setItem(KEY_SCORE_HIST, JSON.stringify(arr)); } catch {}
+  }
+
+  function pushScoreToHistory(payload) {
+    const s = Math.round(Number(payload?.score ?? 0));
+    const sessionId = String(payload?.sessionId || "");
+    const now = Date.now();
+
+    const hist = loadHistory();
+
+    // De-dupe by sessionId if present
+    const already = sessionId ? hist.some(h => h && h.sessionId === sessionId) : false;
+    if (!already) {
+      hist.unshift({ score: s, ts: now, sessionId });
+    }
+
+    const trimmed = hist.slice(0, 3);
+    saveHistory(trimmed);
+    return trimmed;
+  }
+
+  function avgFromHistory(hist) {
+    if (!hist || !hist.length) return 0;
+    const sum = hist.reduce((a, h) => a + (Number(h?.score) || 0), 0);
+    return Math.round(sum / hist.length);
+  }
+
+  // -----------------------
+  // Render SEC
+  // -----------------------
+  async function renderSec(payload, hist3) {
     hideErr();
 
+    // Canvas size (16:9)
     const cssW = Math.min(980, Math.floor(window.innerWidth * 0.96));
     const cssH = Math.floor(cssW * 9 / 16);
     dprScaleCanvas(cssW, cssH);
@@ -263,7 +314,7 @@
     ctx.fillStyle = "rgba(6,7,10,1)";
     ctx.fillRect(0, 0, cssW, cssH);
 
-    // Outer glass panel
+    // Glass panel
     ctx.save();
     ctx.fillStyle = "rgba(255,255,255,.04)";
     ctx.strokeStyle = "rgba(255,255,255,.10)";
@@ -273,51 +324,118 @@
     ctx.stroke();
     ctx.restore();
 
-    // Safe top region so LED never clips
-    const topSafe = 26;
-    const ledCenterY = topSafe + 96; // keeps full digit height inside frame
-
-    // LED score centered (safe)
-    const score = Math.round(Number(payload?.score ?? 0));
-    drawLedNumberCentered(score, cssW / 2, ledCenterY, Math.min(520, cssW - 90));
-
-    // Dot field area (no photo, but consistent “target area” frame)
+    // Image rect (leave room for header LED + footer info)
     const pad = 26;
-    const fieldTop = topSafe + 170;
-    const fieldH = cssH - fieldTop - 90;
-    const field = { x: pad, y: fieldTop, w: cssW - pad * 2, h: Math.max(160, fieldH) };
+    const imgRectOuter = {
+      x: pad,
+      y: pad + 110,                 // pushes image DOWN so LED area never feels cramped
+      w: cssW - pad * 2,
+      h: cssH - pad * 2 - 210        // leaves bottom space for clicks/history
+    };
 
-    // Inner field frame
-    ctx.save();
-    ctx.fillStyle = "rgba(0,0,0,.18)";
-    ctx.strokeStyle = "rgba(255,255,255,.10)";
-    ctx.lineWidth = 1;
-    drawRoundedRect(field.x, field.y, field.w, field.h, 16);
-    ctx.fill();
-    ctx.stroke();
-    ctx.restore();
+    // Target photo
+    const src = getBestTargetPhoto(payload);
+    let drawnImgRect = null;
 
-    // Dots inside field (01 mapped to field)
-    drawDots(payload, field);
+    if (!src) {
+      showErr("No target photo provided to SEC. Go back and re-score.");
+    } else {
+      const img = await loadImage(src);
+      if (!img) {
+        showErr("Target photo failed to load in SEC. Go back and re-score.");
+      } else {
+        const iw = img.naturalWidth || 1;
+        const ih = img.naturalHeight || 1;
+        const scale = Math.min(imgRectOuter.w / iw, imgRectOuter.h / ih);
+        const dw = iw * scale;
+        const dh = ih * scale;
+        const dx = imgRectOuter.x + (imgRectOuter.w - dw) / 2;
+        const dy = imgRectOuter.y + (imgRectOuter.h - dh) / 2;
 
-    // Simple explanation (replacing “you are here”)
-    drawOverlayText(
+        ctx.save();
+        ctx.fillStyle = "rgba(0,0,0,.22)";
+        ctx.strokeStyle = "rgba(255,255,255,.10)";
+        ctx.lineWidth = 1;
+        drawRoundedRect(imgRectOuter.x, imgRectOuter.y, imgRectOuter.w, imgRectOuter.h, 16);
+        ctx.fill();
+        ctx.stroke();
+        ctx.clip();
+
+        ctx.drawImage(img, dx, dy, dw, dh);
+        drawnImgRect = { x: dx, y: dy, w: dw, h: dh };
+
+        // Dots (AIM + HITS + AVG)
+        drawHits(payload, drawnImgRect);
+
+        ctx.restore();
+      }
+    }
+
+    // LED score centered (top)
+    const score = Math.round(Number(payload?.score ?? 0));
+    drawLedNumberCentered(score, cssW / 2, 84, Math.min(520, cssW - 80));
+
+    // Explanation line (replaces “U R Here!”)
+    drawText(
       "Tighter group + closer to aim point = higher score",
       cssW / 2,
-      cssH - 62,
+      136,
       18,
-      "rgba(238,242,247,.90)",
-      1
+      "rgba(238,242,247,.88)",
+      900
     );
 
-    // Footer
+    // Clicks row (bottom)
+    const wDir = String(payload?.windage?.dir || "—");
+    const wClk = Number(payload?.windage?.clicks ?? NaN);
+    const eDir = String(payload?.elevation?.dir || "—");
+    const eClk = Number(payload?.elevation?.clicks ?? NaN);
+
+    const clicksY = cssH - 112;
+
+    // left block
+    drawText("WINDAGE", cssW * 0.26, clicksY - 18, 12, "rgba(238,242,247,.55)", 900);
+    drawText(
+      `${wDir}  ${Number.isFinite(wClk) ? wClk.toFixed(2) : "—"} clicks`,
+      cssW * 0.26,
+      clicksY + 8,
+      16,
+      "rgba(238,242,247,.90)",
+      900
+    );
+
+    // right block
+    drawText("ELEVATION", cssW * 0.74, clicksY - 18, 12, "rgba(238,242,247,.55)", 900);
+    drawText(
+      `${eDir}  ${Number.isFinite(eClk) ? eClk.toFixed(2) : "—"} clicks`,
+      cssW * 0.74,
+      clicksY + 8,
+      16,
+      "rgba(238,242,247,.90)",
+      900
+    );
+
+    // History (last 3 + avg)
+    const avg3 = avgFromHistory(hist3);
+    const histStr = (hist3 || []).map(h => String(h?.score ?? "—")).join("  •  ");
+    const histY = cssH - 64;
+
+    drawText("LAST 3", cssW * 0.20, histY - 14, 11, "rgba(238,242,247,.45)", 900);
+    drawText(histStr || "—", cssW * 0.20, histY + 8, 13, "rgba(238,242,247,.78)", 900);
+
+    drawText("AVG", cssW * 0.80, histY - 14, 11, "rgba(238,242,247,.45)", 900);
+    drawText(String(avg3 || "—"), cssW * 0.80, histY + 8, 16, "rgba(238,242,247,.85)", 900);
+
+    // Footer mark
     ctx.save();
-    ctx.fillStyle = "rgba(238,242,247,.25)";
-    ctx.font = "900 14px system-ui, -apple-system, Segoe UI, Roboto, Arial";
+    ctx.fillStyle = "rgba(238,242,247,.22)";
+    ctx.font = "900 12px system-ui, -apple-system, Segoe UI, Roboto, Arial";
     ctx.textAlign = "center";
     ctx.textBaseline = "bottom";
     ctx.fillText("SEC", cssW / 2, cssH - 18);
     ctx.restore();
+
+    return { ok: true, hasTarget: !!drawnImgRect };
   }
 
   // -----------------------
@@ -328,7 +446,6 @@
       const dataUrl = elCanvas.toDataURL("image/png");
       localStorage.setItem(KEY_PNG_DATA, dataUrl);
 
-      // Convert to blob URL (iOS friendlier)
       const res = await fetch(dataUrl);
       const blob = await res.blob();
       const blobUrl = URL.createObjectURL(blob);
@@ -365,14 +482,17 @@
   async function boot() {
     const payload = loadPayload();
     if (!payload) {
-      showErr("Missing payload. Open from scoring results.");
+      showErr("Missing payload. Open from Tap-n-Score results.");
       return;
     }
 
     const sid = payload.sessionId || "—";
     if (elSession) elSession.textContent = `Session: ${sid}`;
 
-    await renderSec(payload);
+    // Push score into history (last 3)
+    const hist3 = pushScoreToHistory(payload);
+
+    await renderSec(payload, hist3);
 
     // Always generate PNG immediately so download page ALWAYS has it
     const saved = await savePngToStorage();
