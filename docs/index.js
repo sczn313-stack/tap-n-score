@@ -1,254 +1,344 @@
 /* ============================================================
-   sec.js (FULL REPLACEMENT) — BASELINE 22206 SCORE FIX
+   index.js (FULL REPLACEMENT) — BASELINE 22206d4
    Fixes:
-   - Always displays payload.score when present (including 0)
-   - Diagnostics works with ?debug, ?debug=1, ?debug=true
-   - Back button: history.back() else index.html?fresh=timestamp
+   - iOS-safe photo load using FileReader (dataURL), not createObjectURL
+   - File input NOT display:none (handled in HTML)
+   Keeps:
+   - 800lb gorilla button
+   - Distance clicker (+/-)
+   - Aim point green, hits bright green
+   - Sticky results after pause
+   - Ghost click prevention
+   - Simple real-ish score from radius (placeholder inches scale)
 ============================================================ */
 
 (() => {
   const $ = (id) => document.getElementById(id);
 
+  // ---- Required IDs
+  const elPhotoBtn = $("photoBtn");
+  const elFile = $("photoInput");
+  const elImg = $("targetImg");
+  const elDots = $("dotsLayer");
+  const elWrap = $("targetWrap");
+  const elTapCount = $("tapCount");
+  const elClear = $("clearTapsBtn");
+  const elInstruction = $("instructionLine");
+  const elStatus = $("statusLine");
+
+  // Sticky
+  const elStickyBar = $("stickyBar");
+  const elStickyBtn = $("stickyResultsBtn");
+
+  // Settings / links
+  const elVendor = $("vendorLink");
+  const elDistance = $("distanceYds");     // hidden canonical
+  const elDistDisplay = $("distDisplay");  // visible
+  const elDistUp = $("distUp");
+  const elDistDown = $("distDown");
+  const elMoaClick = $("moaPerClick");
+
   const KEY = "SCZN3_SEC_PAYLOAD_V1";
-  const HIST_KEY = "SCZN3_SEC_HISTORY_V1";
+
+  // Tap state (normalized 0..1)
+  let aim = null;     // {x01,y01}
+  let hits = [];      // [{x01,y01},...]
+
+  // Anti-double-fire / anti-scroll
+  let lastTouchTapAt = 0;
+  let touchStart = null;
+  let pauseTimer = null;
 
   // ---- Helpers
-  function safeJsonParse(s) { try { return JSON.parse(s); } catch { return null; } }
+  function clamp01(v) { return Math.max(0, Math.min(1, v)); }
+  function setText(el, t) { if (el) el.textContent = String(t ?? ""); }
 
-  function fromB64(b64) {
-    try {
-      const json = decodeURIComponent(escape(atob(b64)));
-      return safeJsonParse(json);
-    } catch { return null; }
+  function getDistance() {
+    const n = Number(elDistance?.value ?? 100);
+    return Number.isFinite(n) ? n : 100;
   }
 
-  function getParam(name) {
-    try { return new URL(location.href).searchParams.get(name); }
-    catch { return null; }
+  function setDistance(v) {
+    let n = Math.round(Number(v));
+    if (!Number.isFinite(n)) n = 100;
+    n = Math.max(5, Math.min(1000, n));
+
+    if (elDistance) elDistance.value = String(n);
+    if (elDistDisplay) elDistDisplay.textContent = String(n);
   }
 
-  function hasParam(name) {
-    try { return new URL(location.href).searchParams.has(name); }
-    catch { return false; }
+  function setTapCount() {
+    if (elTapCount) elTapCount.textContent = String(hits.length);
   }
 
-  function writeDiag(obj) {
-    const pre = $("secDiag");
-    if (!pre) return;
-    try { pre.textContent = JSON.stringify(obj, null, 2); }
-    catch { pre.textContent = String(obj); }
+  function hideSticky() {
+    if (!elStickyBar) return;
+    elStickyBar.classList.add("stickyHidden");
+    elStickyBar.setAttribute("aria-hidden", "true");
   }
 
-  function setText(id, v) {
-    const el = $(id);
-    if (!el) return;
-    const isEmpty = (v === undefined || v === null || v === "");
-    el.textContent = isEmpty ? "—" : String(v);
+  function showSticky() {
+    if (!elStickyBar) return;
+    elStickyBar.classList.remove("stickyHidden");
+    elStickyBar.setAttribute("aria-hidden", "false");
   }
 
-  function setNum2(id, v) {
-    const el = $(id);
-    if (!el) return;
-    const n = Number(v);
-    el.textContent = Number.isFinite(n) ? n.toFixed(2) : "0.00";
+  function scheduleStickyMagic() {
+    clearTimeout(pauseTimer);
+    pauseTimer = setTimeout(() => {
+      if (hits.length >= 1) showSticky();
+    }, 650);
   }
 
-  function enableBtn(btn, yes) {
-    if (!btn) return;
-    if (yes) {
-      btn.classList.remove("btnDisabled");
-      btn.setAttribute("aria-disabled", "false");
-      btn.disabled = false;
+  function setInstructionForState() {
+    if (!elInstruction) return;
+
+    if (!elImg?.src) { setText(elInstruction, ""); return; }
+    if (!aim) { setText(elInstruction, "Tap Aim Point."); return; }
+    if (hits.length < 1) { setText(elInstruction, "Tap Hits."); return; }
+    setText(elInstruction, "Tap more hits, or pause — results will appear.");
+  }
+
+  function resetAll() {
+    aim = null;
+    hits = [];
+    if (elDots) elDots.innerHTML = "";
+    setTapCount();
+    hideSticky();
+    setInstructionForState();
+    setText(elStatus, elImg?.src ? "Tap Aim Point." : "Add a target photo to begin.");
+  }
+
+  function addDot(x01, y01, kind) {
+    if (!elDots) return;
+
+    const d = document.createElement("div");
+    d.className = "tapDot";
+    d.style.left = (x01 * 100) + "%";
+    d.style.top = (y01 * 100) + "%";
+
+    if (kind === "aim") {
+      d.style.background = "#67f3a4"; // aim point green
     } else {
-      btn.classList.add("btnDisabled");
-      btn.setAttribute("aria-disabled", "true");
-      btn.disabled = true;
+      d.style.background = "#b7ff3c"; // hits bright green
     }
+    d.style.border = "2px solid rgba(0,0,0,.55)";
+    d.style.boxShadow = "0 10px 28px rgba(0,0,0,.55)";
+
+    elDots.appendChild(d);
   }
 
-  function goToIndexFresh() {
-    location.replace(`./index.html?fresh=${Date.now()}`);
+  function getRelative01(clientX, clientY) {
+    const r = elImg.getBoundingClientRect();
+    const x = (clientX - r.left) / r.width;
+    const y = (clientY - r.top) / r.height;
+    return { x01: clamp01(x), y01: clamp01(y) };
   }
 
-  // ---- Diagnostics gating (accepts ?debug, ?debug=1, ?debug=true)
-  const diagBox = $("secDiagBox");
-  const titleEl = $("secTitle");
-
-  const debugParam = getParam("debug");
-  const debugOn =
-    hasParam("debug") || debugParam === "1" || debugParam === "true";
-
-  function showDiagnostics() {
-    if (!diagBox) return;
-    diagBox.classList.remove("diagHidden");
-    diagBox.open = true;
+  function b64FromObj(obj) {
+    const json = JSON.stringify(obj);
+    return btoa(unescape(encodeURIComponent(json)));
   }
 
-  function hideDiagnostics() {
-    if (!diagBox) return;
-    diagBox.classList.add("diagHidden");
-    diagBox.open = false;
+  // ------------------------------------------------------------
+  // SCORING (placeholder inches mapping)
+  // ------------------------------------------------------------
+  const inchesPerFullWidth = 10;
+
+  function scoreFromRadiusInches(rIn) {
+    if (rIn <= 0.25) return 100;
+    if (rIn <= 0.50) return 95;
+    if (rIn <= 1.00) return 90;
+    if (rIn <= 1.50) return 85;
+    if (rIn <= 2.00) return 80;
+    if (rIn <= 2.50) return 75;
+    if (rIn <= 3.00) return 70;
+    if (rIn <= 3.50) return 65;
+    if (rIn <= 4.00) return 60;
+    return 50;
   }
 
-  if (debugOn) showDiagnostics(); else hideDiagnostics();
+  function computeCorrectionAndScore() {
+    if (!aim || hits.length < 1) return null;
 
-  // Long-press title to reveal diagnostics (if not already on)
-  if (titleEl && !debugOn) {
-    let pressTimer = null;
+    const avg = hits.reduce((acc, p) => ({ x: acc.x + p.x01, y: acc.y + p.y01 }), { x: 0, y: 0 });
+    avg.x /= hits.length;
+    avg.y /= hits.length;
 
-    const start = () => {
-      clearTimeout(pressTimer);
-      pressTimer = setTimeout(() => {
-        showDiagnostics();
-        writeDiag({ ok: true, note: "Diagnostics revealed by long-press" });
-      }, 700);
+    const dx = aim.x01 - avg.x; // + => RIGHT
+    const dy = aim.y01 - avg.y; // + => DOWN (screen space)
+
+    const inchesX = dx * inchesPerFullWidth;
+    const inchesY = dy * inchesPerFullWidth;
+    const rIn = Math.sqrt(inchesX * inchesX + inchesY * inchesY);
+
+    const dist = getDistance();
+    const moaPerClick = Number(elMoaClick?.value ?? 0.25);
+
+    const inchesPerMoa = (dist / 100) * 1.047;
+
+    const moaX = inchesX / inchesPerMoa;
+    const moaY = inchesY / inchesPerMoa;
+
+    const clicksX = moaX / moaPerClick;
+    const clicksY = moaY / moaPerClick;
+
+    return {
+      avgPoi: { x01: avg.x, y01: avg.y },
+      inches: { x: inchesX, y: inchesY, r: rIn },
+      score: scoreFromRadiusInches(rIn),
+      windage: { dir: clicksX >= 0 ? "RIGHT" : "LEFT", clicks: Math.abs(clicksX) },
+      elevation: { dir: clicksY >= 0 ? "DOWN" : "UP", clicks: Math.abs(clicksY) },
     };
-
-    const stop = () => {
-      clearTimeout(pressTimer);
-      pressTimer = null;
-    };
-
-    titleEl.addEventListener("touchstart", start, { passive: true });
-    titleEl.addEventListener("touchend", stop);
-    titleEl.addEventListener("touchcancel", stop);
-
-    titleEl.addEventListener("mousedown", start);
-    titleEl.addEventListener("mouseup", stop);
-    titleEl.addEventListener("mouseleave", stop);
   }
 
-  // ---- Load payload: URL first, storage second
-  const rawPayloadParam = getParam("payload");
-  let payload = null;
-
-  if (rawPayloadParam) payload = fromB64(rawPayloadParam);
-
-  if (!payload) {
-    try {
-      const ls = localStorage.getItem(KEY);
-      if (ls) payload = safeJsonParse(ls);
-    } catch {}
+  function goToSEC(payload) {
+    try { localStorage.setItem(KEY, JSON.stringify(payload)); } catch {}
+    const b64 = b64FromObj(payload);
+    window.location.href = `./sec.html?payload=${encodeURIComponent(b64)}&fresh=${Date.now()}`;
   }
 
-  // ---- Buttons
-  const downloadBtn = $("downloadBtn");
-  const vendorBtn = $("vendorBtn");
-  const surveyBtn = $("surveyBtn");
-  const backBtn = $("backToTargetBtn");
-
-  if (backBtn) {
-    backBtn.addEventListener("click", () => {
-      if (history.length > 1) return history.back();
-      goToIndexFresh();
-    });
-  }
-
-  // ---- If no payload
-  if (!payload) {
-    enableBtn(downloadBtn, false);
-    enableBtn(vendorBtn, false);
-    enableBtn(surveyBtn, false);
-
-    if (diagBox && !diagBox.classList.contains("diagHidden")) {
-      writeDiag({
-        ok: false,
-        reason: "No payload found",
-        expected: { urlParam: "payload", localStorageKey: KEY },
-        url: location.href
-      });
+  function onShowResults() {
+    const out = computeCorrectionAndScore();
+    if (!out) {
+      alert("Tap Aim Point first, then tap at least one hit.");
+      return;
     }
-    return;
-  }
 
-  // ---- Persist backup
-  try { localStorage.setItem(KEY, JSON.stringify(payload)); } catch {}
+    const vendorUrl =
+      (elVendor && elVendor.href && elVendor.href !== "#" && !elVendor.href.endsWith("#"))
+        ? elVendor.href
+        : "";
 
-  // ---- Hydrate UI
-  setText("secSession", payload.sessionId || "—");
-  setText("secShots", payload.shots ?? 0);
-
-  // ✅ SCORE FIX: show score if it exists (even 0)
-  if (Object.prototype.hasOwnProperty.call(payload, "score")) {
-    setText("secScore", payload.score);
-  } else {
-    setText("secScore", "—");
-  }
-
-  setText("secWindDir", payload.windage?.dir || "—");
-  setNum2("secWindClicks", payload.windage?.clicks ?? 0);
-
-  setText("secElevDir", payload.elevation?.dir || "—");
-  setNum2("secElevClicks", payload.elevation?.clicks ?? 0);
-
-  // ---- History PREV 1–3 (optional)
-  try {
-    const hist = JSON.parse(localStorage.getItem(HIST_KEY) || "[]");
-    const fmt = (h) => {
-      if (!h) return "—";
-      const s = (h.score === null || h.score === undefined) ? "—" : h.score;
-      return `Score ${s} • Shots ${h.shots} • ${h.wind} • ${h.elev}`;
+    const payload = {
+      sessionId: "S-" + Date.now(),
+      score: out.score,
+      shots: hits.length,
+      windage: { dir: out.windage.dir, clicks: Number(out.windage.clicks.toFixed(2)) },
+      elevation: { dir: out.elevation.dir, clicks: Number(out.elevation.clicks.toFixed(2)) },
+      secPngUrl: "",
+      vendorUrl,
+      surveyUrl: "",
+      debug: { aim, avgPoi: out.avgPoi, distanceYds: getDistance(), inches: out.inches }
     };
-    setText("prev1", fmt(hist[0]));
-    setText("prev2", fmt(hist[1]));
-    setText("prev3", fmt(hist[2]));
-  } catch {
-    setText("prev1", "—");
-    setText("prev2", "—");
-    setText("prev3", "—");
+
+    goToSEC(payload);
   }
 
-  // ---- Download enable (only if we have a URL)
-  const secUrl = String(payload.secPngUrl || payload.secUrl || "").trim();
+  // ---- Distance clicker (+/-)
+  if (elDistUp) elDistUp.addEventListener("click", () => setDistance(getDistance() + 5));
+  if (elDistDown) elDistDown.addEventListener("click", () => setDistance(getDistance() - 5));
 
-  if (secUrl) {
-    enableBtn(downloadBtn, true);
-    downloadBtn.addEventListener("click", () => {
-      const t = Date.now();
-      const from = `./index.html?fresh=${t}`;
-      const target = `./index.html?fresh=${t}`;
-      const u =
-        `./download.html?img=${encodeURIComponent(secUrl)}` +
-        `&from=${encodeURIComponent(from)}` +
-        `&target=${encodeURIComponent(target)}`;
-      window.location.href = u;
-    });
-  } else {
-    enableBtn(downloadBtn, false);
+  // ---- Photo picker
+  if (elPhotoBtn && elFile) {
+    elPhotoBtn.addEventListener("click", () => elFile.click());
   }
 
-  // ---- Vendor button
-  const vendorUrl = String(payload.vendorUrl || "").trim();
-  if (vendorUrl) {
-    enableBtn(vendorBtn, true);
-    vendorBtn.addEventListener("click", () =>
-      window.open(vendorUrl, "_blank", "noopener,noreferrer")
-    );
-  } else enableBtn(vendorBtn, false);
-
-  // ---- Survey button
-  const surveyUrl = String(payload.surveyUrl || "").trim();
-  if (surveyUrl) {
-    enableBtn(surveyBtn, true);
-    surveyBtn.addEventListener("click", () =>
-      window.open(surveyUrl, "_blank", "noopener,noreferrer")
-    );
-  } else enableBtn(surveyBtn, false);
-
-  // ---- Diagnostics
-  if (diagBox && !diagBox.classList.contains("diagHidden")) {
-    writeDiag({
-      ok: true,
-      loadedFrom: rawPayloadParam ? "url.payload" : "localStorage",
-      hasScore: Object.prototype.hasOwnProperty.call(payload, "score"),
-      score: payload.score,
-      payloadSummary: {
-        sessionId: payload.sessionId,
-        shots: payload.shots,
-        windage: payload.windage,
-        elevation: payload.elevation
-      },
-      debug: payload.debug || null
+  // iOS-safe photo load: FileReader -> dataURL
+  function loadFileToImage(file) {
+    return new Promise((resolve, reject) => {
+      const r = new FileReader();
+      r.onload = () => resolve(String(r.result || ""));
+      r.onerror = () => reject(new Error("FileReader failed"));
+      r.readAsDataURL(file);
     });
   }
+
+  if (elFile) {
+    elFile.addEventListener("change", async () => {
+      const f = elFile.files && elFile.files[0];
+      if (!f) return;
+
+      resetAll();
+      setText(elStatus, `Loading photo…`);
+
+      try {
+        const dataUrl = await loadFileToImage(f);
+
+        elImg.onload = () => {
+          setText(elStatus, "Tap Aim Point.");
+          setInstructionForState();
+        };
+        elImg.onerror = () => {
+          setText(elStatus, "Photo failed to load.");
+          setText(elInstruction, "Try again.");
+        };
+
+        elImg.src = dataUrl;
+      } catch (e) {
+        setText(elStatus, "Could not read photo.");
+        setText(elInstruction, "Try again.");
+      }
+
+      // allow choosing same photo again
+      elFile.value = "";
+    });
+  }
+
+  // ---- Tap logic (touch-first, click suppressed)
+  function acceptTap(clientX, clientY) {
+    if (!elImg?.src) return;
+
+    const { x01, y01 } = getRelative01(clientX, clientY);
+
+    if (!aim) {
+      aim = { x01, y01 };
+      addDot(x01, y01, "aim");
+      setText(elStatus, "Tap Hits.");
+      setInstructionForState();
+      hideSticky();
+      return;
+    }
+
+    hits.push({ x01, y01 });
+    addDot(x01, y01, "hit");
+    setTapCount();
+    setInstructionForState();
+
+    hideSticky();
+    scheduleStickyMagic();
+  }
+
+  if (elWrap) {
+    elWrap.addEventListener("touchstart", (e) => {
+      if (!e.touches || !e.touches[0]) return;
+      const t = e.touches[0];
+      touchStart = { x: t.clientX, y: t.clientY, t: Date.now() };
+    }, { passive: true });
+
+    elWrap.addEventListener("touchend", (e) => {
+      const now = Date.now();
+      const t = (e.changedTouches && e.changedTouches[0]) ? e.changedTouches[0] : null;
+      if (!t || !touchStart) return;
+
+      const dx = Math.abs(t.clientX - touchStart.x);
+      const dy = Math.abs(t.clientY - touchStart.y);
+
+      if (dx > 10 || dy > 10) { touchStart = null; return; }
+
+      lastTouchTapAt = now;
+      acceptTap(t.clientX, t.clientY);
+      touchStart = null;
+    }, { passive: true });
+
+    elWrap.addEventListener("click", (e) => {
+      const now = Date.now();
+      if (now - lastTouchTapAt < 800) return;
+      acceptTap(e.clientX, e.clientY);
+    }, { passive: true });
+  }
+
+  // ---- Clear
+  if (elClear) {
+    elClear.addEventListener("click", () => {
+      resetAll();
+      if (elImg?.src) setText(elStatus, "Tap Aim Point.");
+    });
+  }
+
+  if (elStickyBtn) elStickyBtn.addEventListener("click", onShowResults);
+
+  // ---- Boot
+  setDistance(100);
+  resetAll();
 })();
