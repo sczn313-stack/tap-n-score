@@ -1,131 +1,125 @@
 /* ============================================================
-   styles.css (FULL REPLACEMENT) — Tap-n-Score™ (Mobile-first)
-   Goals:
-   - Better iPhone layout (more margin, less cramped)
-   - Target image fully visible (no half-crop feeling)
-   - Easier scrolling around photo without accidental taps
-   - Sticky results bar stays usable + safe-area aware
+   styles.css (FULL REPLACEMENT) — BASELINE 22206d4
+   - 800lb gorilla "Add Target Picture" button
+   - Clean red/white/blue brand accents
+   - Target area responsive + slimmer margins
+   - Sticky results bar
 ============================================================ */
 
 :root{
-  --bg0:#05060a;
-  --bg1:#0a0c12;
+  --bg:#06070a;
   --card: rgba(255,255,255,.06);
   --stroke: rgba(255,255,255,.12);
   --text:#eef2f7;
   --muted: rgba(238,242,247,.65);
-  --muted2: rgba(238,242,247,.45);
-  --shadow: 0 18px 55px rgba(0,0,0,.55);
-  --radius: 20px;
+
+  --red:#d64040;
+  --white:#eef2f7;
+  --blue:#2f66ff;
 
   --btn: rgba(255,255,255,.08);
-  --btnHover: rgba(255,255,255,.12);
-  --btnStroke: rgba(255,255,255,.14);
+  --btnStroke: rgba(255,255,255,.16);
 
-  --primary: rgba(47,102,255,.22);
-  --primaryStroke: rgba(47,102,255,.45);
-
-  --danger: rgba(214,64,64,.16);
-  --dangerStroke: rgba(214,64,64,.45);
+  --aim:#67f3a4;
+  --hit:#b7ff3c;
 }
 
 *{ box-sizing:border-box; }
 html,body{ height:100%; }
-
 body{
   margin:0;
-  font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial;
   color: var(--text);
   background:
     radial-gradient(900px 600px at 15% 10%, rgba(47,102,255,.14), transparent 60%),
     radial-gradient(800px 500px at 85% 0%, rgba(214,64,64,.10), transparent 60%),
-    radial-gradient(900px 700px at 50% 100%, rgba(103,243,164,.08), transparent 65%),
-    linear-gradient(180deg, var(--bg0), var(--bg1));
+    linear-gradient(180deg, #04050a, var(--bg));
 }
 
-/* Main page shell */
 .page{
-  max-width: 760px;           /* slimmer = more margin */
+  max-width: 920px;
   margin: 0 auto;
-  padding: 14px 12px 96px;    /* bottom padding so sticky bar doesn't cover content */
+  padding: 16px 12px 90px; /* extra for sticky bar */
 }
 
-/* Top bar */
 .topBar{
-  padding: 12px 12px 10px;
-  border: 1px solid rgba(255,255,255,.10);
-  border-radius: var(--radius);
-  background: rgba(255,255,255,.04);
-  box-shadow: var(--shadow);
-  margin-bottom: 12px;
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+  padding: 10px 6px 14px;
 }
 
 .topTitle{
+  letter-spacing:.08em;
   font-weight: 900;
-  letter-spacing: .10em;
-  font-size: 14px;
+  font-size: 18px;
+  text-transform: uppercase;
+  text-align:center;
 }
-
 .topSub{
-  margin-top: 6px;
+  text-align:center;
   color: var(--muted);
   font-size: 13px;
-  line-height: 1.25;
 }
 
-/* Cards */
 .card{
   border: 1px solid var(--stroke);
-  border-radius: var(--radius);
   background: var(--card);
-  box-shadow: var(--shadow);
-  padding: 12px;
-  margin-bottom: 12px;
+  border-radius: 18px;
+  overflow:hidden;
+  margin-top: 12px;
+  box-shadow: 0 18px 50px rgba(0,0,0,.45);
 }
 
 .cardTitle{
-  color: var(--muted);
-  font-weight: 900;
-  letter-spacing: .14em;
+  padding: 12px 14px;
+  border-bottom: 1px solid rgba(255,255,255,.08);
+  background: rgba(255,255,255,.03);
+  letter-spacing:.14em;
+  text-transform: uppercase;
   font-size: 12px;
-  margin-bottom: 10px;
+  font-weight: 850;
+  color: rgba(238,242,247,.75);
 }
 
-/* Big 800lb gorilla button */
+/* ===== 800lb gorilla button ===== */
 .btnBig{
-  width:100%;
-  appearance:none;
-  border: 1px solid rgba(255,255,255,.16);
-  background: rgba(255,255,255,.09);
-  color: var(--text);
+  width: calc(100% - 28px);
+  margin: 16px 14px 12px;
   border-radius: 18px;
-  padding: 16px 14px;
+  padding: 18px 14px;
   font-size: 18px;
-  font-weight: 950;
-  letter-spacing: .02em;
+  font-weight: 900;
+  letter-spacing:.02em;
   cursor:pointer;
-  user-select:none;
-  -webkit-tap-highlight-color: transparent;
+  border: 1px solid rgba(47,102,255,.45);
+  background: linear-gradient(180deg, rgba(47,102,255,.22), rgba(47,102,255,.12));
+  color: var(--text);
+  box-shadow: 0 18px 50px rgba(0,0,0,.55);
 }
 .btnBig:active{ transform: translateY(1px); }
-.btnBig:hover{ background: rgba(255,255,255,.12); }
-
-/* Target photo area
-   Key: allow scroll gestures without feeling "trapped"
-   We keep image fully visible and give the user breathing room. */
-.targetWrap{
-  position: relative;
-  margin-top: 12px;
-  border-radius: 18px;
-  overflow: hidden;
-  border: 1px solid rgba(255,255,255,.10);
-  background: rgba(0,0,0,.22);
-
-  /* Big change: make it feel like it fits on iPhone */
-  max-height: 62vh;
+.btnBig::before{
+  content:"";
+  display:block;
+  height: 4px;
+  width: 62px;
+  margin: 0 auto 10px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, rgba(214,64,64,.9), rgba(238,242,247,.9), rgba(47,102,255,.9));
+  opacity:.9;
 }
 
-/* Image always fits width */
+/* Target wrap */
+.targetWrap{
+  width: calc(100% - 28px);
+  margin: 0 14px 12px;
+  border-radius: 16px;
+  overflow:hidden;
+  background: rgba(0,0,0,.22);
+  border: 1px solid rgba(255,255,255,.10);
+  position: relative;
+}
+
 #targetImg{
   width: 100%;
   height: auto;
@@ -134,178 +128,126 @@ body{
   -webkit-user-drag:none;
 }
 
-/* Tap dots layer overlays the image */
+/* dots layer sits on top */
 .dotsLayer{
   position:absolute;
   left:0; top:0; right:0; bottom:0;
   pointer-events:none;
 }
 
-/* Default dot look; colors can be set inline by JS */
-.tapDot{
-  position:absolute;
-  width: 18px;
-  height: 18px;
-  margin-left: -9px;
-  margin-top: -9px;
-  border-radius: 999px;
-  border: 2px solid rgba(0,0,0,.55);
-  box-shadow: 0 10px 28px rgba(0,0,0,.55);
-}
-
-/* Rows / pills / buttons */
+/* Row + buttons */
 .row{
   display:flex;
   gap:10px;
   align-items:center;
-  justify-content:space-between;
   flex-wrap:wrap;
-  margin-top: 12px;
+  padding: 0 14px 14px;
 }
-
-.rowTight{ margin-top: 10px; }
+.rowTight{ padding-top: 0; }
 
 .pill{
-  display:inline-flex;
-  align-items:center;
-  gap:8px;
-  padding: 10px 12px;
+  border: 1px solid rgba(255,255,255,.14);
+  background: rgba(255,255,255,.05);
   border-radius: 999px;
-  border: 1px solid rgba(255,255,255,.12);
-  background: rgba(255,255,255,.04);
-  color: var(--muted);
+  padding: 9px 12px;
   font-size: 13px;
-  font-weight: 800;
+  color: rgba(238,242,247,.80);
 }
 
-.btnPrimary,
-.btnSecondary{
-  appearance:none;
-  border-radius: 16px;
+.btnPrimary, .btnSecondary{
+  border-radius: 14px;
   padding: 12px 14px;
-  font-weight: 900;
   font-size: 14px;
-  letter-spacing: .02em;
+  font-weight: 850;
   cursor:pointer;
-  user-select:none;
-  -webkit-tap-highlight-color: transparent;
   border: 1px solid var(--btnStroke);
   background: var(--btn);
   color: var(--text);
 }
-.btnPrimary:hover,
-.btnSecondary:hover{ background: var(--btnHover); }
-.btnPrimary:active,
-.btnSecondary:active{ transform: translateY(1px); }
-
 .btnPrimary{
-  border-color: var(--primaryStroke);
-  background: var(--primary);
+  border-color: rgba(47,102,255,.45);
+  background: rgba(47,102,255,.16);
 }
-
 .btnSecondary{
-  border-color: var(--dangerStroke);
-  background: var(--danger);
+  border-color: rgba(214,64,64,.45);
+  background: rgba(214,64,64,.12);
 }
+.btnPrimary:active, .btnSecondary:active{ transform: translateY(1px); }
 
-/* Hint */
 .hint{
-  margin: 10px 2px 0;
+  margin: 0;
+  padding: 0 14px 14px;
   color: var(--muted);
   font-size: 13px;
   line-height: 1.35;
-  min-height: 18px; /* prevents layout jump */
 }
 
-/* Settings fields */
+/* Settings */
 .field{
-  display:flex;
-  flex-direction:column;
-  gap:6px;
   flex:1;
   min-width: 160px;
+  display:flex;
+  flex-direction:column;
+  gap:8px;
 }
-
 .fieldLabel{
-  color: var(--muted2);
   font-size: 12px;
-  font-weight: 800;
-  letter-spacing: .08em;
+  color: rgba(238,242,247,.60);
+  letter-spacing:.02em;
 }
-
 .select{
   width:100%;
-  padding: 12px 12px;
-  border-radius: 14px;
-  border: 1px solid rgba(255,255,255,.10);
   background: rgba(0,0,0,.22);
+  border: 1px solid rgba(255,255,255,.14);
+  border-radius: 14px;
+  padding: 12px 10px;
   color: var(--text);
-  font-weight: 800;
 }
 
+/* Vendor link (optional) */
 .vendorLink{
   display:none;
-  margin-top: 10px;
-  padding: 12px;
-  border-radius: 14px;
-  border: 1px solid rgba(255,255,255,.10);
-  background: rgba(255,255,255,.04);
-  color: #9bb7ff;
+  margin: 0 14px 14px;
+  color: rgba(155,183,255,.95);
   text-decoration:none;
-  text-align:center;
-  font-weight: 900;
 }
+.vendorLink:empty{ display:none; }
 
 /* Footer */
 .footer{
+  margin-top: 14px;
   text-align:center;
-  margin-top: 4px;
-  padding: 8px 0 0;
-}
-.footerMark{
-  color: rgba(238,242,247,.28);
-  letter-spacing: .22em;
+  color: rgba(238,242,247,.30);
   font-weight: 900;
-  font-size: 12px;
+  letter-spacing:.22em;
   text-transform: uppercase;
+  font-size: 12px;
+  padding: 10px 0 0;
 }
+.footerMark{ opacity:.9; }
 
-/* Sticky results bar */
+/* Sticky Results Bar */
 .stickyBar{
   position: fixed;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  padding: 10px 12px calc(10px + env(safe-area-inset-bottom));
-  background: rgba(6,7,10,.88);
-  backdrop-filter: blur(10px);
-  border-top: 1px solid rgba(255,255,255,.10);
+  left: 0; right: 0; bottom: 0;
+  padding: 12px 12px 18px;
+  background: linear-gradient(180deg, rgba(6,7,10,0), rgba(6,7,10,.85) 30%, rgba(6,7,10,.95));
   display:flex;
   justify-content:center;
   z-index: 9999;
 }
-
-.stickyHidden{
-  display:none;
-}
+.stickyHidden{ display:none; }
 
 .stickyBtn{
-  width: min(760px, 100%);
-  appearance:none;
+  width: min(560px, 100%);
   border-radius: 18px;
-  padding: 14px 14px;
-  border: 1px solid var(--primaryStroke);
-  background: var(--primary);
-  color: var(--text);
-  font-weight: 950;
+  padding: 16px 14px;
   font-size: 16px;
-  letter-spacing: .02em;
+  font-weight: 950;
+  border: 1px solid rgba(103,243,164,.35);
+  background: rgba(103,243,164,.12);
+  color: var(--text);
   cursor:pointer;
+  box-shadow: 0 18px 45px rgba(0,0,0,.55);
 }
 .stickyBtn:active{ transform: translateY(1px); }
-
-/* Desktop breathing room */
-@media (min-width: 900px){
-  .page{ padding: 18px 14px 96px; }
-  .targetWrap{ max-height: 560px; }
-}
