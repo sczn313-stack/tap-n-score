@@ -1,97 +1,147 @@
 /* ============================================================
-   styles.css (FULL REPLACEMENT) — BASELINE 22206 (GREEN AIM/HITS)
-   Notes:
-   - Aim Point dot = green
-   - Hit dots = brighter green (easy to notice)
+   styles.css (FULL REPLACEMENT) — BASELINE 22206 POLISH
+   Goals:
+   - iPhone: target fits screen (max height) + scroll outside image
+   - Big Photo button is the 800lb gorilla
+   - Aim Point = bright green, Hits = red
+   - Sticky results sits close and feels “magic”
 ============================================================ */
 
 :root{
   --bg:#06070a;
   --card: rgba(255,255,255,.06);
-  --stroke: rgba(255,255,255,.10);
+  --stroke: rgba(255,255,255,.12);
   --text:#eef2f7;
   --muted: rgba(238,242,247,.65);
 
-  --btn: rgba(255,255,255,.08);
-  --btnStroke: rgba(255,255,255,.14);
+  --blue:#2f66ff;
+  --red:#d64040;
+  --green:#67f3a4;
 
-  --greenAim: #67f3a4;   /* aim point */
-  --greenHit: #00ff7b;   /* hits (brighter) */
+  --shadow: 0 18px 55px rgba(0,0,0,.55);
+  --radius: 18px;
 }
 
 *{ box-sizing:border-box; }
 html,body{ height:100%; }
 body{
   margin:0;
-  font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial;
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
   background: var(--bg);
   color: var(--text);
 }
 
 .page{
-  max-width: 720px;
+  min-height:100%;
+  padding: 14px 12px 120px; /* bottom room for sticky bar */
+  max-width: 780px;
   margin: 0 auto;
-  padding: 14px 12px 24px;
 }
 
 .topBar{
   display:flex;
   flex-direction:column;
   gap:6px;
-  padding: 10px 6px 14px;
+  padding: 10px 6px 12px;
 }
+
 .topTitle{
-  letter-spacing:.22em;
-  font-weight: 850;
-  font-size: 12px;
-  opacity:.75;
+  font-weight: 900;
+  letter-spacing: .10em;
+  font-size: 16px;
 }
+
 .topSub{
-  font-size: 14px;
   color: var(--muted);
+  font-size: 13px;
+  line-height: 1.3;
 }
 
 .card{
-  border: 1px solid var(--stroke);
   background: var(--card);
-  border-radius: 18px;
+  border: 1px solid var(--stroke);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
   padding: 12px;
-  margin-bottom: 12px;
+  margin: 10px 0;
 }
 
 .cardTitle{
+  font-weight: 900;
+  letter-spacing: .14em;
   font-size: 12px;
-  letter-spacing:.18em;
-  font-weight: 850;
   color: var(--muted);
   margin-bottom: 10px;
 }
 
-.fileBtn{
-  display:inline-flex;
-  align-items:center;
-  justify-content:center;
+.btnBig{
   width: 100%;
-  padding: 16px 14px;
-  border-radius: 16px;
-  border: 1px solid rgba(103,243,164,.45);
-  background: rgba(103,243,164,.14);
+  border: 1px solid rgba(47,102,255,.45);
+  background: rgba(47,102,255,.22);
   color: var(--text);
+  padding: 14px 14px;
+  border-radius: 16px;
   font-weight: 900;
-  font-size: 18px;
-  letter-spacing: .2px;
-  cursor: pointer;
-  user-select:none;
-  -webkit-tap-highlight-color: transparent;
+  letter-spacing:.02em;
+  font-size: 16px;
+  cursor:pointer;
+  min-height: 52px;
 }
 
+.btnBig:active{ transform: translateY(1px); }
+
+.btnSecondary{
+  border: 1px solid rgba(255,255,255,.16);
+  background: rgba(255,255,255,.07);
+  color: var(--text);
+  padding: 10px 12px;
+  border-radius: 14px;
+  font-weight: 800;
+  cursor:pointer;
+  min-height: 44px;
+}
+
+.pill{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  padding: 10px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,.12);
+  background: rgba(0,0,0,.22);
+  color: var(--muted);
+  font-size: 13px;
+  min-height: 44px;
+}
+
+.row{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+  align-items:center;
+  margin-top: 10px;
+}
+
+.rowTight{ margin-top: 10px; }
+
+.hint{
+  margin: 10px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.35;
+  min-height: 18px;
+}
+
+/* ===== Image + taps ===== */
 .targetWrap{
   margin-top: 12px;
   border-radius: 16px;
   overflow:hidden;
-  background: rgba(0,0,0,.20);
-  border: 1px solid rgba(255,255,255,.08);
+  background: rgba(0,0,0,.18);
+  border: 1px solid rgba(255,255,255,.10);
   position: relative;
+
+  /* Let the IMG decide height; we constrain the IMG itself */
 }
 
 #targetImg{
@@ -100,6 +150,11 @@ body{
   display:block;
   user-select:none;
   -webkit-user-drag:none;
+
+  /* iPhone fit: don’t let it take the whole page */
+  max-height: 54vh;
+  object-fit: contain;
+  background: rgba(0,0,0,.20);
 }
 
 .dotsLayer{
@@ -110,92 +165,90 @@ body{
 
 .tapDot{
   position:absolute;
-  width: 16px;
-  height: 16px;
-  margin-left: -8px;
-  margin-top: -8px;
+  width: 18px; height: 18px;
+  margin-left: -9px;
+  margin-top: -9px;
   border-radius: 999px;
-  box-shadow: 0 10px 24px rgba(0,0,0,.55);
-  border: 2px solid rgba(0,0,0,.60);
+  border: 2px solid rgba(0,0,0,.65);
+  box-shadow: 0 10px 28px rgba(0,0,0,.55);
 }
 
-/* Aim Point = green */
 .tapDotAim{
-  background: var(--greenAim);
-  border-color: rgba(255,255,255,.70);
+  background: rgba(103,243,164,.98); /* BRIGHT GREEN */
 }
 
-/* Hits = BRIGHT green */
 .tapDotHit{
-  background: var(--greenHit);
-  border-color: rgba(255,255,255,.80);
+  background: rgba(214,64,64,.94);
 }
 
-.row{
+/* ===== Settings ===== */
+.field{
+  flex:1;
+  min-width: 160px;
   display:flex;
-  gap:10px;
-  align-items:center;
-  margin-top: 12px;
-  flex-wrap: wrap;
+  flex-direction:column;
+  gap:6px;
 }
 
-.pill{
-  padding: 10px 12px;
-  border-radius: 999px;
-  border: 1px solid rgba(255,255,255,.12);
-  background: rgba(255,255,255,.05);
-  color: var(--muted);
-  font-size: 13px;
-}
-
-.btnPrimary, .btnSecondary{
-  appearance:none;
-  border: 1px solid var(--btnStroke);
-  background: var(--btn);
-  color: var(--text);
-  padding: 12px 14px;
-  border-radius: 14px;
-  font-weight: 850;
-  cursor:pointer;
-  user-select:none;
-  -webkit-tap-highlight-color: transparent;
-}
-
-.btnPrimary{
-  border-color: rgba(103,243,164,.38);
-  background: rgba(103,243,164,.12);
-}
-
-.hint{
-  margin: 10px 2px 0;
-  color: var(--muted);
-  font-size: 13px;
-  line-height: 1.35;
-}
-
-.field{ display:block; width:100%; }
 .fieldLabel{
-  display:block;
+  color: rgba(238,242,247,.55);
   font-size: 12px;
-  color: var(--muted);
-  margin-bottom: 6px;
+  font-weight: 800;
 }
+
 .select{
   width:100%;
-  border-radius: 14px;
-  border: 1px solid rgba(255,255,255,.12);
-  background: rgba(0,0,0,.20);
+  border: 1px solid rgba(255,255,255,.14);
+  background: rgba(0,0,0,.22);
   color: var(--text);
-  padding: 12px 12px;
+  padding: 10px 10px;
+  border-radius: 14px;
+  font-weight: 800;
+  min-height: 44px;
 }
 
-.vendorLink{ display:none; }
+.vendorLink{
+  display:none;
+}
 
 .footer{
+  margin-top: 14px;
   text-align:center;
   color: rgba(238,242,247,.30);
   letter-spacing:.22em;
-  font-weight: 850;
+  font-weight: 900;
   font-size: 12px;
-  padding: 10px 0 0;
+  padding: 10px 0 4px;
 }
+
+.footerMark{}
+
+/* ===== Sticky Results ===== */
+.stickyBar{
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 10px;
+  display:flex;
+  justify-content:center;
+  padding: 0 12px;
+  z-index: 99999;
+}
+
+.stickyHidden{ display:none; }
+
+.stickyBtn{
+  width: min(780px, 100%);
+  border: 1px solid rgba(103,243,164,.42);
+  background: rgba(103,243,164,.16);
+  color: var(--text);
+  padding: 14px 14px;
+  border-radius: 18px;
+  font-weight: 950;
+  font-size: 16px;
+  cursor:pointer;
+  box-shadow: 0 18px 55px rgba(0,0,0,.55);
+  min-height: 54px;
+}
+
+.stickyBtn:active{ transform: translateY(1px); }
