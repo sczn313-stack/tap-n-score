@@ -1,18 +1,15 @@
 /* ============================================================
-   index.js (FULL REPLACEMENT) — BASELINE 22206d1
-   Matches your CURRENT index.html IDs:
-   - photoBtn (big button) triggers photoInput
-   - stickyResultsBtn triggers results
-   - stickyBar appears after user pauses (magic)
+   index.js (FULL REPLACEMENT) — POLISH 22206
    Fixes:
-   - iOS/Safari image not loading reliably (onload/onerror)
-   - double-tap / double-hit (ghost click suppression)
+   - double-hit per tap (ONLY pointerdown; no click handler)
+   - Aim Point = green dot; Hits = red dot
+   - Big button becomes "Change photo" after load
+   - Sticky Show Results appears after user pauses ("magic")
 ============================================================ */
 
 (() => {
   const $ = (id) => document.getElementById(id);
 
-  // --- IDs in your index.html
   const elPhotoBtn = $("photoBtn");
   const elFile     = $("photoInput");
   const elImg      = $("targetImg");
@@ -28,28 +25,20 @@
   const elInstruction = $("instructionLine");
   const elStatus      = $("statusLine");
 
-  // Optional
   const elVendor   = $("vendorLink");
   const elDistance = $("distanceYds");
   const elMoaClick = $("moaPerClick");
 
   const KEY = "SCZN3_SEC_PAYLOAD_V1";
 
-  // --- State
   let objectUrl = null;
-  let aim = null;     // {x01,y01}
-  let hits = [];      // [{x01,y01},...]
-  let lastTapAt = 0;
+  let aim = null;
+  let hits = [];
 
-  // “Magic” sticky timing
   let idleTimer = null;
   const IDLE_SHOW_MS = 650;
 
-  // Ghost click guard (pointerdown + click both firing on iOS sometimes)
-  const GHOST_WINDOW_MS = 700;
-
   function setText(el, txt) { if (el) el.textContent = txt; }
-  function now() { return Date.now(); }
   function clamp01(v) { return Math.max(0, Math.min(1, v)); }
 
   function showSticky(show) {
@@ -66,7 +55,6 @@
   function scheduleStickyReveal() {
     clearTimeout(idleTimer);
     idleTimer = setTimeout(() => {
-      // Only reveal once we have aim + at least 1 hit
       if (aim && hits.length > 0) showSticky(true);
     }, IDLE_SHOW_MS);
   }
@@ -75,8 +63,7 @@
     if (elTapCount) elTapCount.textContent = String(hits.length);
   }
 
-  function setInstructionMode() {
-    // keep this minimal (you asked to stop repeating)
+  function setModeText() {
     if (!aim) {
       setText(elInstruction, "Tap Aim Point.");
       setText(elStatus, "Tap Aim Point.");
@@ -84,7 +71,6 @@
     } else {
       setText(elInstruction, "Tap Hits.");
       setText(elStatus, "Tap Hits.");
-      // don’t show sticky instantly; wait for “ponder moment”
       showSticky(false);
     }
   }
@@ -94,7 +80,7 @@
     hits = [];
     if (elDots) elDots.innerHTML = "";
     setTapCount();
-    setInstructionMode();
+    setModeText();
   }
 
   function addDot(x01, y01, kind) {
@@ -118,7 +104,6 @@
     return btoa(unescape(encodeURIComponent(json)));
   }
 
-  // Placeholder correction math (keeps the pipeline alive)
   function computeCorrection() {
     if (!aim || hits.length < 1) return null;
 
@@ -126,11 +111,9 @@
     avg.x /= hits.length;
     avg.y /= hits.length;
 
-    // aim - POI (move POI to aim)
     const dx = aim.x01 - avg.x; // + => RIGHT
-    const dy = aim.y01 - avg.y; // + => DOWN (screen)
+    const dy = aim.y01 - avg.y; // + => DOWN
 
-    // demo scale
     const inchesPerFullWidth = 10;
     const inchesX = dx * inchesPerFullWidth;
     const inchesY = dy * inchesPerFullWidth;
@@ -147,7 +130,7 @@
 
     return {
       avgPoi: { x01: avg.x, y01: avg.y },
-      windage: { dir: clicksX >= 0 ? "RIGHT" : "LEFT", clicks: Math.abs(clicksX) },
+      windage:  { dir: clicksX >= 0 ? "RIGHT" : "LEFT", clicks: Math.abs(clicksX) },
       elevation:{ dir: clicksY >= 0 ? "DOWN"  : "UP",   clicks: Math.abs(clicksY) },
     };
   }
@@ -180,11 +163,11 @@
     goToSEC(payload);
   }
 
-  // --- IMAGE LOAD RELIABILITY (iOS/Safari)
   function loadSelectedFile(file) {
     if (!file) return;
 
     clearDots();
+    showSticky(false);
 
     if (objectUrl) {
       try { URL.revokeObjectURL(objectUrl); } catch {}
@@ -197,7 +180,12 @@
 
     elImg.onload = () => {
       setText(elStatus, "Photo loaded. Tap Aim Point.");
-      // allow selecting the same photo again later
+      setModeText();
+
+      // button becomes "Change photo"
+      if (elPhotoBtn) elPhotoBtn.textContent = "Change photo";
+
+      // allow selecting same photo again
       try { elFile.value = ""; } catch {}
     };
 
@@ -210,11 +198,9 @@
 
   // --- EVENTS
 
-  // Big button -> open chooser
+  // Big button -> chooser
   if (elPhotoBtn && elFile) {
-    elPhotoBtn.addEventListener("click", () => {
-      elFile.click();
-    });
+    elPhotoBtn.addEventListener("click", () => elFile.click());
   }
 
   // File chosen
@@ -226,17 +212,13 @@
     });
   }
 
-  // Tapping surface
-  const tapSurface = elWrap || elImg;
+  // Tap ONLY on the image area
+  const tapSurface = elImg;
   if (tapSurface) {
     tapSurface.style.touchAction = "manipulation";
 
     tapSurface.addEventListener("pointerdown", (ev) => {
-      if (!elImg?.src) return;
-
-      const t = now();
-      if (t - lastTapAt < GHOST_WINDOW_MS) return;
-      lastTapAt = t;
+      if (!elImg.src) return;
 
       ev.preventDefault();
 
@@ -245,7 +227,7 @@
       if (!aim) {
         aim = { x01, y01 };
         addDot(x01, y01, "aim");
-        setInstructionMode();
+        setModeText();
         scheduleStickyReveal();
         return;
       }
@@ -253,37 +235,26 @@
       hits.push({ x01, y01 });
       addDot(x01, y01, "hit");
       setTapCount();
-      setInstructionMode();
+      setModeText();
       scheduleStickyReveal();
     }, { passive: false });
-
-    // swallow ghost clicks
-    tapSurface.addEventListener("click", (ev) => {
-      const t = now();
-      if (t - lastTapAt < GHOST_WINDOW_MS) {
-        ev.preventDefault();
-        ev.stopPropagation();
-      }
-    }, true);
   }
 
   if (elClear) {
     elClear.addEventListener("click", () => {
       clearDots();
-      setText(elStatus, "Cleared. Add a photo or tap Aim Point.");
+      setText(elStatus, "Cleared. Tap Aim Point.");
       showSticky(false);
     });
   }
 
-  // Sticky results button
   if (elStickyResults) {
-    elStickyResults.addEventListener("click", () => {
-      runResults();
-    });
+    elStickyResults.addEventListener("click", () => runResults());
   }
 
   // --- BOOT
   clearDots();
   setText(elStatus, "Add a target photo to begin.");
+  if (elPhotoBtn) elPhotoBtn.textContent = "Add Target Picture";
   showSticky(false);
 })();
