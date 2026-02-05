@@ -1,14 +1,15 @@
 /* ============================================================
-   index.js (FULL REPLACEMENT) — BASELINE 22206d4
-   Fixes:
-   - "Two hits per tap" (single input path: Pointer Events only)
-   - "Photo selected but didn’t load" (FileReader -> dataURL for iOS)
+   index.js (FULL REPLACEMENT) — BASELINE 22206d4 (DOT VISIBILITY FIX)
+   Fix:
+   - Taps were counted but dots not visible (CSS/z-index/size issues)
+   - This version FORCE-STYLES dots + overlay layer in JS so it can’t break
    Keeps:
-   - Distance clicker (+/-)
    - One big photo button
+   - Distance clicker (+/-)
+   - iOS double-tap prevention (touch+click)
    - Aim Point green, Hits bright green
    - Sticky results appears after pause
-   - Real score (radius inches -> score) using placeholder width scale
+   - Real score from radius (placeholder inches mapping)
 ============================================================ */
 
 (() => {
@@ -35,24 +36,23 @@
   const elDistDisplay = $("distDisplay");  // visible number
   const elDistUp = $("distUp");
   const elDistDown = $("distDown");
+
   const elMoaClick = $("moaPerClick");
 
-  const KEY_PAYLOAD = "SCZN3_SEC_PAYLOAD_V1";
+  const KEY = "SCZN3_SEC_PAYLOAD_V1";
+
+  let objectUrl = null;
 
   // Tap state (normalized 0..1)
   let aim = null;     // {x01,y01}
   let hits = [];      // [{x01,y01},...]
 
-  // Sticky timing
+  // Anti-double-fire / anti-scroll
+  let lastTouchTapAt = 0;
+  let touchStart = null;
   let pauseTimer = null;
 
-  // Pointer tracking (scroll vs tap discrimination)
-  let pointerDown = null; // {x,y,t}
-  let suppressUntil = 0;  // hard gate to prevent fast double-fire
-
-  // ------------------------------------------------------------
-  // Helpers
-  // ------------------------------------------------------------
+  // ---- Helpers
   function clamp01(v) { return Math.max(0, Math.min(1, v)); }
   function setText(el, t) { if (el) el.textContent = String(t ?? ""); }
 
@@ -65,6 +65,7 @@
     let n = Math.round(Number(v));
     if (!Number.isFinite(n)) n = 100;
     n = Math.max(5, Math.min(1000, n));
+
     if (elDistance) elDistance.value = String(n);
     if (elDistDisplay) elDistDisplay.textContent = String(n);
   }
@@ -96,12 +97,34 @@
     if (!elInstruction) return;
 
     if (!elImg?.src) { setText(elInstruction, ""); return; }
-
     if (!aim) { setText(elInstruction, "Tap Aim Point."); return; }
-
     if (hits.length < 1) { setText(elInstruction, "Tap Hits."); return; }
 
     setText(elInstruction, "Tap more hits, or pause — results will appear.");
+  }
+
+  // ---- FORCE overlay layer to be visible and on top (THIS IS THE FIX)
+  function forceOverlayLayout() {
+    if (!elWrap || !elImg || !elDots) return;
+
+    // Ensure wrapper is a positioning context
+    const wrapStyle = getComputedStyle(elWrap);
+    if (wrapStyle.position === "static") elWrap.style.position = "relative";
+
+    // Ensure image is below overlay
+    elImg.style.position = "relative";
+    elImg.style.zIndex = "1";
+
+    // Ensure overlay covers the image and sits on top
+    elDots.style.position = "absolute";
+    elDots.style.left = "0";
+    elDots.style.top = "0";
+    elDots.style.right = "0";
+    elDots.style.bottom = "0";
+    elDots.style.width = "100%";
+    elDots.style.height = "100%";
+    elDots.style.zIndex = "10";
+    elDots.style.pointerEvents = "none";
   }
 
   function resetAll() {
@@ -110,29 +133,33 @@
     if (elDots) elDots.innerHTML = "";
     setTapCount();
     hideSticky();
+    forceOverlayLayout();
     setInstructionForState();
-    setText(elStatus, elImg?.src ? "Tap Aim Point." : "Add a target photo to begin.");
+    setText(elStatus, elImg?.src ? "Tap Aim Point." : "Add a photo to begin.");
   }
 
+  // ---- Add dot with INLINE sizing + styling so CSS can’t break it
   function addDot(x01, y01, kind) {
     if (!elDots) return;
 
     const d = document.createElement("div");
-    d.className = "tapDot";
+
+    // absolute position with center alignment
+    d.style.position = "absolute";
     d.style.left = (x01 * 100) + "%";
     d.style.top = (y01 * 100) + "%";
-
-    // IMPORTANT: dots should never steal taps
-    d.style.pointerEvents = "none";
+    d.style.transform = "translate(-50%, -50%)";
+    d.style.width = "18px";
+    d.style.height = "18px";
+    d.style.borderRadius = "999px";
+    d.style.zIndex = "20";
+    d.style.boxShadow = "0 10px 28px rgba(0,0,0,.55)";
+    d.style.border = "2px solid rgba(0,0,0,.55)";
 
     if (kind === "aim") {
       d.style.background = "#67f3a4"; // aim point green
-      d.style.border = "2px solid rgba(0,0,0,.55)";
-      d.style.boxShadow = "0 10px 28px rgba(0,0,0,.55)";
     } else {
       d.style.background = "#b7ff3c"; // hits bright green
-      d.style.border = "2px solid rgba(0,0,0,.55)";
-      d.style.boxShadow = "0 10px 28px rgba(0,0,0,.55)";
     }
 
     elDots.appendChild(d);
@@ -151,9 +178,7 @@
   }
 
   // ------------------------------------------------------------
-  // SCORING (REAL-ish) — inches-based using current placeholder scale
-  // Placeholder scale: full image width = 10 inches
-  // Later: replace with real inches mapping per target profile.
+  // SCORING — placeholder inches mapping (width=10 inches)
   // ------------------------------------------------------------
   const inchesPerFullWidth = 10;
 
@@ -173,24 +198,21 @@
   function computeCorrectionAndScore() {
     if (!aim || hits.length < 1) return null;
 
-    // Average POI
     const avg = hits.reduce((acc, p) => ({ x: acc.x + p.x01, y: acc.y + p.y01 }), { x: 0, y: 0 });
     avg.x /= hits.length;
     avg.y /= hits.length;
 
-    // Correction vector aim - poi
     const dx = aim.x01 - avg.x; // + => RIGHT
     const dy = aim.y01 - avg.y; // + => DOWN (screen space)
 
-    // Inches (placeholder)
     const inchesX = dx * inchesPerFullWidth;
     const inchesY = dy * inchesPerFullWidth;
+
     const rIn = Math.sqrt(inchesX * inchesX + inchesY * inchesY);
 
     const dist = getDistance();
     const moaPerClick = Number(elMoaClick?.value ?? 0.25);
 
-    // True MOA inches at distance
     const inchesPerMoa = (dist / 100) * 1.047;
 
     const moaX = inchesX / inchesPerMoa;
@@ -211,7 +233,7 @@
   }
 
   function goToSEC(payload) {
-    try { localStorage.setItem(KEY_PAYLOAD, JSON.stringify(payload)); } catch {}
+    try { localStorage.setItem(KEY, JSON.stringify(payload)); } catch {}
     const b64 = b64FromObj(payload);
     window.location.href = `./sec.html?payload=${encodeURIComponent(b64)}&fresh=${Date.now()}`;
   }
@@ -248,51 +270,13 @@
     goToSEC(payload);
   }
 
-  // ------------------------------------------------------------
-  // Distance clicker (+/-)
-  // ------------------------------------------------------------
+  // ---- Distance clicker (+/-)
   if (elDistUp) elDistUp.addEventListener("click", () => setDistance(getDistance() + 5));
   if (elDistDown) elDistDown.addEventListener("click", () => setDistance(getDistance() - 5));
 
-  // ------------------------------------------------------------
-  // Photo button -> file input
-  // NOTE: removing capture attribute is what enables library picker
-  // (Keep capture in HTML if you want camera-first; here we do NOT force it)
-  // ------------------------------------------------------------
-  if (elPhotoBtn && elFile) elPhotoBtn.addEventListener("click", () => elFile.click());
-
-  function loadFileToImg(file) {
-    resetAll();
-
-    const reader = new FileReader();
-
-    reader.onload = () => {
-      const dataUrl = String(reader.result || "");
-      if (!dataUrl.startsWith("data:image/")) {
-        setText(elStatus, "Photo failed to load.");
-        setText(elInstruction, "Try again.");
-        return;
-      }
-
-      elImg.onload = () => {
-        setText(elStatus, "Tap Aim Point.");
-        setInstructionForState();
-      };
-
-      elImg.onerror = () => {
-        setText(elStatus, "Photo failed to load.");
-        setText(elInstruction, "Try again.");
-      };
-
-      elImg.src = dataUrl;
-    };
-
-    reader.onerror = () => {
-      setText(elStatus, "Photo failed to load.");
-      setText(elInstruction, "Try again.");
-    };
-
-    reader.readAsDataURL(file);
+  // ---- Photo picker
+  if (elPhotoBtn && elFile) {
+    elPhotoBtn.addEventListener("click", () => elFile.click());
   }
 
   if (elFile) {
@@ -300,21 +284,33 @@
       const f = elFile.files && elFile.files[0];
       if (!f) return;
 
-      loadFileToImg(f);
+      resetAll();
+
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+      objectUrl = URL.createObjectURL(f);
+
+      elImg.onload = () => {
+        forceOverlayLayout();
+        setText(elStatus, "Tap Aim Point.");
+        setInstructionForState();
+      };
+      elImg.onerror = () => {
+        setText(elStatus, "Photo failed to load.");
+        setText(elInstruction, "Try again.");
+      };
+
+      elImg.src = objectUrl;
 
       // allow selecting same file again
       elFile.value = "";
     });
   }
 
-  // ------------------------------------------------------------
-  // Tap logic — ONE PATH ONLY (Pointer Events)
-  // Prevents double-hit on iOS.
-  // Scroll detection: movement > 10px => treat as scroll, ignore.
-  // ------------------------------------------------------------
+  // ---- Tap logic (touch-first, click suppressed)
   function acceptTap(clientX, clientY) {
     if (!elImg?.src) return;
 
+    forceOverlayLayout(); // keep overlay correct even after layout shifts
     const { x01, y01 } = getRelative01(clientX, clientY);
 
     if (!aim) {
@@ -336,49 +332,39 @@
   }
 
   if (elWrap) {
-    // ensure overlay never blocks pointer
-    if (elDots) elDots.style.pointerEvents = "none";
+    elWrap.addEventListener("touchstart", (e) => {
+      if (!e.touches || !e.touches[0]) return;
+      const t = e.touches[0];
+      touchStart = { x: t.clientX, y: t.clientY, t: Date.now() };
+    }, { passive: true });
 
-    elWrap.addEventListener("pointerdown", (e) => {
-      if (!e.isPrimary) return;
-      if (!elImg?.src) return;
-
-      pointerDown = { x: e.clientX, y: e.clientY, t: Date.now() };
-    });
-
-    elWrap.addEventListener("pointerup", (e) => {
-      if (!e.isPrimary) return;
-      if (!pointerDown) return;
-
+    elWrap.addEventListener("touchend", (e) => {
       const now = Date.now();
-      if (now < suppressUntil) {
-        pointerDown = null;
-        return;
-      }
+      const t = (e.changedTouches && e.changedTouches[0]) ? e.changedTouches[0] : null;
+      if (!t || !touchStart) return;
 
-      const dx = Math.abs(e.clientX - pointerDown.x);
-      const dy = Math.abs(e.clientY - pointerDown.y);
+      const dx = Math.abs(t.clientX - touchStart.x);
+      const dy = Math.abs(t.clientY - touchStart.y);
 
-      // If the user dragged (scroll gesture), ignore
+      // scroll => ignore
       if (dx > 10 || dy > 10) {
-        pointerDown = null;
+        touchStart = null;
         return;
       }
 
-      // Hard gate to prevent accidental double-fire
-      suppressUntil = now + 350;
+      lastTouchTapAt = now;
+      acceptTap(t.clientX, t.clientY);
+      touchStart = null;
+    }, { passive: true });
 
+    elWrap.addEventListener("click", (e) => {
+      const now = Date.now();
+      if (now - lastTouchTapAt < 800) return; // kill ghost click
       acceptTap(e.clientX, e.clientY);
-      pointerDown = null;
-    });
-
-    elWrap.addEventListener("pointercancel", () => { pointerDown = null; });
-    elWrap.addEventListener("pointerleave", () => { pointerDown = null; });
+    }, { passive: true });
   }
 
-  // ------------------------------------------------------------
-  // Buttons
-  // ------------------------------------------------------------
+  // ---- Buttons
   if (elClear) {
     elClear.addEventListener("click", () => {
       resetAll();
@@ -388,9 +374,8 @@
 
   if (elStickyBtn) elStickyBtn.addEventListener("click", onShowResults);
 
-  // ------------------------------------------------------------
-  // Boot
-  // ------------------------------------------------------------
+  // ---- Boot
   setDistance(100);
+  forceOverlayLayout();
   resetAll();
 })();
