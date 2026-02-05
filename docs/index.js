@@ -1,13 +1,17 @@
 /* ============================================================
-   index.js (FULL REPLACEMENT) — BASELINE 22206 + Distance Clicker
+   index.js (FULL REPLACEMENT) — POLISH PASS
    Adds:
-   - Distance clicker (+ / -) around #distanceYds input
+   - Aim Point dot = GREEN
+   - Hit dots = BRIGHT GREEN (clear visual switch)
+   - Sticky "Show results" appears after user pauses tapping
+   - Scroll-safe: swipe/scroll does NOT record a hit (tap vs move threshold)
+   - Uses URL payload to sec.html (baseline behavior preserved)
 ============================================================ */
 
 (() => {
   const $ = (id) => document.getElementById(id);
 
-  // Required IDs in index.html
+  // Required IDs
   const elFile = $("photoInput");
   const elPhotoBtn = $("photoBtn");
   const elImg = $("targetImg");
@@ -17,26 +21,28 @@
   const elInstruction = $("instructionLine");
   const elStatus = $("statusLine");
 
-  // Sticky
+  // Sticky results bar
   const elStickyBar = $("stickyBar");
   const elStickyBtn = $("stickyResultsBtn");
 
   // Settings
   const elVendor = $("vendorLink");
-  const elDistance = $("distanceYds"); // now an <input type="number">
+  const elDistance = $("distanceYds");
   const elMoaClick = $("moaPerClick");
-
-  // Distance clicker buttons
-  const elMinus = $("distMinus");
-  const elPlus = $("distPlus");
 
   const KEY = "SCZN3_SEC_PAYLOAD_V1";
 
   let objectUrl = null;
-  let bull = null;   // {x01,y01}
-  let shots = [];    // [{x01,y01},...]
+  let bull = null;     // {x01,y01}
+  let shots = [];      // [{x01,y01},...]
 
-  // --- helpers
+  // "Magic" sticky timing
+  let stickyTimer = null;
+
+  // Tap vs scroll detection
+  let downInfo = null; // {x,y,time}
+
+  // ---------- helpers
   function clamp01(v) { return Math.max(0, Math.min(1, v)); }
 
   function setText(el, txt) { if (el) el.textContent = txt; }
@@ -56,30 +62,73 @@
     }
   }
 
+  function clearStickyTimer() {
+    if (stickyTimer) {
+      clearTimeout(stickyTimer);
+      stickyTimer = null;
+    }
+  }
+
+  function scheduleStickyReveal() {
+    clearStickyTimer();
+    // Only show after at least 1 hit + user paused
+    if (shots.length < 1) return;
+
+    stickyTimer = setTimeout(() => {
+      showSticky(true);
+      // Keep copy minimal
+      setText(elInstruction, "");
+      setText(elStatus, "Ready when you are.");
+    }, 900); // <-- "magic pause" time
+  }
+
   function clearDots() {
     bull = null;
     shots = [];
     if (elDots) elDots.innerHTML = "";
     setTapCount();
+    clearStickyTimer();
     showSticky(false);
-    setText(elInstruction, "");
-    setText(elStatus, elImg?.src ? "Tap Aim Point, then tap hits." : "Add a target photo to begin.");
+
+    if (elImg && elImg.src) {
+      setText(elStatus, "Tap Aim Point, then tap hits.");
+      setText(elInstruction, "Aim Point first. Then hits.");
+    } else {
+      setText(elStatus, "Add a target photo to begin.");
+      setText(elInstruction, "");
+    }
   }
 
   function addDot(x01, y01, kind) {
     if (!elDots) return;
 
     const d = document.createElement("div");
-    d.className = "tapDot " + (kind === "bull" ? "tapDotBull" : "tapDotShot");
+    d.className = "tapDot";
+
+    // Position
     d.style.left = (x01 * 100) + "%";
     d.style.top = (y01 * 100) + "%";
+
+    // COLOR RULES (inline so it ALWAYS wins)
+    // Aim Point = GREEN
+    // Hits = BRIGHT GREEN (different shade so you feel the switch)
+    if (kind === "bull") {
+      d.style.background = "#67f3a4";           // green
+      d.style.borderColor = "rgba(0,0,0,.55)";
+      d.style.boxShadow = "0 8px 26px rgba(0,0,0,.55)";
+    } else {
+      d.style.background = "#00ff66";           // bright green
+      d.style.borderColor = "rgba(0,0,0,.55)";
+      d.style.boxShadow = "0 8px 26px rgba(0,0,0,.55)";
+    }
+
     elDots.appendChild(d);
   }
 
-  function getRelative01FromEvent(ev) {
+  function getRelative01FromClientXY(clientX, clientY) {
     const r = elImg.getBoundingClientRect();
-    const x = (ev.clientX - r.left) / r.width;
-    const y = (ev.clientY - r.top) / r.height;
+    const x = (clientX - r.left) / r.width;
+    const y = (clientY - r.top) / r.height;
     return { x01: clamp01(x), y01: clamp01(y) };
   }
 
@@ -99,7 +148,7 @@
     return Number.isFinite(n) && n > 0 ? n : 0.25;
   }
 
-  // Demo correction (placeholder math)
+  // Demo correction (placeholder math, but directions are consistent)
   function computeCorrection() {
     if (!bull || shots.length < 1) return null;
 
@@ -139,83 +188,6 @@
     location.href = `./sec.html?payload=${encodeURIComponent(b64)}&fresh=${Date.now()}`;
   }
 
-  // --- Distance clicker behavior
-  function setDistance(v) {
-    const n = Number(v);
-    const val = Number.isFinite(n) ? Math.max(1, Math.min(2000, Math.round(n))) : 100;
-    if (elDistance) elDistance.value = String(val);
-  }
-
-  function stepDistance(delta) {
-    const cur = readDistanceYds();
-    setDistance(cur + delta);
-  }
-
-  if (elMinus) elMinus.addEventListener("click", () => stepDistance(-5));
-  if (elPlus) elPlus.addEventListener("click", () => stepDistance(+5));
-
-  if (elDistance) {
-    elDistance.addEventListener("change", () => setDistance(readDistanceYds()));
-    elDistance.addEventListener("blur", () => setDistance(readDistanceYds()));
-  }
-
-  // --- Photo button opens picker (Camera OR Library)
-  if (elPhotoBtn && elFile) {
-    elPhotoBtn.addEventListener("click", () => elFile.click());
-  }
-
-  if (elFile) {
-    elFile.addEventListener("change", () => {
-      const f = elFile.files && elFile.files[0];
-      if (!f) return;
-
-      clearDots();
-
-      if (objectUrl) URL.revokeObjectURL(objectUrl);
-      objectUrl = URL.createObjectURL(f);
-
-      elImg.onload = () => {
-        setText(elStatus, "Tap Aim Point, then tap hits.");
-        setText(elInstruction, "Tap Aim Point (green), then tap hits.");
-      };
-      elImg.onerror = () => {
-        setText(elStatus, "Photo failed to load.");
-        setText(elInstruction, "Try again.");
-      };
-
-      elImg.src = objectUrl;
-
-      // allow picking same file again
-      elFile.value = "";
-    });
-  }
-
-  // --- Tap handling (single event path to avoid double taps)
-  if (elImg) {
-    elImg.addEventListener("pointerdown", (ev) => {
-      if (!elImg.src) return;
-      // stop double-fire from synthesized clicks
-      ev.preventDefault();
-
-      const { x01, y01 } = getRelative01FromEvent(ev);
-
-      if (!bull) {
-        bull = { x01, y01 };
-        addDot(x01, y01, "bull");
-        setText(elInstruction, "Now tap hits.");
-      } else {
-        shots.push({ x01, y01 });
-        addDot(x01, y01, "shot");
-        setTapCount();
-
-        // show sticky after first hit
-        if (shots.length >= 1) showSticky(true);
-      }
-    }, { passive: false });
-  }
-
-  if (elClear) elClear.addEventListener("click", clearDots);
-
   function runResults() {
     const out = computeCorrection();
     if (!out) {
@@ -238,9 +210,99 @@
     goToSEC(payload);
   }
 
+  // ---------- events
+
+  // Big photo button opens picker
+  if (elPhotoBtn && elFile) elPhotoBtn.addEventListener("click", () => elFile.click());
+
+  // Load photo
+  if (elFile) {
+    elFile.addEventListener("change", () => {
+      const f = elFile.files && elFile.files[0];
+      if (!f) return;
+
+      clearDots();
+
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+      objectUrl = URL.createObjectURL(f);
+
+      elImg.onload = () => {
+        setText(elStatus, "Tap Aim Point, then tap hits.");
+        setText(elInstruction, "Aim Point first. Then hits.");
+      };
+      elImg.onerror = () => {
+        setText(elStatus, "Photo failed to load.");
+        setText(elInstruction, "Try again.");
+      };
+
+      elImg.src = objectUrl;
+
+      // allow choosing same photo again
+      elFile.value = "";
+    });
+  }
+
+  // Tap vs scroll: record only if "tap-like"
+  // - pointerdown records start point/time
+  // - pointerup checks movement threshold
+  // - only then we record a tap
+  if (elImg) {
+    // Helps iOS understand this area can scroll; we will only record true taps
+    elImg.style.touchAction = "pan-y";
+
+    elImg.addEventListener("pointerdown", (ev) => {
+      if (!elImg.src) return;
+      downInfo = { x: ev.clientX, y: ev.clientY, t: Date.now() };
+
+      // while user is tapping/moving, hide sticky
+      showSticky(false);
+      clearStickyTimer();
+    }, { passive: true });
+
+    elImg.addEventListener("pointerup", (ev) => {
+      if (!elImg.src) return;
+      if (!downInfo) return;
+
+      const dx = Math.abs(ev.clientX - downInfo.x);
+      const dy = Math.abs(ev.clientY - downInfo.y);
+      const dt = Date.now() - downInfo.t;
+      downInfo = null;
+
+      // Thresholds: if finger moved, assume scroll/pan, NOT a hit
+      // dt guard keeps long scroll holds from triggering taps
+      const movedTooMuch = (dx > 10 || dy > 10);
+      const heldTooLong = (dt > 900);
+
+      if (movedTooMuch || heldTooLong) return;
+
+      // This is a real tap
+      const { x01, y01 } = getRelative01FromClientXY(ev.clientX, ev.clientY);
+
+      if (!bull) {
+        bull = { x01, y01 };
+        addDot(x01, y01, "bull");
+        setText(elStatus, "Now tap hits.");
+        setText(elInstruction, "Now tap hits.");
+      } else {
+        shots.push({ x01, y01 });
+        addDot(x01, y01, "shot");
+        setTapCount();
+
+        // Magic reveal after pause
+        setText(elStatus, "Tap more hits… or pause.");
+        scheduleStickyReveal();
+      }
+    }, { passive: true });
+
+    elImg.addEventListener("pointercancel", () => {
+      downInfo = null;
+    }, { passive: true });
+  }
+
+  if (elClear) elClear.addEventListener("click", clearDots);
+
   if (elStickyBtn) elStickyBtn.addEventListener("click", runResults);
 
-  // --- boot
-  setDistance(Number(elDistance?.value || 100));
+  // ---------- boot
   clearDots();
 })();
