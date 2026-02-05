@@ -1,173 +1,263 @@
 /* ============================================================
-   tap-n-score/sec.js  (FULL REPLACEMENT) — Fertilizer Pass
-   Adds:
-   - Micro-twinkle on lit LED dots (random delay/duration)
-   - Keeps centered 2-digit (00–99) and 100 as 3-digit
-   Test:
-     /tap-n-score/sec.html?score=25
-     /tap-n-score/sec.html?score=100
+   sec.js (FULL REPLACEMENT) — LED Score + Payload Priority
+   Priority:
+     1) payload.score (URL payload or localStorage payload)
+     2) ?score=25 (manual preview / demo)
+     3) "—"
 ============================================================ */
 
 (() => {
   const $ = (id) => document.getElementById(id);
 
-  const ledDigits = $("ledDigits");
-  const diagOut = $("diagOut");
+  const KEY = "SCZN3_SEC_PAYLOAD_V1";
+  const HIST_KEY = "SCZN3_SEC_HISTORY_V1";
+
+  function safeJsonParse(s) { try { return JSON.parse(s); } catch { return null; } }
+
+  function fromB64(b64) {
+    try {
+      const json = decodeURIComponent(escape(atob(b64)));
+      return safeJsonParse(json);
+    } catch { return null; }
+  }
+
+  function getParam(name) {
+    try {
+      return new URL(location.href).searchParams.get(name);
+    } catch { return null; }
+  }
+
+  function writeDiag(obj) {
+    const pre = $("secDiag");
+    if (!pre) return;
+    try { pre.textContent = JSON.stringify(obj, null, 2); }
+    catch { pre.textContent = String(obj); }
+  }
+
+  function setText(id, v) {
+    const el = $(id);
+    if (!el) return;
+    el.textContent = (v === undefined || v === null || v === "") ? "—" : String(v);
+  }
+
+  function setNum2(id, v) {
+    const el = $(id);
+    if (!el) return;
+    const n = Number(v);
+    el.textContent = Number.isFinite(n) ? n.toFixed(2) : "0.00";
+  }
+
+  function enableBtn(btn, yes) {
+    if (!btn) return;
+    if (yes) {
+      btn.classList.remove("btnDisabled");
+      btn.setAttribute("aria-disabled", "false");
+      btn.disabled = false;
+    } else {
+      btn.classList.add("btnDisabled");
+      btn.setAttribute("aria-disabled", "true");
+      btn.disabled = true;
+    }
+  }
+
+  function goToIndexFresh() {
+    location.replace(`./index.html?fresh=${Date.now()}`);
+  }
+
+  // ---- Diagnostics gating
+  const diagBox = $("secDiagBox");
+  const titleEl = $("secTitle");
+  const debugParam = getParam("debug");
+  const debugOn = debugParam === "1" || debugParam === "true";
+
+  function showDiagnostics() {
+    if (!diagBox) return;
+    diagBox.classList.remove("diagHidden");
+    diagBox.open = true;
+  }
+  function hideDiagnostics() {
+    if (!diagBox) return;
+    diagBox.classList.add("diagHidden");
+    diagBox.open = false;
+  }
+
+  if (debugOn) showDiagnostics();
+  else hideDiagnostics();
+
+  // Long-press title to reveal diagnostics
+  if (titleEl && !debugOn) {
+    let t = null;
+    const start = () => {
+      clearTimeout(t);
+      t = setTimeout(() => {
+        showDiagnostics();
+        writeDiag({ ok: true, note: "Diagnostics revealed by long-press" });
+      }, 700);
+    };
+    const stop = () => { clearTimeout(t); t = null; };
+
+    titleEl.addEventListener("touchstart", start, { passive: true });
+    titleEl.addEventListener("touchend", stop);
+    titleEl.addEventListener("touchcancel", stop);
+
+    titleEl.addEventListener("mousedown", start);
+    titleEl.addEventListener("mouseup", stop);
+    titleEl.addEventListener("mouseleave", stop);
+  }
+
+  // ---- Load payload: URL payload first, then localStorage
+  const rawPayloadParam = getParam("payload");
+  let payload = null;
+
+  if (rawPayloadParam) payload = fromB64(rawPayloadParam);
+
+  if (!payload) {
+    try {
+      const ls = localStorage.getItem(KEY);
+      if (ls) payload = safeJsonParse(ls);
+    } catch {}
+  }
+
+  // ---- Buttons
   const downloadBtn = $("downloadBtn");
+  const vendorBtn = $("vendorBtn");
+  const surveyBtn = $("surveyBtn");
+  const backBtn = $("backToTargetBtn");
 
-  function clampInt(n, min, max, fallback) {
-    const x = Number(n);
-    if (!Number.isFinite(x)) return fallback;
-    const xi = Math.round(x);
-    return Math.max(min, Math.min(max, xi));
-  }
-
-  function setDiag(obj) {
-    if (!diagOut) return;
-    diagOut.textContent = JSON.stringify(obj, null, 2);
-  }
-
-  function getQueryScore() {
-    const params = new URLSearchParams(window.location.search);
-    const raw = params.get("score");
-    if (raw == null) return null;
-    return clampInt(raw, 0, 100, 0);
-  }
-
-  // Dot-matrix size
-  const W = 10;
-  const H = 14;
-
-  function makeBlankGrid() {
-    return Array.from({ length: H }, () => Array.from({ length: W }, () => 0));
-  }
-
-  function drawH(grid, y, x0, x1) {
-    for (let x = x0; x <= x1; x++) grid[y][x] = 1;
-  }
-
-  function drawV(grid, x, y0, y1) {
-    for (let y = y0; y <= y1; y++) grid[y][x] = 1;
-  }
-
-  function digitToGrid(d) {
-    const g = makeBlankGrid();
-
-    const topY = 1, topX0 = 2, topX1 = 7;
-    const uvY0 = 2, uvY1 = 6, leftX = 1, rightX = 8;
-    const midY = 7, midX0 = 2, midX1 = 7;
-    const lvY0 = 8, lvY1 = 12;
-    const botY = 13, botX0 = 2, botX1 = 7;
-
-    const segs = {
-      0: ["a","b","c","d","e","f"],
-      1: ["b","c"],
-      2: ["a","b","g","e","d"],
-      3: ["a","b","g","c","d"],
-      4: ["f","g","b","c"],
-      5: ["a","f","g","c","d"],
-      6: ["a","f","g","e","c","d"],
-      7: ["a","b","c"],
-      8: ["a","b","c","d","e","f","g"],
-      9: ["a","b","c","d","f","g"],
-    }[d] || [];
-
-    if (segs.includes("a")) drawH(g, topY, topX0, topX1);
-    if (segs.includes("f")) drawV(g, leftX, uvY0, uvY1);
-    if (segs.includes("b")) drawV(g, rightX, uvY0, uvY1);
-    if (segs.includes("g")) drawH(g, midY, midX0, midX1);
-    if (segs.includes("e")) drawV(g, leftX, lvY0, lvY1);
-    if (segs.includes("c")) drawV(g, rightX, lvY0, lvY1);
-    if (segs.includes("d")) drawH(g, botY, botX0, botX1);
-
-    // subtle thickness
-    const boosted = makeBlankGrid();
-    for (let y = 0; y < H; y++) {
-      for (let x = 0; x < W; x++) {
-        if (!g[y][x]) continue;
-        boosted[y][x] = 1;
-        if (x + 1 < W) boosted[y][x + 1] = 1;
-      }
-    }
-
-    return boosted;
-  }
-
-  function renderDigit(grid) {
-    const digitEl = document.createElement("div");
-    digitEl.className = "ledDigit";
-
-    for (let y = 0; y < H; y++) {
-      for (let x = 0; x < W; x++) {
-        const dot = document.createElement("div");
-        dot.className = grid[y][x] ? "dot on" : "dot";
-        digitEl.appendChild(dot);
-      }
-    }
-    return digitEl;
-  }
-
-  function applyTwinkle() {
-    // Add calm “organic” twinkle only to lit dots
-    const onDots = ledDigits.querySelectorAll(".dot.on");
-    onDots.forEach((dot) => {
-      dot.classList.add("twinkle");
-
-      // Random but calm
-      const delay = (Math.random() * 2.8).toFixed(2) + "s";
-      const dur = (3.2 + Math.random() * 3.2).toFixed(2) + "s"; // 3.2–6.4s
-      dot.style.animationDelay = delay;
-      dot.style.animationDuration = dur;
+  if (backBtn) {
+    backBtn.addEventListener("click", () => {
+      if (history.length > 1) { history.back(); return; }
+      goToIndexFresh();
     });
   }
 
-  function setScore(score) {
-    const s = clampInt(score, 0, 100, 0);
-    const str = (s === 100) ? "100" : String(s).padStart(2, "0");
+  // ---- Score source: payload.score -> ?score= -> —
+  const scoreParam = getParam("score");
+  const scoreFromParam = (scoreParam !== null && scoreParam !== "") ? Number(scoreParam) : null;
 
-    ledDigits.innerHTML = "";
-    for (const ch of str) {
-      const d = Number(ch);
-      ledDigits.appendChild(renderDigit(digitToGrid(d)));
-    }
-
-    applyTwinkle();
-
-    // Optional: wire download if img param exists
-    const params = new URLSearchParams(window.location.search);
-    const img = params.get("img");
-    if (img && downloadBtn) {
-      downloadBtn.href =
-        "/tap-n-score/download.html?img=" + encodeURIComponent(img) +
-        "&from=" + encodeURIComponent("/tap-n-score/index.html?fresh=1") +
-        "&target=" + encodeURIComponent("/tap-n-score/index.html?fresh=1");
-    }
-
-    setDiag({
-      ok: true,
-      score: s,
-      displayed: str,
-      twinkle: "onDots randomized (delay/duration)"
-    });
+  let scoreFinal = null;
+  if (payload && payload.score !== undefined && payload.score !== null && payload.score !== "") {
+    scoreFinal = payload.score;
+  } else if (Number.isFinite(scoreFromParam)) {
+    scoreFinal = scoreFromParam;
+  } else {
+    scoreFinal = "—";
   }
 
-  const queryScore = getQueryScore();
-  if (queryScore == null) {
-    setScore(25);
-    setDiag({
-      ok: true,
-      score: 25,
-      displayed: "25",
-      source: "default demo",
-      tip: "Add ?score=25 or ?score=100"
+  // If payload is missing, still show the score demo cleanly
+  setText("secScore", scoreFinal);
+
+  // ---- If payload missing, disable buttons + minimal fill
+  if (!payload) {
+    setText("secSession", "—");
+    setText("secShots", 0);
+    setText("secWindDir", "—");
+    setNum2("secWindClicks", 0);
+    setText("secElevDir", "—");
+    setNum2("secElevClicks", 0);
+
+    setText("prev1", "—");
+    setText("prev2", "—");
+    setText("prev3", "—");
+
+    enableBtn(downloadBtn, false);
+    enableBtn(vendorBtn, false);
+    enableBtn(surveyBtn, false);
+
+    if (debugOn) {
+      writeDiag({
+        ok: false,
+        note: "No payload loaded. Showing score via ?score= fallback if provided.",
+        url: location.href,
+        hasScoreParam: Number.isFinite(scoreFromParam),
+        expected: { urlParam: "payload", localStorageKey: KEY }
+      });
+    }
+    return;
+  }
+
+  // ---- Persist backup
+  try { localStorage.setItem(KEY, JSON.stringify(payload)); } catch {}
+
+  // ---- Hydrate UI from payload
+  setText("secSession", payload.sessionId || "—");
+  setText("secShots", payload.shots ?? 0);
+
+  setText("secWindDir", payload.windage?.dir || "—");
+  setNum2("secWindClicks", payload.windage?.clicks ?? 0);
+
+  setText("secElevDir", payload.elevation?.dir || "—");
+  setNum2("secElevClicks", payload.elevation?.clicks ?? 0);
+
+  // ---- History PREV 1–3
+  try {
+    const hist = JSON.parse(localStorage.getItem(HIST_KEY) || "[]");
+    const fmt = (h) => {
+      if (!h) return "—";
+      const s = (h.score === null || h.score === undefined) ? "—" : h.score;
+      return `Score ${s} • Shots ${h.shots} • ${h.wind} • ${h.elev}`;
+    };
+    setText("prev1", fmt(hist[0]));
+    setText("prev2", fmt(hist[1]));
+    setText("prev3", fmt(hist[2]));
+  } catch {
+    setText("prev1", "—");
+    setText("prev2", "—");
+    setText("prev3", "—");
+  }
+
+  // ---- Buttons enabled only if URLs exist
+  const secUrl = String(payload.secPngUrl || payload.secUrl || "").trim();
+  const vendorUrl = String(payload.vendorUrl || "").trim();
+  const surveyUrl = String(payload.surveyUrl || "").trim();
+
+  if (secUrl) {
+    enableBtn(downloadBtn, true);
+    downloadBtn.addEventListener("click", () => {
+      const t = Date.now();
+      const from = `./index.html?fresh=${t}`;
+      const target = `./index.html?fresh=${t}`;
+      const u =
+        `./download.html?img=${encodeURIComponent(secUrl)}` +
+        `&from=${encodeURIComponent(from)}` +
+        `&target=${encodeURIComponent(target)}`;
+      location.href = u;
     });
   } else {
-    setScore(queryScore);
-    setDiag({
+    enableBtn(downloadBtn, false);
+  }
+
+  if (vendorUrl) {
+    enableBtn(vendorBtn, true);
+    vendorBtn.addEventListener("click", () => window.open(vendorUrl, "_blank", "noopener,noreferrer"));
+  } else {
+    enableBtn(vendorBtn, false);
+  }
+
+  if (surveyUrl) {
+    enableBtn(surveyBtn, true);
+    surveyBtn.addEventListener("click", () => window.open(surveyUrl, "_blank", "noopener,noreferrer"));
+  } else {
+    enableBtn(surveyBtn, false);
+  }
+
+  // ---- Diagnostics (only when visible)
+  if (debugOn) {
+    writeDiag({
       ok: true,
-      score: queryScore,
-      source: "query",
-      tip: "Try ?score=100"
+      loadedFrom: rawPayloadParam ? "url.payload" : "localStorage",
+      scoreRendered: scoreFinal,
+      key: KEY,
+      payloadSummary: {
+        sessionId: payload.sessionId,
+        score: payload.score,
+        shots: payload.shots,
+        windage: payload.windage,
+        elevation: payload.elevation,
+        hasSecUrl: Boolean(secUrl),
+        hasVendorUrl: Boolean(vendorUrl),
+        hasSurveyUrl: Boolean(surveyUrl)
+      }
     });
   }
 })();
