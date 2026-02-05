@@ -1,254 +1,262 @@
 /* ============================================================
-   styles.css (FULL REPLACEMENT) — BASELINE 22206 POLISH
+   /tap-n-score/styles.css (FULL REPLACEMENT) — Baseline 22206 UI
    Goals:
-   - iPhone: target fits screen (max height) + scroll outside image
-   - Big Photo button is the 800lb gorilla
-   - Aim Point = bright green, Hits = red
-   - Sticky results sits close and feels “magic”
+   - iPhone: target fully visible (better fit)
+   - Keep margins so scrolling is possible
+   - Keep buttons near the target
+   - Sticky results bar sits above iPhone home indicator
 ============================================================ */
 
 :root{
   --bg:#06070a;
   --card: rgba(255,255,255,.06);
-  --stroke: rgba(255,255,255,.12);
+  --stroke: rgba(255,255,255,.10);
   --text:#eef2f7;
   --muted: rgba(238,242,247,.65);
 
-  --blue:#2f66ff;
   --red:#d64040;
+  --white:#eef2f7;
+  --blue:#2f66ff;
   --green:#67f3a4;
 
-  --shadow: 0 18px 55px rgba(0,0,0,.55);
+  --shadow: 0 18px 45px rgba(0,0,0,.55);
+
   --radius: 18px;
+
+  /* iOS safe areas */
+  --safeTop: env(safe-area-inset-top);
+  --safeBottom: env(safe-area-inset-bottom);
 }
 
 *{ box-sizing:border-box; }
 html,body{ height:100%; }
 body{
   margin:0;
-  font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
-  background: var(--bg);
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial;
   color: var(--text);
+  background: var(--bg);
 }
 
+/* Main page */
 .page{
-  min-height:100%;
-  padding: 14px 12px 120px; /* bottom room for sticky bar */
-  max-width: 780px;
+  min-height: 100%;
+  padding:
+    calc(12px + var(--safeTop))
+    12px
+    calc(90px + var(--safeBottom)) /* leaves room for sticky bar */
+    12px;
+  max-width: 720px;
   margin: 0 auto;
 }
 
+/* Header */
 .topBar{
-  display:flex;
-  flex-direction:column;
-  gap:6px;
-  padding: 10px 6px 12px;
-}
-
-.topTitle{
-  font-weight: 900;
-  letter-spacing: .10em;
-  font-size: 16px;
-}
-
-.topSub{
-  color: var(--muted);
-  font-size: 13px;
-  line-height: 1.3;
-}
-
-.card{
-  background: var(--card);
-  border: 1px solid var(--stroke);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow);
-  padding: 12px;
-  margin: 10px 0;
-}
-
-.cardTitle{
-  font-weight: 900;
-  letter-spacing: .14em;
-  font-size: 12px;
-  color: var(--muted);
   margin-bottom: 10px;
 }
-
-.btnBig{
-  width: 100%;
-  border: 1px solid rgba(47,102,255,.45);
-  background: rgba(47,102,255,.22);
-  color: var(--text);
-  padding: 14px 14px;
-  border-radius: 16px;
+.topTitle{
   font-weight: 900;
-  letter-spacing:.02em;
+  letter-spacing: .06em;
   font-size: 16px;
-  cursor:pointer;
-  min-height: 52px;
+}
+.topSub{
+  margin-top: 6px;
+  color: var(--muted);
+  font-size: 13px;
 }
 
+/* Cards */
+.card{
+  border: 1px solid var(--stroke);
+  background: var(--card);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+  margin-bottom: 12px;
+}
+.cardTitle{
+  padding: 12px 12px 10px;
+  border-bottom: 1px solid rgba(255,255,255,.07);
+  font-weight: 900;
+  letter-spacing: .10em;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+/* Big photo button (800lb gorilla) */
+.btnBig{
+  width: calc(100% - 24px);
+  margin: 12px;
+  padding: 16px 14px;
+  border-radius: 16px;
+  border: 1px solid rgba(255,255,255,.14);
+  background: rgba(255,255,255,.08);
+  color: var(--text);
+  font-weight: 900;
+  font-size: 18px;
+  letter-spacing: .02em;
+  cursor: pointer;
+}
 .btnBig:active{ transform: translateY(1px); }
 
-.btnSecondary{
-  border: 1px solid rgba(255,255,255,.16);
-  background: rgba(255,255,255,.07);
-  color: var(--text);
-  padding: 10px 12px;
-  border-radius: 14px;
-  font-weight: 800;
-  cursor:pointer;
-  min-height: 44px;
-}
-
-.pill{
-  display:inline-flex;
-  align-items:center;
-  gap:8px;
-  padding: 10px 12px;
-  border-radius: 999px;
-  border: 1px solid rgba(255,255,255,.12);
-  background: rgba(0,0,0,.22);
-  color: var(--muted);
-  font-size: 13px;
-  min-height: 44px;
-}
-
-.row{
-  display:flex;
-  gap:10px;
-  flex-wrap:wrap;
-  align-items:center;
-  margin-top: 10px;
-}
-
-.rowTight{ margin-top: 10px; }
-
-.hint{
-  margin: 10px 0 0;
-  color: var(--muted);
-  font-size: 13px;
-  line-height: 1.35;
-  min-height: 18px;
-}
-
-/* ===== Image + taps ===== */
+/* Target area */
 .targetWrap{
-  margin-top: 12px;
-  border-radius: 16px;
-  overflow:hidden;
-  background: rgba(0,0,0,.18);
-  border: 1px solid rgba(255,255,255,.10);
   position: relative;
+  width: 100%;
+  background: rgba(0,0,0,.20);
+  border-top: 1px solid rgba(255,255,255,.06);
+  border-bottom: 1px solid rgba(255,255,255,.06);
 
-  /* Let the IMG decide height; we constrain the IMG itself */
+  /* iPhone fit: cap height so whole target is visible more often */
+  max-height: min(58vh, 520px);
+  overflow: hidden;
+
+  /* gives a little margin inside */
+  padding: 8px 10px 10px;
 }
 
+/* Make image slimmer (more outer margin on small screens) */
 #targetImg{
-  width: 100%;
-  height: auto;
   display:block;
+  width: 92%;
+  height: auto;
+  margin: 0 auto;
+  border-radius: 14px;
   user-select:none;
   -webkit-user-drag:none;
-
-  /* iPhone fit: don’t let it take the whole page */
-  max-height: 54vh;
-  object-fit: contain;
-  background: rgba(0,0,0,.20);
 }
 
-.dotsLayer{
+/* Tap overlay matches the image area */
+.dotsLayer,
+#dotsLayer{
   position:absolute;
   left:0; top:0; right:0; bottom:0;
   pointer-events:none;
 }
 
-.tapDot{
-  position:absolute;
-  width: 18px; height: 18px;
-  margin-left: -9px;
-  margin-top: -9px;
+/* Row controls under the target */
+.row{
+  display:flex;
+  gap: 10px;
+  align-items:center;
+  flex-wrap:wrap;
+  padding: 10px 12px 12px;
+}
+
+.rowTight{
+  padding-top: 8px;
+}
+
+.pill{
+  border: 1px solid rgba(255,255,255,.12);
+  background: rgba(0,0,0,.18);
+  color: var(--muted);
   border-radius: 999px;
-  border: 2px solid rgba(0,0,0,.65);
-  box-shadow: 0 10px 28px rgba(0,0,0,.55);
+  padding: 8px 12px;
+  font-size: 13px;
+}
+.pill span{ color: var(--text); font-weight: 800; }
+
+/* Buttons */
+.btnPrimary,
+.btnSecondary{
+  appearance:none;
+  border-radius: 14px;
+  padding: 11px 14px;
+  font-weight: 900;
+  border: 1px solid rgba(255,255,255,.14);
+  background: rgba(255,255,255,.08);
+  color: var(--text);
+  cursor:pointer;
+}
+.btnPrimary{
+  border-color: rgba(47,102,255,.45);
+  background: rgba(47,102,255,.18);
+}
+.btnSecondary{
+  border-color: rgba(214,64,64,.40);
+  background: rgba(214,64,64,.14);
+}
+.btnPrimary:active,
+.btnSecondary:active{ transform: translateY(1px); }
+
+/* Hint line */
+.hint{
+  margin: 0;
+  padding: 0 12px 12px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.35;
 }
 
-.tapDotAim{
-  background: rgba(103,243,164,.98); /* BRIGHT GREEN */
-}
-
-.tapDotHit{
-  background: rgba(214,64,64,.94);
-}
-
-/* ===== Settings ===== */
+/* Settings fields */
 .field{
-  flex:1;
-  min-width: 160px;
+  flex: 1;
+  min-width: 150px;
   display:flex;
   flex-direction:column;
-  gap:6px;
+  gap: 6px;
 }
-
 .fieldLabel{
   color: rgba(238,242,247,.55);
   font-size: 12px;
-  font-weight: 800;
 }
-
 .select{
   width:100%;
-  border: 1px solid rgba(255,255,255,.14);
-  background: rgba(0,0,0,.22);
-  color: var(--text);
-  padding: 10px 10px;
   border-radius: 14px;
-  font-weight: 800;
-  min-height: 44px;
+  border: 1px solid rgba(255,255,255,.12);
+  background: rgba(0,0,0,.20);
+  color: var(--text);
+  padding: 12px 12px;
+  font-size: 14px;
 }
 
+/* Vendor link */
 .vendorLink{
   display:none;
+  padding: 10px 12px 12px;
+  color: #9bb7ff;
+  text-decoration:none;
 }
 
+/* Footer */
 .footer{
-  margin-top: 14px;
   text-align:center;
   color: rgba(238,242,247,.30);
-  letter-spacing:.22em;
+  padding: 8px 0 0;
+  letter-spacing: .22em;
   font-weight: 900;
+  text-transform: uppercase;
   font-size: 12px;
-  padding: 10px 0 4px;
 }
+.footerMark{ opacity:.9; }
 
-.footerMark{}
-
-/* ===== Sticky Results ===== */
+/* Sticky results bar (magic) */
 .stickyBar{
   position: fixed;
-  left: 0;
-  right: 0;
-  bottom: 10px;
-  display:flex;
-  justify-content:center;
-  padding: 0 12px;
-  z-index: 99999;
+  left: 12px;
+  right: 12px;
+  bottom: calc(12px + var(--safeBottom));
+  max-width: 720px;
+  margin: 0 auto;
+  border-radius: 18px;
+  background: rgba(0,0,0,.62);
+  border: 1px solid rgba(255,255,255,.14);
+  box-shadow: 0 18px 45px rgba(0,0,0,.55);
+  padding: 10px;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
 }
-
 .stickyHidden{ display:none; }
 
 .stickyBtn{
-  width: min(780px, 100%);
-  border: 1px solid rgba(103,243,164,.42);
-  background: rgba(103,243,164,.16);
-  color: var(--text);
+  width:100%;
+  border-radius: 16px;
   padding: 14px 14px;
-  border-radius: 18px;
   font-weight: 950;
   font-size: 16px;
+  border: 1px solid rgba(103,243,164,.40);
+  background: rgba(103,243,164,.14);
+  color: var(--text);
   cursor:pointer;
-  box-shadow: 0 18px 55px rgba(0,0,0,.55);
-  min-height: 54px;
 }
-
 .stickyBtn:active{ transform: translateY(1px); }
