@@ -5,468 +5,60 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="color-scheme" content="dark" />
   <meta name="theme-color" content="#06070a" />
-  <title>Tap-n-Score™ — Download SEC</title>
 
-  <style>
-    :root{
-      --bg0:#05060a;
-      --bg1:#0a0c12;
-      --card: rgba(255,255,255,.06);
-      --card2: rgba(255,255,255,.045);
-      --stroke: rgba(255,255,255,.12);
-      --text:#eef2f7;
-      --muted: rgba(238,242,247,.65);
-      --muted2: rgba(238,242,247,.45);
-      --shadow: 0 20px 60px rgba(0,0,0,.55);
-      --radius: 22px;
+  <!-- HARD NO-CACHE (Safari helpers) -->
+  <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
 
-      --red:#d64040;
-      --white:#eef2f7;
-      --blue:#2f66ff;
+  <title>Download SEC</title>
 
-      --btn: rgba(255,255,255,.07);
-      --btnHover: rgba(255,255,255,.10);
-      --btnStroke: rgba(255,255,255,.14);
-      --green: #67f3a4;
-    }
-
-    *{ box-sizing:border-box; }
-    html,body{ height:100%; }
-    body{
-      margin:0;
-      font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
-      color: var(--text);
-      background:
-        radial-gradient(1200px 800px at 20% 10%, rgba(46,102,255,.10), transparent 60%),
-        radial-gradient(1200px 800px at 80% 20%, rgba(214,64,64,.10), transparent 60%),
-        radial-gradient(1200px 800px at 50% 90%, rgba(103,243,164,.06), transparent 60%),
-        linear-gradient(180deg, var(--bg0), var(--bg1));
-      padding: 18px 14px 24px;
-    }
-
-    .wrap{ max-width: 980px; margin: 0 auto; }
-    .shell{
-      background: rgba(255,255,255,.04);
-      border: 1px solid rgba(255,255,255,.10);
-      border-radius: var(--radius);
-      box-shadow: var(--shadow);
-      overflow: hidden;
-    }
-
-    .top{
-      padding: 18px 18px 14px;
-      border-bottom: 1px solid rgba(255,255,255,.08);
-      background: linear-gradient(180deg, rgba(255,255,255,.035), rgba(255,255,255,.02));
-    }
-
-    .title{
-      margin: 0;
-      letter-spacing: .08em;
-      font-weight: 850;
-      font-size: clamp(26px, 4vw, 42px);
-      text-transform: uppercase;
-      line-height: 1.05;
-    }
-    .title .r{ color: var(--red); }
-    .title .w{ color: var(--white); }
-    .title .b{ color: var(--blue); }
-
-    .subtitle{
-      margin: 10px 0 0;
-      color: var(--muted);
-      font-size: 14px;
-    }
-
-    .grid{
-      display: grid;
-      grid-template-columns: 1fr;
-      gap: 14px;
-      padding: 16px 16px 18px;
-    }
-    @media (min-width: 900px){
-      .grid{
-        grid-template-columns: 1.35fr .65fr;
-        align-items: start;
-      }
-    }
-
-    .card{
-      background: var(--card);
-      border: 1px solid var(--stroke);
-      border-radius: 18px;
-      padding: 14px;
-    }
-
-    .card h2{
-      margin: 0 0 10px;
-      font-size: 14px;
-      letter-spacing: .12em;
-      text-transform: uppercase;
-      color: var(--muted);
-      font-weight: 800;
-    }
-
-    .previewBox{
-      background: rgba(0,0,0,.25);
-      border: 1px dashed rgba(255,255,255,.18);
-      border-radius: 16px;
-      padding: 12px;
-      overflow: hidden;
-      min-height: 260px;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      position: relative;
-    }
-
-    img#secImg{
-      max-width: 100%;
-      height: auto;
-      display: none;
-      border-radius: 12px;
-      box-shadow: 0 14px 40px rgba(0,0,0,.45);
-    }
-
-    .empty{
-      color: var(--muted2);
-      text-align:center;
-      padding: 26px 10px;
-      line-height: 1.35;
-    }
-    .empty strong{ color: var(--text); }
-
-    .actions{
-      display:flex;
-      flex-direction: column;
-      gap: 10px;
-    }
-
-    .btn{
-      width:100%;
-      appearance:none;
-      border: 1px solid var(--btnStroke);
-      background: var(--btn);
-      color: var(--text);
-      padding: 12px 14px;
-      border-radius: 14px;
-      font-size: 15px;
-      font-weight: 750;
-      cursor: pointer;
-      text-align:center;
-      text-decoration:none;
-      user-select:none;
-      -webkit-tap-highlight-color: transparent;
-    }
-    .btn:hover{ background: var(--btnHover); }
-    .btn:active{ transform: translateY(1px); }
-
-    .btnPrimary{
-      border-color: rgba(103,243,164,.35);
-      background: rgba(103,243,164,.10);
-    }
-    .btnPrimary:hover{ background: rgba(103,243,164,.14); }
-
-    .btnDisabled{
-      opacity: .45;
-      pointer-events:none;
-    }
-
-    .hint{
-      color: var(--muted);
-      font-size: 13px;
-      line-height: 1.35;
-      margin-top: 4px;
-    }
-
-    details{
-      background: var(--card2);
-      border: 1px solid rgba(255,255,255,.10);
-      border-radius: 16px;
-      padding: 10px 12px;
-    }
-    summary{
-      cursor:pointer;
-      font-weight: 750;
-      color: var(--muted);
-      letter-spacing: .06em;
-      text-transform: uppercase;
-      font-size: 12px;
-      outline:none;
-    }
-    pre{
-      margin: 10px 0 0;
-      white-space: pre-wrap;
-      word-break: break-word;
-      color: rgba(238,242,247,.82);
-      font-size: 12px;
-      line-height: 1.35;
-    }
-
-    .foot{
-      padding: 10px 16px 14px;
-      color: rgba(238,242,247,.30);
-      text-align:center;
-      letter-spacing: .22em;
-      font-weight: 800;
-      text-transform: uppercase;
-      font-size: 12px;
-    }
-  </style>
+  <link rel="stylesheet" href="/tap-n-score/styles.css?v=22206d4" />
 </head>
 
 <body>
-  <div class="wrap">
-    <div class="shell">
-      <div class="top">
-        <h1 class="title">
-          <span class="r">Shooter</span> <span class="w">Experience</span> <span class="b">Card</span>
-        </h1>
-        <p class="subtitle" id="subLine">Download your SEC PNG.</p>
+  <main class="page">
+
+    <section class="card">
+      <div class="cardTitle">PREVIEW</div>
+
+      <div class="targetWrap" style="padding:14px;">
+        <img id="secImg" alt="SEC Preview" style="width:100%; height:auto; display:block; border-radius:14px;" />
       </div>
 
-      <div class="grid">
-        <!-- PREVIEW -->
-        <div class="card">
-          <h2>Preview</h2>
-          <div class="previewBox" id="previewBox">
-            <div class="empty" id="emptyState">
-              <strong>No SEC image loaded.</strong><br/>
-              This page expects:<br/>
-              <code>?img=https://.../sec.png</code><br/>
-              or <code>data:image/png...</code>
-            </div>
-            <img id="secImg" alt="Shooter Experience Card preview" />
-          </div>
+      <p id="msgLine" class="hint" style="margin-top:8px;"></p>
+    </section>
 
-          <div class="hint" style="margin-top:10px;">
-            Tip (iPad): if a download doesn’t start, press-and-hold the image and choose <b>Save to Photos</b>.
-          </div>
-        </div>
+    <section class="card">
+      <div class="cardTitle">DOWNLOAD</div>
 
-        <!-- ACTIONS -->
-        <div class="card">
-          <h2>Download</h2>
+      <button id="downloadBtn" class="btnPrimary" type="button">
+        Download SEC PNG
+      </button>
 
-          <div class="actions">
-            <button id="downloadBtn" class="btn btnPrimary btnDisabled">Download SEC PNG</button>
-            <a id="scoreAnotherLink" class="btn" href="#">Score another</a>
-            <a id="backToTargetLink" class="btn" href="#">Back to setup</a>
-          </div>
+      <button id="scoreAnotherBtn" class="btnSecondary" type="button" style="margin-top:10px;">
+        Score another
+      </button>
 
-          <div class="hint" id="hintLine">
-            When the SEC image is present, the download button will turn on.
-          </div>
+      <button id="backBtn" class="btnSecondary" type="button" style="margin-top:10px;">
+        Back to setup
+      </button>
 
-          <details style="margin-top:12px;">
-            <summary>Diagnostics</summary>
-            <pre id="diagOut">(none)</pre>
-          </details>
-        </div>
-      </div>
+      <p class="hint" style="margin-top:10px;">
+        Tip (iPad/iPhone): If download doesn’t start, press-and-hold the image and choose <b>Save to Photos</b>.
+      </p>
 
-      <div class="foot">SCZN3</div>
-    </div>
-  </div>
+      <details id="diagWrap" style="margin-top:12px;">
+        <summary style="cursor:pointer;">DIAGNOSTICS</summary>
+        <pre id="diag" style="white-space:pre-wrap; font-size:12px; opacity:.85;"></pre>
+      </details>
+    </section>
 
-  <script>
-    (() => {
-      const $ = (id) => document.getElementById(id);
+    <footer class="footer">
+      <span class="footerMark">SCZN3</span>
+    </footer>
+  </main>
 
-      const secImg = $("secImg");
-      const emptyState = $("emptyState");
-      const downloadBtn = $("downloadBtn");
-      const diagOut = $("diagOut");
-      const subLine = $("subLine");
-      const hintLine = $("hintLine");
-
-      const scoreAnotherLink = $("scoreAnotherLink");
-      const backToTargetLink = $("backToTargetLink");
-
-      // ----------------------------
-      // Base lock: keep everything inside /tap-n-score/
-      // ----------------------------
-      const urlNow = new URL(location.href);
-
-      // basePath = "/tap-n-score/" (or whatever folder we are in)
-      const basePath = urlNow.pathname.endsWith("/")
-        ? urlNow.pathname
-        : urlNow.pathname.slice(0, urlNow.pathname.lastIndexOf("/") + 1);
-
-      const baseOrigin = urlNow.origin;
-      const baseLockedPrefix = baseOrigin + basePath;
-
-      function freshIndexUrl() {
-        return `./index.html?fresh=${Date.now()}`;
-      }
-
-      function setDiag(obj) {
-        try { diagOut.textContent = JSON.stringify(obj, null, 2); }
-        catch { diagOut.textContent = String(obj); }
-      }
-
-      function isDataUrl(u) {
-        return typeof u === "string" && u.startsWith("data:image/");
-      }
-
-      function guessFileName(u) {
-        if (isDataUrl(u)) return "SEC.png";
-        try {
-          const uu = new URL(u);
-          const p = uu.pathname.split("/").filter(Boolean).pop() || "SEC.png";
-          return p.toLowerCase().endsWith(".png") ? p : (p + ".png");
-        } catch {
-          return "SEC.png";
-        }
-      }
-
-      // Allow only:
-      //  - "./something" (relative)
-      //  - "/tap-n-score/something" (same base path)
-      //  - "https://same-origin/tap-n-score/something" (same origin + same base path)
-      function sanitizeNav(raw) {
-        const s = String(raw || "").trim();
-        if (!s) return "";
-
-        // Relative is safe
-        if (s.startsWith("./")) return s;
-
-        // Absolute path: must start with our basePath
-        if (s.startsWith("/")) {
-          if (s.startsWith(basePath)) return s;
-          return "";
-        }
-
-        // Full URL: must match origin and basePath
-        try {
-          const u = new URL(s);
-          if (u.origin !== baseOrigin) return "";
-          if (!u.pathname.startsWith(basePath)) return "";
-          return u.href;
-        } catch {
-          return "";
-        }
-      }
-
-      async function downloadAsFile(imgUrl) {
-        if (isDataUrl(imgUrl)) {
-          const a = document.createElement("a");
-          a.href = imgUrl;
-          a.download = guessFileName(imgUrl);
-          document.body.appendChild(a);
-          a.click();
-          a.remove();
-          return;
-        }
-
-        // Remote fetch -> blob (may fail due to CORS)
-        const res = await fetch(imgUrl, { mode: "cors" });
-        if (!res.ok) throw new Error("Fetch failed: " + res.status);
-        const blob = await res.blob();
-
-        const a = document.createElement("a");
-        const obj = URL.createObjectURL(blob);
-        a.href = obj;
-        a.download = guessFileName(imgUrl);
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-        setTimeout(() => URL.revokeObjectURL(obj), 1500);
-      }
-
-      // ----------------------------
-      // Params
-      // ----------------------------
-      const params = new URLSearchParams(window.location.search);
-      const imgParam = params.get("img") || "";
-      const fromParam = params.get("from") || "";
-      const targetParam = params.get("target") || "";
-
-      // ----------------------------
-      // Default safe nav (always inside app)
-      // ----------------------------
-      const safeScoreAnother = sanitizeNav(fromParam) || freshIndexUrl();
-      const safeBackToSetup  = sanitizeNav(targetParam) || freshIndexUrl();
-
-      scoreAnotherLink.href = safeScoreAnother;
-      backToTargetLink.href = safeBackToSetup;
-
-      // ----------------------------
-      // No image?
-      // ----------------------------
-      if (!imgParam) {
-        subLine.textContent = "Download your SEC PNG.";
-        hintLine.textContent = "No image provided. Open with ?img=YOUR_PNG_URL";
-        setDiag({
-          ok: false,
-          reason: "missing img param",
-          baseLocked: basePath,
-          nav: { scoreAnother: safeScoreAnother, backToSetup: safeBackToSetup },
-          example: baseLockedPrefix + "download.html?img=https://example.com/sec.png&from=./index.html&target=./index.html"
-        });
-        return;
-      }
-
-      // ----------------------------
-      // Show image
-      // ----------------------------
-      subLine.textContent = "SEC ready to download.";
-      emptyState.style.display = "none";
-      secImg.style.display = "block";
-      secImg.src = imgParam;
-
-      secImg.onload = () => {
-        downloadBtn.classList.remove("btnDisabled");
-        hintLine.textContent = "Tap Download SEC PNG. (iPad tip: press-and-hold image to Save to Photos.)";
-        setDiag({
-          ok: true,
-          baseLocked: basePath,
-          imgType: isDataUrl(imgParam) ? "dataUrl" : "remoteUrl",
-          nav: { scoreAnother: safeScoreAnother, backToSetup: safeBackToSetup },
-          raw: { fromParam, targetParam }
-        });
-      };
-
-      secImg.onerror = () => {
-        downloadBtn.classList.add("btnDisabled");
-        hintLine.textContent = "Could not load the SEC image. (Check the img= URL.)";
-        setDiag({
-          ok: false,
-          reason: "image failed to load",
-          baseLocked: basePath,
-          img: imgParam,
-          nav: { scoreAnother: safeScoreAnother, backToSetup: safeBackToSetup }
-        });
-      };
-
-      // ----------------------------
-      // Download action
-      // ----------------------------
-      downloadBtn.addEventListener("click", async () => {
-        if (downloadBtn.classList.contains("btnDisabled")) return;
-
-        const imgUrl = String(imgParam).trim();
-        downloadBtn.textContent = "Downloading…";
-
-        try {
-          await downloadAsFile(imgUrl);
-          downloadBtn.textContent = "Download SEC PNG";
-        } catch (e) {
-          // Fallback: open image in a new tab (works even when blob/CORS fails)
-          setDiag({
-            ok: false,
-            reason: "download failed (likely CORS)",
-            img: imgUrl,
-            error: String(e),
-            fallback: "opening image in new tab",
-            nav: { scoreAnother: safeScoreAnother, backToSetup: safeBackToSetup }
-          });
-
-          downloadBtn.textContent = "Open image (fallback)";
-          window.open(imgUrl, "_blank", "noopener,noreferrer");
-          setTimeout(() => (downloadBtn.textContent = "Download SEC PNG"), 1200);
-        }
-      });
-    })();
-  </script>
+  <script src="/tap-n-score/download.js?v=22206d4"></script>
 </body>
 </html>
