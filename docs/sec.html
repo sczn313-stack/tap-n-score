@@ -1,3 +1,4 @@
+<!-- sec.html (FULL REPLACEMENT) — LED SCORE STYLE (DOT-MATRIX) -->
 <!doctype html>
 <html lang="en">
 <head>
@@ -5,178 +6,231 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="color-scheme" content="dark" />
   <meta name="theme-color" content="#06070a" />
-  <title>Tap-n-Score™ — Shooter Experience Card</title>
-
-  <!-- PWA (keeps iOS from doing weird scope stuff) -->
-  <link rel="manifest" href="/tap-n-score/manifest.webmanifest" />
-  <link rel="apple-touch-icon" href="/tap-n-score/icons/icon-192.png" />
-  <link rel="icon" href="/tap-n-score/icons/icon-192.png" />
 
   <!-- HARD NO-CACHE (Safari helpers) -->
   <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
 
-  <link rel="stylesheet" href="/tap-n-score/sec.css?v=20260206a" />
+  <title>Tap-n-Score™ — SEC</title>
 
-  <!-- tiny helper: diagnostics hidden unless JS reveals -->
+  <!-- Your existing CSS (keeps branding/layout consistent) -->
+  <link rel="stylesheet" href="/tap-n-score/styles.css?v=22206-score1" />
+
   <style>
-    .diagHidden{ display:none !important; }
+    /* ============================================================
+       LED SCORE (dot-matrix) — calm, centered, soft glow
+       - Designed to look like your reference LED photo
+       - Two digits normally; 100 becomes 3 digits (still centered)
+    ============================================================ */
+
+    :root{
+      --led-yellow:#f2e6a6;   /* “pale yellow” */
+      --led-green:#67f3a4;    /* soft bright green */
+      --led-red:#ff5b5b;      /* soft red (not harsh) */
+      --led-white:#eef2f7;
+
+      --led-off: rgba(255,255,255,.06);
+      --led-bg: rgba(0,0,0,.18);
+      --led-stroke: rgba(255,255,255,.10);
+      --led-shadow: 0 18px 55px rgba(0,0,0,.55);
+    }
+
+    .secPage{
+      max-width: 980px;
+      margin: 0 auto;
+      padding: 16px 14px 26px;
+    }
+
+    .secHeader{
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+
+    .brandBlock{
+      line-height: 1.05;
+    }
+
+    .brandTitle{
+      font-weight: 900;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      font-size: clamp(22px, 3.6vw, 34px);
+      margin: 0;
+    }
+
+    .brandSub{
+      margin: 6px 0 0;
+      color: rgba(238,242,247,.70);
+      font-weight: 700;
+      font-size: 14px;
+    }
+
+    .secCard{
+      background: rgba(255,255,255,.05);
+      border: 1px solid rgba(255,255,255,.12);
+      border-radius: 22px;
+      box-shadow: var(--led-shadow);
+      overflow: hidden;
+    }
+
+    .secPad{
+      padding: 16px;
+    }
+
+    .ledStage{
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding: 18px 12px 14px;
+      background:
+        radial-gradient(900px 500px at 30% 20%, rgba(46,102,255,.10), transparent 60%),
+        radial-gradient(900px 500px at 70% 25%, rgba(214,64,64,.10), transparent 60%),
+        linear-gradient(180deg, rgba(0,0,0,.10), rgba(0,0,0,.18));
+      border-bottom: 1px solid rgba(255,255,255,.10);
+    }
+
+    .ledFrame{
+      width: min(860px, 100%);
+      background: var(--led-bg);
+      border: 1px solid var(--led-stroke);
+      border-radius: 26px;
+      padding: 18px 14px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,.04);
+    }
+
+    /* SVG scales responsively */
+    #ledSvg{
+      width: 100%;
+      height: auto;
+      max-height: 280px;
+      display:block;
+    }
+
+    .ledTextRow{
+      padding: 14px 16px 16px;
+      text-align:center;
+    }
+
+    .youHere{
+      font-weight: 850;
+      font-size: clamp(18px, 3.2vw, 30px);
+      margin: 0;
+      letter-spacing: .02em;
+    }
+
+    .doBetter{
+      margin: 8px 0 0;
+      font-weight: 800;
+      font-size: clamp(15px, 2.2vw, 20px);
+      color: rgba(238,242,247,.78);
+    }
+
+    .actionsRow{
+      display:flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content:center;
+      padding: 0 16px 16px;
+    }
+
+    .secBtn{
+      appearance:none;
+      border: 1px solid rgba(255,255,255,.14);
+      background: rgba(255,255,255,.07);
+      color: rgba(238,242,247,.92);
+      padding: 11px 14px;
+      border-radius: 14px;
+      font-weight: 800;
+      cursor:pointer;
+      text-decoration:none;
+      user-select:none;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .secBtn:hover{ background: rgba(255,255,255,.10); }
+    .secBtn:active{ transform: translateY(1px); }
+
+    .secBtnPrimary{
+      border-color: rgba(103,243,164,.35);
+      background: rgba(103,243,164,.10);
+    }
+    .secBtnPrimary:hover{ background: rgba(103,243,164,.14); }
+
+    .miniLine{
+      text-align:center;
+      padding: 0 16px 14px;
+      color: rgba(238,242,247,.42);
+      font-weight: 800;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+      font-size: 12px;
+    }
+
+    /* diagnostics (hidden unless ?debug=1) */
+    .diagWrap{
+      margin-top: 12px;
+      padding: 0 16px 16px;
+      display:none;
+    }
+    .diagWrap.show{ display:block; }
+    .diagBox{
+      background: rgba(255,255,255,.04);
+      border: 1px solid rgba(255,255,255,.10);
+      border-radius: 16px;
+      padding: 10px 12px;
+      font-size: 12px;
+      color: rgba(238,242,247,.78);
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
   </style>
 </head>
 
 <body>
-  <main class="page">
-    <section class="shell">
+  <main class="secPage">
+    <header class="secHeader">
+      <div class="brandBlock">
+        <h1 class="brandTitle">TAP-N-SCORE™</h1>
+        <div class="brandSub">After-Shot Intelligence</div>
+      </div>
+    </header>
 
-      <!-- HEADER -->
-      <header class="hdr">
-        <div class="hdrTitle">
-          <!-- LONG-PRESS THIS TITLE to reveal diagnostics -->
-          <div class="brand" id="secTitle" style="user-select:none;-webkit-user-select:none;">
-            <span class="r">SHOOTER</span>
-            <span class="w">EXPERIENCE</span>
-            <span class="b">CARD</span>
-          </div>
-
-          <div class="pillRow">
-            <div class="pill">
-              <span class="pillLabel">Session:</span>
-              <span class="pillValue" id="secSession">—</span>
-            </div>
-            <div class="pill">
-              <span class="pillLabel">Shots:</span>
-              <span class="pillValue" id="secShots">0</span>
-            </div>
-          </div>
+    <section class="secCard">
+      <div class="ledStage">
+        <div class="ledFrame" aria-label="Score display">
+          <svg id="ledSvg" viewBox="0 0 1000 320" role="img" aria-label="LED score">
+            <!-- JS draws dots here -->
+            <rect x="0" y="0" width="1000" height="320" rx="24" ry="24"
+              fill="rgba(0,0,0,.14)" stroke="rgba(255,255,255,.10)" />
+            <g id="ledDots"></g>
+          </svg>
         </div>
-      </header>
+      </div>
 
-      <!-- BODY GRID -->
-      <section class="grid">
+      <div class="ledTextRow">
+        <p class="youHere" id="youHereLine">You’re here.</p>
+        <p class="doBetter" id="doBetterLine">There’s more room. Keep going.</p>
+      </div>
 
-        <!-- LEFT: SCORING + ADJUSTMENTS + HISTORY -->
-        <section class="leftCol">
+      <div class="actionsRow">
+        <a class="secBtn" id="backBtn" href="/tap-n-score/index.html">Score another</a>
+        <a class="secBtn secBtnPrimary" id="downloadBtn" href="#" rel="noopener">Download SEC</a>
+      </div>
 
-          <!-- SCORING -->
-          <article class="card">
-            <div class="cardHead">
-              <div class="cardKicker">SCORING</div>
-            </div>
+      <div class="miniLine" id="sessionLine">SCZN3</div>
 
-            <div class="scoreWrap">
-              <div class="scoreLabel">SHOOTER’S SCORE</div>
-              <div class="scoreBox">
-                <div class="scoreValue" id="secScore">—</div>
-              </div>
-            </div>
-          </article>
-
-          <!-- ADJUSTMENTS -->
-          <article class="card">
-            <div class="cardHead">
-              <div class="cardKicker">ADJUSTMENTS</div>
-            </div>
-
-            <div class="adjustTitle">Target clicks</div>
-
-            <div class="adjustGrid">
-              <!-- WINDAGE -->
-              <div class="adjustItem">
-                <div class="adjustMini">WINDAGE</div>
-
-                <div class="adjustRow">
-                  <div class="adjustNum" id="secWindClicks">0.00</div>
-
-                  <div class="dirStack">
-                    <div class="dirPill" id="secWindDir">—</div>
-                  </div>
-                </div>
-              </div>
-
-              <!-- ELEVATION -->
-              <div class="adjustItem">
-                <div class="adjustMini">ELEVATION</div>
-
-                <div class="adjustRow">
-                  <div class="adjustNum" id="secElevClicks">0.00</div>
-
-                  <div class="dirStack">
-                    <div class="dirPill" id="secElevDir">—</div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </article>
-
-          <!-- HISTORY -->
-          <article class="card">
-            <div class="cardHead">
-              <div class="cardKicker">HISTORY</div>
-            </div>
-
-            <div class="historyGrid">
-              <div class="histItem">
-                <div class="histMini">PREV 1</div>
-                <div class="histVal" id="prev1">—</div>
-              </div>
-              <div class="histItem">
-                <div class="histMini">PREV 2</div>
-                <div class="histVal" id="prev2">—</div>
-              </div>
-              <div class="histItem">
-                <div class="histMini">PREV 3</div>
-                <div class="histVal" id="prev3">—</div>
-              </div>
-            </div>
-          </article>
-
-        </section>
-
-        <!-- RIGHT: ACTIONS -->
-        <aside class="rightCol">
-          <article class="card actionsCard">
-            <div class="cardHead">
-              <div class="cardKicker">ACTIONS</div>
-            </div>
-
-            <div class="btnCol">
-              <button id="downloadBtn" class="btn btnPrimary btnDisabled" aria-disabled="true">
-                Download SEC
-              </button>
-
-              <button id="vendorBtn" class="btn btnDisabled" aria-disabled="true">
-                Buy more targets
-              </button>
-
-              <button id="surveyBtn" class="btn btnDisabled" aria-disabled="true">
-                Survey
-              </button>
-
-              <button id="backToTargetBtn" class="btn">
-                Back to target
-              </button>
-            </div>
-
-            <div class="tip">
-              Tip (iPad): if download doesn’t start, you can also press-and-hold the image on the download page and save it.
-            </div>
-
-            <!-- Hidden by default. Revealed by ?debug=1 OR long-press title -->
-            <details class="diag diagHidden" id="secDiagBox">
-              <summary>Diagnostics</summary>
-              <pre id="secDiag">(none)</pre>
-            </details>
-
-          </article>
-        </aside>
-
-      </section>
-
-      <footer class="foot">SCZN3</footer>
+      <div class="diagWrap" id="diagWrap">
+        <div class="diagBox" id="diagBox">(none)</div>
+      </div>
     </section>
   </main>
 
-  <script src="/tap-n-score/sec.js?v=20260206a"></script>
+  <script src="/tap-n-score/sec.js?v=22206-score1"></script>
 </body>
 </html>
