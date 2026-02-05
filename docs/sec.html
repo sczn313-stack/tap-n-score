@@ -1,4 +1,3 @@
-<!-- sec.html (FULL REPLACEMENT) — LED SCORE STYLE (DOT-MATRIX) -->
 <!doctype html>
 <html lang="en">
 <head>
@@ -12,225 +11,355 @@
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
 
-  <title>Tap-n-Score™ — SEC</title>
+  <title>Tap-n-Score™ — Score</title>
 
-  <!-- Your existing CSS (keeps branding/layout consistent) -->
-  <link rel="stylesheet" href="/tap-n-score/styles.css?v=22206-score1" />
+  <!-- Keep using your existing global styles -->
+  <link rel="stylesheet" href="/tap-n-score/styles.css?v=22206d1" />
 
+  <!-- SCORE / LED STYLES (self-contained so we don’t risk breaking other pages) -->
   <style>
-    /* ============================================================
-       LED SCORE (dot-matrix) — calm, centered, soft glow
-       - Designed to look like your reference LED photo
-       - Two digits normally; 100 becomes 3 digits (still centered)
-    ============================================================ */
-
     :root{
-      --led-yellow:#f2e6a6;   /* “pale yellow” */
-      --led-green:#67f3a4;    /* soft bright green */
-      --led-red:#ff5b5b;      /* soft red (not harsh) */
-      --led-white:#eef2f7;
+      --bg0:#05060a;
+      --bg1:#0a0c12;
 
-      --led-off: rgba(255,255,255,.06);
-      --led-bg: rgba(0,0,0,.18);
-      --led-stroke: rgba(255,255,255,.10);
-      --led-shadow: 0 18px 55px rgba(0,0,0,.55);
+      --text:#eef2f7;
+      --muted: rgba(238,242,247,.70);
+
+      /* Pale yellow “LED” */
+      --led: #ffeaa0;         /* pale yellow */
+      --ledHot: #fff2bf;      /* slightly brighter core */
+      --ledDotOff: rgba(255,234,160,.09);
+
+      --card: rgba(255,255,255,.06);
+      --stroke: rgba(255,255,255,.12);
+      --shadow: 0 20px 60px rgba(0,0,0,.55);
+      --radius: 22px;
     }
 
-    .secPage{
+    body{
+      background:
+        radial-gradient(1200px 800px at 25% 15%, rgba(255,234,160,.06), transparent 55%),
+        radial-gradient(1200px 800px at 70% 15%, rgba(47,102,255,.06), transparent 55%),
+        linear-gradient(180deg, var(--bg0), var(--bg1));
+    }
+
+    .secWrap{
       max-width: 980px;
       margin: 0 auto;
-      padding: 16px 14px 26px;
+      padding: 18px 14px 28px;
     }
 
-    .secHeader{
-      display:flex;
-      align-items:flex-start;
-      justify-content:space-between;
-      gap: 12px;
-      margin-bottom: 14px;
-    }
-
-    .brandBlock{
-      line-height: 1.05;
-    }
-
-    .brandTitle{
-      font-weight: 900;
-      letter-spacing: .08em;
-      text-transform: uppercase;
-      font-size: clamp(22px, 3.6vw, 34px);
-      margin: 0;
-    }
-
-    .brandSub{
-      margin: 6px 0 0;
-      color: rgba(238,242,247,.70);
-      font-weight: 700;
-      font-size: 14px;
-    }
-
-    .secCard{
-      background: rgba(255,255,255,.05);
-      border: 1px solid rgba(255,255,255,.12);
-      border-radius: 22px;
-      box-shadow: var(--led-shadow);
+    .secShell{
+      background: rgba(255,255,255,.04);
+      border: 1px solid rgba(255,255,255,.10);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
       overflow: hidden;
     }
 
-    .secPad{
+    .secTop{
+      padding: 18px 18px 14px;
+      border-bottom: 1px solid rgba(255,255,255,.08);
+      background: linear-gradient(180deg, rgba(255,255,255,.035), rgba(255,255,255,.02));
+    }
+
+    .brandTitle{
+      margin: 0;
+      letter-spacing: .10em;
+      font-weight: 900;
+      font-size: clamp(24px, 4vw, 42px);
+      text-transform: uppercase;
+      line-height: 1.05;
+    }
+    .brandTitle .r{ color:#d64040; }
+    .brandTitle .w{ color:#eef2f7; }
+    .brandTitle .b{ color:#2f66ff; }
+    .subTitle{
+      margin: 10px 0 0;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .secGrid{
+      display:grid;
+      grid-template-columns: 1fr;
+      gap: 14px;
       padding: 16px;
+    }
+    @media (min-width: 900px){
+      .secGrid{
+        grid-template-columns: 1.05fr .95fr;
+        align-items: start;
+      }
+    }
+
+    .secCard{
+      background: var(--card);
+      border: 1px solid var(--stroke);
+      border-radius: 18px;
+      padding: 14px;
+    }
+    .secCard h2{
+      margin: 0 0 10px;
+      font-size: 13px;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      color: rgba(238,242,247,.70);
+      font-weight: 850;
+    }
+
+    /* ===== LED SCORE PANEL ===== */
+    .scorePanel{
+      border-radius: 18px;
+      border: 1px solid rgba(255,255,255,.10);
+      background:
+        radial-gradient(1000px 700px at 50% 30%, rgba(255,234,160,.07), transparent 60%),
+        rgba(0,0,0,.25);
+      padding: 18px 14px 16px;
+    }
+
+    .scoreCopyTop{
+      display:flex;
+      justify-content:center;
+      text-align:center;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 12px;
+    }
+    .urHere{
+      font-weight: 950;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      color: rgba(238,242,247,.92);
+      font-size: 18px;
+    }
+    .keepGoing{
+      font-weight: 850;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      color: rgba(238,242,247,.70);
+      font-size: 18px;
     }
 
     .ledStage{
       display:flex;
-      align-items:center;
       justify-content:center;
-      padding: 18px 12px 14px;
-      background:
-        radial-gradient(900px 500px at 30% 20%, rgba(46,102,255,.10), transparent 60%),
-        radial-gradient(900px 500px at 70% 25%, rgba(214,64,64,.10), transparent 60%),
-        linear-gradient(180deg, rgba(0,0,0,.10), rgba(0,0,0,.18));
-      border-bottom: 1px solid rgba(255,255,255,.10);
+      align-items:center;
+      padding: 10px 8px 12px;
     }
 
-    .ledFrame{
-      width: min(860px, 100%);
-      background: var(--led-bg);
-      border: 1px solid var(--led-stroke);
-      border-radius: 26px;
-      padding: 18px 14px;
+    /* A “marquee box” to help centering feel intentional */
+    .ledBox{
+      width: min(560px, 100%);
+      border-radius: 18px;
+      border: 1px solid rgba(255,255,255,.10);
+      background: rgba(0,0,0,.28);
+      padding: 14px 10px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Subtle shimmer across the LEDs */
+    .ledBox::after{
+      content:"";
+      position:absolute;
+      inset:-40% -60%;
+      background: linear-gradient(110deg,
+        transparent 40%,
+        rgba(255,234,160,.08) 50%,
+        transparent 60%);
+      transform: rotate(8deg);
+      animation: ledSweep 4.2s linear infinite;
+      pointer-events:none;
+      opacity: .55;
+    }
+    @keyframes ledSweep{
+      0%{ transform: translateX(-25%) rotate(8deg); }
+      100%{ transform: translateX(25%) rotate(8deg); }
+    }
+
+    .ledDigits{
       display:flex;
-      align-items:center;
       justify-content:center;
-      box-shadow: inset 0 0 0 1px rgba(255,255,255,.04);
-    }
-
-    /* SVG scales responsively */
-    #ledSvg{
+      align-items:center;
+      gap: clamp(10px, 2.8vw, 24px);
       width: 100%;
-      height: auto;
-      max-height: 280px;
-      display:block;
     }
 
-    .ledTextRow{
-      padding: 14px 16px 16px;
+    /* Each digit is a dot-matrix canvas made with CSS grid */
+    .ledDigit{
+      --dot: clamp(6px, 1.1vw, 10px);
+      --gap: clamp(2px, .55vw, 5px);
+
+      display:grid;
+      grid-template-columns: repeat(10, var(--dot));
+      grid-template-rows: repeat(14, var(--dot));
+      gap: var(--gap);
+      padding: 6px;
+      border-radius: 14px;
+
+      /* a little background so it reads as a unit */
+      background: rgba(255,255,255,.02);
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,.06);
+    }
+
+    .dot{
+      width: var(--dot);
+      height: var(--dot);
+      border-radius: 999px;
+      background: var(--ledDotOff);
+    }
+
+    .dot.on{
+      background: radial-gradient(circle at 35% 35%, var(--ledHot), var(--led) 55%, rgba(255,234,160,.55));
+      filter: drop-shadow(0 0 6px rgba(255,234,160,.35)) drop-shadow(0 0 14px rgba(255,234,160,.18));
+    }
+
+    .scoreHint{
+      margin: 10px 0 0;
       text-align:center;
+      color: rgba(238,242,247,.68);
+      font-size: 14px;
+      line-height: 1.35;
     }
 
-    .youHere{
-      font-weight: 850;
-      font-size: clamp(18px, 3.2vw, 30px);
-      margin: 0;
-      letter-spacing: .02em;
-    }
-
-    .doBetter{
-      margin: 8px 0 0;
-      font-weight: 800;
-      font-size: clamp(15px, 2.2vw, 20px);
-      color: rgba(238,242,247,.78);
-    }
-
-    .actionsRow{
+    /* Right column “actions” */
+    .actions{
       display:flex;
+      flex-direction: column;
       gap: 10px;
-      flex-wrap: wrap;
-      justify-content:center;
-      padding: 0 16px 16px;
     }
-
-    .secBtn{
+    .btn{
+      width:100%;
       appearance:none;
       border: 1px solid rgba(255,255,255,.14);
       background: rgba(255,255,255,.07);
       color: rgba(238,242,247,.92);
-      padding: 11px 14px;
+      padding: 12px 14px;
       border-radius: 14px;
-      font-weight: 800;
-      cursor:pointer;
+      font-size: 15px;
+      font-weight: 850;
+      cursor: pointer;
+      text-align:center;
       text-decoration:none;
       user-select:none;
       -webkit-tap-highlight-color: transparent;
     }
-    .secBtn:hover{ background: rgba(255,255,255,.10); }
-    .secBtn:active{ transform: translateY(1px); }
+    .btn:hover{ background: rgba(255,255,255,.10); }
+    .btn:active{ transform: translateY(1px); }
 
-    .secBtnPrimary{
-      border-color: rgba(103,243,164,.35);
-      background: rgba(103,243,164,.10);
+    .btnPrimary{
+      border-color: rgba(255,234,160,.35);
+      background: rgba(255,234,160,.10);
     }
-    .secBtnPrimary:hover{ background: rgba(103,243,164,.14); }
+    .btnPrimary:hover{ background: rgba(255,234,160,.14); }
 
-    .miniLine{
-      text-align:center;
-      padding: 0 16px 14px;
-      color: rgba(238,242,247,.42);
-      font-weight: 800;
-      letter-spacing: .14em;
-      text-transform: uppercase;
-      font-size: 12px;
+    .mutedLine{
+      color: rgba(238,242,247,.60);
+      font-size: 13px;
+      line-height: 1.35;
+      margin-top: 6px;
     }
 
-    /* diagnostics (hidden unless ?debug=1) */
-    .diagWrap{
-      margin-top: 12px;
-      padding: 0 16px 16px;
-      display:none;
-    }
-    .diagWrap.show{ display:block; }
-    .diagBox{
-      background: rgba(255,255,255,.04);
+    details{
+      background: rgba(255,255,255,.045);
       border: 1px solid rgba(255,255,255,.10);
       border-radius: 16px;
       padding: 10px 12px;
+      margin-top: 12px;
+    }
+    summary{
+      cursor:pointer;
+      font-weight: 850;
+      color: rgba(238,242,247,.65);
+      letter-spacing: .06em;
+      text-transform: uppercase;
       font-size: 12px;
-      color: rgba(238,242,247,.78);
+      outline:none;
+    }
+    pre{
+      margin: 10px 0 0;
       white-space: pre-wrap;
       word-break: break-word;
+      color: rgba(238,242,247,.82);
+      font-size: 12px;
+      line-height: 1.35;
+    }
+
+    .foot{
+      padding: 10px 16px 14px;
+      color: rgba(238,242,247,.30);
+      text-align:center;
+      letter-spacing: .22em;
+      font-weight: 900;
+      text-transform: uppercase;
+      font-size: 12px;
     }
   </style>
 </head>
 
 <body>
-  <main class="secPage">
-    <header class="secHeader">
-      <div class="brandBlock">
-        <h1 class="brandTitle">TAP-N-SCORE™</h1>
-        <div class="brandSub">After-Shot Intelligence</div>
+  <div class="secWrap">
+    <div class="secShell">
+      <div class="secTop">
+        <h1 class="brandTitle">
+          <span class="r">TAP</span><span class="w">-N-</span><span class="b">SCORE</span><span class="w">™</span>
+        </h1>
+        <p class="subTitle" id="subLine">After-Shot Intelligence</p>
       </div>
-    </header>
 
-    <section class="secCard">
-      <div class="ledStage">
-        <div class="ledFrame" aria-label="Score display">
-          <svg id="ledSvg" viewBox="0 0 1000 320" role="img" aria-label="LED score">
-            <!-- JS draws dots here -->
-            <rect x="0" y="0" width="1000" height="320" rx="24" ry="24"
-              fill="rgba(0,0,0,.14)" stroke="rgba(255,255,255,.10)" />
-            <g id="ledDots"></g>
-          </svg>
+      <div class="secGrid">
+        <!-- LEFT: SCORE -->
+        <div class="secCard">
+          <h2>Score</h2>
+
+          <div class="scorePanel">
+            <div class="scoreCopyTop">
+              <div class="urHere">U R Here!</div>
+              <div class="keepGoing">Keep going!</div>
+            </div>
+
+            <div class="ledStage">
+              <div class="ledBox" aria-label="LED score display">
+                <div id="ledDigits" class="ledDigits"></div>
+              </div>
+            </div>
+
+            <div class="scoreHint" id="scoreHint">
+              Soft LED score — calm, centered, and easy to read.
+            </div>
+          </div>
+
+          <details>
+            <summary>Diagnostics</summary>
+            <pre id="diagOut">(none)</pre>
+          </details>
+        </div>
+
+        <!-- RIGHT: ACTIONS -->
+        <div class="secCard">
+          <h2>Next</h2>
+
+          <div class="actions">
+            <a class="btn btnPrimary" id="backBtn" href="/tap-n-score/index.html?fresh=1">Score another</a>
+            <a class="btn" id="downloadBtn" href="/tap-n-score/download.html">Download SEC PNG</a>
+          </div>
+
+          <div class="mutedLine">
+            Tip: you can test the LED style directly with:<br/>
+            <code>?score=25</code> or <code>?score=100</code>
+          </div>
+
+          <div class="mutedLine" style="margin-top:10px;">
+            We’ll wire this to your real computed score next (when you’re ready).
+          </div>
         </div>
       </div>
 
-      <div class="ledTextRow">
-        <p class="youHere" id="youHereLine">You’re here.</p>
-        <p class="doBetter" id="doBetterLine">There’s more room. Keep going.</p>
-      </div>
+      <div class="foot">SCZN3</div>
+    </div>
+  </div>
 
-      <div class="actionsRow">
-        <a class="secBtn" id="backBtn" href="/tap-n-score/index.html">Score another</a>
-        <a class="secBtn secBtnPrimary" id="downloadBtn" href="#" rel="noopener">Download SEC</a>
-      </div>
-
-      <div class="miniLine" id="sessionLine">SCZN3</div>
-
-      <div class="diagWrap" id="diagWrap">
-        <div class="diagBox" id="diagBox">(none)</div>
-      </div>
-    </section>
-  </main>
-
-  <script src="/tap-n-score/sec.js?v=22206-score1"></script>
+  <script src="/tap-n-score/sec.js?v=22206d1"></script>
 </body>
 </html>
