@@ -13,8 +13,52 @@
 
   <title>Tap-n-Score™</title>
 
-  <!-- IMPORTANT: use RELATIVE paths for GitHub Pages subfolder -->
-  <link rel="stylesheet" href="./styles.css?v=22206e1" />
+  <link rel="stylesheet" href="/tap-n-score/styles.css?v=22206d2" />
+
+  <!-- Stepper styling (kept local so we don't touch styles.css yet) -->
+  <style>
+    .stepperWrap{ display:flex; flex-direction:column; gap:6px; }
+    .stepperRow{
+      display:flex; align-items:center; gap:10px;
+      background: rgba(255,255,255,.04);
+      border: 1px solid rgba(255,255,255,.10);
+      border-radius: 14px;
+      padding: 10px;
+    }
+    .stepBtn{
+      width:46px; height:46px;
+      border-radius: 14px;
+      border: 1px solid rgba(255,255,255,.14);
+      background: rgba(255,255,255,.07);
+      color: #eef2f7;
+      font-size: 20px;
+      font-weight: 900;
+      line-height: 1;
+      cursor: pointer;
+    }
+    .stepBtn:active{ transform: translateY(1px); }
+    .stepVal{
+      flex:1;
+      text-align:center;
+      font-weight: 900;
+      font-size: 18px;
+      letter-spacing:.04em;
+      color:#eef2f7;
+      user-select:none;
+    }
+    /* keep the real value in the existing id "distanceYds" so index.js doesn't break */
+    input#distanceYds{
+      position:absolute;
+      left:-9999px; top:-9999px;
+      width:1px; height:1px;
+      opacity:0;
+    }
+    .stepHint{
+      font-size: 12px;
+      color: rgba(238,242,247,.65);
+      line-height: 1.35;
+    }
+  </style>
 </head>
 
 <body>
@@ -22,31 +66,33 @@
 
     <header class="topBar">
       <div class="topTitle">TAP-N-SCORE™</div>
-      <div id="statusLine" class="topSub">Add a photo to begin.</div>
+      <div id="statusLine" class="topSub">Add a target photo to begin.</div>
     </header>
 
     <section class="card">
       <div class="cardTitle">PHOTO</div>
 
-      <!-- 800lb gorilla -->
+      <!-- One 800lb gorilla button -->
       <button id="photoBtn" class="btnBig" type="button">Add Target Picture</button>
 
-      <!-- Hidden input: NO capture attribute so iOS offers Camera + Photo Library -->
+      <!-- hidden input (button triggers this) -->
       <input
         id="photoInput"
         type="file"
         accept="image/*"
+        inputmode="none"
+        capture="environment"
         style="display:none"
       />
 
-      <div id="targetWrap" class="targetWrap" aria-label="Photo area">
-        <img id="targetImg" alt="Photo preview" />
+      <div id="targetWrap" class="targetWrap" aria-label="Target photo area">
+        <img id="targetImg" alt="Target preview" />
         <div id="dotsLayer" class="dotsLayer" aria-hidden="true"></div>
       </div>
 
       <div class="row rowTight">
         <div class="pill">
-          Hits: <span id="tapCount">0</span>
+          Taps: <span id="tapCount">0</span>
         </div>
 
         <button id="clearTapsBtn" class="btnSecondary" type="button">
@@ -60,19 +106,31 @@
     <section class="card">
       <div class="cardTitle">SETTINGS</div>
 
-      <div class="row">
-        <label class="field">
+      <div class="row" style="gap:12px; align-items:stretch;">
+        <!-- Distance Clicker -->
+        <label class="field" style="flex:1;">
           <span class="fieldLabel">Distance (yards)</span>
-          <select id="distanceYds" class="select">
-            <option value="25">25</option>
-            <option value="50">50</option>
-            <option value="100" selected>100</option>
-            <option value="200">200</option>
-            <option value="300">300</option>
-          </select>
+
+          <div class="stepperWrap">
+            <div class="stepperRow">
+              <button id="distDown" class="stepBtn" type="button">−</button>
+
+              <div class="stepVal">
+                <span id="distDisplay">100</span> yd
+              </div>
+
+              <button id="distUp" class="stepBtn" type="button">+</button>
+
+              <!-- Hidden input keeps the canonical value for JS -->
+              <input id="distanceYds" value="100" />
+            </div>
+
+            <div class="stepHint">Tap +/−. (Range: 5–1000)</div>
+          </div>
         </label>
 
-        <label class="field">
+        <!-- MOA/click stays dropdown for now -->
+        <label class="field" style="flex:1;">
           <span class="fieldLabel">MOA / click</span>
           <select id="moaPerClick" class="select">
             <option value="0.25" selected>0.25</option>
@@ -98,7 +156,6 @@
 
   </main>
 
-  <!-- IMPORTANT: use RELATIVE paths for GitHub Pages subfolder -->
-  <script src="./index.js?v=22206e1"></script>
+  <script src="/tap-n-score/index.js?v=22206d2"></script>
 </body>
 </html>
