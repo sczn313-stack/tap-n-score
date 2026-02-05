@@ -13,7 +13,7 @@
 
   <title>Download SEC</title>
 
-  <link rel="stylesheet" href="/tap-n-score/styles.css?v=22206d2" />
+  <link rel="stylesheet" href="/tap-n-score/styles.css?v=22206d3" />
 </head>
 
 <body>
@@ -31,11 +31,10 @@
         <div id="emptyState" style="text-align:center; padding:18px;">
           <div style="font-size:20px; font-weight:800; margin-bottom:6px;">No SEC image loaded.</div>
           <div style="opacity:.75; margin-bottom:10px;">
-            This page accepts:
+            This page now loads from localStorage:
             <div style="margin-top:6px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size:12px; opacity:.85;">
-              ?img=https://.../sec.png<br/>
-              or a data:image/png...<br/>
-              or localStorage fallback
+              SCZN3_SEC_PNG_BLOBURL_V1<br/>
+              SCZN3_SEC_PNG_DATAURL_V1
             </div>
           </div>
         </div>
@@ -60,11 +59,13 @@
           Score another
         </button>
 
-        <button id="backToSetupBtn" class="btnSecondary" type="button" style="width:100%;">
+        <!-- IMPORTANT: id must be backBtn for the new JS -->
+        <button id="backBtn" class="btnSecondary" type="button" style="width:100%;">
           Back to setup
         </button>
 
-        <div id="tinyNote" class="hint" style="margin-top:10px; opacity:.75;"></div>
+        <!-- IMPORTANT: id must be msgLine for the new JS -->
+        <div id="msgLine" class="hint" style="margin-top:10px; opacity:.75;"></div>
       </div>
 
       <details id="diagWrap" style="margin-top:14px;">
@@ -79,6 +80,6 @@
 
   </main>
 
-  <script src="/tap-n-score/download.js?v=22206d2"></script>
+  <script src="/tap-n-score/download.js?v=22206d3"></script>
 </body>
 </html>
