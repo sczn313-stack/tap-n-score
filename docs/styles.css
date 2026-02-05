@@ -1,214 +1,103 @@
-:<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <meta name="color-scheme" content="dark" />
-  <meta name="theme-color" content="#06070a" />
+/* ============================================================
+   styles.css (FULL REPLACEMENT) — BASELINE 22206 (GREEN AIM/HITS)
+   Notes:
+   - Aim Point dot = green
+   - Hit dots = brighter green (easy to notice)
+============================================================ */
 
-  <!-- HARD NO-CACHE (Safari helpers) -->
-  <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0" />
-  <meta http-equiv="Pragma" content="no-cache" />
-  <meta http-equiv="Expires" content="0" />
-
-  <title>Tap-n-Score™</title>
-
-  <link rel="stylesheet" href="/tap-n-score/styles.css?v=22206d1" />
-</head>
-
-<body>
-  <main class="page">
-
-    <header class="topBar">
-      <div class="topTitle">TAP-N-SCORE™</div>
-      <div id="statusLine" class="topSub">Add a target photo to begin.</div>
-    </header>
-
-    <section class="card">
-      <div class="cardTitle">PHOTO</div>
-
-      <!-- One 800lb gorilla button -->
-      <button id="photoBtn" class="btnBig" type="button">Add Target Picture</button>
-
-      <!-- hidden input (button triggers this) -->
-      <input
-        id="photoInput"
-        type="file"
-        accept="image/*"
-        inputmode="none"
-        capture="environment"
-        style="display:none"
-      />
-
-      <div id="targetWrap" class="targetWrap" aria-label="Target photo area">
-        <img id="targetImg" alt="Target preview" />
-        <div id="dotsLayer" class="dotsLayer" aria-hidden="true"></div>
-      </div>
-
-      <div class="row rowTight">
-        <div class="pill">
-          Taps: <span id="tapCount">0</span>
-        </div>
-
-        <button id="clearTapsBtn" class="btnSecondary" type="button">
-          Clear
-        </button>
-      </div>
-
-      <!-- This will be mostly blank now (JS fills only when needed) -->
-      <p id="instructionLine" class="hint"></p>
-    </section>
-
-    <section class="card">
-      <div class="cardTitle">SETTINGS</div>
-
-      <div class="row">
-        <label class="field">
-          <span class="fieldLabel">Distance (yards)</span>
-          <!-- we’ll convert to a stepper later; leaving as-is for now -->
-          <select id="distanceYds" class="select">
-            <option value="25">25</option>
-            <option value="50">50</option>
-            <option value="100" selected>100</option>
-            <option value="200">200</option>
-            <option value="300">300</option>
-          </select>
-        </label>
-
-        <label class="field">
-          <span class="fieldLabel">MOA / click</span>
-          <select id="moaPerClick" class="select">
-            <option value="0.25" selected>0.25</option>
-            <option value="0.5">0.5</option>
-            <option value="0.125">0.125</option>
-          </select>
-        </label>
-      </div>
-
-      <a id="vendorLink" class="vendorLink" href="#" target="_blank" rel="noopener"></a>
-    </section>
-
-    <footer class="footer">
-      <span class="footerMark">SCZN3</span>
-    </footer>
-
-    <!-- Sticky “magic” results bar -->
-    <div id="stickyBar" class="stickyBar stickyHidden" aria-hidden="true">
-      <button id="stickyResultsBtn" class="stickyBtn" type="button">
-        Show results
-      </button>
-    </div>
-
-  </main>
-
-  <script src="/tap-n-score/index.js?v=22206d1"></script>
-</body>
-</html>root{
+:root{
   --bg:#06070a;
   --card: rgba(255,255,255,.06);
-  --stroke: rgba(255,255,255,.12);
+  --stroke: rgba(255,255,255,.10);
   --text:#eef2f7;
   --muted: rgba(238,242,247,.65);
 
-  --red:#d64040;
-  --blue:#2f66ff;
-  --green:#67f3a4;
-
   --btn: rgba(255,255,255,.08);
-  --btnHover: rgba(255,255,255,.12);
   --btnStroke: rgba(255,255,255,.14);
 
-  --radius: 18px;
+  --greenAim: #67f3a4;   /* aim point */
+  --greenHit: #00ff7b;   /* hits (brighter) */
 }
 
 *{ box-sizing:border-box; }
 html,body{ height:100%; }
 body{
   margin:0;
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial;
   background: var(--bg);
   color: var(--text);
-  font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
 }
 
 .page{
-  max-width: 980px;
+  max-width: 720px;
   margin: 0 auto;
-  padding: 14px 12px 86px; /* room for sticky bar */
+  padding: 14px 12px 24px;
 }
 
 .topBar{
-  border: 1px solid var(--stroke);
-  background: rgba(255,255,255,.04);
-  border-radius: var(--radius);
-  padding: 12px 12px 10px;
-  margin-bottom: 12px;
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+  padding: 10px 6px 14px;
 }
-
 .topTitle{
-  font-weight: 900;
-  letter-spacing: .08em;
-  text-transform: uppercase;
-  font-size: 14px;
+  letter-spacing:.22em;
+  font-weight: 850;
+  font-size: 12px;
+  opacity:.75;
 }
-
 .topSub{
-  margin-top: 6px;
+  font-size: 14px;
   color: var(--muted);
-  font-size: 13px;
-  line-height: 1.25;
 }
 
 .card{
   border: 1px solid var(--stroke);
   background: var(--card);
-  border-radius: var(--radius);
+  border-radius: 18px;
   padding: 12px;
   margin-bottom: 12px;
 }
 
 .cardTitle{
-  font-weight: 900;
-  letter-spacing: .12em;
-  text-transform: uppercase;
-  color: var(--muted);
   font-size: 12px;
+  letter-spacing:.18em;
+  font-weight: 850;
+  color: var(--muted);
   margin-bottom: 10px;
 }
 
-.btnGorilla{
+.fileBtn{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
   width: 100%;
-  appearance:none;
-  border: 1px solid rgba(47,102,255,.50);
-  background: rgba(47,102,255,.22);
-  color: var(--text);
-  padding: 16px 16px;
+  padding: 16px 14px;
   border-radius: 16px;
-  font-size: 18px;
+  border: 1px solid rgba(103,243,164,.45);
+  background: rgba(103,243,164,.14);
+  color: var(--text);
   font-weight: 900;
-  letter-spacing: .02em;
+  font-size: 18px;
+  letter-spacing: .2px;
   cursor: pointer;
-  margin-bottom: 12px;
+  user-select:none;
   -webkit-tap-highlight-color: transparent;
 }
-.btnGorilla:active{ transform: translateY(1px); }
-.btnGorilla:hover{ background: rgba(47,102,255,.28); }
 
 .targetWrap{
-  position: relative;
-  width: 100%;
-  border: 1px solid rgba(255,255,255,.10);
+  margin-top: 12px;
   border-radius: 16px;
-  overflow: hidden;
+  overflow:hidden;
   background: rgba(0,0,0,.20);
-  max-height: 58vh;
+  border: 1px solid rgba(255,255,255,.08);
+  position: relative;
 }
 
 #targetImg{
   width: 100%;
-  height: 100%;
-  max-height: 58vh;
-  object-fit: contain;
-  display: block;
+  height: auto;
+  display:block;
   user-select:none;
   -webkit-user-drag:none;
 }
@@ -221,29 +110,40 @@ body{
 
 .tapDot{
   position:absolute;
-  width: 16px; height: 16px;
-  margin-left: -8px; margin-top: -8px;
+  width: 16px;
+  height: 16px;
+  margin-left: -8px;
+  margin-top: -8px;
   border-radius: 999px;
-  box-shadow: 0 10px 22px rgba(0,0,0,.55);
-  border: 2px solid rgba(0,0,0,.55);
+  box-shadow: 0 10px 24px rgba(0,0,0,.55);
+  border: 2px solid rgba(0,0,0,.60);
 }
-.tapDotBull{ background: rgba(103,243,164,.95); }
-.tapDotShot{ background: rgba(214,64,64,.92); }
+
+/* Aim Point = green */
+.tapDotAim{
+  background: var(--greenAim);
+  border-color: rgba(255,255,255,.70);
+}
+
+/* Hits = BRIGHT green */
+.tapDotHit{
+  background: var(--greenHit);
+  border-color: rgba(255,255,255,.80);
+}
 
 .row{
   display:flex;
-  gap: 10px;
+  gap:10px;
   align-items:center;
-  flex-wrap: wrap;
   margin-top: 12px;
+  flex-wrap: wrap;
 }
-.rowTight{ margin-top: 10px; }
 
 .pill{
+  padding: 10px 12px;
+  border-radius: 999px;
   border: 1px solid rgba(255,255,255,.12);
   background: rgba(255,255,255,.05);
-  padding: 8px 10px;
-  border-radius: 999px;
   color: var(--muted);
   font-size: 13px;
 }
@@ -257,15 +157,14 @@ body{
   border-radius: 14px;
   font-weight: 850;
   cursor:pointer;
+  user-select:none;
   -webkit-tap-highlight-color: transparent;
 }
+
 .btnPrimary{
-  border-color: rgba(103,243,164,.40);
+  border-color: rgba(103,243,164,.38);
   background: rgba(103,243,164,.12);
 }
-.btnPrimary:hover{ background: rgba(103,243,164,.16); }
-.btnSecondary:hover{ background: var(--btnHover); }
-.btnPrimary:active,.btnSecondary:active{ transform: translateY(1px); }
 
 .hint{
   margin: 10px 2px 0;
@@ -274,82 +173,29 @@ body{
   line-height: 1.35;
 }
 
-.field{
-  flex: 1;
-  min-width: 160px;
-  display:block;
-}
+.field{ display:block; width:100%; }
 .fieldLabel{
   display:block;
-  color: var(--muted);
   font-size: 12px;
+  color: var(--muted);
   margin-bottom: 6px;
 }
-
-.select, .input{
-  width: 100%;
-  background: rgba(0,0,0,.22);
-  border: 1px solid rgba(255,255,255,.12);
+.select{
+  width:100%;
   border-radius: 14px;
+  border: 1px solid rgba(255,255,255,.12);
+  background: rgba(0,0,0,.20);
   color: var(--text);
   padding: 12px 12px;
-  outline: none;
-  font-size: 15px;
 }
 
-.vendorLink{
-  display:none;
-  margin-top: 10px;
-  color: rgba(155,183,255,.95);
-  text-decoration:none;
-}
+.vendorLink{ display:none; }
 
 .footer{
   text-align:center;
-  margin-top: 8px;
-}
-.footerMark{
   color: rgba(238,242,247,.30);
+  letter-spacing:.22em;
+  font-weight: 850;
   font-size: 12px;
-  letter-spacing: .22em;
-  font-weight: 900;
-  text-transform: uppercase;
+  padding: 10px 0 0;
 }
-
-/* Hide normal results button until “magic pause” */
-.btnHidden{ display:none !important; }
-
-/* Sticky bar */
-.stickyBar{
-  position: fixed;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  padding: 12px 12px calc(12px + env(safe-area-inset-bottom));
-  background: rgba(6,7,10,.82);
-  backdrop-filter: blur(10px);
-  border-top: 1px solid rgba(255,255,255,.10);
-  display:flex;
-  justify-content:center;
-  z-index: 9999;
-}
-
-.stickyHidden{
-  display:none !important;
-}
-
-.stickyBtn{
-  width: min(720px, 96vw);
-  appearance:none;
-  border: 1px solid rgba(103,243,164,.45);
-  background: rgba(103,243,164,.16);
-  color: var(--text);
-  padding: 14px 16px;
-  border-radius: 16px;
-  font-weight: 950;
-  font-size: 18px;
-  letter-spacing: .02em;
-  cursor:pointer;
-  -webkit-tap-highlight-color: transparent;
-}
-.stickyBtn:active{ transform: translateY(1px); }
