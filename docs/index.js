@@ -1,5 +1,5 @@
 /* ============================================================
-   tap-n-score/index.js (FULL REPLACEMENT) — BASELINE 22206d4
+   tap-n-score/index.js (FULL REPLACEMENT) — BASELINE 22206d4 (PATCHED)
    Fix / Adds:
    - Stores selected target photo for SEC as:
        SCZN3_TARGET_IMG_DATAURL_V1   (data:image/...)
@@ -11,6 +11,10 @@
      - Aim Point green, Hits bright green
      - Sticky results appears after pause
      - Real score computed from cluster offset distance (inches) placeholder mapping
+
+   PATCHES (THIS VERSION):
+   - Dot size HARD-LOCKED to 10px (AIM + HIT)
+   - iOS layout force on image load to prevent “phantom/offset” tap mapping
 ============================================================ */
 
 (() => {
@@ -132,23 +136,39 @@
     setText(elStatus, elImg?.src ? "Tap Aim Point." : "Add a photo to begin.");
   }
 
+  // ------------------------------------------------------------
+  // DOTS (PATCHED)
+  // - HARD LOCK size to 10px for AIM + HIT
+  // - Absolutely positioned so CSS cannot balloon them
+  // ------------------------------------------------------------
   function addDot(x01, y01, kind) {
     if (!elDots) return;
 
     const d = document.createElement("div");
     d.className = "tapDot";
+
+    // Position (percentage)
     d.style.left = (x01 * 100) + "%";
     d.style.top = (y01 * 100) + "%";
 
+    // HARD SIZE LOCK (10px)
+    d.style.width = "10px";
+    d.style.height = "10px";
+    d.style.borderRadius = "50%";
+    d.style.position = "absolute";
+    d.style.transform = "translate(-50%, -50%)";
+    d.style.pointerEvents = "none";
+
+    // Color by type
     if (kind === "aim") {
-      d.style.background = "#67f3a4"; // aim point green
-      d.style.border = "2px solid rgba(0,0,0,.55)";
-      d.style.boxShadow = "0 10px 28px rgba(0,0,0,.55)";
+      d.style.background = "#67f3a4"; // AIM green
     } else {
-      d.style.background = "#b7ff3c"; // hits bright green
-      d.style.border = "2px solid rgba(0,0,0,.55)";
-      d.style.boxShadow = "0 10px 28px rgba(0,0,0,.55)";
+      d.style.background = "#b7ff3c"; // HIT bright green
     }
+
+    // Style
+    d.style.border = "2px solid rgba(0,0,0,.6)";
+    d.style.boxShadow = "0 6px 18px rgba(0,0,0,.55)";
 
     elDots.appendChild(d);
   }
@@ -166,9 +186,7 @@
   }
 
   // ------------------------------------------------------------
-  // TARGET PHOTO STORAGE (THIS IS THE FIX)
-  // - Store a dataURL copy (best for canvas export in SEC)
-  // - Also store blob URL (fast preview fallback)
+  // TARGET PHOTO STORAGE (SEC handoff)
   // ------------------------------------------------------------
   async function storeTargetPhotoForSEC(file, blobUrl) {
     // store blob URL (fast)
@@ -281,8 +299,6 @@
       elevation: { dir: out.elevation.dir, clicks: Number(out.elevation.clicks.toFixed(2)) },
       vendorUrl,
       surveyUrl: "",
-      // IMPORTANT: we DO NOT need to stuff the image into payload anymore
-      // SEC will pull it from localStorage KEY_TARGET_IMG_DATA/KEY_TARGET_IMG_BLOB
       sourceImg: "",
       debug: {
         aim,
@@ -314,10 +330,13 @@
       if (objectUrl) URL.revokeObjectURL(objectUrl);
       objectUrl = URL.createObjectURL(f);
 
-      // STORE PHOTO FOR SEC (THIS IS THE KEY FIX)
+      // STORE PHOTO FOR SEC (KEY FIX)
       await storeTargetPhotoForSEC(f, objectUrl);
 
       elImg.onload = () => {
+        // PATCH: force layout before tap math (prevents iOS phantom offset)
+        elImg.getBoundingClientRect();
+
         setText(elStatus, "Tap Aim Point.");
         setInstructionForState();
       };
