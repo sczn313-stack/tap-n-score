@@ -1,117 +1,162 @@
 /* ============================================================
-   index.js (FULL REPLACEMENT) — REAL SCORE (Baseline 22206+)
-   Flow:
-   - Add photo
-   - Tap Aim Point (first) then tap hits
-   - Show results -> computes correction + REAL score -> payload -> sec.html
-   - Saves short history for SEC "PREV 1–3"
-   Fix:
-   - Prevents double-tap registering (pointer-based + debounce)
+   index.js (FULL REPLACEMENT) — TRUE INCHES MAPPING (A)
+   BASELINE 22206+
+
+   What this does:
+   - Converts tap positions to TRUE INCH coordinates using a known target size.
+   - Stores bull + shots in inches (not normalized %).
+   - Computes correction in inches -> MOA -> clicks using TRUE MOA (1.047"/100y).
+   - Fixes “two hits per tap” by using a single pointer pipeline + tap debounce.
+   - Adds scroll-friendly tap detection (small-move = tap, else ignore).
+
+   Target size:
+   - Default: 23 inches (square)
+   - Override via URL: ?size=23   (or 8.5, 11, 12, etc.)
+     Example:
+       /tap-n-score/index.html?fresh=1&size=23
 ============================================================ */
 
 (() => {
   const $ = (id) => document.getElementById(id);
 
-  // Required IDs in index.html
-  const elFile = $("photoInput");
-  const elPhotoBtn = $("photoBtn");          // big button (optional)
+  // ---- Required IDs
+  const elPhotoBtn = $("photoBtn");      // big button
+  const elFile = $("photoInput");        // hidden input
   const elImg = $("targetImg");
   const elDots = $("dotsLayer");
-  const elWrap = $("targetWrap");
   const elTapCount = $("tapCount");
   const elClear = $("clearTapsBtn");
-  const elSee = $("seeResultsBtn");          // optional if you use sticky only
-  const elStickyBar = $("stickyBar");        // optional
-  const elStickyBtn = $("stickyResultsBtn"); // optional
-  const elInstruction = $("instructionLine");
+  const elSticky = $("stickyBar");
+  const elStickyBtn = $("stickyResultsBtn");
   const elStatus = $("statusLine");
+  const elInstruction = $("instructionLine");
 
-  // Optional
+  // ---- Optional
   const elVendor = $("vendorLink");
   const elDistance = $("distanceYds");
   const elMoaClick = $("moaPerClick");
 
-  const KEY = "SCZN3_SEC_PAYLOAD_V1";
+  // ---- Storage
+  const SEC_KEY = "SCZN3_SEC_PAYLOAD_V1";
   const HIST_KEY = "SCZN3_SEC_HISTORY_V1";
 
-  // --- SCORING TUNERS (you can tune later)
-  // Score starts at 100 and loses points based on:
-  // 1) Center error (MOA)  -> weight_center
-  // 2) Group spread (MOA)  -> weight_spread
-  const weight_center = 7.5;  // points per MOA of center error
-  const weight_spread = 4.0;  // points per MOA of spread (RMS)
-  const minShotsForScore = 3; // score is more meaningful at 3+
+  // ---- Target Size (INCHES)
+  // default 23, override with ?size=23
+  const params = new URLSearchParams(location.search);
+  const TARGET_SIZE_IN = (() => {
+    const n = Number(params.get("size"));
+    return Number.isFinite(n) && n > 0 ? n : 23;
+  })();
 
-  // --- Placeholder scale: image full-width represents 10 inches
-  // (Later: replace with a real calibration mapping.)
-  const inchesPerFullWidth = 10;
-
+  // ---- State (INCHES, screen-space: x right +, y down +)
   let objectUrl = null;
+  let bull = null;          // {x,y} inches
+  let shots = [];           // [{x,y},...]
+  let lastTapAt = 0;
 
-  // Aim point + shots in normalized [0..1] coordinates
-  let aim = null;   // {x01,y01}
-  let shots = [];   // [{x01,y01},...]
+  // ---- Tap handling guards (prevents “double hit per tap”)
+  let ignoreClickUntil = 0;
 
-  // Tap debounce (prevents double registers)
-  let lastTapMs = 0;
+  // ---- Tap/scroll discrimination
+  // If finger moves more than this many pixels, treat it as scroll/drag, not a tap.
+  const MOVE_THRESHOLD_PX = 10;
 
-  function clamp01(v) { return Math.max(0, Math.min(1, v)); }
-  function clamp(n, a, b){ return Math.max(a, Math.min(b, n)); }
-
-  function setStatus(msg) {
-    if (elStatus) elStatus.textContent = msg;
-  }
-
-  function setHint(msg) {
-    if (elInstruction) elInstruction.textContent = msg || "";
-  }
+  function setText(el, t) { if (el) el.textContent = String(t); }
 
   function setTapCount() {
-    if (elTapCount) elTapCount.textContent = String(shots.length);
+    setText(elTapCount, shots.length);
+  }
+
+  function showSticky(yes) {
+    if (!elSticky) return;
+    if (yes) {
+      elSticky.classList.remove("stickyHidden");
+      elSticky.setAttribute("aria-hidden", "false");
+    } else {
+      elSticky.classList.add("stickyHidden");
+      elSticky.setAttribute("aria-hidden", "true");
+    }
+  }
+
+  function setInstruction(msg) {
+    if (!elInstruction) return;
+    elInstruction.textContent = msg || "";
+  }
+
+  function setStatus(msg) {
+    if (!elStatus) return;
+    elStatus.textContent = msg || "";
   }
 
   function clearDots() {
-    aim = null;
+    bull = null;
     shots = [];
     if (elDots) elDots.innerHTML = "";
     setTapCount();
-    setHint("");
-    hideResultsIfAny();
+    showSticky(false);
+    setInstruction("Tap Aim Point, then tap hits.");
     setStatus("Add a target photo to begin.");
   }
 
-  function showResultsIfAny() {
-    // If you have sticky bar UI
-    if (elStickyBar) {
-      elStickyBar.classList.remove("stickyHidden");
-      elStickyBar.setAttribute("aria-hidden", "false");
-    }
-  }
+  function addDotInches(p, kind) {
+    if (!elDots || !elImg) return;
 
-  function hideResultsIfAny() {
-    if (elStickyBar) {
-      elStickyBar.classList.add("stickyHidden");
-      elStickyBar.setAttribute("aria-hidden", "true");
-    }
-  }
+    // We position dots in % to stay correct while scaling,
+    // but the stored values are inches.
+    const r = elImg.getBoundingClientRect();
+    if (!r || r.width < 2 || r.height < 2) return;
 
-  function addDot(x01, y01, kind) {
-    if (!elDots) return;
+    const x01 = p.x / TARGET_SIZE_IN;
+    const y01 = p.y / TARGET_SIZE_IN;
 
     const d = document.createElement("div");
-    // Use your existing CSS classes:
-    // tapDotBull (aim point) and tapDotShot (hits)
-    d.className = "tapDot " + (kind === "aim" ? "tapDotBull" : "tapDotShot");
+    d.className = "tapDot " + (kind === "bull" ? "tapDotBull" : "tapDotShot");
     d.style.left = (x01 * 100) + "%";
     d.style.top = (y01 * 100) + "%";
     elDots.appendChild(d);
   }
 
-  function getRelative01FromEvent(ev) {
+  function imgRect() {
+    if (!elImg) return null;
     const r = elImg.getBoundingClientRect();
-    const x = (ev.clientX - r.left) / r.width;
-    const y = (ev.clientY - r.top) / r.height;
-    return { x01: clamp01(x), y01: clamp01(y) };
+    if (!r || r.width < 2 || r.height < 2) return null;
+    return r;
+  }
+
+  function pxToInches(xPx, yPx, rect) {
+    const xIn = (xPx / rect.width) * TARGET_SIZE_IN;
+    const yIn = (yPx / rect.height) * TARGET_SIZE_IN;
+    return { x: xIn, y: yIn };
+  }
+
+  function computeCorrection_Inches() {
+    if (!bull || shots.length < 1) return null;
+
+    const avg = shots.reduce((acc, p) => ({ x: acc.x + p.x, y: acc.y + p.y }), { x: 0, y: 0 });
+    avg.x /= shots.length;
+    avg.y /= shots.length;
+
+    // bull - POI (move POI to bull)
+    const dxIn = bull.x - avg.x; // + => RIGHT
+    const dyIn = bull.y - avg.y; // + => DOWN (screen-space)
+
+    const dist = Number(elDistance?.value ?? 100);
+    const moaPerClick = Number(elMoaClick?.value ?? 0.25);
+
+    const inchesPerMoa = (dist / 100) * 1.047; // TRUE MOA
+    const moaX = dxIn / inchesPerMoa;
+    const moaY = dyIn / inchesPerMoa;
+
+    const clicksX = moaX / moaPerClick;
+    const clicksY = moaY / moaPerClick;
+
+    return {
+      avgPoi: { x: avg.x, y: avg.y },
+      dxIn,
+      dyIn,
+      windage: { dir: clicksX >= 0 ? "RIGHT" : "LEFT", clicks: Math.abs(clicksX) },
+      elevation: { dir: clicksY >= 0 ? "DOWN" : "UP", clicks: Math.abs(clicksY) }
+    };
   }
 
   function b64FromObj(obj) {
@@ -119,144 +164,66 @@
     return btoa(unescape(encodeURIComponent(json)));
   }
 
-  function inchesPerMoaAt(distYds) {
-    return (distYds / 100) * 1.047; // TRUE MOA
-  }
-
-  function formatWindElev(windDir, windClicks, elevDir, elevClicks) {
-    const w = `${windDir} ${Number(windClicks).toFixed(2)}`;
-    const e = `${elevDir} ${Number(elevClicks).toFixed(2)}`;
-    return { wind: w, elev: e };
-  }
-
-  function computeReal(out) {
-    // out contains avgPoi, windage, elevation, inchesX, inchesY, moaX, moaY, etc.
-    // Score uses:
-    // - center error = distance between avgPoi and aim (MOA)
-    // - spread = RMS distance of shots from avgPoi (MOA)
-    const dist = out.dist;
-
-    // center error in normalized space
-    const dx01 = aim.x01 - out.avgPoi.x01;
-    const dy01 = aim.y01 - out.avgPoi.y01;
-
-    // convert to inches (placeholder scale)
-    const cx_in = Math.sqrt((dx01 * inchesPerFullWidth) ** 2 + (dy01 * inchesPerFullWidth) ** 2);
-
-    const ipm = inchesPerMoaAt(dist);
-    const center_moa = cx_in / ipm;
-
-    // spread RMS around avgPoi
-    let sumSqIn = 0;
-    for (const s of shots) {
-      const sx01 = s.x01 - out.avgPoi.x01;
-      const sy01 = s.y01 - out.avgPoi.y01;
-      const rin = Math.sqrt((sx01 * inchesPerFullWidth) ** 2 + (sy01 * inchesPerFullWidth) ** 2);
-      sumSqIn += rin * rin;
-    }
-    const rms_in = Math.sqrt(sumSqIn / Math.max(1, shots.length));
-    const spread_moa = rms_in / ipm;
-
-    // Score model
-    // - Penalize center and spread
-    // - Slightly reduce reliability if fewer than minShotsForScore
-    let penalty = (center_moa * weight_center) + (spread_moa * weight_spread);
-
-    if (shots.length < minShotsForScore) {
-      penalty *= 0.85; // still score, but gentler penalty on tiny sample
-    }
-
-    const score = clamp(Math.round(100 - penalty), 0, 100);
-
-    return {
-      score,
-      center_moa: Number(center_moa.toFixed(2)),
-      spread_moa: Number(spread_moa.toFixed(2)),
-    };
-  }
-
-  function computeCorrectionAndScore() {
-    if (!aim || shots.length < 1) return null;
-
-    // avg POI (normalized)
-    const avg = shots.reduce((acc, p) => ({ x: acc.x + p.x01, y: acc.y + p.y01 }), { x: 0, y: 0 });
-    avg.x /= shots.length;
-    avg.y /= shots.length;
-
-    // aim - POI (move POI to aim)
-    const dx = aim.x01 - avg.x; // + => RIGHT
-    const dy = aim.y01 - avg.y; // + => DOWN (screen space)
-
-    // placeholder inches mapping
-    const inchesX = dx * inchesPerFullWidth;
-    const inchesY = dy * inchesPerFullWidth;
-
-    const dist = Number(elDistance?.value ?? 100);
-    const moaPerClick = Number(elMoaClick?.value ?? 0.25);
-
-    const ipm = inchesPerMoaAt(dist);
-    const moaX = inchesX / ipm;
-    const moaY = inchesY / ipm;
-
-    const clicksX = moaX / moaPerClick;
-    const clicksY = moaY / moaPerClick;
-
-    const windage = { dir: clicksX >= 0 ? "RIGHT" : "LEFT", clicks: Math.abs(clicksX) };
-    const elevation = { dir: clicksY >= 0 ? "DOWN" : "UP", clicks: Math.abs(clicksY) };
-
-    const base = {
-      dist,
-      moaPerClick,
-      avgPoi: { x01: avg.x, y01: avg.y },
-      windage,
-      elevation
-    };
-
-    const scoreBits = computeReal(base);
-
-    return {
-      ...base,
-      ...scoreBits
-    };
-  }
-
-  function saveHistoryEntry(payload) {
+  function pushHistory(payload) {
     try {
-      const hist = JSON.parse(localStorage.getItem(HIST_KEY) || "[]");
-      const { wind, elev } = formatWindElev(
-        payload.windage?.dir || "—",
-        payload.windage?.clicks ?? 0,
-        payload.elevation?.dir || "—",
-        payload.elevation?.clicks ?? 0
-      );
-
+      const prev = JSON.parse(localStorage.getItem(HIST_KEY) || "[]");
       const entry = {
-        ts: Date.now(),
+        t: Date.now(),
         score: payload.score,
         shots: payload.shots,
-        wind,
-        elev
+        wind: `${payload.windage.dir} ${Number(payload.windage.clicks).toFixed(2)}`,
+        elev: `${payload.elevation.dir} ${Number(payload.elevation.clicks).toFixed(2)}`
       };
-
-      const next = [entry, ...hist].slice(0, 3);
-      localStorage.setItem(HIST_KEY, JSON.stringify(next));
-    } catch {}
+      localStorage.setItem(HIST_KEY, JSON.stringify([entry, ...prev].slice(0, 3)));
+    } catch (_) {}
   }
 
   function goToSEC(payload) {
-    try { localStorage.setItem(KEY, JSON.stringify(payload)); } catch {}
-    saveHistoryEntry(payload);
+    try { localStorage.setItem(SEC_KEY, JSON.stringify(payload)); } catch {}
 
     const b64 = b64FromObj(payload);
     location.href = `./sec.html?payload=${encodeURIComponent(b64)}&fresh=${Date.now()}`;
   }
 
-  // ---- Photo button triggers file picker
-  if (elPhotoBtn && elFile) {
-    elPhotoBtn.addEventListener("click", () => elFile.click());
+  function showResults() {
+    const out = computeCorrection_Inches();
+    if (!out) {
+      alert("Tap Aim Point first, then tap at least one hit.");
+      return;
+    }
+
+    const payload = {
+      sessionId: "S-" + Date.now(),
+      score: null, // leave real scoring for the next module (you’re building it)
+      shots: shots.length,
+      windage: { dir: out.windage.dir, clicks: Number(out.windage.clicks.toFixed(2)) },
+      elevation: { dir: out.elevation.dir, clicks: Number(out.elevation.clicks.toFixed(2)) },
+      secPngUrl: "",
+      vendorUrl: (elVendor && elVendor.href && elVendor.href !== "#") ? elVendor.href : "",
+      surveyUrl: "",
+      debug: {
+        targetSizeIn: TARGET_SIZE_IN,
+        bull,
+        avgPoi: out.avgPoi,
+        dxIn: out.dxIn,
+        dyIn: out.dyIn
+      }
+    };
+
+    pushHistory(payload);
+    goToSEC(payload);
   }
 
-  // ---- File input: load image
+  // ============================================================
+  // Photo button -> open picker/camera with user choice
+  // ============================================================
+  if (elPhotoBtn && elFile) {
+    elPhotoBtn.addEventListener("click", () => {
+      // This yields the iOS chooser (Camera / Photo Library / Browse) depending on user settings.
+      elFile.click();
+    });
+  }
+
   if (elFile) {
     elFile.addEventListener("change", () => {
       const f = elFile.files && elFile.files[0];
@@ -266,100 +233,114 @@
 
       if (objectUrl) URL.revokeObjectURL(objectUrl);
       objectUrl = URL.createObjectURL(f);
-
-      elImg.onload = () => {
-        setStatus("Tap Aim Point, then tap hits.");
-        setHint(""); // keep landing clean
-      };
       elImg.src = objectUrl;
+
+      setStatus("Tap Aim Point, then tap hits.");
+      setInstruction("Tap Aim Point, then tap hits.");
+      // allow selecting same file again
+      elFile.value = "";
     });
   }
 
-  // ---- Single-tap handler (prevents double-hit)
-  function handleTap(ev) {
-    // Debounce: ignore if too soon (prevents touch+click doubles)
-    const now = Date.now();
-    if (now - lastTapMs < 220) return;
-    lastTapMs = now;
+  // ============================================================
+  // SINGLE tap pipeline (prevents “two hits per tap”)
+  // Uses pointer events when available, falls back to click.
+  // ============================================================
 
-    if (!elImg || !elImg.src) return;
+  function handleTap(clientX, clientY) {
+    const r = imgRect();
+    if (!r) return;
 
-    // If we can, prevent default to avoid ghost clicks
-    if (ev && typeof ev.preventDefault === "function") ev.preventDefault();
+    const xPx = clientX - r.left;
+    const yPx = clientY - r.top;
 
-    const { x01, y01 } = getRelative01FromEvent(ev);
+    if (xPx < 0 || yPx < 0 || xPx > r.width || yPx > r.height) return;
 
-    if (!aim) {
-      aim = { x01, y01 };
-      addDot(x01, y01, "aim");
-      setStatus("Now tap your hits.");
-      showResultsIfAny(); // “magic” results button can appear once aim is set
-    } else {
-      shots.push({ x01, y01 });
-      addDot(x01, y01, "shot");
-      setTapCount();
-      showResultsIfAny(); // ensure visible once shots exist
-    }
-  }
+    const pIn = pxToInches(xPx, yPx, r);
 
-  function bindTapLayer() {
-    if (!elImg) return;
-
-    // Prefer pointer events
-    if ("PointerEvent" in window) {
-      elImg.addEventListener("pointerdown", handleTap, { passive: false });
+    if (!bull) {
+      bull = pIn;
+      addDotInches(pIn, "bull");
+      setInstruction("Aim Point set ✅ Now tap hits.");
+      setStatus("Aim Point set. Tap hits.");
+      lastTapAt = Date.now();
       return;
     }
 
-    // Fallback: touchstart (avoid click)
-    elImg.addEventListener("touchstart", (ev) => {
-      const t = ev.touches && ev.touches[0];
-      if (!t) return;
-      // synthesize clientX/Y onto event-like object
-      handleTap({
-        clientX: t.clientX,
-        clientY: t.clientY,
-        preventDefault: () => ev.preventDefault()
-      });
-    }, { passive: false });
+    shots.push(pIn);
+    addDotInches(pIn, "shot");
+    setTapCount();
+
+    setInstruction("Tap more hits, or pause…");
+    setStatus("Tap hits. Pause for results…");
+
+    lastTapAt = Date.now();
   }
 
-  bindTapLayer();
+  // Touch/scroll discrimination with pointer events
+  let downX = 0, downY = 0, downAt = 0, downActive = false;
 
-  // ---- Clear
+  function onPointerDown(e) {
+    if (!elImg?.src) return;
+    if (e.pointerType === "mouse" && e.button !== 0) return;
+
+    downActive = true;
+    downX = e.clientX;
+    downY = e.clientY;
+    downAt = Date.now();
+
+    // Prevent follow-up click double-fire
+    if (e.pointerType === "touch") {
+      ignoreClickUntil = Date.now() + 500;
+    }
+  }
+
+  function onPointerUp(e) {
+    if (!downActive) return;
+    downActive = false;
+
+    const dx = e.clientX - downX;
+    const dy = e.clientY - downY;
+    const moved = Math.hypot(dx, dy);
+
+    // If user dragged (scroll), ignore
+    if (moved > MOVE_THRESHOLD_PX) return;
+
+    // Debounce ultra-fast duplicates
+    const now = Date.now();
+    if (now - lastTapAt < 30) return;
+
+    handleTap(e.clientX, e.clientY);
+  }
+
+  if (elImg) {
+    if ("PointerEvent" in window) {
+      elImg.addEventListener("pointerdown", onPointerDown, { passive: true });
+      elImg.addEventListener("pointerup", onPointerUp, { passive: true });
+    } else {
+      // Fallback: click only (older browsers)
+      elImg.addEventListener("click", (ev) => {
+        if (Date.now() < ignoreClickUntil) return;
+        if (!elImg.src) return;
+        handleTap(ev.clientX, ev.clientY);
+      }, { passive: true });
+    }
+  }
+
+  // ============================================================
+  // Buttons
+  // ============================================================
   if (elClear) elClear.addEventListener("click", clearDots);
 
-  // ---- Show results (either normal button or sticky)
-  function onShowResults() {
-    const out = computeCorrectionAndScore();
-    if (!out) {
-      alert("Tap Aim Point first, then tap at least one hit.");
-      return;
-    }
+  // Sticky results button
+  if (elStickyBtn) elStickyBtn.addEventListener("click", showResults);
 
-    const payload = {
-      sessionId: "S-" + Date.now(),
-      score: out.score, // ✅ REAL SCORE
-      shots: shots.length,
-      windage: { dir: out.windage.dir, clicks: Number(out.windage.clicks.toFixed(2)) },
-      elevation: { dir: out.elevation.dir, clicks: Number(out.elevation.clicks.toFixed(2)) },
-      secPngUrl: "",
-      vendorUrl: (elVendor && elVendor.href && elVendor.href !== "#") ? elVendor.href : "",
-      surveyUrl: "",
-      debug: {
-        aim,
-        avgPoi: out.avgPoi,
-        center_moa: out.center_moa,
-        spread_moa: out.spread_moa,
-        dist: out.dist
-      }
-    };
-
-    goToSEC(payload);
-  }
-
-  if (elSee) elSee.addEventListener("click", onShowResults);
-  if (elStickyBtn) elStickyBtn.addEventListener("click", onShowResults);
+  // “Magic” appearance: when shooter pauses after at least 1 hit
+  setInterval(() => {
+    if (!bull || shots.length < 1) { showSticky(false); return; }
+    const idleMs = Date.now() - lastTapAt;
+    showSticky(idleMs >= 900);
+  }, 200);
 
   // ---- Boot
   clearDots();
