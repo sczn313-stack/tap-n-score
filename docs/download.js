@@ -1,12 +1,11 @@
 /* ============================================================
-   download.js (FULL REPLACEMENT) — 22206d4
-   Fixes:
-   - OLD page expected ?img=...
-   - NEW system uses sec.html?payload=... + localStorage payload
-   Now:
-   - Build SEC preview from payload (query OR localStorage)
-   - Render as SVG, display in <img>
-   - Download as PNG (SVG -> canvas -> PNG)
+   download.js (FULL REPLACEMENT) — 22206d5
+   Fix:
+   - iOS Safari often blocks programmatic downloads (data URL + download attr)
+   New behavior:
+   - Create PNG from SVG
+   - Try download attribute (works on desktop)
+   - If blocked, OPEN PNG in new tab so user can press-hold -> Save to Photos
 ============================================================ */
 
 (() => {
@@ -27,7 +26,6 @@
   }
 
   function safeParsePayload() {
-    // 1) payload in URL
     const p = qs("payload");
     if (p) {
       try {
@@ -35,13 +33,10 @@
         return JSON.parse(json);
       } catch {}
     }
-
-    // 2) localStorage
     try {
       const raw = localStorage.getItem(KEY);
       if (raw) return JSON.parse(raw);
     } catch {}
-
     return null;
   }
 
@@ -49,9 +44,20 @@
     return Math.max(a, Math.min(b, n));
   }
 
-  // LED “dot” style digits using simple rounded rectangles (clean + calm)
+  function setMsg(t) {
+    if (elMsg) elMsg.textContent = t || "";
+  }
+
+  // --- Detect iOS Safari-ish environment
+  function isIOS() {
+    const ua = navigator.userAgent || "";
+    const iOS = /iPad|iPhone|iPod/.test(ua);
+    const iPadOS13Plus = navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1;
+    return iOS || iPadOS13Plus;
+  }
+
+  // --- LED digit SVG (same as before)
   function ledDigitSVG(d, x, y, s, color) {
-    // 7-seg mapping
     const seg = {
       0: [1,1,1,1,1,1,0],
       1: [0,1,1,0,0,0,0],
@@ -68,10 +74,9 @@
     const on = seg || [0,0,0,0,0,0,0];
 
     const w = 60 * s, h = 110 * s;
-    const t = 12 * s; // thickness
+    const t = 12 * s;
     const r = 6 * s;
 
-    // segments: A,B,C,D,E,F,G
     const A = [x + t, y, w - 2*t, t];
     const B = [x + w - t, y + t, t, (h/2) - (1.5*t)];
     const C = [x + w - t, y + (h/2) + (0.5*t), t, (h/2) - (1.5*t)];
@@ -110,17 +115,14 @@
 
     const shots = payload?.shots ?? 0;
 
-    // Pale yellow request for 25 example (we’ll use pale yellow for ALL scores)
     const ledColor = "#F6E79A"; // pale warm yellow
 
     const scoreStr = score === 100 ? "100" : String(score).padStart(2, "0");
 
-    // Center layout
     const canvasW = 1200;
     const canvasH = 700;
 
-    // digit sizing + centering
-    const s = 3.2;              // scale factor
+    const s = 3.2;
     const digitW = 60*s;
     const gap = 26*s;
 
@@ -160,30 +162,24 @@
 
   <rect width="100%" height="100%" fill="url(#bg)"/>
 
-  <!-- Header -->
   <text x="70" y="95" font-family="system-ui, -apple-system, Segoe UI, Roboto, Arial"
         font-size="64" font-weight="800" fill="#ffffff" opacity="0.95">TAP-N-SCORE™</text>
   <text x="70" y="145" font-family="system-ui, -apple-system, Segoe UI, Roboto, Arial"
         font-size="40" font-weight="700" fill="#cfd6e6" opacity="0.85">After-Shot Intelligence</text>
 
-  <!-- Card -->
   <rect x="70" y="185" width="1060" height="420" rx="36" fill="url(#card)" stroke="rgba(255,255,255,0.10)"/>
 
-  <!-- LED Score -->
   ${digits}
 
-  <!-- Small “You’re here / Get better” line (calm) -->
   <text x="600" y="545" text-anchor="middle"
         font-family="system-ui, -apple-system, Segoe UI, Roboto, Arial"
         font-size="40" font-weight="800" fill="#ffffff" opacity="0.92">U R Here!  Keep Going.</text>
 
-  <!-- Corrections -->
   <text x="110" y="635" font-family="system-ui, -apple-system, Segoe UI, Roboto, Arial"
         font-size="32" font-weight="700" fill="#cfd6e6" opacity="0.9">
     Windage: ${wDir} ${wClicks}  •  Elevation: ${eDir} ${eClicks}  •  Shots: ${shots}
   </text>
 
-  <!-- Footer mark -->
   <text x="1090" y="670" text-anchor="end"
         font-family="system-ui, -apple-system, Segoe UI, Roboto, Arial"
         font-size="26" font-weight="800" fill="#ffffff" opacity="0.35">SCZN3</text>
@@ -216,17 +212,21 @@
     });
   }
 
-  function downloadDataUrl(dataUrl, filename) {
+  function tryDownload(dataUrl, filename) {
+    // Works on most desktop browsers, often fails on iOS
     const a = document.createElement("a");
     a.href = dataUrl;
     a.download = filename;
+    a.rel = "noopener";
+    a.target = "_self";
     document.body.appendChild(a);
     a.click();
     a.remove();
   }
 
-  function setMsg(t) {
-    if (elMsg) elMsg.textContent = t || "";
+  function openInNewTab(dataUrl) {
+    // iOS-safe: opens the image; user can press-hold -> Save to Photos
+    window.open(dataUrl, "_blank", "noopener,noreferrer");
   }
 
   // ---- Boot
@@ -239,13 +239,13 @@
     gotLocalStoragePayload: (() => {
       try { return !!localStorage.getItem(KEY); } catch { return false; }
     })(),
+    isIOS: isIOS(),
     baseLocked: "/tap-n-score/",
     nav: {
       scoreAnother: "./index.html?fresh=" + Date.now(),
       backToSetup: "./index.html?fresh=" + Date.now(),
     }
   };
-
   if (elDiag) elDiag.textContent = JSON.stringify(diag, null, 2);
 
   if (!payload) {
@@ -254,12 +254,10 @@
     if (elDl) elDl.disabled = true;
   } else {
     const svg = buildSECsvg(payload);
-    const svgUrl = svgToDataUrl(svg);
-    elImg.src = svgUrl;
-    setMsg("Preview ready. Download PNG, or press-and-hold to Save to Photos.");
+    elImg.src = svgToDataUrl(svg);
+    setMsg("Preview ready. Tap Download. On iPhone/iPad you may need press-and-hold the image → Save to Photos.");
   }
 
-  // Buttons
   if (elScoreAnother) elScoreAnother.addEventListener("click", () => {
     window.location.href = "./index.html?fresh=" + Date.now();
   });
@@ -275,11 +273,20 @@
         alert("No SEC payload found. Go back and hit Show results first.");
         return;
       }
+
       const svg = buildSECsvg(payloadNow);
       const pngUrl = await svgToPngDataUrl(svg, 1200, 700);
-      downloadDataUrl(pngUrl, "SEC.png");
+
+      // Attempt normal download first (desktop/Android)
+      tryDownload(pngUrl, "SEC.png");
+
+      // iOS fallback: open the PNG so the user can Save to Photos
+      if (isIOS()) {
+        setMsg("iPhone/iPad: opening image… press-and-hold → Save to Photos.");
+        openInNewTab(pngUrl);
+      }
     } catch (e) {
-      alert("Download failed. Try press-and-hold the image → Save to Photos.");
+      alert("Download blocked. Press-and-hold the preview image → Save to Photos.");
     }
   });
 })();
