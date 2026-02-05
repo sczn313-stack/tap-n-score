@@ -5,152 +5,100 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="color-scheme" content="dark" />
   <meta name="theme-color" content="#06070a" />
-  <title>Tap-n-Score™ — Shooter Experience Card</title>
 
-  <link rel="stylesheet" href="./sec.css?v=22206-led1" />
+  <!-- HARD NO-CACHE (Safari helpers) -->
+  <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
 
-  <style>
-    .diagHidden{ display:none !important; }
-  </style>
+  <title>Tap-n-Score™</title>
+
+  <!-- IMPORTANT: use RELATIVE paths for GitHub Pages subfolder -->
+  <link rel="stylesheet" href="./styles.css?v=22206e1" />
 </head>
 
 <body>
   <main class="page">
-    <section class="shell">
 
-      <header class="hdr">
-        <div class="brand" id="secTitle" style="user-select:none;-webkit-user-select:none;">
-          <span class="r">SHOOTER</span>
-          <span class="w">EXPERIENCE</span>
-          <span class="b">CARD</span>
+    <header class="topBar">
+      <div class="topTitle">TAP-N-SCORE™</div>
+      <div id="statusLine" class="topSub">Add a photo to begin.</div>
+    </header>
+
+    <section class="card">
+      <div class="cardTitle">PHOTO</div>
+
+      <!-- 800lb gorilla -->
+      <button id="photoBtn" class="btnBig" type="button">Add Target Picture</button>
+
+      <!-- Hidden input: NO capture attribute so iOS offers Camera + Photo Library -->
+      <input
+        id="photoInput"
+        type="file"
+        accept="image/*"
+        style="display:none"
+      />
+
+      <div id="targetWrap" class="targetWrap" aria-label="Photo area">
+        <img id="targetImg" alt="Photo preview" />
+        <div id="dotsLayer" class="dotsLayer" aria-hidden="true"></div>
+      </div>
+
+      <div class="row rowTight">
+        <div class="pill">
+          Hits: <span id="tapCount">0</span>
         </div>
 
-        <div class="pillRow">
-          <div class="pill">
-            <span class="pillLabel">Session:</span>
-            <span class="pillValue" id="secSession">—</span>
-          </div>
-          <div class="pill">
-            <span class="pillLabel">Shots:</span>
-            <span class="pillValue" id="secShots">0</span>
-          </div>
-        </div>
-      </header>
+        <button id="clearTapsBtn" class="btnSecondary" type="button">
+          Clear
+        </button>
+      </div>
 
-      <section class="grid">
-
-        <section class="leftCol">
-
-          <!-- SCORING -->
-          <article class="card">
-            <div class="cardHead">
-              <div class="cardKicker">SCORING</div>
-            </div>
-
-            <div class="scoreWrap">
-              <div class="scoreLabel">YOUR SCORE</div>
-
-              <div class="scoreBox" aria-label="Score">
-                <div class="scoreValue" id="secScore">—</div>
-                <div class="scoreTagline" id="scoreTagline">
-                  <b>U R Here!</b> Nice magic show. Keep going!
-                </div>
-              </div>
-            </div>
-          </article>
-
-          <!-- ADJUSTMENTS -->
-          <article class="card">
-            <div class="cardHead">
-              <div class="cardKicker">ADJUSTMENTS</div>
-            </div>
-
-            <div class="adjustTitle">Target clicks</div>
-
-            <div class="adjustGrid">
-              <div class="adjustItem">
-                <div class="adjustMini">WINDAGE</div>
-                <div class="adjustRow">
-                  <div class="adjustNum" id="secWindClicks">0.00</div>
-                  <div class="dirPill" id="secWindDir">—</div>
-                </div>
-              </div>
-
-              <div class="adjustItem">
-                <div class="adjustMini">ELEVATION</div>
-                <div class="adjustRow">
-                  <div class="adjustNum" id="secElevClicks">0.00</div>
-                  <div class="dirPill" id="secElevDir">—</div>
-                </div>
-              </div>
-            </div>
-          </article>
-
-          <!-- HISTORY -->
-          <article class="card">
-            <div class="cardHead">
-              <div class="cardKicker">HISTORY</div>
-            </div>
-
-            <div class="historyGrid">
-              <div class="histItem">
-                <div class="histMini">PREV 1</div>
-                <div class="histVal" id="prev1">—</div>
-              </div>
-              <div class="histItem">
-                <div class="histMini">PREV 2</div>
-                <div class="histVal" id="prev2">—</div>
-              </div>
-              <div class="histItem">
-                <div class="histMini">PREV 3</div>
-                <div class="histVal" id="prev3">—</div>
-              </div>
-            </div>
-          </article>
-
-        </section>
-
-        <aside class="rightCol">
-          <article class="card actionsCard">
-            <div class="cardHead">
-              <div class="cardKicker">ACTIONS</div>
-            </div>
-
-            <div class="btnCol">
-              <button id="downloadBtn" class="btn btnPrimary btnDisabled" aria-disabled="true">
-                Download SEC
-              </button>
-
-              <button id="vendorBtn" class="btn btnDisabled" aria-disabled="true">
-                Buy more targets
-              </button>
-
-              <button id="surveyBtn" class="btn btnDisabled" aria-disabled="true">
-                Survey
-              </button>
-
-              <button id="backToTargetBtn" class="btn">
-                Back to target
-              </button>
-            </div>
-
-            <div class="tip">
-              Tip (iPad): if download doesn’t start, you can press-and-hold the image on the download page and save it.
-            </div>
-
-            <details class="diag diagHidden" id="secDiagBox">
-              <summary>Diagnostics</summary>
-              <pre id="secDiag">(none)</pre>
-            </details>
-          </article>
-        </aside>
-
-      </section>
-
-      <footer class="foot">SCZN3</footer>
+      <p id="instructionLine" class="hint"></p>
     </section>
+
+    <section class="card">
+      <div class="cardTitle">SETTINGS</div>
+
+      <div class="row">
+        <label class="field">
+          <span class="fieldLabel">Distance (yards)</span>
+          <select id="distanceYds" class="select">
+            <option value="25">25</option>
+            <option value="50">50</option>
+            <option value="100" selected>100</option>
+            <option value="200">200</option>
+            <option value="300">300</option>
+          </select>
+        </label>
+
+        <label class="field">
+          <span class="fieldLabel">MOA / click</span>
+          <select id="moaPerClick" class="select">
+            <option value="0.25" selected>0.25</option>
+            <option value="0.5">0.5</option>
+            <option value="0.125">0.125</option>
+          </select>
+        </label>
+      </div>
+
+      <a id="vendorLink" class="vendorLink" href="#" target="_blank" rel="noopener"></a>
+    </section>
+
+    <footer class="footer">
+      <span class="footerMark">SCZN3</span>
+    </footer>
+
+    <!-- Sticky “magic” results bar -->
+    <div id="stickyBar" class="stickyBar stickyHidden" aria-hidden="true">
+      <button id="stickyResultsBtn" class="stickyBtn" type="button">
+        Show results
+      </button>
+    </div>
+
   </main>
 
-  <script src="./sec.js?v=22206-led1"></script>
+  <!-- IMPORTANT: use RELATIVE paths for GitHub Pages subfolder -->
+  <script src="./index.js?v=22206e1"></script>
 </body>
 </html>
