@@ -13,7 +13,7 @@
 
   <title>Tap-n-Score™</title>
 
-  <link rel="stylesheet" href="/tap-n-score/styles.css?v=22206d2" />
+  <link rel="stylesheet" href="/tap-n-score/styles.css?v=22206d3" />
 
   <!-- Stepper styling (kept local so we don't touch styles.css yet) -->
   <style>
@@ -72,10 +72,18 @@
     <section class="card">
       <div class="cardTitle">PHOTO</div>
 
-      <!-- One 800lb gorilla button -->
-      <button id="photoBtn" class="btnBig" type="button">Add Target Picture</button>
+      <!-- 800lb gorilla button -->
+      <!-- Fallback: onclick triggers the file input even if JS fails -->
+      <button
+        id="photoBtn"
+        class="btnBig"
+        type="button"
+        onclick="document.getElementById('photoInput').click()"
+      >
+        Add Target Picture
+      </button>
 
-      <!-- hidden input (button triggers this) -->
+      <!-- hidden input -->
       <input
         id="photoInput"
         type="file"
@@ -128,7 +136,7 @@
           </div>
         </label>
 
-        <!-- MOA/click stays dropdown for now -->
+        <!-- MOA/click -->
         <label class="field" style="flex:1;">
           <span class="fieldLabel">MOA / click</span>
           <select id="moaPerClick" class="select">
@@ -155,6 +163,7 @@
 
   </main>
 
-  <script src="/tap-n-score/index.js?v=22206d2"></script>
+  <!-- IMPORTANT: defer so DOM exists before JS binds -->
+  <script defer src="/tap-n-score/index.js?v=22206d3"></script>
 </body>
 </html>
