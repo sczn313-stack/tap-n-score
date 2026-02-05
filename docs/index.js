@@ -1,21 +1,16 @@
 /* ============================================================
-   index.js (FULL REPLACEMENT) — BASELINE 22206 (POLISH)
+   index.js (FULL REPLACEMENT) — IMAGE LOAD RELIABILITY PATCH
    Fixes:
-   - Prevents "2 hits per tap" (iOS ghost click) using pointer events
-   - Aim Point dot = green
-   - Hit dots = bright green
-   - Cleaner instruction text: "Tap Aim Point" -> "Tap Hits"
-   Flow:
-   - Upload photo
-   - Tap Aim Point (first) then tap hits
-   - Show results -> payload -> sec.html (?payload=base64)
-   - localStorage backup only
+   - Target image sometimes not showing after selecting a photo (iOS/Safari)
+   - Adds onload/onerror status so we know EXACT failure point
+   - Resets file input ONLY AFTER img loads (prevents iOS oddities)
+   - Keeps your Aim Point + Hits tap flow intact
 ============================================================ */
 
 (() => {
   const $ = (id) => document.getElementById(id);
 
-  // Required IDs in index.html
+  // Required IDs
   const elFile = $("photoInput");
   const elImg = $("targetImg");
   const elDots = $("dotsLayer");
@@ -24,7 +19,7 @@
   const elClear = $("clearTapsBtn");
   const elSee = $("seeResultsBtn");
   const elInstruction = $("instructionLine");
-  const elStatus = $("statusLine"); // optional but in your latest html
+  const elStatus = $("statusLine");
 
   // Optional
   const elVendor = $("vendorLink");
@@ -34,22 +29,16 @@
   const KEY = "SCZN3_SEC_PAYLOAD_V1";
 
   let objectUrl = null;
+  let aim = null;
+  let hits = [];
 
-  // normalized (0..1) coords relative to displayed image
-  let aim = null;     // {x01,y01}
-  let hits = [];      // [{x01,y01},...]
-
-  // --- Ghost tap prevention
-  // If a browser fires both pointer + click, we ignore follow-ups inside a short window.
+  // Ghost tap prevention (still fine to keep)
   let lastPointerTapAt = 0;
   const GHOST_WINDOW_MS = 650;
 
+  function setText(el, txt) { if (el) el.textContent = txt; }
   function now() { return Date.now(); }
   function clamp01(v) { return Math.max(0, Math.min(1, v)); }
-
-  function setText(el, txt) {
-    if (el) el.textContent = txt;
-  }
 
   function setTapCount() {
     if (elTapCount) elTapCount.textContent = String(hits.length);
@@ -75,7 +64,6 @@
 
   function addDot(x01, y01, kind) {
     if (!elDots) return;
-
     const d = document.createElement("div");
     d.className = "tapDot " + (kind === "aim" ? "tapDotAim" : "tapDotHit");
     d.style.left = (x01 * 100) + "%";
@@ -95,7 +83,6 @@
     return btoa(unescape(encodeURIComponent(json)));
   }
 
-  // --- Simple placeholder correction (keeps your “direction always right” logic intact)
   function computeCorrection() {
     if (!aim || hits.length < 1) return null;
 
@@ -103,12 +90,10 @@
     avg.x /= hits.length;
     avg.y /= hits.length;
 
-    // aim - POI (move POI to aim)
     const dx = aim.x01 - avg.x; // + => RIGHT
     const dy = aim.y01 - avg.y; // + => DOWN (screen space)
 
-    // Demo scale placeholder: full image width = 10 inches
-    const inchesPerFullWidth = 10;
+    const inchesPerFullWidth = 10; // placeholder
     const inchesX = dx * inchesPerFullWidth;
     const inchesY = dy * inchesPerFullWidth;
 
@@ -131,16 +116,13 @@
 
   function goToSEC(payload) {
     try { localStorage.setItem(KEY, JSON.stringify(payload)); } catch {}
-
     const b64 = b64FromObj(payload);
     location.href = `./sec.html?payload=${encodeURIComponent(b64)}&fresh=${Date.now()}`;
   }
 
   function handleTap(ev) {
-    // Must have image loaded
     if (!elImg?.src) return;
 
-    // Ghost protection: ignore duplicate triggers within window
     const t = now();
     if (t - lastPointerTapAt < GHOST_WINDOW_MS) return;
     lastPointerTapAt = t;
@@ -160,44 +142,67 @@
     setInstructionMode();
   }
 
-  // ---- EVENTS
+  // ---- IMAGE LOAD PIPELINE (THE FIX)
+  function loadSelectedFile(file) {
+    if (!file) return;
 
-  // File input — keep iOS-friendly
+    // clear tap state, keep UI ready
+    clearDots();
+
+    // cleanup old object URL
+    if (objectUrl) {
+      try { URL.revokeObjectURL(objectUrl); } catch {}
+      objectUrl = null;
+    }
+
+    // set status now
+    setText(elStatus, "Loading photo…");
+
+    // create URL + attach reliable handlers
+    objectUrl = URL.createObjectURL(file);
+
+    // IMPORTANT: assign handlers BEFORE setting src
+    elImg.onload = () => {
+      setText(elStatus, "Photo loaded. Tap Aim Point.");
+      // NOW it is safe to clear the input so user can re-pick same image
+      try { elFile.value = ""; } catch {}
+    };
+
+    elImg.onerror = () => {
+      setText(elStatus, "Photo failed to load. Try again.");
+      // keep input (don’t clear) so user can retry
+    };
+
+    elImg.src = objectUrl;
+  }
+
+  // ---- EVENTS
   if (elFile) {
     elFile.addEventListener("change", () => {
       const f = elFile.files && elFile.files[0];
       if (!f) return;
-
-      clearDots();
-
-      if (objectUrl) URL.revokeObjectURL(objectUrl);
-      objectUrl = URL.createObjectURL(f);
-      elImg.src = objectUrl;
-
-      // reset input so same photo can be re-picked
-      elFile.value = "";
+      loadSelectedFile(f);
     });
   }
 
-  // Tap layer — pointer events ONLY (prevents 2-count issue)
-  // Make sure dotsLayer or wrap is actually the tap surface.
+  // Tap surface — use wrapper so image scroll/drag doesn’t steal taps
   const tapSurface = elWrap || elImg;
 
   if (tapSurface) {
-    // Stop browser gestures from turning into “click” after touch
     tapSurface.style.touchAction = "manipulation";
 
     tapSurface.addEventListener("pointerdown", (ev) => {
-      // Only primary touch/pen/mouse
       if (ev.isPrimary === false) return;
-      // Avoid right-click
       if (ev.pointerType === "mouse" && ev.button !== 0) return;
+
+      // Only allow taps AFTER image has loaded (prevents “half state” taps)
+      if (!elImg?.src) return;
 
       ev.preventDefault();
       handleTap(ev);
     }, { passive: false });
 
-    // Extra safety: if some browser still fires click, block it
+    // block ghost click if it happens
     tapSurface.addEventListener("click", (ev) => {
       const t = now();
       if (t - lastPointerTapAt < GHOST_WINDOW_MS) {
@@ -208,7 +213,10 @@
     }, true);
   }
 
-  if (elClear) elClear.addEventListener("click", clearDots);
+  if (elClear) elClear.addEventListener("click", () => {
+    clearDots();
+    setText(elStatus, "Cleared. Tap Aim Point.");
+  });
 
   if (elSee) {
     elSee.addEventListener("click", () => {
@@ -236,4 +244,5 @@
 
   // ---- BOOT
   clearDots();
+  setText(elStatus, "Add a photo to begin.");
 })();
