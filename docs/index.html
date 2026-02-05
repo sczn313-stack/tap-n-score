@@ -1,3 +1,4 @@
+<!-- index.html (FULL REPLACEMENT) — “800lb gorilla” button + cleaner wording + tighter phone layout -->
 <!doctype html>
 <html lang="en">
 <head>
@@ -13,7 +14,39 @@
 
   <title>Tap-n-Score™</title>
 
-  <link rel="stylesheet" href="/tap-n-score/styles.css?v=22206d1" />
+  <!-- App CSS -->
+  <link rel="stylesheet" href="/tap-n-score/styles.css?v=22206e1" />
+
+  <!-- Small page-level tweaks (safe; doesn't fight your main CSS) -->
+  <style>
+    /* Make the photo button the hero */
+    .btnBig{
+      width: 100%;
+      min-height: 58px;
+      font-size: 18px;
+      font-weight: 850;
+      letter-spacing: .2px;
+      border-radius: 18px;
+    }
+
+    /* Keep target preview slimmer on phone (more margin, less “edge-to-edge”) */
+    .targetWrap{
+      width: 100%;
+      max-width: 560px;
+      margin: 12px auto 0;
+    }
+
+    /* Put sticky bar a bit higher so it feels “near” the photo */
+    .stickyBar{
+      padding-bottom: calc(10px + env(safe-area-inset-bottom));
+    }
+
+    /* Nudge show-results to feel closer to the photo area on small screens */
+    @media (max-width: 520px){
+      .card{ padding-bottom: 14px; }
+      .rowTight{ margin-top: 10px; }
+    }
+  </style>
 </head>
 
 <body>
@@ -21,7 +54,7 @@
 
     <header class="topBar">
       <div class="topTitle">TAP-N-SCORE™</div>
-      <div id="statusLine" class="topSub">Add a picture to begin.</div>
+      <div id="statusLine" class="topSub">Add a target photo to begin.</div>
     </header>
 
     <section class="card">
@@ -31,23 +64,22 @@
       <button id="photoBtn" class="btnBig" type="button">Add Target Picture</button>
 
       <!-- hidden input (button triggers this) -->
+      <!-- NOTE: removing capture=environment here helps iOS offer Camera OR Library more reliably -->
       <input
         id="photoInput"
         type="file"
         accept="image/*"
-        inputmode="none"
-        capture="environment"
         style="display:none"
       />
 
-      <div id="targetWrap" class="targetWrap" aria-label="Photo area">
-        <img id="targetImg" alt="Photo preview" />
+      <div id="targetWrap" class="targetWrap" aria-label="Target photo area">
+        <img id="targetImg" alt="Target preview" />
         <div id="dotsLayer" class="dotsLayer" aria-hidden="true"></div>
       </div>
 
       <div class="row rowTight">
         <div class="pill">
-          Taps: <span id="tapCount">0</span>
+          Hits: <span id="tapCount">0</span>
         </div>
 
         <button id="clearTapsBtn" class="btnSecondary" type="button">
@@ -55,7 +87,7 @@
         </button>
       </div>
 
-      <!-- Keep this empty on load; JS can fill when needed -->
+      <!-- JS keeps this mostly empty (no repetitive “target” wording) -->
       <p id="instructionLine" class="hint"></p>
     </section>
 
@@ -100,6 +132,6 @@
 
   </main>
 
-  <script src="/tap-n-score/index.js?v=22206d1"></script>
+  <script src="/tap-n-score/index.js?v=22206e1"></script>
 </body>
 </html>
