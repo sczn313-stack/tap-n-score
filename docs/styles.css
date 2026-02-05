@@ -1,262 +1,311 @@
 /* ============================================================
-   /tap-n-score/styles.css (FULL REPLACEMENT) — Baseline 22206 UI
+   styles.css (FULL REPLACEMENT) — Tap-n-Score™ (Mobile-first)
    Goals:
-   - iPhone: target fully visible (better fit)
-   - Keep margins so scrolling is possible
-   - Keep buttons near the target
-   - Sticky results bar sits above iPhone home indicator
+   - Better iPhone layout (more margin, less cramped)
+   - Target image fully visible (no half-crop feeling)
+   - Easier scrolling around photo without accidental taps
+   - Sticky results bar stays usable + safe-area aware
 ============================================================ */
 
 :root{
-  --bg:#06070a;
+  --bg0:#05060a;
+  --bg1:#0a0c12;
   --card: rgba(255,255,255,.06);
-  --stroke: rgba(255,255,255,.10);
+  --stroke: rgba(255,255,255,.12);
   --text:#eef2f7;
   --muted: rgba(238,242,247,.65);
+  --muted2: rgba(238,242,247,.45);
+  --shadow: 0 18px 55px rgba(0,0,0,.55);
+  --radius: 20px;
 
-  --red:#d64040;
-  --white:#eef2f7;
-  --blue:#2f66ff;
-  --green:#67f3a4;
+  --btn: rgba(255,255,255,.08);
+  --btnHover: rgba(255,255,255,.12);
+  --btnStroke: rgba(255,255,255,.14);
 
-  --shadow: 0 18px 45px rgba(0,0,0,.55);
+  --primary: rgba(47,102,255,.22);
+  --primaryStroke: rgba(47,102,255,.45);
 
-  --radius: 18px;
-
-  /* iOS safe areas */
-  --safeTop: env(safe-area-inset-top);
-  --safeBottom: env(safe-area-inset-bottom);
+  --danger: rgba(214,64,64,.16);
+  --dangerStroke: rgba(214,64,64,.45);
 }
 
 *{ box-sizing:border-box; }
 html,body{ height:100%; }
+
 body{
   margin:0;
-  font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial;
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
   color: var(--text);
-  background: var(--bg);
+  background:
+    radial-gradient(900px 600px at 15% 10%, rgba(47,102,255,.14), transparent 60%),
+    radial-gradient(800px 500px at 85% 0%, rgba(214,64,64,.10), transparent 60%),
+    radial-gradient(900px 700px at 50% 100%, rgba(103,243,164,.08), transparent 65%),
+    linear-gradient(180deg, var(--bg0), var(--bg1));
 }
 
-/* Main page */
+/* Main page shell */
 .page{
-  min-height: 100%;
-  padding:
-    calc(12px + var(--safeTop))
-    12px
-    calc(90px + var(--safeBottom)) /* leaves room for sticky bar */
-    12px;
-  max-width: 720px;
+  max-width: 760px;           /* slimmer = more margin */
   margin: 0 auto;
+  padding: 14px 12px 96px;    /* bottom padding so sticky bar doesn't cover content */
 }
 
-/* Header */
+/* Top bar */
 .topBar{
-  margin-bottom: 10px;
+  padding: 12px 12px 10px;
+  border: 1px solid rgba(255,255,255,.10);
+  border-radius: var(--radius);
+  background: rgba(255,255,255,.04);
+  box-shadow: var(--shadow);
+  margin-bottom: 12px;
 }
+
 .topTitle{
   font-weight: 900;
-  letter-spacing: .06em;
-  font-size: 16px;
+  letter-spacing: .10em;
+  font-size: 14px;
 }
+
 .topSub{
   margin-top: 6px;
   color: var(--muted);
   font-size: 13px;
+  line-height: 1.25;
 }
 
 /* Cards */
 .card{
   border: 1px solid var(--stroke);
-  background: var(--card);
   border-radius: var(--radius);
+  background: var(--card);
   box-shadow: var(--shadow);
-  overflow: hidden;
+  padding: 12px;
   margin-bottom: 12px;
 }
+
 .cardTitle{
-  padding: 12px 12px 10px;
-  border-bottom: 1px solid rgba(255,255,255,.07);
-  font-weight: 900;
-  letter-spacing: .10em;
-  font-size: 12px;
   color: var(--muted);
+  font-weight: 900;
+  letter-spacing: .14em;
+  font-size: 12px;
+  margin-bottom: 10px;
 }
 
-/* Big photo button (800lb gorilla) */
+/* Big 800lb gorilla button */
 .btnBig{
-  width: calc(100% - 24px);
-  margin: 12px;
-  padding: 16px 14px;
-  border-radius: 16px;
-  border: 1px solid rgba(255,255,255,.14);
-  background: rgba(255,255,255,.08);
+  width:100%;
+  appearance:none;
+  border: 1px solid rgba(255,255,255,.16);
+  background: rgba(255,255,255,.09);
   color: var(--text);
-  font-weight: 900;
+  border-radius: 18px;
+  padding: 16px 14px;
   font-size: 18px;
+  font-weight: 950;
   letter-spacing: .02em;
-  cursor: pointer;
+  cursor:pointer;
+  user-select:none;
+  -webkit-tap-highlight-color: transparent;
 }
 .btnBig:active{ transform: translateY(1px); }
+.btnBig:hover{ background: rgba(255,255,255,.12); }
 
-/* Target area */
+/* Target photo area
+   Key: allow scroll gestures without feeling "trapped"
+   We keep image fully visible and give the user breathing room. */
 .targetWrap{
   position: relative;
-  width: 100%;
-  background: rgba(0,0,0,.20);
-  border-top: 1px solid rgba(255,255,255,.06);
-  border-bottom: 1px solid rgba(255,255,255,.06);
-
-  /* iPhone fit: cap height so whole target is visible more often */
-  max-height: min(58vh, 520px);
+  margin-top: 12px;
+  border-radius: 18px;
   overflow: hidden;
+  border: 1px solid rgba(255,255,255,.10);
+  background: rgba(0,0,0,.22);
 
-  /* gives a little margin inside */
-  padding: 8px 10px 10px;
+  /* Big change: make it feel like it fits on iPhone */
+  max-height: 62vh;
 }
 
-/* Make image slimmer (more outer margin on small screens) */
+/* Image always fits width */
 #targetImg{
-  display:block;
-  width: 92%;
+  width: 100%;
   height: auto;
-  margin: 0 auto;
-  border-radius: 14px;
+  display:block;
   user-select:none;
   -webkit-user-drag:none;
 }
 
-/* Tap overlay matches the image area */
-.dotsLayer,
-#dotsLayer{
+/* Tap dots layer overlays the image */
+.dotsLayer{
   position:absolute;
   left:0; top:0; right:0; bottom:0;
   pointer-events:none;
 }
 
-/* Row controls under the target */
+/* Default dot look; colors can be set inline by JS */
+.tapDot{
+  position:absolute;
+  width: 18px;
+  height: 18px;
+  margin-left: -9px;
+  margin-top: -9px;
+  border-radius: 999px;
+  border: 2px solid rgba(0,0,0,.55);
+  box-shadow: 0 10px 28px rgba(0,0,0,.55);
+}
+
+/* Rows / pills / buttons */
 .row{
   display:flex;
-  gap: 10px;
+  gap:10px;
   align-items:center;
+  justify-content:space-between;
   flex-wrap:wrap;
-  padding: 10px 12px 12px;
+  margin-top: 12px;
 }
 
-.rowTight{
-  padding-top: 8px;
-}
+.rowTight{ margin-top: 10px; }
 
 .pill{
-  border: 1px solid rgba(255,255,255,.12);
-  background: rgba(0,0,0,.18);
-  color: var(--muted);
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  padding: 10px 12px;
   border-radius: 999px;
-  padding: 8px 12px;
+  border: 1px solid rgba(255,255,255,.12);
+  background: rgba(255,255,255,.04);
+  color: var(--muted);
   font-size: 13px;
+  font-weight: 800;
 }
-.pill span{ color: var(--text); font-weight: 800; }
 
-/* Buttons */
 .btnPrimary,
 .btnSecondary{
   appearance:none;
-  border-radius: 14px;
-  padding: 11px 14px;
+  border-radius: 16px;
+  padding: 12px 14px;
   font-weight: 900;
-  border: 1px solid rgba(255,255,255,.14);
-  background: rgba(255,255,255,.08);
-  color: var(--text);
+  font-size: 14px;
+  letter-spacing: .02em;
   cursor:pointer;
+  user-select:none;
+  -webkit-tap-highlight-color: transparent;
+  border: 1px solid var(--btnStroke);
+  background: var(--btn);
+  color: var(--text);
 }
-.btnPrimary{
-  border-color: rgba(47,102,255,.45);
-  background: rgba(47,102,255,.18);
-}
-.btnSecondary{
-  border-color: rgba(214,64,64,.40);
-  background: rgba(214,64,64,.14);
-}
+.btnPrimary:hover,
+.btnSecondary:hover{ background: var(--btnHover); }
 .btnPrimary:active,
 .btnSecondary:active{ transform: translateY(1px); }
 
-/* Hint line */
+.btnPrimary{
+  border-color: var(--primaryStroke);
+  background: var(--primary);
+}
+
+.btnSecondary{
+  border-color: var(--dangerStroke);
+  background: var(--danger);
+}
+
+/* Hint */
 .hint{
-  margin: 0;
-  padding: 0 12px 12px;
+  margin: 10px 2px 0;
   color: var(--muted);
   font-size: 13px;
   line-height: 1.35;
+  min-height: 18px; /* prevents layout jump */
 }
 
 /* Settings fields */
 .field{
-  flex: 1;
-  min-width: 150px;
   display:flex;
   flex-direction:column;
-  gap: 6px;
-}
-.fieldLabel{
-  color: rgba(238,242,247,.55);
-  font-size: 12px;
-}
-.select{
-  width:100%;
-  border-radius: 14px;
-  border: 1px solid rgba(255,255,255,.12);
-  background: rgba(0,0,0,.20);
-  color: var(--text);
-  padding: 12px 12px;
-  font-size: 14px;
+  gap:6px;
+  flex:1;
+  min-width: 160px;
 }
 
-/* Vendor link */
+.fieldLabel{
+  color: var(--muted2);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: .08em;
+}
+
+.select{
+  width:100%;
+  padding: 12px 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,.10);
+  background: rgba(0,0,0,.22);
+  color: var(--text);
+  font-weight: 800;
+}
+
 .vendorLink{
   display:none;
-  padding: 10px 12px 12px;
+  margin-top: 10px;
+  padding: 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,.10);
+  background: rgba(255,255,255,.04);
   color: #9bb7ff;
   text-decoration:none;
+  text-align:center;
+  font-weight: 900;
 }
 
 /* Footer */
 .footer{
   text-align:center;
-  color: rgba(238,242,247,.30);
+  margin-top: 4px;
   padding: 8px 0 0;
+}
+.footerMark{
+  color: rgba(238,242,247,.28);
   letter-spacing: .22em;
   font-weight: 900;
-  text-transform: uppercase;
   font-size: 12px;
+  text-transform: uppercase;
 }
-.footerMark{ opacity:.9; }
 
-/* Sticky results bar (magic) */
+/* Sticky results bar */
 .stickyBar{
   position: fixed;
-  left: 12px;
-  right: 12px;
-  bottom: calc(12px + var(--safeBottom));
-  max-width: 720px;
-  margin: 0 auto;
-  border-radius: 18px;
-  background: rgba(0,0,0,.62);
-  border: 1px solid rgba(255,255,255,.14);
-  box-shadow: 0 18px 45px rgba(0,0,0,.55);
-  padding: 10px;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 10px 12px calc(10px + env(safe-area-inset-bottom));
+  background: rgba(6,7,10,.88);
   backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+  border-top: 1px solid rgba(255,255,255,.10);
+  display:flex;
+  justify-content:center;
+  z-index: 9999;
 }
-.stickyHidden{ display:none; }
+
+.stickyHidden{
+  display:none;
+}
 
 .stickyBtn{
-  width:100%;
-  border-radius: 16px;
+  width: min(760px, 100%);
+  appearance:none;
+  border-radius: 18px;
   padding: 14px 14px;
+  border: 1px solid var(--primaryStroke);
+  background: var(--primary);
+  color: var(--text);
   font-weight: 950;
   font-size: 16px;
-  border: 1px solid rgba(103,243,164,.40);
-  background: rgba(103,243,164,.14);
-  color: var(--text);
+  letter-spacing: .02em;
   cursor:pointer;
 }
 .stickyBtn:active{ transform: translateY(1px); }
+
+/* Desktop breathing room */
+@media (min-width: 900px){
+  .page{ padding: 18px 14px 96px; }
+  .targetWrap{ max-height: 560px; }
+}
