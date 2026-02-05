@@ -1,4 +1,4 @@
-<!-- tap-n-score/sec.html (FULL REPLACEMENT) — OPTION A (render + generate SEC PNG here) -->
+<!-- tap-n-score/sec.html (FULL REPLACEMENT) — SEC (RW&B) -->
 <!doctype html>
 <html lang="en">
 <head>
@@ -12,176 +12,62 @@
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
 
-  <title>SEC — Tap-n-Score™</title>
+  <title>Shooter Experience Card (SEC)</title>
 
-  <link rel="stylesheet" href="/tap-n-score/styles.css?v=SEC-A1" />
-
-  <style>
-    /* Keep it consistent with your dark glass style, but SEC-specific layout */
-    .secWrap{
-      width: min(980px, 96vw);
-      margin: 0 auto;
-      padding: 18px 12px 40px;
-      display: flex;
-      flex-direction: column;
-      gap: 14px;
-    }
-
-    .heroBrand{
-      display:flex;
-      align-items:flex-end;
-      justify-content:space-between;
-      gap:12px;
-      padding: 8px 4px 2px;
-    }
-    .heroLeft{
-      display:flex;
-      flex-direction:column;
-      gap:4px;
-    }
-    .heroTitle{
-      font-weight: 900;
-      letter-spacing: .06em;
-      font-size: clamp(26px, 5vw, 44px);
-      line-height: 1.02;
-    }
-    .heroSub{
-      font-size: clamp(14px, 2.2vw, 18px);
-      color: rgba(238,242,247,.72);
-      font-weight: 800;
-      letter-spacing: .02em;
-    }
-
-    .heroRight{
-      display:flex;
-      flex-direction:column;
-      align-items:flex-end;
-      gap:6px;
-      min-width: 180px;
-    }
-
-    .sessionLine{
-      font-size: 12px;
-      color: rgba(238,242,247,.55);
-      letter-spacing: .04em;
-      font-weight: 800;
-      text-transform: uppercase;
-    }
-
-    .secCard{
-      background: rgba(255,255,255,.04);
-      border: 1px solid rgba(255,255,255,.10);
-      border-radius: 18px;
-      padding: 14px;
-      box-shadow: 0 18px 60px rgba(0,0,0,.35);
-    }
-
-    .secCanvasWrap{
-      position: relative;
-      width: 100%;
-      border-radius: 16px;
-      overflow: hidden;
-      border: 1px solid rgba(255,255,255,.10);
-      background: rgba(0,0,0,.25);
-    }
-
-    canvas#secCanvas{
-      display:block;
-      width:100%;
-      height:auto;
-    }
-
-    .rowBtns{
-      display:flex;
-      gap:12px;
-      flex-wrap:wrap;
-    }
-
-    .btnWide{
-      flex:1;
-      min-width: 220px;
-      height: 54px;
-      border-radius: 16px;
-      border: 1px solid rgba(255,255,255,.14);
-      background: rgba(255,255,255,.08);
-      color: #eef2f7;
-      font-weight: 900;
-      font-size: 16px;
-      letter-spacing: .02em;
-      cursor:pointer;
-    }
-    .btnWide:active{ transform: translateY(1px); }
-
-    .btnPrimaryWide{
-      flex: 2;
-      min-width: 260px;
-      height: 58px;
-      border-radius: 18px;
-      border: 1px solid rgba(255,255,255,.18);
-      background: rgba(103,243,164,.15);
-      color: #eafff2;
-      font-weight: 1000;
-      font-size: 16px;
-      letter-spacing: .03em;
-      cursor:pointer;
-    }
-    .btnPrimaryWide:active{ transform: translateY(1px); }
-
-    .note{
-      color: rgba(238,242,247,.68);
-      font-size: 13px;
-      line-height: 1.4;
-      margin-top: 8px;
-      font-weight: 700;
-    }
-
-    .err{
-      color: rgba(255,210,210,.92);
-      font-weight: 900;
-      letter-spacing: .02em;
-      margin: 8px 0 0;
-    }
-  </style>
+  <!-- Keep shared app styling -->
+  <link rel="stylesheet" href="/tap-n-score/styles.css?v=SEC-RWB1" />
+  <!-- SEC-specific styling -->
+  <link rel="stylesheet" href="/tap-n-score/sec.css?v=SEC-RWB1" />
 </head>
 
 <body>
   <main class="secWrap">
 
-    <div class="heroBrand">
-      <div class="heroLeft">
-        <div class="heroTitle">TAP-N-SCORE™</div>
-        <div class="heroSub">After-Shot Intelligence</div>
+    <!-- BRAND (NO TAP-N-SCORE HERE) -->
+    <header class="secHeader">
+      <div class="secBrandLine">
+        <div class="secBrandTitle" aria-label="Shooter Experience Card">
+          <span class="r">Shooter</span>
+          <span class="w">Experience</span>
+          <span class="b">Card</span>
+        </div>
+        <div class="secBrandSub">
+          <span class="secAcr" aria-label="SEC acronym">
+            <span class="r">S</span><span class="w">E</span><span class="b">C</span>
+          </span>
+        </div>
       </div>
 
-      <div class="heroRight">
-        <div class="sessionLine" id="sessionLine">Session: —</div>
+      <div class="secMetaLine">
+        <div id="sessionLine" class="sessionLine">Session: —</div>
       </div>
-    </div>
+    </header>
 
+    <!-- CANVAS CARD -->
     <section class="secCard">
       <div class="secCanvasWrap">
         <canvas id="secCanvas" width="1200" height="675"></canvas>
       </div>
 
-      <div id="errLine" class="err" style="display:none;"></div>
+      <div id="errLine" class="secErr" style="display:none;"></div>
 
-      <div class="rowBtns" style="margin-top:14px;">
-        <button id="downloadBtn" class="btnPrimaryWide" type="button">Download SEC PNG</button>
-        <button id="scoreAnotherBtn" class="btnWide" type="button">Score another</button>
-        <button id="backBtn" class="btnWide" type="button">Back to setup</button>
+      <div class="secActions">
+        <button id="downloadBtn" class="secBtn secBtnPrimary" type="button">Download SEC PNG</button>
+        <button id="scoreAnotherBtn" class="secBtn" type="button">Score another</button>
+        <button id="backBtn" class="secBtn" type="button">Back to setup</button>
       </div>
 
-      <div class="note">
-        Tip (iPhone/iPad): if download doesn’t start, press-and-hold the image in the next screen and choose <b>Save to Photos</b>.
+      <div class="secTip">
+        Tip (iPhone/iPad): If download doesn’t start, the next screen will open the PNG — press-and-hold and choose <b>Save to Photos</b>.
       </div>
     </section>
 
-    <footer class="footer" style="margin-top:8px;">
+    <footer class="footer" style="margin-top:10px;">
       <span class="footerMark">SCZN3</span>
     </footer>
 
   </main>
 
-  <script src="/tap-n-score/sec.js?v=SEC-A1"></script>
+  <script src="/tap-n-score/sec.js?v=SEC-RWB1"></script>
 </body>
 </html>
