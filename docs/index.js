@@ -1,20 +1,5 @@
 /* ============================================================
-   tap-n-score/index.js (FULL REPLACEMENT) — BASELINE 22206d4 (PATCHED)
-   Fix / Adds:
-   - Stores selected target photo for SEC as:
-       SCZN3_TARGET_IMG_DATAURL_V1   (data:image/...)
-       SCZN3_TARGET_IMG_BLOBURL_V1   (blob:...)
-   - Keeps:
-     - Distance clicker (+/-)
-     - One big photo button
-     - iOS double-tap prevention (touch+click)
-     - Aim Point green, Hits bright green
-     - Sticky results appears after pause
-     - Real score computed from cluster offset distance (inches) placeholder mapping
-
-   PATCHES (THIS VERSION):
-   - Dot size HARD-LOCKED to 10px (AIM + HIT)
-   - iOS layout force on image load to prevent “phantom/offset” tap mapping
+   tap-n-score/index.js (FULL REPLACEMENT) — BASELINE 22206d4 + HIT LIST IN PAYLOAD
 ============================================================ */
 
 (() => {
@@ -77,7 +62,6 @@
     let n = Math.round(Number(v));
     if (!Number.isFinite(n)) n = 100;
     n = Math.max(5, Math.min(1000, n));
-
     if (elDistance) elDistance.value = String(n);
     if (elDistDisplay) elDistDisplay.textContent = String(n);
   }
@@ -136,39 +120,23 @@
     setText(elStatus, elImg?.src ? "Tap Aim Point." : "Add a photo to begin.");
   }
 
-  // ------------------------------------------------------------
-  // DOTS (PATCHED)
-  // - HARD LOCK size to 10px for AIM + HIT
-  // - Absolutely positioned so CSS cannot balloon them
-  // ------------------------------------------------------------
   function addDot(x01, y01, kind) {
     if (!elDots) return;
 
     const d = document.createElement("div");
     d.className = "tapDot";
-
-    // Position (percentage)
     d.style.left = (x01 * 100) + "%";
     d.style.top = (y01 * 100) + "%";
 
-    // HARD SIZE LOCK (10px)
-    d.style.width = "10px";
-    d.style.height = "10px";
-    d.style.borderRadius = "50%";
-    d.style.position = "absolute";
-    d.style.transform = "translate(-50%, -50%)";
-    d.style.pointerEvents = "none";
-
-    // Color by type
     if (kind === "aim") {
-      d.style.background = "#67f3a4"; // AIM green
+      d.style.background = "#67f3a4";
+      d.style.border = "2px solid rgba(0,0,0,.55)";
+      d.style.boxShadow = "0 10px 28px rgba(0,0,0,.55)";
     } else {
-      d.style.background = "#b7ff3c"; // HIT bright green
+      d.style.background = "#b7ff3c";
+      d.style.border = "2px solid rgba(0,0,0,.55)";
+      d.style.boxShadow = "0 10px 28px rgba(0,0,0,.55)";
     }
-
-    // Style
-    d.style.border = "2px solid rgba(0,0,0,.6)";
-    d.style.boxShadow = "0 6px 18px rgba(0,0,0,.55)";
 
     elDots.appendChild(d);
   }
@@ -185,14 +153,9 @@
     return btoa(unescape(encodeURIComponent(json)));
   }
 
-  // ------------------------------------------------------------
-  // TARGET PHOTO STORAGE (SEC handoff)
-  // ------------------------------------------------------------
   async function storeTargetPhotoForSEC(file, blobUrl) {
-    // store blob URL (fast)
     try { localStorage.setItem(KEY_TARGET_IMG_BLOB, blobUrl); } catch {}
 
-    // store data URL (most reliable for SEC canvas)
     try {
       const dataUrl = await new Promise((resolve, reject) => {
         const r = new FileReader();
@@ -204,16 +167,10 @@
       if (dataUrl && dataUrl.startsWith("data:image/")) {
         localStorage.setItem(KEY_TARGET_IMG_DATA, dataUrl);
       }
-    } catch {
-      // If storage fails, SEC can still try blob URL
-    }
+    } catch {}
   }
 
-  // ------------------------------------------------------------
-  // SCORING (REAL) — inches-based using current placeholder scale
-  // Placeholder scale: full image width = 10 inches
-  // Later: replace inchesPerFullWidth with real inches mapping.
-  // ------------------------------------------------------------
+  // Placeholder scale
   const inchesPerFullWidth = 10;
 
   function scoreFromRadiusInches(rIn) {
@@ -232,26 +189,21 @@
   function computeCorrectionAndScore() {
     if (!aim || hits.length < 1) return null;
 
-    // Average POI
     const avg = hits.reduce((acc, p) => ({ x: acc.x + p.x01, y: acc.y + p.y01 }), { x: 0, y: 0 });
     avg.x /= hits.length;
     avg.y /= hits.length;
 
-    // bull/aim - POI (move POI to aim)
-    const dx = aim.x01 - avg.x; // + => RIGHT
-    const dy = aim.y01 - avg.y; // + => DOWN (screen space)
+    const dx = aim.x01 - avg.x;
+    const dy = aim.y01 - avg.y;
 
-    // Convert to inches (placeholder width = 10 inches)
     const inchesX = dx * inchesPerFullWidth;
     const inchesY = dy * inchesPerFullWidth;
 
-    // Radius in inches (distance from aim to average POI)
     const rIn = Math.sqrt(inchesX * inchesX + inchesY * inchesY);
 
     const dist = getDistance();
     const moaPerClick = Number(elMoaClick?.value ?? 0.25);
 
-    // True MOA inches at distance
     const inchesPerMoa = (dist / 100) * 1.047;
 
     const moaX = inchesX / inchesPerMoa;
@@ -302,6 +254,7 @@
       sourceImg: "",
       debug: {
         aim,
+        hits,                 // ✅ THIS is what SEC needs to draw all hit dots
         avgPoi: out.avgPoi,
         distanceYds: getDistance(),
         inches: out.inches
@@ -311,11 +264,9 @@
     goToSEC(payload);
   }
 
-  // ---- Distance clicker (+/-)
   if (elDistUp) elDistUp.addEventListener("click", () => setDistance(getDistance() + 5));
   if (elDistDown) elDistDown.addEventListener("click", () => setDistance(getDistance() - 5));
 
-  // ---- Photo picker (800lb gorilla)
   if (elPhotoBtn && elFile) {
     elPhotoBtn.addEventListener("click", () => elFile.click());
   }
@@ -330,13 +281,9 @@
       if (objectUrl) URL.revokeObjectURL(objectUrl);
       objectUrl = URL.createObjectURL(f);
 
-      // STORE PHOTO FOR SEC (KEY FIX)
       await storeTargetPhotoForSEC(f, objectUrl);
 
       elImg.onload = () => {
-        // PATCH: force layout before tap math (prevents iOS phantom offset)
-        elImg.getBoundingClientRect();
-
         setText(elStatus, "Tap Aim Point.");
         setInstructionForState();
       };
@@ -348,12 +295,10 @@
 
       elImg.src = objectUrl;
 
-      // allow selecting same file again
       elFile.value = "";
     });
   }
 
-  // ---- Tap logic (touch-first, click suppressed)
   function acceptTap(clientX, clientY) {
     if (!elImg?.src) return;
 
@@ -392,7 +337,6 @@
       const dx = Math.abs(t.clientX - touchStart.x);
       const dy = Math.abs(t.clientY - touchStart.y);
 
-      // scroll => ignore
       if (dx > 10 || dy > 10) {
         touchStart = null;
         return;
@@ -405,12 +349,11 @@
 
     elWrap.addEventListener("click", (e) => {
       const now = Date.now();
-      if (now - lastTouchTapAt < 800) return; // kill ghost click
+      if (now - lastTouchTapAt < 800) return;
       acceptTap(e.clientX, e.clientY);
     }, { passive: true });
   }
 
-  // ---- Buttons
   if (elClear) {
     elClear.addEventListener("click", () => {
       resetAll();
@@ -420,7 +363,6 @@
 
   if (elStickyBtn) elStickyBtn.addEventListener("click", onShowResults);
 
-  // ---- Boot
   setDistance(100);
   resetAll();
 })();
