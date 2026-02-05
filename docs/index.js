@@ -1,15 +1,16 @@
 /* ============================================================
-   index.js (FULL REPLACEMENT) — BASELINE 22206d4
-   Fixes:
-   - iOS-safe photo load using FileReader (dataURL), not createObjectURL
-   - File input NOT display:none (handled in HTML)
-   Keeps:
-   - 800lb gorilla button
-   - Distance clicker (+/-)
-   - Aim point green, hits bright green
-   - Sticky results after pause
-   - Ghost click prevention
-   - Simple real-ish score from radius (placeholder inches scale)
+   tap-n-score/index.js (FULL REPLACEMENT) — BASELINE 22206d4
+   Fix / Adds:
+   - Stores selected target photo for SEC as:
+       SCZN3_TARGET_IMG_DATAURL_V1   (data:image/...)
+       SCZN3_TARGET_IMG_BLOBURL_V1   (blob:...)
+   - Keeps:
+     - Distance clicker (+/-)
+     - One big photo button
+     - iOS double-tap prevention (touch+click)
+     - Aim Point green, Hits bright green
+     - Sticky results appears after pause
+     - Real score computed from cluster offset distance (inches) placeholder mapping
 ============================================================ */
 
 (() => {
@@ -30,15 +31,25 @@
   const elStickyBar = $("stickyBar");
   const elStickyBtn = $("stickyResultsBtn");
 
-  // Settings / links
+  // Settings / links (optional)
   const elVendor = $("vendorLink");
-  const elDistance = $("distanceYds");     // hidden canonical
-  const elDistDisplay = $("distDisplay");  // visible
+  const elDistance = $("distanceYds");     // hidden input (canonical)
+  const elDistDisplay = $("distDisplay");  // visible number
   const elDistUp = $("distUp");
   const elDistDown = $("distDown");
   const elMoaClick = $("moaPerClick");
 
-  const KEY = "SCZN3_SEC_PAYLOAD_V1";
+  // ---- Storage keys
+  const KEY_PAYLOAD = "SCZN3_SEC_PAYLOAD_V1";
+
+  // Target photo handoff keys for SEC
+  const KEY_TARGET_IMG_DATA = "SCZN3_TARGET_IMG_DATAURL_V1"; // data:image/...
+  const KEY_TARGET_IMG_BLOB = "SCZN3_TARGET_IMG_BLOBURL_V1"; // blob:...
+
+  // (Optional) carry vendor link
+  const KEY_VENDOR_URL = "SCZN3_VENDOR_URL_V1";
+
+  let objectUrl = null;
 
   // Tap state (normalized 0..1)
   let aim = null;     // {x01,y01}
@@ -93,9 +104,21 @@
   function setInstructionForState() {
     if (!elInstruction) return;
 
-    if (!elImg?.src) { setText(elInstruction, ""); return; }
-    if (!aim) { setText(elInstruction, "Tap Aim Point."); return; }
-    if (hits.length < 1) { setText(elInstruction, "Tap Hits."); return; }
+    if (!elImg?.src) {
+      setText(elInstruction, "");
+      return;
+    }
+
+    if (!aim) {
+      setText(elInstruction, "Tap Aim Point.");
+      return;
+    }
+
+    if (hits.length < 1) {
+      setText(elInstruction, "Tap Hits.");
+      return;
+    }
+
     setText(elInstruction, "Tap more hits, or pause — results will appear.");
   }
 
@@ -106,7 +129,7 @@
     setTapCount();
     hideSticky();
     setInstructionForState();
-    setText(elStatus, elImg?.src ? "Tap Aim Point." : "Add a target photo to begin.");
+    setText(elStatus, elImg?.src ? "Tap Aim Point." : "Add a photo to begin.");
   }
 
   function addDot(x01, y01, kind) {
@@ -119,11 +142,13 @@
 
     if (kind === "aim") {
       d.style.background = "#67f3a4"; // aim point green
+      d.style.border = "2px solid rgba(0,0,0,.55)";
+      d.style.boxShadow = "0 10px 28px rgba(0,0,0,.55)";
     } else {
       d.style.background = "#b7ff3c"; // hits bright green
+      d.style.border = "2px solid rgba(0,0,0,.55)";
+      d.style.boxShadow = "0 10px 28px rgba(0,0,0,.55)";
     }
-    d.style.border = "2px solid rgba(0,0,0,.55)";
-    d.style.boxShadow = "0 10px 28px rgba(0,0,0,.55)";
 
     elDots.appendChild(d);
   }
@@ -141,7 +166,35 @@
   }
 
   // ------------------------------------------------------------
-  // SCORING (placeholder inches mapping)
+  // TARGET PHOTO STORAGE (THIS IS THE FIX)
+  // - Store a dataURL copy (best for canvas export in SEC)
+  // - Also store blob URL (fast preview fallback)
+  // ------------------------------------------------------------
+  async function storeTargetPhotoForSEC(file, blobUrl) {
+    // store blob URL (fast)
+    try { localStorage.setItem(KEY_TARGET_IMG_BLOB, blobUrl); } catch {}
+
+    // store data URL (most reliable for SEC canvas)
+    try {
+      const dataUrl = await new Promise((resolve, reject) => {
+        const r = new FileReader();
+        r.onload = () => resolve(String(r.result || ""));
+        r.onerror = reject;
+        r.readAsDataURL(file);
+      });
+
+      if (dataUrl && dataUrl.startsWith("data:image/")) {
+        localStorage.setItem(KEY_TARGET_IMG_DATA, dataUrl);
+      }
+    } catch {
+      // If storage fails, SEC can still try blob URL
+    }
+  }
+
+  // ------------------------------------------------------------
+  // SCORING (REAL) — inches-based using current placeholder scale
+  // Placeholder scale: full image width = 10 inches
+  // Later: replace inchesPerFullWidth with real inches mapping.
   // ------------------------------------------------------------
   const inchesPerFullWidth = 10;
 
@@ -161,20 +214,26 @@
   function computeCorrectionAndScore() {
     if (!aim || hits.length < 1) return null;
 
+    // Average POI
     const avg = hits.reduce((acc, p) => ({ x: acc.x + p.x01, y: acc.y + p.y01 }), { x: 0, y: 0 });
     avg.x /= hits.length;
     avg.y /= hits.length;
 
+    // bull/aim - POI (move POI to aim)
     const dx = aim.x01 - avg.x; // + => RIGHT
     const dy = aim.y01 - avg.y; // + => DOWN (screen space)
 
+    // Convert to inches (placeholder width = 10 inches)
     const inchesX = dx * inchesPerFullWidth;
     const inchesY = dy * inchesPerFullWidth;
+
+    // Radius in inches (distance from aim to average POI)
     const rIn = Math.sqrt(inchesX * inchesX + inchesY * inchesY);
 
     const dist = getDistance();
     const moaPerClick = Number(elMoaClick?.value ?? 0.25);
 
+    // True MOA inches at distance
     const inchesPerMoa = (dist / 100) * 1.047;
 
     const moaX = inchesX / inchesPerMoa;
@@ -183,17 +242,19 @@
     const clicksX = moaX / moaPerClick;
     const clicksY = moaY / moaPerClick;
 
+    const score = scoreFromRadiusInches(rIn);
+
     return {
       avgPoi: { x01: avg.x, y01: avg.y },
       inches: { x: inchesX, y: inchesY, r: rIn },
-      score: scoreFromRadiusInches(rIn),
+      score,
       windage: { dir: clicksX >= 0 ? "RIGHT" : "LEFT", clicks: Math.abs(clicksX) },
       elevation: { dir: clicksY >= 0 ? "DOWN" : "UP", clicks: Math.abs(clicksY) },
     };
   }
 
   function goToSEC(payload) {
-    try { localStorage.setItem(KEY, JSON.stringify(payload)); } catch {}
+    try { localStorage.setItem(KEY_PAYLOAD, JSON.stringify(payload)); } catch {}
     const b64 = b64FromObj(payload);
     window.location.href = `./sec.html?payload=${encodeURIComponent(b64)}&fresh=${Date.now()}`;
   }
@@ -210,16 +271,25 @@
         ? elVendor.href
         : "";
 
+    try { if (vendorUrl) localStorage.setItem(KEY_VENDOR_URL, vendorUrl); } catch {}
+
     const payload = {
       sessionId: "S-" + Date.now(),
       score: out.score,
       shots: hits.length,
       windage: { dir: out.windage.dir, clicks: Number(out.windage.clicks.toFixed(2)) },
       elevation: { dir: out.elevation.dir, clicks: Number(out.elevation.clicks.toFixed(2)) },
-      secPngUrl: "",
       vendorUrl,
       surveyUrl: "",
-      debug: { aim, avgPoi: out.avgPoi, distanceYds: getDistance(), inches: out.inches }
+      // IMPORTANT: we DO NOT need to stuff the image into payload anymore
+      // SEC will pull it from localStorage KEY_TARGET_IMG_DATA/KEY_TARGET_IMG_BLOB
+      sourceImg: "",
+      debug: {
+        aim,
+        avgPoi: out.avgPoi,
+        distanceYds: getDistance(),
+        inches: out.inches
+      }
     };
 
     goToSEC(payload);
@@ -229,19 +299,9 @@
   if (elDistUp) elDistUp.addEventListener("click", () => setDistance(getDistance() + 5));
   if (elDistDown) elDistDown.addEventListener("click", () => setDistance(getDistance() - 5));
 
-  // ---- Photo picker
+  // ---- Photo picker (800lb gorilla)
   if (elPhotoBtn && elFile) {
     elPhotoBtn.addEventListener("click", () => elFile.click());
-  }
-
-  // iOS-safe photo load: FileReader -> dataURL
-  function loadFileToImage(file) {
-    return new Promise((resolve, reject) => {
-      const r = new FileReader();
-      r.onload = () => resolve(String(r.result || ""));
-      r.onerror = () => reject(new Error("FileReader failed"));
-      r.readAsDataURL(file);
-    });
   }
 
   if (elFile) {
@@ -250,27 +310,26 @@
       if (!f) return;
 
       resetAll();
-      setText(elStatus, `Loading photo…`);
 
-      try {
-        const dataUrl = await loadFileToImage(f);
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+      objectUrl = URL.createObjectURL(f);
 
-        elImg.onload = () => {
-          setText(elStatus, "Tap Aim Point.");
-          setInstructionForState();
-        };
-        elImg.onerror = () => {
-          setText(elStatus, "Photo failed to load.");
-          setText(elInstruction, "Try again.");
-        };
+      // STORE PHOTO FOR SEC (THIS IS THE KEY FIX)
+      await storeTargetPhotoForSEC(f, objectUrl);
 
-        elImg.src = dataUrl;
-      } catch (e) {
-        setText(elStatus, "Could not read photo.");
+      elImg.onload = () => {
+        setText(elStatus, "Tap Aim Point.");
+        setInstructionForState();
+      };
+
+      elImg.onerror = () => {
+        setText(elStatus, "Photo failed to load.");
         setText(elInstruction, "Try again.");
-      }
+      };
 
-      // allow choosing same photo again
+      elImg.src = objectUrl;
+
+      // allow selecting same file again
       elFile.value = "";
     });
   }
@@ -314,7 +373,11 @@
       const dx = Math.abs(t.clientX - touchStart.x);
       const dy = Math.abs(t.clientY - touchStart.y);
 
-      if (dx > 10 || dy > 10) { touchStart = null; return; }
+      // scroll => ignore
+      if (dx > 10 || dy > 10) {
+        touchStart = null;
+        return;
+      }
 
       lastTouchTapAt = now;
       acceptTap(t.clientX, t.clientY);
@@ -323,12 +386,12 @@
 
     elWrap.addEventListener("click", (e) => {
       const now = Date.now();
-      if (now - lastTouchTapAt < 800) return;
+      if (now - lastTouchTapAt < 800) return; // kill ghost click
       acceptTap(e.clientX, e.clientY);
     }, { passive: true });
   }
 
-  // ---- Clear
+  // ---- Buttons
   if (elClear) {
     elClear.addEventListener("click", () => {
       resetAll();
