@@ -1,13 +1,12 @@
 /* ============================================================
-   index.js (FULL REPLACEMENT) — BASELINE 22206e2 (POLISH)
-   Fixes / Polish:
-   - Big button triggers photo picker (camera OR library)
-   - Photo load reliability
-   - iOS double-tap bug (touch + click) eliminated
-   - Copy: "Tap Aim Point" then "Tap Hits"
-   - Aim Point dot = green, Hits = bright green
-   - Sticky Show Results appears after user pauses (magic)
-   - SEC handoff via URL base64 + localStorage backup
+   index.js (FULL REPLACEMENT) — BASELINE 22206d2
+   Adds:
+   - Distance clicker (+/-) with live display
+   Keeps:
+   - One big photo button
+   - iOS double-tap prevention (touch+click)
+   - Aim Point green, Hits bright green
+   - Sticky results appears after pause
 ============================================================ */
 
 (() => {
@@ -28,12 +27,13 @@
   const elStickyBar = $("stickyBar");
   const elStickyBtn = $("stickyResultsBtn");
 
-  // Optional (back-compat if present)
-  const elSee = $("seeResultsBtn");
-
   // Settings / links (optional)
   const elVendor = $("vendorLink");
-  const elDistance = $("distanceYds");
+  const elDistance = $("distanceYds");     // hidden input (canonical)
+  const elDistDisplay = $("distDisplay");  // visible number
+  const elDistUp = $("distUp");
+  const elDistDown = $("distDown");
+
   const elMoaClick = $("moaPerClick");
 
   const KEY = "SCZN3_SEC_PAYLOAD_V1";
@@ -45,14 +45,28 @@
   let hits = [];      // [{x01,y01},...]
 
   // Anti-double-fire / anti-scroll
-  let lastTouchTapAt = 0;     // time we accepted a touch tap
-  let touchStart = null;      // {x,y,t}
+  let lastTouchTapAt = 0;
+  let touchStart = null;
   let pauseTimer = null;
 
   // ---- Helpers
   function clamp01(v) { return Math.max(0, Math.min(1, v)); }
-
   function setText(el, t) { if (el) el.textContent = String(t ?? ""); }
+
+  function getDistance() {
+    const n = Number(elDistance?.value ?? 100);
+    return Number.isFinite(n) ? n : 100;
+  }
+
+  function setDistance(v) {
+    // keep reasonable bounds
+    let n = Math.round(Number(v));
+    if (!Number.isFinite(n)) n = 100;
+    n = Math.max(5, Math.min(1000, n));
+
+    if (elDistance) elDistance.value = String(n);
+    if (elDistDisplay) elDistDisplay.textContent = String(n);
+  }
 
   function setTapCount() {
     if (elTapCount) elTapCount.textContent = String(hits.length);
@@ -73,7 +87,6 @@
   function scheduleStickyMagic() {
     clearTimeout(pauseTimer);
     pauseTimer = setTimeout(() => {
-      // Only show after user has at least 1 hit
       if (hits.length >= 1) showSticky();
     }, 650);
   }
@@ -114,13 +127,9 @@
 
     const d = document.createElement("div");
     d.className = "tapDot";
-
-    // position in %
     d.style.left = (x01 * 100) + "%";
     d.style.top = (y01 * 100) + "%";
 
-    // Make colors unmissable (JS forces it regardless of CSS)
-    // Aim = green, Hits = bright green
     if (kind === "aim") {
       d.style.background = "#67f3a4";
       d.style.border = "2px solid rgba(0,0,0,.55)";
@@ -146,7 +155,6 @@
     return btoa(unescape(encodeURIComponent(json)));
   }
 
-  // Placeholder math (kept stable): bull/aim - avg(hit)
   function computeCorrection() {
     if (!aim || hits.length < 1) return null;
 
@@ -157,12 +165,12 @@
     const dx = aim.x01 - avg.x; // + => RIGHT
     const dy = aim.y01 - avg.y; // + => DOWN (screen space)
 
-    // Demo scale
+    // Demo scale placeholder
     const inchesPerFullWidth = 10;
     const inchesX = dx * inchesPerFullWidth;
     const inchesY = dy * inchesPerFullWidth;
 
-    const dist = Number(elDistance?.value ?? 100);
+    const dist = getDistance();
     const moaPerClick = Number(elMoaClick?.value ?? 0.25);
 
     const inchesPerMoa = (dist / 100) * 1.047;
@@ -181,7 +189,6 @@
 
   function goToSEC(payload) {
     try { localStorage.setItem(KEY, JSON.stringify(payload)); } catch {}
-
     const b64 = b64FromObj(payload);
     window.location.href = `./sec.html?payload=${encodeURIComponent(b64)}&fresh=${Date.now()}`;
   }
@@ -193,7 +200,6 @@
       return;
     }
 
-    // Vendor link (only if real)
     const vendorUrl =
       (elVendor && elVendor.href && elVendor.href !== "#" && !elVendor.href.endsWith("#"))
         ? elVendor.href
@@ -201,25 +207,28 @@
 
     const payload = {
       sessionId: "S-" + Date.now(),
-      score: 25, // placeholder — real score next fertilizer
+      score: 25, // placeholder until real score
       shots: hits.length,
       windage: { dir: out.windage.dir, clicks: Number(out.windage.clicks.toFixed(2)) },
       elevation: { dir: out.elevation.dir, clicks: Number(out.elevation.clicks.toFixed(2)) },
       secPngUrl: "",
       vendorUrl,
       surveyUrl: "",
-      debug: { aim, avgPoi: out.avgPoi }
+      debug: { aim, avgPoi: out.avgPoi, distanceYds: getDistance() }
     };
 
     goToSEC(payload);
   }
 
+  // ---- Distance clicker (+/-)
+  if (elDistUp) elDistUp.addEventListener("click", () => setDistance(getDistance() + 5));
+  if (elDistDown) elDistDown.addEventListener("click", () => setDistance(getDistance() - 5));
+
+  // Long-press optional? (not needed now) — keep it simple.
+
   // ---- Photo picker
   if (elPhotoBtn && elFile) {
-    elPhotoBtn.addEventListener("click", () => {
-      // force-open picker
-      elFile.click();
-    });
+    elPhotoBtn.addEventListener("click", () => elFile.click());
   }
 
   if (elFile) {
@@ -227,13 +236,11 @@
       const f = elFile.files && elFile.files[0];
       if (!f) return;
 
-      // Reset state for new photo
       resetAll();
 
       if (objectUrl) URL.revokeObjectURL(objectUrl);
       objectUrl = URL.createObjectURL(f);
 
-      // iOS: assign after onload handlers
       elImg.onload = () => {
         setText(elStatus, "Tap Aim Point.");
         setInstructionForState();
@@ -251,7 +258,7 @@
   }
 
   // ---- Tap logic (touch-first, click suppressed)
-  function acceptTap(clientX, clientY, source) {
+  function acceptTap(clientX, clientY) {
     if (!elImg?.src) return;
 
     const { x01, y01 } = getRelative01(clientX, clientY);
@@ -270,12 +277,10 @@
     setTapCount();
     setInstructionForState();
 
-    // Magic: show sticky after pause
     hideSticky();
     scheduleStickyMagic();
   }
 
-  // Touch: track movement so scroll doesn’t become a hit
   if (elWrap) {
     elWrap.addEventListener("touchstart", (e) => {
       if (!e.touches || !e.touches[0]) return;
@@ -291,24 +296,21 @@
       const dx = Math.abs(t.clientX - touchStart.x);
       const dy = Math.abs(t.clientY - touchStart.y);
 
-      // If user moved finger, treat as scroll (ignore tap)
+      // scroll => ignore
       if (dx > 10 || dy > 10) {
         touchStart = null;
         return;
       }
 
       lastTouchTapAt = now;
-      acceptTap(t.clientX, t.clientY, "touch");
+      acceptTap(t.clientX, t.clientY);
       touchStart = null;
     }, { passive: true });
-  }
 
-  // Click: ignore if it follows a touch (prevents 2 hits per tap on iOS)
-  if (elWrap) {
     elWrap.addEventListener("click", (e) => {
       const now = Date.now();
-      if (now - lastTouchTapAt < 800) return; // suppress ghost click
-      acceptTap(e.clientX, e.clientY, "click");
+      if (now - lastTouchTapAt < 800) return; // kill ghost click
+      acceptTap(e.clientX, e.clientY);
     }, { passive: true });
   }
 
@@ -321,8 +323,8 @@
   }
 
   if (elStickyBtn) elStickyBtn.addEventListener("click", onShowResults);
-  if (elSee) elSee.addEventListener("click", onShowResults);
 
   // ---- Boot
+  setDistance(100);
   resetAll();
 })();
