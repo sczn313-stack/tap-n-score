@@ -14,9 +14,9 @@
   <title>Tap-n-Score™ — Score</title>
 
   <!-- Keep using your existing global styles -->
-  <link rel="stylesheet" href="/tap-n-score/styles.css?v=22206d1" />
+  <link rel="stylesheet" href="/tap-n-score/styles.css?v=22206d2" />
 
-  <!-- SCORE / LED STYLES (self-contained so we don’t risk breaking other pages) -->
+  <!-- SCORE / LED STYLES -->
   <style>
     :root{
       --bg0:#05060a;
@@ -26,8 +26,8 @@
       --muted: rgba(238,242,247,.70);
 
       /* Pale yellow “LED” */
-      --led: #ffeaa0;         /* pale yellow */
-      --ledHot: #fff2bf;      /* slightly brighter core */
+      --led: #ffeaa0;
+      --ledHot: #fff2bf;
       --ledDotOff: rgba(255,234,160,.09);
 
       --card: rgba(255,255,255,.06);
@@ -74,6 +74,7 @@
     .brandTitle .r{ color:#d64040; }
     .brandTitle .w{ color:#eef2f7; }
     .brandTitle .b{ color:#2f66ff; }
+
     .subTitle{
       margin: 10px 0 0;
       color: var(--muted);
@@ -118,14 +119,24 @@
       padding: 18px 14px 16px;
     }
 
+    /* Fertilizer 1: gentle float */
+    @keyframes floatSoft{
+      0%{ transform: translateY(0px); opacity: 1; }
+      50%{ transform: translateY(-3px); opacity: .98; }
+      100%{ transform: translateY(0px); opacity: 1; }
+    }
+
     .scoreCopyTop{
       display:flex;
       justify-content:center;
       text-align:center;
-      gap: 8px;
+      gap: 10px;
       flex-wrap: wrap;
       margin-bottom: 12px;
+      animation: floatSoft 3.8s ease-in-out infinite;
+      will-change: transform;
     }
+
     .urHere{
       font-weight: 950;
       letter-spacing: .06em;
@@ -148,7 +159,6 @@
       padding: 10px 8px 12px;
     }
 
-    /* A “marquee box” to help centering feel intentional */
     .ledBox{
       width: min(560px, 100%);
       border-radius: 18px;
@@ -159,23 +169,23 @@
       overflow: hidden;
     }
 
-    /* Subtle shimmer across the LEDs */
+    /* Subtle shimmer */
     .ledBox::after{
       content:"";
       position:absolute;
       inset:-40% -60%;
       background: linear-gradient(110deg,
         transparent 40%,
-        rgba(255,234,160,.08) 50%,
+        rgba(255,234,160,.07) 50%,
         transparent 60%);
       transform: rotate(8deg);
-      animation: ledSweep 4.2s linear infinite;
+      animation: ledSweep 6.2s linear infinite; /* slower = calmer */
       pointer-events:none;
-      opacity: .55;
+      opacity: .45;
     }
     @keyframes ledSweep{
-      0%{ transform: translateX(-25%) rotate(8deg); }
-      100%{ transform: translateX(25%) rotate(8deg); }
+      0%{ transform: translateX(-22%) rotate(8deg); }
+      100%{ transform: translateX(22%) rotate(8deg); }
     }
 
     .ledDigits{
@@ -186,7 +196,6 @@
       width: 100%;
     }
 
-    /* Each digit is a dot-matrix canvas made with CSS grid */
     .ledDigit{
       --dot: clamp(6px, 1.1vw, 10px);
       --gap: clamp(2px, .55vw, 5px);
@@ -198,7 +207,6 @@
       padding: 6px;
       border-radius: 14px;
 
-      /* a little background so it reads as a unit */
       background: rgba(255,255,255,.02);
       box-shadow: inset 0 0 0 1px rgba(255,255,255,.06);
     }
@@ -210,9 +218,24 @@
       background: var(--ledDotOff);
     }
 
+    /* Base ON glow */
     .dot.on{
       background: radial-gradient(circle at 35% 35%, var(--ledHot), var(--led) 55%, rgba(255,234,160,.55));
       filter: drop-shadow(0 0 6px rgba(255,234,160,.35)) drop-shadow(0 0 14px rgba(255,234,160,.18));
+      will-change: filter, opacity;
+    }
+
+    /* Fertilizer 2: micro-twinkle (JS will randomize delay/duration) */
+    @keyframes twinkle{
+      0%{ opacity: 1; filter: drop-shadow(0 0 6px rgba(255,234,160,.34)) drop-shadow(0 0 14px rgba(255,234,160,.18)); }
+      50%{ opacity: .92; filter: drop-shadow(0 0 9px rgba(255,234,160,.42)) drop-shadow(0 0 18px rgba(255,234,160,.22)); }
+      100%{ opacity: 1; filter: drop-shadow(0 0 6px rgba(255,234,160,.34)) drop-shadow(0 0 14px rgba(255,234,160,.18)); }
+    }
+
+    .dot.on.twinkle{
+      animation-name: twinkle;
+      animation-timing-function: ease-in-out;
+      animation-iteration-count: infinite;
     }
 
     .scoreHint{
@@ -223,7 +246,6 @@
       line-height: 1.35;
     }
 
-    /* Right column “actions” */
     .actions{
       display:flex;
       flex-direction: column;
@@ -326,7 +348,7 @@
             </div>
 
             <div class="scoreHint" id="scoreHint">
-              Soft LED score — calm, centered, and easy to read.
+              Calm LED score — soft glow with a tiny twinkle.
             </div>
           </div>
 
@@ -346,12 +368,8 @@
           </div>
 
           <div class="mutedLine">
-            Tip: you can test the LED style directly with:<br/>
+            Test LED style:
             <code>?score=25</code> or <code>?score=100</code>
-          </div>
-
-          <div class="mutedLine" style="margin-top:10px;">
-            We’ll wire this to your real computed score next (when you’re ready).
           </div>
         </div>
       </div>
@@ -360,6 +378,6 @@
     </div>
   </div>
 
-  <script src="/tap-n-score/sec.js?v=22206d1"></script>
+  <script src="/tap-n-score/sec.js?v=22206d2"></script>
 </body>
 </html>
