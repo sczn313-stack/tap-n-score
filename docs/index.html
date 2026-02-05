@@ -13,7 +13,7 @@
 
   <title>Tap-n-Score™</title>
 
-  <link rel="stylesheet" href="/tap-n-score/styles.css?v=22206c1" />
+  <link rel="stylesheet" href="/tap-n-score/styles.css?v=22206d1" />
 </head>
 
 <body>
@@ -21,29 +21,33 @@
 
     <header class="topBar">
       <div class="topTitle">TAP-N-SCORE™</div>
-      <div id="statusLine" class="topSub">Add a target photo to begin.</div>
+      <div id="statusLine" class="topSub">Add a picture to begin.</div>
     </header>
 
     <section class="card">
       <div class="cardTitle">PHOTO</div>
 
+      <!-- One 800lb gorilla button -->
       <button id="photoBtn" class="btnBig" type="button">Add Target Picture</button>
 
+      <!-- hidden input (button triggers this) -->
       <input
         id="photoInput"
         type="file"
         accept="image/*"
+        inputmode="none"
+        capture="environment"
         style="display:none"
       />
 
-      <div id="targetWrap" class="targetWrap" aria-label="Target photo area">
-        <img id="targetImg" alt="Target preview" />
+      <div id="targetWrap" class="targetWrap" aria-label="Photo area">
+        <img id="targetImg" alt="Photo preview" />
         <div id="dotsLayer" class="dotsLayer" aria-hidden="true"></div>
       </div>
 
       <div class="row rowTight">
         <div class="pill">
-          Hits: <span id="tapCount">0</span>
+          Taps: <span id="tapCount">0</span>
         </div>
 
         <button id="clearTapsBtn" class="btnSecondary" type="button">
@@ -51,6 +55,7 @@
         </button>
       </div>
 
+      <!-- Keep this empty on load; JS can fill when needed -->
       <p id="instructionLine" class="hint"></p>
     </section>
 
@@ -58,31 +63,18 @@
       <div class="cardTitle">SETTINGS</div>
 
       <div class="row">
-        <label class="field" style="flex:1;">
+        <label class="field">
           <span class="fieldLabel">Distance (yards)</span>
-
-          <!-- Clicker row -->
-          <div style="display:flex; gap:10px; align-items:center;">
-            <button id="distMinus" class="btnSecondary" type="button" aria-label="Decrease distance">−</button>
-
-            <!-- Keep THIS ID to avoid breaking your JS -->
-            <input
-              id="distanceYds"
-              class="select"
-              type="number"
-              inputmode="numeric"
-              min="1"
-              max="2000"
-              step="1"
-              value="100"
-              style="flex:1; text-align:center;"
-            />
-
-            <button id="distPlus" class="btnSecondary" type="button" aria-label="Increase distance">+</button>
-          </div>
+          <select id="distanceYds" class="select">
+            <option value="25">25</option>
+            <option value="50">50</option>
+            <option value="100" selected>100</option>
+            <option value="200">200</option>
+            <option value="300">300</option>
+          </select>
         </label>
 
-        <label class="field" style="flex:1;">
+        <label class="field">
           <span class="fieldLabel">MOA / click</span>
           <select id="moaPerClick" class="select">
             <option value="0.25" selected>0.25</option>
@@ -99,6 +91,7 @@
       <span class="footerMark">SCZN3</span>
     </footer>
 
+    <!-- Sticky “magic” results bar -->
     <div id="stickyBar" class="stickyBar stickyHidden" aria-hidden="true">
       <button id="stickyResultsBtn" class="stickyBtn" type="button">
         Show results
@@ -107,6 +100,6 @@
 
   </main>
 
-  <script src="/tap-n-score/index.js?v=22206c1"></script>
+  <script src="/tap-n-score/index.js?v=22206d1"></script>
 </body>
 </html>
