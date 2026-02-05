@@ -6,16 +6,14 @@
   <meta name="color-scheme" content="dark" />
   <meta name="theme-color" content="#06070a" />
 
-  <!-- HARD NO-CACHE (Safari helpers) -->
   <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
 
   <title>Tap-n-Score™</title>
 
-  <link rel="stylesheet" href="/tap-n-score/styles.css?v=22206d3" />
+  <link rel="stylesheet" href="/tap-n-score/styles.css?v=22206d4" />
 
-  <!-- Stepper styling (kept local so we don't touch styles.css yet) -->
   <style>
     .stepperWrap{ display:flex; flex-direction:column; gap:6px; }
     .stepperRow{
@@ -46,17 +44,22 @@
       color:#eef2f7;
       user-select:none;
     }
-    /* keep the real value in the existing id "distanceYds" so index.js doesn't break */
     input#distanceYds{
-      position:absolute;
-      left:-9999px; top:-9999px;
-      width:1px; height:1px;
-      opacity:0;
+      position:absolute; left:-9999px; top:-9999px;
+      width:1px; height:1px; opacity:0;
     }
     .stepHint{
       font-size: 12px;
       color: rgba(238,242,247,.65);
       line-height: 1.35;
+    }
+
+    /* IMPORTANT (iOS): do NOT use display:none for file input */
+    .fileHidden{
+      position:absolute;
+      left:-9999px;
+      width:1px; height:1px;
+      opacity:0;
     }
   </style>
 </head>
@@ -72,24 +75,13 @@
     <section class="card">
       <div class="cardTitle">PHOTO</div>
 
-      <!-- 800lb gorilla button -->
-      <!-- Fallback: onclick triggers the file input even if JS fails -->
-      <button
-        id="photoBtn"
-        class="btnBig"
-        type="button"
-        onclick="document.getElementById('photoInput').click()"
-      >
-        Add Target Picture
-      </button>
+      <button id="photoBtn" class="btnBig" type="button">Add Target Picture</button>
 
-      <!-- hidden input -->
       <input
         id="photoInput"
+        class="fileHidden"
         type="file"
         accept="image/*"
-        inputmode="none"
-        style="display:none"
       />
 
       <div id="targetWrap" class="targetWrap" aria-label="Target photo area">
@@ -114,7 +106,6 @@
       <div class="cardTitle">SETTINGS</div>
 
       <div class="row" style="gap:12px; align-items:stretch;">
-        <!-- Distance Clicker -->
         <label class="field" style="flex:1;">
           <span class="fieldLabel">Distance (yards)</span>
 
@@ -128,7 +119,6 @@
 
               <button id="distUp" class="stepBtn" type="button">+</button>
 
-              <!-- Hidden input keeps the canonical value for JS -->
               <input id="distanceYds" value="100" />
             </div>
 
@@ -136,7 +126,6 @@
           </div>
         </label>
 
-        <!-- MOA/click -->
         <label class="field" style="flex:1;">
           <span class="fieldLabel">MOA / click</span>
           <select id="moaPerClick" class="select">
@@ -154,7 +143,6 @@
       <span class="footerMark">SCZN3</span>
     </footer>
 
-    <!-- Sticky “magic” results bar -->
     <div id="stickyBar" class="stickyBar stickyHidden" aria-hidden="true">
       <button id="stickyResultsBtn" class="stickyBtn" type="button">
         Show results
@@ -163,7 +151,6 @@
 
   </main>
 
-  <!-- IMPORTANT: defer so DOM exists before JS binds -->
-  <script defer src="/tap-n-score/index.js?v=22206d3"></script>
+  <script defer src="/tap-n-score/index.js?v=22206d4"></script>
 </body>
 </html>
