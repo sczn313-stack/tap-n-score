@@ -13,8 +13,7 @@
 
   <title>Tap-n-Score™</title>
 
-  <!-- CSS -->
-  <link rel="stylesheet" href="/tap-n-score/styles.css?v=22206p1" />
+  <link rel="stylesheet" href="/tap-n-score/styles.css?v=22206c1" />
 </head>
 
 <body>
@@ -28,13 +27,8 @@
     <section class="card">
       <div class="cardTitle">PHOTO</div>
 
-      <!-- 800lb gorilla -->
       <button id="photoBtn" class="btnBig" type="button">Add Target Picture</button>
 
-      <!-- IMPORTANT:
-           - NO capture attribute (allows Camera OR Photo Library)
-           - keep accept only
-      -->
       <input
         id="photoInput"
         type="file"
@@ -64,18 +58,31 @@
       <div class="cardTitle">SETTINGS</div>
 
       <div class="row">
-        <label class="field">
+        <label class="field" style="flex:1;">
           <span class="fieldLabel">Distance (yards)</span>
-          <select id="distanceYds" class="select">
-            <option value="25">25</option>
-            <option value="50">50</option>
-            <option value="100" selected>100</option>
-            <option value="200">200</option>
-            <option value="300">300</option>
-          </select>
+
+          <!-- Clicker row -->
+          <div style="display:flex; gap:10px; align-items:center;">
+            <button id="distMinus" class="btnSecondary" type="button" aria-label="Decrease distance">−</button>
+
+            <!-- Keep THIS ID to avoid breaking your JS -->
+            <input
+              id="distanceYds"
+              class="select"
+              type="number"
+              inputmode="numeric"
+              min="1"
+              max="2000"
+              step="1"
+              value="100"
+              style="flex:1; text-align:center;"
+            />
+
+            <button id="distPlus" class="btnSecondary" type="button" aria-label="Increase distance">+</button>
+          </div>
         </label>
 
-        <label class="field">
+        <label class="field" style="flex:1;">
           <span class="fieldLabel">MOA / click</span>
           <select id="moaPerClick" class="select">
             <option value="0.25" selected>0.25</option>
@@ -85,7 +92,6 @@
         </label>
       </div>
 
-      <!-- optional hook (safe empty) -->
       <a id="vendorLink" class="vendorLink" href="#" target="_blank" rel="noopener"></a>
     </section>
 
@@ -93,7 +99,6 @@
       <span class="footerMark">SCZN3</span>
     </footer>
 
-    <!-- Sticky results -->
     <div id="stickyBar" class="stickyBar stickyHidden" aria-hidden="true">
       <button id="stickyResultsBtn" class="stickyBtn" type="button">
         Show results
@@ -102,6 +107,6 @@
 
   </main>
 
-  <script src="/tap-n-score/index.js?v=22206p1"></script>
+  <script src="/tap-n-score/index.js?v=22206c1"></script>
 </body>
 </html>
