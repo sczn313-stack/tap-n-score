@@ -11,13 +11,24 @@
 
   <script>
     (function () {
-      // ALWAYS land on the locked landing page
-      var base = "/tap-n-score/index.html";
+      var p = window.location.pathname || "";
       var qs = window.location.search || "";
       var hash = window.location.hash || "";
-      window.location.replace(base + qs + hash);
+
+      // If we are ALREADY on the landing page, NEVER redirect.
+      if (p.endsWith("/tap-n-score/index.html")) return;
+
+      // Only redirect if this file is being used as an entry point.
+      // (prevents loops when something else loads target.html internally)
+      var isTapRoot = (p === "/tap-n-score/" || p.endsWith("/tap-n-score/target.html"));
+
+      if (isTapRoot) {
+        window.location.replace("/tap-n-score/index.html" + qs + hash);
+      }
     })();
   </script>
 </head>
-<body style="margin:0;background:#06070a;"></body>
+
+<body style="margin:0;background:#06070a;color:#eef2f7;font-family:system-ui;">
+</body>
 </html>
