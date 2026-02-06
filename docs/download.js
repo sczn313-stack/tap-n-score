@@ -1,17 +1,11 @@
 /* ============================================================
-   tap-n-score/download.js (FULL REPLACEMENT) — PREVIEW + DIAG + iOS FRIENDLY
+   tap-n-score/download.js (FULL REPLACEMENT) — MATCHES download.html IDS
    Reads SEC PNG from localStorage:
      SCZN3_SEC_PNG_DATAURL_V1
      SCZN3_SEC_PNG_BLOBURL_V1
-   Optional:
-     SCZN3_SEC_FROM_V1  (back-to-sec route)
-   Behavior:
-   - Shows preview (hides empty state)
-   - Download button:
-       1) tries programmatic download
-       2) falls back to opening image (best on iOS: press-and-hold -> Save)
-   - Auto mode (?auto=1):
-       attempts download flow, but if popup blocked, shows clear instruction
+   Shows preview + supports:
+   - Auto open on load when ?auto=1
+   - Download button (iOS-friendly open)
 ============================================================ */
 
 (() => {
@@ -23,54 +17,33 @@
 
   const elImg = $("secImg");
   const elEmpty = $("emptyState");
-  const elMsg = $("msgLine");
+  const elStatus = $("statusLine");
   const elDiag = $("diag");
+  const elDiagWrap = $("diagWrap");
+  const elTiny = $("tinyNote");
 
   const btnDownload = $("downloadBtn");
   const btnScoreAnother = $("scoreAnotherBtn");
-  const btnBack = $("backBtn");
+  const btnBackToSetup = $("backToSetupBtn");
 
   function getParam(name) {
-    try {
-      return new URL(window.location.href).searchParams.get(name);
-    } catch {
-      return null;
-    }
+    const u = new URL(window.location.href);
+    return u.searchParams.get(name);
   }
 
-  function setMsg(t) {
-    if (elMsg) elMsg.textContent = String(t || "");
-  }
-
-  function setDiag(obj) {
-    if (!elDiag) return;
-    try { elDiag.textContent = JSON.stringify(obj, null, 2); }
-    catch { elDiag.textContent = String(obj); }
+  function setStatus(t) {
+    if (!elStatus) return;
+    elStatus.textContent = String(t || "");
   }
 
   function bestSrc() {
-    let blob = "";
-    let data = "";
-    try { blob = localStorage.getItem(KEY_PNG_BLOB) || ""; } catch {}
-    try { data = localStorage.getItem(KEY_PNG_DATA) || ""; } catch {}
-
+    const blob = localStorage.getItem(KEY_PNG_BLOB);
     if (blob && blob.startsWith("blob:")) return { src: blob, kind: "blob" };
+
+    const data = localStorage.getItem(KEY_PNG_DATA);
     if (data && data.startsWith("data:image/png")) return { src: data, kind: "data" };
+
     return { src: "", kind: "none" };
-  }
-
-  function showPreview(src) {
-    if (elEmpty) elEmpty.style.display = src ? "none" : "block";
-    if (!elImg) return;
-
-    if (!src) {
-      elImg.style.display = "none";
-      elImg.removeAttribute("src");
-      return;
-    }
-
-    elImg.style.display = "block";
-    elImg.src = src;
   }
 
   function navToIndex() {
@@ -78,30 +51,21 @@
   }
 
   function navBackToFrom() {
-    let from = "";
-    try { from = localStorage.getItem(KEY_FROM) || ""; } catch {}
+    const from = localStorage.getItem(KEY_FROM);
     if (from && typeof from === "string" && from.includes("sec.html")) {
       window.location.href = from;
-      return;
+    } else {
+      navToIndex();
     }
-    navToIndex();
   }
 
-  // iOS: "download" often fails; opening the image is most reliable.
-  function openImage(src) {
-    // try new tab first
+  function openImageNewTab(src) {
     try {
-      const w = window.open(src, "_blank", "noopener,noreferrer");
-      if (w) return true;
-    } catch {}
-
-    // fallback: same-tab navigation
-    try {
-      window.location.href = src;
+      window.open(src, "_blank", "noopener,noreferrer");
       return true;
-    } catch {}
-
-    return false;
+    } catch {
+      return false;
+    }
   }
 
   function tryProgrammaticDownload(src) {
@@ -118,66 +82,65 @@
     }
   }
 
-  function doDownloadFlow(src, meta = {}) {
+  function doDownloadFlow(src) {
     if (!src) {
-      setMsg("No SEC image found. Go back and re-score.");
-      setDiag({ ok: false, reason: "missing_src", ...meta });
+      setStatus("No SEC image found. Re-score to generate a PNG.");
       return;
     }
 
-    // Try classic download (desktop-friendly)
-    const okDl = tryProgrammaticDownload(src);
-    if (okDl) {
-      setMsg("Downloading SEC.png…");
-      setDiag({ ok: true, method: "anchor_download", ...meta });
+    const ok = tryProgrammaticDownload(src);
+    if (ok) {
+      setStatus("Downloading SEC.png…");
       return;
     }
 
-    // Fallback: open image (best for iOS save-to-photos)
-    const opened = openImage(src);
+    const opened = openImageNewTab(src);
     if (opened) {
-      setMsg("If it opens as an image: press-and-hold it and choose Save to Photos.");
-      setDiag({ ok: true, method: "open_image", ...meta });
+      setStatus("If download doesn’t start: press-and-hold the image and choose Save to Photos.");
       return;
     }
 
-    setMsg("Could not start download. Re-score and try again.");
-    setDiag({ ok: false, reason: "download_failed", ...meta });
+    setStatus("Could not start download. Try again or re-score.");
   }
 
   function boot() {
     const { src, kind } = bestSrc();
 
-    showPreview(src);
-
-    if (!src) {
-      setMsg("No SEC image found. Go back and re-score.");
-    } else {
-      setMsg("Tip (iPhone/iPad): press-and-hold the image to Save to Photos.");
+    // Preview
+    if (elImg) {
+      if (src) {
+        elImg.style.display = "block";
+        elImg.src = src;
+      } else {
+        elImg.style.display = "none";
+        elImg.removeAttribute("src");
+      }
     }
 
-    setDiag({
-      ok: !!src,
-      kind,
-      keys: {
-        blob: KEY_PNG_BLOB,
-        data: KEY_PNG_DATA,
-        from: KEY_FROM
-      },
-      hasBlob: kind === "blob",
-      hasData: kind === "data",
-      auto: getParam("auto")
-    });
+    if (elEmpty) elEmpty.style.display = src ? "none" : "block";
 
-    if (btnDownload) btnDownload.addEventListener("click", () => doDownloadFlow(src, { trigger: "click" }));
+    if (!src) setStatus("No SEC image found. Go back and re-score.");
+    else setStatus("Preview then download.");
+
+    if (elTiny) elTiny.textContent = src ? `Loaded from: ${kind}` : "";
+
+    // Diagnostics
+    if (elDiag && elDiagWrap) {
+      elDiag.textContent =
+        `PNG kind: ${kind}\n` +
+        `Has DATA: ${!!localStorage.getItem(KEY_PNG_DATA)}\n` +
+        `Has BLOB: ${!!localStorage.getItem(KEY_PNG_BLOB)}\n` +
+        `FROM: ${localStorage.getItem(KEY_FROM) || "—"}`;
+    }
+
+    // Buttons
+    if (btnDownload) btnDownload.addEventListener("click", () => doDownloadFlow(src));
     if (btnScoreAnother) btnScoreAnother.addEventListener("click", navToIndex);
-    if (btnBack) btnBack.addEventListener("click", navBackToFrom);
+    if (btnBackToSetup) btnBackToSetup.addEventListener("click", navBackToFrom);
 
-    // Auto mode: may be blocked by popup rules — we still try, then message user.
+    // Auto-open
     if (getParam("auto") === "1" && src) {
-      setTimeout(() => {
-        doDownloadFlow(src, { trigger: "auto" });
-      }, 350);
+      setTimeout(() => doDownloadFlow(src), 350);
     }
   }
 
