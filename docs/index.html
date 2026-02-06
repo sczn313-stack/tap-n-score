@@ -3,12 +3,126 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="color-scheme" content="dark" />
+  <meta name="theme-color" content="#06070a" />
+
+  <!-- HARD NO-CACHE (Safari helpers) -->
   <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
-  <title>Tap-n-Score — Landing Test</title>
+
+  <title>Tap-n-Score™</title>
+
+  <link rel="stylesheet" href="./styles.css?v=LOCK-0206A" />
 </head>
-<body style="margin:0;background:#06070a;color:#eef2f7;font:700 20px system-ui;display:flex;min-height:100vh;align-items:center;justify-content:center;">
-  LANDING OK ✅  /tap-n-score/index.html
+
+<body>
+  <main class="page">
+
+    <!-- LANDING (LOCKED HERO) -->
+    <section id="hero" class="hero" aria-label="Tap-n-Score landing">
+      <div class="brandRow">
+        <div class="brandTitle">
+          <span class="r">TAP</span><span class="w">-N-</span><span class="b">SCORE</span><span class="w">™</span>
+        </div>
+        <div class="brandSub">After-Shot Intelligence</div>
+      </div>
+
+      <div class="heroMid">
+        <button id="photoBtn" class="heroBtn" type="button">Add Target Picture</button>
+
+        <div class="heroTip">
+          Tip: Straight-on photos give the most accurate<br/>
+          results.
+        </div>
+      </div>
+
+      <!-- Vendor pill (always visible) -->
+      <a id="vendorBox" class="vendorBox" href="#" aria-label="Vendor">
+        <span id="vendorLabel" class="vendorPillText">BUY MORE TARGETS LIKE THIS</span>
+      </a>
+
+      <!-- wire (visual) -->
+      <svg class="vendorWire" viewBox="0 0 180 90" aria-hidden="true">
+        <path d="M10 10 C 70 10, 70 70, 170 70" fill="none" stroke="rgba(255,255,255,.28)" stroke-width="3" stroke-linecap="round"/>
+        <path d="M10 18 C 78 18, 78 76, 170 76" fill="none" stroke="rgba(47,102,255,.18)" stroke-width="2" stroke-linecap="round"/>
+      </svg>
+
+      <!-- iOS: do NOT display:none -->
+      <input id="photoInput" class="fileHidden" type="file" accept="image/*" />
+    </section>
+
+    <!-- TARGET PAGE (appears after photo) -->
+    <section id="scoreSection" class="card scoreHidden">
+      <div class="cardTitle">TARGET</div>
+
+      <div id="statusLine" class="hint" style="margin-top:0; margin-bottom:10px;">
+        Add a target photo to begin.
+      </div>
+
+      <div id="targetWrap" class="targetWrap" aria-label="Target photo area">
+        <img id="targetImg" alt="Target preview" />
+        <div id="dotsLayer" class="dotsLayer" aria-hidden="true"></div>
+      </div>
+
+      <div class="row rowTight">
+        <div class="pill">Taps: <span id="tapCount">0</span></div>
+        <button id="undoBtn" class="btnSecondary" type="button">Undo</button>
+        <button id="clearTapsBtn" class="btnSecondary" type="button">Restart</button>
+      </div>
+
+      <p id="instructionLine" class="hint"></p>
+
+      <!-- Vendor link (clickable only when vendor URL exists) -->
+      <a id="vendorLink" class="vendorLink" href="#" target="_blank" rel="noopener"></a>
+    </section>
+
+    <!-- SETTINGS (appears after photo) -->
+    <section id="settingsSection" class="card scoreHidden">
+      <div class="cardTitle">SETTINGS</div>
+
+      <div class="row" style="gap:12px; align-items:stretch;">
+        <label class="field" style="flex:1;">
+          <span class="fieldLabel">Distance (yards)</span>
+
+          <div class="distBox">
+            <button id="distDown" type="button" class="distBtn">−</button>
+
+            <div class="distMid">
+              <span id="distDisplay">100</span> yd
+            </div>
+
+            <button id="distUp" type="button" class="distBtn">+</button>
+
+            <!-- hidden input the JS reads -->
+            <input id="distanceYds" value="100" class="srOnly" />
+          </div>
+
+          <div class="fieldHelp">Tap +/−. (Range: 5–1000)</div>
+        </label>
+
+        <label class="field" style="flex:1;">
+          <span class="fieldLabel">MOA / click</span>
+          <select id="moaPerClick" class="select">
+            <option value="0.25" selected>0.25</option>
+            <option value="0.5">0.5</option>
+            <option value="0.125">0.125</option>
+          </select>
+        </label>
+      </div>
+    </section>
+
+    <footer class="footer">
+      <span class="footerMark">SCZN3</span>
+    </footer>
+
+    <!-- Sticky Results -->
+    <div id="stickyBar" class="stickyBar stickyHidden" aria-hidden="true">
+      <button id="stickyResultsBtn" class="stickyBtn" type="button">Show results</button>
+    </div>
+
+  </main>
+
+  <script defer src="./index.js?v=LOCK-0206A"></script>
 </body>
 </html>
