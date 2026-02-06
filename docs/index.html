@@ -1,17 +1,4 @@
-<script>
-  (async () => {
-    try {
-      if ("serviceWorker" in navigator) {
-        const regs = await navigator.serviceWorker.getRegistrations();
-        for (const r of regs) await r.unregister();
-      }
-      if (window.caches) {
-        const keys = await caches.keys();
-        await Promise.all(keys.map((k) => caches.delete(k)));
-      }
-    } catch {}
-  })();
-</script><!doctype html>
+<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
@@ -19,29 +6,9 @@
   <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
-  <meta name="theme-color" content="#06070a" />
-  <title>Tap-n-Score™</title>
-
-  <script>
-    (function () {
-      var p = window.location.pathname || "";
-      var qs = window.location.search || "";
-      var hash = window.location.hash || "";
-
-      // If we are ALREADY on the landing page, NEVER redirect.
-      if (p.endsWith("/tap-n-score/index.html")) return;
-
-      // Only redirect if this file is being used as an entry point.
-      // (prevents loops when something else loads target.html internally)
-      var isTapRoot = (p === "/tap-n-score/" || p.endsWith("/tap-n-score/target.html"));
-
-      if (isTapRoot) {
-        window.location.replace("/tap-n-score/index.html" + qs + hash);
-      }
-    })();
-  </script>
+  <title>Tap-n-Score — Landing Test</title>
 </head>
-
-<body style="margin:0;background:#06070a;color:#eef2f7;font-family:system-ui;">
+<body style="margin:0;background:#06070a;color:#eef2f7;font:700 20px system-ui;display:flex;min-height:100vh;align-items:center;justify-content:center;">
+  LANDING OK ✅  /tap-n-score/index.html
 </body>
 </html>
