@@ -1,9 +1,6 @@
 /* ============================================================
-   styles.css (FULL REPLACEMENT) — BASELINE 22206d4
-   - 800lb gorilla "Add Target Picture" button
-   - Clean red/white/blue brand accents
-   - Target area responsive + slimmer margins
-   - Sticky results bar
+   styles.css (FULL REPLACEMENT) — LOCKED BASELINE + DOTS VISIBLE
+   - Adds .tapDot (10px) so dots ALWAYS show
 ============================================================ */
 
 :root{
@@ -82,7 +79,7 @@ body{
   color: rgba(238,242,247,.75);
 }
 
-/* ===== 800lb gorilla button ===== */
+/* ===== 800lb gorilla button (used elsewhere too) ===== */
 .btnBig{
   width: calc(100% - 28px);
   margin: 16px 14px 12px;
@@ -133,6 +130,17 @@ body{
   position:absolute;
   left:0; top:0; right:0; bottom:0;
   pointer-events:none;
+}
+
+/* ✅ THE MISSING PIECE: DOTS */
+.tapDot{
+  position:absolute;
+  width: 10px;   /* locked */
+  height: 10px;  /* locked */
+  border-radius: 999px;
+  transform: translate(-50%, -50%);
+  border: 2px solid rgba(0,0,0,.55);
+  box-shadow: 0 10px 28px rgba(0,0,0,.55);
 }
 
 /* Row + buttons */
