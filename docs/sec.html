@@ -1,4 +1,3 @@
-<!-- tap-n-score/sec.html (FULL REPLACEMENT) — SHOOTER EXPERIENCE CARD (RW&B) -->
 <!doctype html>
 <html lang="en">
 <head>
@@ -7,42 +6,33 @@
   <meta name="color-scheme" content="dark" />
   <meta name="theme-color" content="#06070a" />
 
-  <!-- HARD NO-CACHE (Safari helpers) -->
   <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
 
   <title>SEC — Shooter Experience Card</title>
 
-  <!-- Keep using your shared stylesheet for base UI if you want -->
-  <link rel="stylesheet" href="/tap-n-score/styles.css?v=SEC-LOCK-01" />
-  <!-- SEC-specific layout -->
-  <link rel="stylesheet" href="/tap-n-score/sec.css?v=SEC-LOCK-01" />
+  <link rel="stylesheet" href="./sec.css?v=SEC-0206A" />
 </head>
 
 <body>
   <main class="secPage">
-
-    <!-- Header -->
-    <header class="secHdr">
-      <div class="secBrand" aria-label="Shooter Experience Card">
-        <span class="r">SHOOTER</span>
-        <span class="w">EXPERIENCE</span>
-        <span class="b">CARD</span>
-        <span class="w">SEC</span>
-      </div>
-
-      <div id="sessionLine" class="secSession">Session: —</div>
-    </header>
-
-    <!-- Main card -->
     <section class="secShell">
+
+      <header class="secHdr">
+        <div class="secBrand" aria-label="Shooter Experience Card">
+          <span class="r">SHOOTER</span>
+          <span class="w">EXPERIENCE</span>
+          <span class="b">CARD</span>
+          <span class="w">SEC</span>
+        </div>
+
+        <div id="sessionLine" class="secSession">Session: —</div>
+      </header>
 
       <div class="secScoreWrap">
         <div class="secScoreLabelTop">SCORE</div>
-
         <div id="scoreValue" class="secScoreValue">0</div>
-
         <div id="scoreLabel" class="secScoreLabel">—</div>
 
         <div class="secFairness">
@@ -52,7 +42,6 @@
 
       <div id="errLine" class="secErr" style="display:none;"></div>
 
-      <!-- Stats -->
       <div class="secGrid">
         <div class="secStat">
           <div class="secStatK">SHOTS</div>
@@ -66,36 +55,29 @@
 
         <div class="secStat">
           <div class="secStatK">WINDAGE</div>
-          <div class="secStatV" id="windVal">—</div>
+          <div class="secStatV"><span id="windVal">—</span> <span class="secUnit">CLICKS</span></div>
         </div>
 
         <div class="secStat">
           <div class="secStatK">ELEVATION</div>
-          <div class="secStatV" id="elevVal">—</div>
+          <div class="secStatV"><span id="elevVal">—</span> <span class="secUnit">CLICKS</span></div>
         </div>
       </div>
 
-      <!-- Actions -->
       <div class="secActions">
-        <button id="downloadBtn" class="secBtn secBtnPrimary" type="button">
-          Download SEC PNG
-        </button>
-
-        <button id="scoreAnotherBtn" class="secBtn" type="button">
-          Score another
-        </button>
+        <button id="downloadBtn" class="secBtn secBtnPrimary" type="button">Download SEC PNG</button>
+        <button id="scoreAnotherBtn" class="secBtn" type="button">Score another</button>
       </div>
 
       <div class="secTip">
-        Tip (iPhone/iPad): if the download doesn’t start, it will open the PNG —
+        Tip (iPhone/iPad): if download doesn’t auto-start, the PNG will open —
         press-and-hold the image and choose <b>Save to Photos</b>.
       </div>
 
       <footer class="secFoot">SCZN3</footer>
     </section>
-
   </main>
 
-  <script src="/tap-n-score/sec.js?v=SEC-LOCK-01"></script>
+  <script src="./sec.js?v=SEC-0206A"></script>
 </body>
 </html>
