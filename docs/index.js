@@ -1,22 +1,21 @@
 /* ============================================================
-   tap-n-score/index.js (FULL REPLACEMENT) — QRC LANDING + SCORING
-   Locks:
-   - QRC opens index.html landing hero (800lb gorilla)
-   - Button text: Add Target Picture
-   - Vendor (inside a box) shown only if vendorUrl exists
-   - No session # on landing
-   - After photo chosen: reveals scoring UI + stores photo for SEC
+   tap-n-score/index.js (FULL REPLACEMENT) — LANDING VENDOR PLACEHOLDER
+   Change:
+   - Vendor pill ALWAYS visible on landing:
+       shows "VENDOR" if no vendor URL yet
+       becomes clickable when vendor URL exists
 ============================================================ */
 
 (() => {
   const $ = (id) => document.getElementById(id);
 
-  // ---- Landing / hero
+  // Landing / hero
   const elPhotoBtn = $("photoBtn");
   const elFile = $("photoInput");
   const elVendorBox = $("vendorBox");
+  const elVendorLabel = $("vendorLabel");
 
-  // ---- Scoring UI
+  // Scoring UI
   const elScoreSection = $("scoreSection");
   const elSettingsSection = $("settingsSection");
 
@@ -39,30 +38,56 @@
   const elDistDown = $("distDown");
   const elMoaClick = $("moaPerClick");
 
-  // ---- Storage keys
+  // Storage keys
   const KEY_PAYLOAD = "SCZN3_SEC_PAYLOAD_V1";
-
-  // Target photo handoff keys for SEC
   const KEY_TARGET_IMG_DATA = "SCZN3_TARGET_IMG_DATAURL_V1";
   const KEY_TARGET_IMG_BLOB = "SCZN3_TARGET_IMG_BLOBURL_V1";
-
-  // Vendor URL
   const KEY_VENDOR_URL = "SCZN3_VENDOR_URL_V1";
 
   let objectUrl = null;
 
-  // Tap state (normalized 0..1)
-  let aim = null;     // {x01,y01}
-  let hits = [];      // [{x01,y01},...]
+  let aim = null;
+  let hits = [];
 
-  // Anti-double-fire / anti-scroll
   let lastTouchTapAt = 0;
   let touchStart = null;
   let pauseTimer = null;
 
-  // ---- Helpers
   function clamp01(v) { return Math.max(0, Math.min(1, v)); }
   function setText(el, t) { if (el) el.textContent = String(t ?? ""); }
+
+  function revealScoringUI() {
+    if (elScoreSection) elScoreSection.classList.remove("scoreHidden");
+    if (elSettingsSection) elSettingsSection.classList.remove("scoreHidden");
+    try { elScoreSection?.scrollIntoView({ behavior: "smooth", block: "start" }); } catch {}
+  }
+
+  // ---- Vendor placeholder ALWAYS shows
+  function hydrateVendorBox() {
+    const v = localStorage.getItem(KEY_VENDOR_URL) || "";
+    const ok = typeof v === "string" && v.startsWith("http");
+
+    if (!elVendorBox) return;
+
+    if (ok) {
+      elVendorBox.href = v;
+      elVendorBox.target = "_blank";
+      elVendorBox.rel = "noopener";
+      if (elVendorLabel) elVendorLabel.textContent = "VENDOR";
+      elVendorBox.style.opacity = "1";
+      elVendorBox.style.pointerEvents = "auto";
+    } else {
+      // placeholder state (visible but not clickable)
+      elVendorBox.removeAttribute("href");
+      elVendorBox.removeAttribute("target");
+      elVendorBox.removeAttribute("rel");
+      if (elVendorLabel) elVendorLabel.textContent = "VENDOR";
+      elVendorBox.style.opacity = ".92";
+      elVendorBox.style.pointerEvents = "none";
+    }
+  }
+
+  function setTapCount() { if (elTapCount) elTapCount.textContent = String(hits.length); }
 
   function hideSticky() {
     if (!elStickyBar) return;
@@ -83,25 +108,11 @@
     }, 650);
   }
 
-  function setTapCount() {
-    if (elTapCount) elTapCount.textContent = String(hits.length);
-  }
-
   function setInstructionForState() {
     if (!elInstruction) return;
-
-    if (!elImg?.src) {
-      setText(elInstruction, "");
-      return;
-    }
-    if (!aim) {
-      setText(elInstruction, "Tap Aim Point.");
-      return;
-    }
-    if (hits.length < 1) {
-      setText(elInstruction, "Tap Hits.");
-      return;
-    }
+    if (!elImg?.src) { setText(elInstruction, ""); return; }
+    if (!aim) { setText(elInstruction, "Tap Aim Point."); return; }
+    if (hits.length < 1) { setText(elInstruction, "Tap Hits."); return; }
     setText(elInstruction, "Tap more hits, or pause — results will appear.");
   }
 
@@ -115,40 +126,8 @@
     setText(elStatus, elImg?.src ? "Tap Aim Point." : "Add a target photo to begin.");
   }
 
-  // ------------------------------------------------------------
-  // Reveal scoring UI after photo chosen
-  // ------------------------------------------------------------
-  function revealScoringUI() {
-    if (elScoreSection) elScoreSection.classList.remove("scoreHidden");
-    if (elSettingsSection) elSettingsSection.classList.remove("scoreHidden");
-
-    // scroll into the scoring area so it feels like “next step”
-    try { elScoreSection?.scrollIntoView({ behavior: "smooth", block: "start" }); } catch {}
-  }
-
-  // ------------------------------------------------------------
-  // Vendor box: reads localStorage vendor URL (if already set by QRC flow)
-  // You can set KEY_VENDOR_URL earlier (or later after first score).
-  // ------------------------------------------------------------
-  function hydrateVendorBox() {
-    const v = localStorage.getItem(KEY_VENDOR_URL) || "";
-    const ok = typeof v === "string" && v.startsWith("http");
-    if (elVendorBox) {
-      if (ok) {
-        elVendorBox.href = v;
-        elVendorBox.style.display = "inline-flex";
-      } else {
-        elVendorBox.style.display = "none";
-      }
-    }
-  }
-
-  // ------------------------------------------------------------
-  // TARGET PHOTO STORAGE FOR SEC
-  // ------------------------------------------------------------
   async function storeTargetPhotoForSEC(file, blobUrl) {
     try { localStorage.setItem(KEY_TARGET_IMG_BLOB, blobUrl); } catch {}
-
     try {
       const dataUrl = await new Promise((resolve, reject) => {
         const r = new FileReader();
@@ -156,36 +135,21 @@
         r.onerror = reject;
         r.readAsDataURL(file);
       });
-
       if (dataUrl && dataUrl.startsWith("data:image/")) {
         localStorage.setItem(KEY_TARGET_IMG_DATA, dataUrl);
       }
-    } catch {
-      // SEC can still try blob URL if data URL fails
-    }
+    } catch {}
   }
 
-  // ------------------------------------------------------------
-  // Dots
-  // ------------------------------------------------------------
   function addDot(x01, y01, kind) {
     if (!elDots) return;
-
     const d = document.createElement("div");
     d.className = "tapDot";
     d.style.left = (x01 * 100) + "%";
     d.style.top = (y01 * 100) + "%";
-
-    if (kind === "aim") {
-      d.style.background = "#67f3a4"; // aim point
-    } else {
-      d.style.background = "#b7ff3c"; // hits
-    }
-
-    // your dot size is controlled in CSS (.tapDot). Leaving JS clean.
+    d.style.background = (kind === "aim") ? "#67f3a4" : "#b7ff3c";
     d.style.border = "2px solid rgba(0,0,0,.55)";
     d.style.boxShadow = "0 10px 28px rgba(0,0,0,.55)";
-
     elDots.appendChild(d);
   }
 
@@ -201,28 +165,20 @@
     return btoa(unescape(encodeURIComponent(json)));
   }
 
-  // ------------------------------------------------------------
-  // Distance
-  // ------------------------------------------------------------
   function getDistance() {
     const n = Number(elDistance?.value ?? 100);
     return Number.isFinite(n) ? n : 100;
   }
-
   function setDistance(v) {
     let n = Math.round(Number(v));
     if (!Number.isFinite(n)) n = 100;
     n = Math.max(5, Math.min(1000, n));
-
     if (elDistance) elDistance.value = String(n);
     if (elDistDisplay) elDistDisplay.textContent = String(n);
   }
 
-  // ------------------------------------------------------------
-  // SCORING (placeholder inches mapping unchanged)
-  // ------------------------------------------------------------
+  // scoring placeholder unchanged
   const inchesPerFullWidth = 10;
-
   function scoreFromRadiusInches(rIn) {
     if (rIn <= 0.25) return 100;
     if (rIn <= 0.50) return 95;
@@ -243,9 +199,8 @@
     avg.x /= hits.length;
     avg.y /= hits.length;
 
-    // aim - poi (move POI to aim)
-    const dx = aim.x01 - avg.x; // + => RIGHT
-    const dy = aim.y01 - avg.y; // + => DOWN (screen space)
+    const dx = aim.x01 - avg.x;
+    const dy = aim.y01 - avg.y;
 
     const inchesX = dx * inchesPerFullWidth;
     const inchesY = dy * inchesPerFullWidth;
@@ -281,10 +236,7 @@
 
   function onShowResults() {
     const out = computeCorrectionAndScore();
-    if (!out) {
-      alert("Tap Aim Point first, then tap at least one hit.");
-      return;
-    }
+    if (!out) { alert("Tap Aim Point first, then tap at least one hit."); return; }
 
     const vendorUrl = localStorage.getItem(KEY_VENDOR_URL) || "";
 
@@ -297,23 +249,14 @@
       vendorUrl,
       surveyUrl: "",
       sourceImg: "",
-      debug: {
-        aim,
-        avgPoi: out.avgPoi,
-        distanceYds: getDistance(),
-        inches: out.inches
-      }
+      debug: { aim, avgPoi: out.avgPoi, distanceYds: getDistance(), inches: out.inches }
     };
 
     goToSEC(payload);
   }
 
-  // ------------------------------------------------------------
-  // Photo picker (800lb gorilla)
-  // ------------------------------------------------------------
-  if (elPhotoBtn && elFile) {
-    elPhotoBtn.addEventListener("click", () => elFile.click());
-  }
+  // ---- Photo
+  if (elPhotoBtn && elFile) elPhotoBtn.addEventListener("click", () => elFile.click());
 
   if (elFile) {
     elFile.addEventListener("change", async () => {
@@ -340,18 +283,13 @@
       };
 
       elImg.src = objectUrl;
-
-      // allow selecting same file again
       elFile.value = "";
     });
   }
 
-  // ------------------------------------------------------------
-  // Tap logic (touch-first, click suppressed)
-  // ------------------------------------------------------------
+  // ---- Tap logic
   function acceptTap(clientX, clientY) {
     if (!elImg?.src) return;
-
     const { x01, y01 } = getRelative01(clientX, clientY);
 
     if (!aim) {
@@ -387,10 +325,7 @@
       const dx = Math.abs(t.clientX - touchStart.x);
       const dy = Math.abs(t.clientY - touchStart.y);
 
-      if (dx > 10 || dy > 10) {
-        touchStart = null;
-        return;
-      }
+      if (dx > 10 || dy > 10) { touchStart = null; return; }
 
       lastTouchTapAt = now;
       acceptTap(t.clientX, t.clientY);
@@ -404,24 +339,13 @@
     }, { passive: true });
   }
 
-  // ------------------------------------------------------------
-  // Buttons / distance
-  // ------------------------------------------------------------
-  if (elClear) {
-    elClear.addEventListener("click", () => {
-      resetAll();
-      if (elImg?.src) setText(elStatus, "Tap Aim Point.");
-    });
-  }
-
+  // ---- Buttons / distance
+  if (elClear) elClear.addEventListener("click", () => { resetAll(); if (elImg?.src) setText(elStatus, "Tap Aim Point."); });
   if (elStickyBtn) elStickyBtn.addEventListener("click", onShowResults);
-
   if (elDistUp) elDistUp.addEventListener("click", () => setDistance(getDistance() + 5));
   if (elDistDown) elDistDown.addEventListener("click", () => setDistance(getDistance() - 5));
 
-  // ------------------------------------------------------------
-  // Boot
-  // ------------------------------------------------------------
+  // ---- Boot
   setDistance(100);
   hideSticky();
   resetAll();
