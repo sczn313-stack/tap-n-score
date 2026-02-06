@@ -1,9 +1,13 @@
 /* ============================================================
-   tap-n-score/index.js (FULL REPLACEMENT) — LANDING VENDOR PLACEHOLDER
-   Change:
-   - Vendor pill ALWAYS visible on landing:
-       shows "VENDOR" if no vendor URL yet
-       becomes clickable when vendor URL exists
+   tap-n-score/index.js (FULL REPLACEMENT) — LOCKED LANDING + DOTS + REDO
+   Fixes / Adds:
+   - DOTS ALWAYS RENDER (relies on .tapDot CSS)
+   - Dot size handled in CSS (10px)
+   - REDO button removes last action:
+       last hit -> removed
+       if no hits, aim -> removed
+   - Keeps: landing vendor placeholder logic, iOS touch + ghost click suppression,
+            sticky results behavior, photo storage for SEC
 ============================================================ */
 
 (() => {
@@ -23,6 +27,7 @@
   const elDots = $("dotsLayer");
   const elWrap = $("targetWrap");
   const elTapCount = $("tapCount");
+  const elRedo = $("redoBtn");
   const elClear = $("clearTapsBtn");
   const elInstruction = $("instructionLine");
   const elStatus = $("statusLine");
@@ -46,13 +51,20 @@
 
   let objectUrl = null;
 
-  let aim = null;
-  let hits = [];
+  // Actions stack (truth)
+  // [{type:"aim"|"hit", x01, y01}]
+  let actions = [];
 
+  // Derived state
+  const getAim = () => actions.find(a => a.type === "aim") || null;
+  const getHits = () => actions.filter(a => a.type === "hit");
+
+  // Anti-double-fire / anti-scroll
   let lastTouchTapAt = 0;
   let touchStart = null;
   let pauseTimer = null;
 
+  // ---- Helpers
   function clamp01(v) { return Math.max(0, Math.min(1, v)); }
   function setText(el, t) { if (el) el.textContent = String(t ?? ""); }
 
@@ -66,7 +78,6 @@
   function hydrateVendorBox() {
     const v = localStorage.getItem(KEY_VENDOR_URL) || "";
     const ok = typeof v === "string" && v.startsWith("http");
-
     if (!elVendorBox) return;
 
     if (ok) {
@@ -87,7 +98,10 @@
     }
   }
 
-  function setTapCount() { if (elTapCount) elTapCount.textContent = String(hits.length); }
+  function setTapCount() {
+    const hits = getHits();
+    if (elTapCount) elTapCount.textContent = String(hits.length);
+  }
 
   function hideSticky() {
     if (!elStickyBar) return;
@@ -104,28 +118,64 @@
   function scheduleStickyMagic() {
     clearTimeout(pauseTimer);
     pauseTimer = setTimeout(() => {
-      if (hits.length >= 1) showSticky();
+      if (getHits().length >= 1) showSticky();
     }, 650);
   }
 
   function setInstructionForState() {
     if (!elInstruction) return;
     if (!elImg?.src) { setText(elInstruction, ""); return; }
-    if (!aim) { setText(elInstruction, "Tap Aim Point."); return; }
-    if (hits.length < 1) { setText(elInstruction, "Tap Hits."); return; }
+
+    const aim = getAim();
+    const hits = getHits();
+
+    if (!aim) {
+      setText(elInstruction, "Tap Aim Point.");
+      return;
+    }
+    if (hits.length < 1) {
+      setText(elInstruction, "Tap Hits.");
+      return;
+    }
     setText(elInstruction, "Tap more hits, or pause — results will appear.");
   }
 
   function resetAll() {
-    aim = null;
-    hits = [];
-    if (elDots) elDots.innerHTML = "";
+    actions = [];
+    renderDots();
     setTapCount();
     hideSticky();
     setInstructionForState();
     setText(elStatus, elImg?.src ? "Tap Aim Point." : "Add a target photo to begin.");
   }
 
+  // ------------------------------------------------------------
+  // DOT RENDERING (single source of truth)
+  // ------------------------------------------------------------
+  function renderDots() {
+    if (!elDots) return;
+    elDots.innerHTML = "";
+
+    actions.forEach((a) => {
+      const d = document.createElement("div");
+      d.className = "tapDot";
+      d.style.left = (a.x01 * 100) + "%";
+      d.style.top = (a.y01 * 100) + "%";
+
+      // Colors (aim + hit)
+      if (a.type === "aim") {
+        d.style.background = "#67f3a4";
+      } else {
+        d.style.background = "#b7ff3c";
+      }
+
+      elDots.appendChild(d);
+    });
+  }
+
+  // ------------------------------------------------------------
+  // TARGET PHOTO STORAGE (SEC handoff)
+  // ------------------------------------------------------------
   async function storeTargetPhotoForSEC(file, blobUrl) {
     try { localStorage.setItem(KEY_TARGET_IMG_BLOB, blobUrl); } catch {}
     try {
@@ -139,18 +189,6 @@
         localStorage.setItem(KEY_TARGET_IMG_DATA, dataUrl);
       }
     } catch {}
-  }
-
-  function addDot(x01, y01, kind) {
-    if (!elDots) return;
-    const d = document.createElement("div");
-    d.className = "tapDot";
-    d.style.left = (x01 * 100) + "%";
-    d.style.top = (y01 * 100) + "%";
-    d.style.background = (kind === "aim") ? "#67f3a4" : "#b7ff3c";
-    d.style.border = "2px solid rgba(0,0,0,.55)";
-    d.style.boxShadow = "0 10px 28px rgba(0,0,0,.55)";
-    elDots.appendChild(d);
   }
 
   function getRelative01(clientX, clientY) {
@@ -177,8 +215,11 @@
     if (elDistDisplay) elDistDisplay.textContent = String(n);
   }
 
-  // scoring placeholder unchanged
+  // ------------------------------------------------------------
+  // SCORING (placeholder unchanged)
+  // ------------------------------------------------------------
   const inchesPerFullWidth = 10;
+
   function scoreFromRadiusInches(rIn) {
     if (rIn <= 0.25) return 100;
     if (rIn <= 0.50) return 95;
@@ -193,6 +234,8 @@
   }
 
   function computeCorrectionAndScore() {
+    const aim = getAim();
+    const hits = getHits();
     if (!aim || hits.length < 1) return null;
 
     const avg = hits.reduce((acc, p) => ({ x: acc.x + p.x01, y: acc.y + p.y01 }), { x: 0, y: 0 });
@@ -236,8 +279,13 @@
 
   function onShowResults() {
     const out = computeCorrectionAndScore();
-    if (!out) { alert("Tap Aim Point first, then tap at least one hit."); return; }
+    if (!out) {
+      alert("Tap Aim Point first, then tap at least one hit.");
+      return;
+    }
 
+    const aim = getAim();
+    const hits = getHits();
     const vendorUrl = localStorage.getItem(KEY_VENDOR_URL) || "";
 
     const payload = {
@@ -255,7 +303,9 @@
     goToSEC(payload);
   }
 
-  // ---- Photo
+  // ------------------------------------------------------------
+  // INPUT: PHOTO
+  // ------------------------------------------------------------
   if (elPhotoBtn && elFile) elPhotoBtn.addEventListener("click", () => elFile.click());
 
   if (elFile) {
@@ -287,22 +337,27 @@
     });
   }
 
-  // ---- Tap logic
+  // ------------------------------------------------------------
+  // INPUT: TAPS
+  // ------------------------------------------------------------
   function acceptTap(clientX, clientY) {
     if (!elImg?.src) return;
+
     const { x01, y01 } = getRelative01(clientX, clientY);
 
+    const aim = getAim();
     if (!aim) {
-      aim = { x01, y01 };
-      addDot(x01, y01, "aim");
+      actions = [{ type: "aim", x01, y01 }];
+      renderDots();
       setText(elStatus, "Tap Hits.");
+      setTapCount();
       setInstructionForState();
       hideSticky();
       return;
     }
 
-    hits.push({ x01, y01 });
-    addDot(x01, y01, "hit");
+    actions.push({ type: "hit", x01, y01 });
+    renderDots();
     setTapCount();
     setInstructionForState();
 
@@ -325,7 +380,11 @@
       const dx = Math.abs(t.clientX - touchStart.x);
       const dy = Math.abs(t.clientY - touchStart.y);
 
-      if (dx > 10 || dy > 10) { touchStart = null; return; }
+      // scroll => ignore
+      if (dx > 10 || dy > 10) {
+        touchStart = null;
+        return;
+      }
 
       lastTouchTapAt = now;
       acceptTap(t.clientX, t.clientY);
@@ -334,13 +393,48 @@
 
     elWrap.addEventListener("click", (e) => {
       const now = Date.now();
-      if (now - lastTouchTapAt < 800) return;
+      if (now - lastTouchTapAt < 800) return; // kill ghost click
       acceptTap(e.clientX, e.clientY);
     }, { passive: true });
   }
 
-  // ---- Buttons / distance
-  if (elClear) elClear.addEventListener("click", () => { resetAll(); if (elImg?.src) setText(elStatus, "Tap Aim Point."); });
+  // ------------------------------------------------------------
+  // BUTTONS
+  // ------------------------------------------------------------
+  function doRedo() {
+    if (!actions.length) return;
+
+    // Remove last action
+    actions.pop();
+
+    // If we removed aim but still have hits (shouldn't happen), strip hits too
+    const hasAim = !!getAim();
+    if (!hasAim) {
+      actions = []; // aim defines the whole session
+      hideSticky();
+      setText(elStatus, "Tap Aim Point.");
+    }
+
+    renderDots();
+    setTapCount();
+    setInstructionForState();
+
+    const hits = getHits();
+    if (hasAim && hits.length < 1) {
+      hideSticky();
+      setText(elStatus, "Tap Hits.");
+    }
+  }
+
+  if (elRedo) elRedo.addEventListener("click", doRedo);
+
+  if (elClear) {
+    elClear.addEventListener("click", () => {
+      resetAll();
+      if (elImg?.src) setText(elStatus, "Tap Aim Point.");
+    });
+  }
+
   if (elStickyBtn) elStickyBtn.addEventListener("click", onShowResults);
   if (elDistUp) elDistUp.addEventListener("click", () => setDistance(getDistance() + 5));
   if (elDistDown) elDistDown.addEventListener("click", () => setDistance(getDistance() - 5));
