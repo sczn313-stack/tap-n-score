@@ -10,14 +10,17 @@
   <title>Tap-n-Score™</title>
 
   <script>
-    // Always route TARGET to the landing page (index.html).
-    // Keep querystring so you can pass flags if needed.
+    // Hard rule: target.html is NEVER the entry page.
+    // Always route to /tap-n-score/index.html and preserve query + hash.
     (function () {
-      var dest = "./index.html" + (location.search || "");
-      location.replace(dest);
+      var base = "/tap-n-score/index.html";
+      var qs = window.location.search || "";
+      var hash = window.location.hash || "";
+      window.location.replace(base + qs + hash);
     })();
   </script>
 </head>
+
 <body style="margin:0;background:#06070a;color:#fff;font-family:system-ui">
 </body>
 </html>
