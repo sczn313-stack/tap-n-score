@@ -1,13 +1,25 @@
 /* ============================================================
-   tap-n-score/index.js (FULL REPLACEMENT) — BASELINE 22206d4 + HIT LIST IN PAYLOAD
+   tap-n-score/index.js (FULL REPLACEMENT) — QRC LANDING + SCORING
+   Locks:
+   - QRC opens index.html landing hero (800lb gorilla)
+   - Button text: Add Target Picture
+   - Vendor (inside a box) shown only if vendorUrl exists
+   - No session # on landing
+   - After photo chosen: reveals scoring UI + stores photo for SEC
 ============================================================ */
 
 (() => {
   const $ = (id) => document.getElementById(id);
 
-  // ---- Required IDs
+  // ---- Landing / hero
   const elPhotoBtn = $("photoBtn");
   const elFile = $("photoInput");
+  const elVendorBox = $("vendorBox");
+
+  // ---- Scoring UI
+  const elScoreSection = $("scoreSection");
+  const elSettingsSection = $("settingsSection");
+
   const elImg = $("targetImg");
   const elDots = $("dotsLayer");
   const elWrap = $("targetWrap");
@@ -20,10 +32,9 @@
   const elStickyBar = $("stickyBar");
   const elStickyBtn = $("stickyResultsBtn");
 
-  // Settings / links (optional)
-  const elVendor = $("vendorLink");
-  const elDistance = $("distanceYds");     // hidden input (canonical)
-  const elDistDisplay = $("distDisplay");  // visible number
+  // Settings
+  const elDistance = $("distanceYds");
+  const elDistDisplay = $("distDisplay");
   const elDistUp = $("distUp");
   const elDistDown = $("distDown");
   const elMoaClick = $("moaPerClick");
@@ -32,10 +43,10 @@
   const KEY_PAYLOAD = "SCZN3_SEC_PAYLOAD_V1";
 
   // Target photo handoff keys for SEC
-  const KEY_TARGET_IMG_DATA = "SCZN3_TARGET_IMG_DATAURL_V1"; // data:image/...
-  const KEY_TARGET_IMG_BLOB = "SCZN3_TARGET_IMG_BLOBURL_V1"; // blob:...
+  const KEY_TARGET_IMG_DATA = "SCZN3_TARGET_IMG_DATAURL_V1";
+  const KEY_TARGET_IMG_BLOB = "SCZN3_TARGET_IMG_BLOBURL_V1";
 
-  // (Optional) carry vendor link
+  // Vendor URL
   const KEY_VENDOR_URL = "SCZN3_VENDOR_URL_V1";
 
   let objectUrl = null;
@@ -52,23 +63,6 @@
   // ---- Helpers
   function clamp01(v) { return Math.max(0, Math.min(1, v)); }
   function setText(el, t) { if (el) el.textContent = String(t ?? ""); }
-
-  function getDistance() {
-    const n = Number(elDistance?.value ?? 100);
-    return Number.isFinite(n) ? n : 100;
-  }
-
-  function setDistance(v) {
-    let n = Math.round(Number(v));
-    if (!Number.isFinite(n)) n = 100;
-    n = Math.max(5, Math.min(1000, n));
-    if (elDistance) elDistance.value = String(n);
-    if (elDistDisplay) elDistDisplay.textContent = String(n);
-  }
-
-  function setTapCount() {
-    if (elTapCount) elTapCount.textContent = String(hits.length);
-  }
 
   function hideSticky() {
     if (!elStickyBar) return;
@@ -89,6 +83,10 @@
     }, 650);
   }
 
+  function setTapCount() {
+    if (elTapCount) elTapCount.textContent = String(hits.length);
+  }
+
   function setInstructionForState() {
     if (!elInstruction) return;
 
@@ -96,17 +94,14 @@
       setText(elInstruction, "");
       return;
     }
-
     if (!aim) {
       setText(elInstruction, "Tap Aim Point.");
       return;
     }
-
     if (hits.length < 1) {
       setText(elInstruction, "Tap Hits.");
       return;
     }
-
     setText(elInstruction, "Tap more hits, or pause — results will appear.");
   }
 
@@ -117,9 +112,62 @@
     setTapCount();
     hideSticky();
     setInstructionForState();
-    setText(elStatus, elImg?.src ? "Tap Aim Point." : "Add a photo to begin.");
+    setText(elStatus, elImg?.src ? "Tap Aim Point." : "Add a target photo to begin.");
   }
 
+  // ------------------------------------------------------------
+  // Reveal scoring UI after photo chosen
+  // ------------------------------------------------------------
+  function revealScoringUI() {
+    if (elScoreSection) elScoreSection.classList.remove("scoreHidden");
+    if (elSettingsSection) elSettingsSection.classList.remove("scoreHidden");
+
+    // scroll into the scoring area so it feels like “next step”
+    try { elScoreSection?.scrollIntoView({ behavior: "smooth", block: "start" }); } catch {}
+  }
+
+  // ------------------------------------------------------------
+  // Vendor box: reads localStorage vendor URL (if already set by QRC flow)
+  // You can set KEY_VENDOR_URL earlier (or later after first score).
+  // ------------------------------------------------------------
+  function hydrateVendorBox() {
+    const v = localStorage.getItem(KEY_VENDOR_URL) || "";
+    const ok = typeof v === "string" && v.startsWith("http");
+    if (elVendorBox) {
+      if (ok) {
+        elVendorBox.href = v;
+        elVendorBox.style.display = "inline-flex";
+      } else {
+        elVendorBox.style.display = "none";
+      }
+    }
+  }
+
+  // ------------------------------------------------------------
+  // TARGET PHOTO STORAGE FOR SEC
+  // ------------------------------------------------------------
+  async function storeTargetPhotoForSEC(file, blobUrl) {
+    try { localStorage.setItem(KEY_TARGET_IMG_BLOB, blobUrl); } catch {}
+
+    try {
+      const dataUrl = await new Promise((resolve, reject) => {
+        const r = new FileReader();
+        r.onload = () => resolve(String(r.result || ""));
+        r.onerror = reject;
+        r.readAsDataURL(file);
+      });
+
+      if (dataUrl && dataUrl.startsWith("data:image/")) {
+        localStorage.setItem(KEY_TARGET_IMG_DATA, dataUrl);
+      }
+    } catch {
+      // SEC can still try blob URL if data URL fails
+    }
+  }
+
+  // ------------------------------------------------------------
+  // Dots
+  // ------------------------------------------------------------
   function addDot(x01, y01, kind) {
     if (!elDots) return;
 
@@ -129,14 +177,14 @@
     d.style.top = (y01 * 100) + "%";
 
     if (kind === "aim") {
-      d.style.background = "#67f3a4";
-      d.style.border = "2px solid rgba(0,0,0,.55)";
-      d.style.boxShadow = "0 10px 28px rgba(0,0,0,.55)";
+      d.style.background = "#67f3a4"; // aim point
     } else {
-      d.style.background = "#b7ff3c";
-      d.style.border = "2px solid rgba(0,0,0,.55)";
-      d.style.boxShadow = "0 10px 28px rgba(0,0,0,.55)";
+      d.style.background = "#b7ff3c"; // hits
     }
+
+    // your dot size is controlled in CSS (.tapDot). Leaving JS clean.
+    d.style.border = "2px solid rgba(0,0,0,.55)";
+    d.style.boxShadow = "0 10px 28px rgba(0,0,0,.55)";
 
     elDots.appendChild(d);
   }
@@ -153,24 +201,26 @@
     return btoa(unescape(encodeURIComponent(json)));
   }
 
-  async function storeTargetPhotoForSEC(file, blobUrl) {
-    try { localStorage.setItem(KEY_TARGET_IMG_BLOB, blobUrl); } catch {}
-
-    try {
-      const dataUrl = await new Promise((resolve, reject) => {
-        const r = new FileReader();
-        r.onload = () => resolve(String(r.result || ""));
-        r.onerror = reject;
-        r.readAsDataURL(file);
-      });
-
-      if (dataUrl && dataUrl.startsWith("data:image/")) {
-        localStorage.setItem(KEY_TARGET_IMG_DATA, dataUrl);
-      }
-    } catch {}
+  // ------------------------------------------------------------
+  // Distance
+  // ------------------------------------------------------------
+  function getDistance() {
+    const n = Number(elDistance?.value ?? 100);
+    return Number.isFinite(n) ? n : 100;
   }
 
-  // Placeholder scale
+  function setDistance(v) {
+    let n = Math.round(Number(v));
+    if (!Number.isFinite(n)) n = 100;
+    n = Math.max(5, Math.min(1000, n));
+
+    if (elDistance) elDistance.value = String(n);
+    if (elDistDisplay) elDistDisplay.textContent = String(n);
+  }
+
+  // ------------------------------------------------------------
+  // SCORING (placeholder inches mapping unchanged)
+  // ------------------------------------------------------------
   const inchesPerFullWidth = 10;
 
   function scoreFromRadiusInches(rIn) {
@@ -193,8 +243,9 @@
     avg.x /= hits.length;
     avg.y /= hits.length;
 
-    const dx = aim.x01 - avg.x;
-    const dy = aim.y01 - avg.y;
+    // aim - poi (move POI to aim)
+    const dx = aim.x01 - avg.x; // + => RIGHT
+    const dy = aim.y01 - avg.y; // + => DOWN (screen space)
 
     const inchesX = dx * inchesPerFullWidth;
     const inchesY = dy * inchesPerFullWidth;
@@ -203,7 +254,6 @@
 
     const dist = getDistance();
     const moaPerClick = Number(elMoaClick?.value ?? 0.25);
-
     const inchesPerMoa = (dist / 100) * 1.047;
 
     const moaX = inchesX / inchesPerMoa;
@@ -236,12 +286,7 @@
       return;
     }
 
-    const vendorUrl =
-      (elVendor && elVendor.href && elVendor.href !== "#" && !elVendor.href.endsWith("#"))
-        ? elVendor.href
-        : "";
-
-    try { if (vendorUrl) localStorage.setItem(KEY_VENDOR_URL, vendorUrl); } catch {}
+    const vendorUrl = localStorage.getItem(KEY_VENDOR_URL) || "";
 
     const payload = {
       sessionId: "S-" + Date.now(),
@@ -254,7 +299,6 @@
       sourceImg: "",
       debug: {
         aim,
-        hits,                 // ✅ THIS is what SEC needs to draw all hit dots
         avgPoi: out.avgPoi,
         distanceYds: getDistance(),
         inches: out.inches
@@ -264,9 +308,9 @@
     goToSEC(payload);
   }
 
-  if (elDistUp) elDistUp.addEventListener("click", () => setDistance(getDistance() + 5));
-  if (elDistDown) elDistDown.addEventListener("click", () => setDistance(getDistance() - 5));
-
+  // ------------------------------------------------------------
+  // Photo picker (800lb gorilla)
+  // ------------------------------------------------------------
   if (elPhotoBtn && elFile) {
     elPhotoBtn.addEventListener("click", () => elFile.click());
   }
@@ -286,19 +330,25 @@
       elImg.onload = () => {
         setText(elStatus, "Tap Aim Point.");
         setInstructionForState();
+        revealScoringUI();
       };
 
       elImg.onerror = () => {
         setText(elStatus, "Photo failed to load.");
         setText(elInstruction, "Try again.");
+        revealScoringUI();
       };
 
       elImg.src = objectUrl;
 
+      // allow selecting same file again
       elFile.value = "";
     });
   }
 
+  // ------------------------------------------------------------
+  // Tap logic (touch-first, click suppressed)
+  // ------------------------------------------------------------
   function acceptTap(clientX, clientY) {
     if (!elImg?.src) return;
 
@@ -354,6 +404,9 @@
     }, { passive: true });
   }
 
+  // ------------------------------------------------------------
+  // Buttons / distance
+  // ------------------------------------------------------------
   if (elClear) {
     elClear.addEventListener("click", () => {
       resetAll();
@@ -363,6 +416,14 @@
 
   if (elStickyBtn) elStickyBtn.addEventListener("click", onShowResults);
 
+  if (elDistUp) elDistUp.addEventListener("click", () => setDistance(getDistance() + 5));
+  if (elDistDown) elDistDown.addEventListener("click", () => setDistance(getDistance() - 5));
+
+  // ------------------------------------------------------------
+  // Boot
+  // ------------------------------------------------------------
   setDistance(100);
+  hideSticky();
   resetAll();
+  hydrateVendorBox();
 })();
