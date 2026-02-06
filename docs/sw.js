@@ -1,94 +1,144 @@
 /* ============================================================
-   docs/sw.js (FULL REPLACEMENT)
-   Purpose:
-   - STOP navigation hijack to sec.html
-   - Network-first for page navigations
-   - Offline fallback -> target.html
-   - Clean cache versioning
+   tap-n-score/sw.js (FULL REPLACEMENT) — LANDING-FIRST NAVIGATION
+   Goal:
+   - Any NAVIGATION request (user typing URL, opening app, refresh)
+     should resolve to the Landing page (index.html) unless explicitly
+     requesting another file.
+   - Network-first for HTML so you don't get stuck on old cached pages.
+   - Cache static assets for speed.
 ============================================================ */
 
-const VERSION = "sw-v20260202c";
-const CACHE_NAME = `tap-n-score-${VERSION}`;
+const VERSION = "TNS-SW-LANDING-1";
+const STATIC_CACHE = `tns-static-${VERSION}`;
+const HTML_CACHE = `tns-html-${VERSION}`;
 
-// Cache the bare minimum you want available offline.
-const CORE_ASSETS = [
-  "./",
-  "./index.html",
-  "./target.html",
-  "./sec.html",
-  "./styles.css",
-  "./sec.css",
-  "./index.js",
-  "./sec.js",
-  "./coach.js",
-  "./coach.css",
-  "./download.html"
+// Adjust if your site is served from /tap-n-score/
+const BASE = "/tap-n-score/";
+
+// Minimal static assets you want reliably cached
+const STATIC_ASSETS = [
+  `${BASE}styles.css`,
+  `${BASE}index.js`,
+  `${BASE}sec.css`,
+  `${BASE}sec.js`,
+  `${BASE}download.js`,
+  `${BASE}coach.js`,
+  `${BASE}manifest.webmanifest`,
+  `${BASE}manifest.json`,
 ];
 
-// --- Install
 self.addEventListener("install", (event) => {
-  event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(CORE_ASSETS))
-  );
-  self.skipWaiting();
+  event.waitUntil((async () => {
+    self.skipWaiting();
+
+    const staticCache = await caches.open(STATIC_CACHE);
+    // Best-effort caching; don't fail install if one is missing
+    await Promise.allSettled(STATIC_ASSETS.map((u) => staticCache.add(u)));
+
+    // Pre-cache landing HTML so offline fallback works
+    const htmlCache = await caches.open(HTML_CACHE);
+    await Promise.allSettled([
+      htmlCache.add(`${BASE}index.html`),
+    ]);
+  })());
 });
 
-// --- Activate (delete old caches)
 self.addEventListener("activate", (event) => {
-  event.waitUntil(
-    caches.keys().then((keys) =>
-      Promise.all(
-        keys
-          .filter((k) => k.startsWith("tap-n-score-") && k !== CACHE_NAME)
-          .map((k) => caches.delete(k))
-      )
-    )
-  );
-  self.clients.claim();
+  event.waitUntil((async () => {
+    // Kill old caches so stale routes can't “win”
+    const keys = await caches.keys();
+    await Promise.all(
+      keys.map((k) => {
+        if (k.startsWith("tns-") && k !== STATIC_CACHE && k !== HTML_CACHE) {
+          return caches.delete(k);
+        }
+        return Promise.resolve();
+      })
+    );
+
+    await self.clients.claim();
+  })());
 });
 
-// --- Fetch
+// Helpers
+function isNavigation(req) {
+  return req.mode === "navigate";
+}
+
+function isHtmlRequest(req) {
+  const url = new URL(req.url);
+  return req.headers.get("accept")?.includes("text/html") || url.pathname.endsWith(".html");
+}
+
+function isSameOrigin(url) {
+  return url.origin === self.location.origin;
+}
+
+function shouldCacheStatic(url) {
+  // cache css/js/images/icons, etc.
+  return (
+    url.pathname.startsWith(BASE) &&
+    (url.pathname.endsWith(".css") ||
+     url.pathname.endsWith(".js")  ||
+     url.pathname.endsWith(".png") ||
+     url.pathname.endsWith(".jpg") ||
+     url.pathname.endsWith(".jpeg")||
+     url.pathname.endsWith(".webp")||
+     url.pathname.endsWith(".svg") ||
+     url.pathname.endsWith(".ico") ||
+     url.pathname.endsWith(".json")||
+     url.pathname.endsWith(".webmanifest"))
+  );
+}
+
 self.addEventListener("fetch", (event) => {
   const req = event.request;
   const url = new URL(req.url);
 
-  // Only handle same-origin requests (your GitHub Pages site)
-  if (url.origin !== self.location.origin) return;
+  // Only handle same-origin
+  if (!isSameOrigin(url)) return;
 
-  // 1) NAVIGATION: network-first, offline fallback to target.html
-  if (req.mode === "navigate") {
-    event.respondWith(
-      fetch(req)
-        .then((res) => {
-          // Update cache in background
-          const copy = res.clone();
-          caches.open(CACHE_NAME).then((c) => c.put(req, copy)).catch(() => {});
-          return res;
-        })
-        .catch(async () => {
-          // Offline fallback: landing page
-          const cached = await caches.match("./target.html");
-          return cached || caches.match("./index.html");
-        })
-    );
+  // 1) NAVIGATION: Always resolve to Landing page if anything fails.
+  //    Network-first so edits show up immediately.
+  if (isNavigation(req) || isHtmlRequest(req)) {
+    event.respondWith((async () => {
+      try {
+        // Try the actual requested HTML first (network)
+        const fresh = await fetch(req, { cache: "no-store" });
+
+        // If user opened a deep link explicitly (sec.html, target.html),
+        // let it load; your page-level guards will redirect if needed.
+        // Also: update HTML cache for offline fallback.
+        const htmlCache = await caches.open(HTML_CACHE);
+        htmlCache.put(req, fresh.clone());
+        return fresh;
+      } catch (e) {
+        // Offline / SW fallback -> landing
+        const htmlCache = await caches.open(HTML_CACHE);
+        const cachedLanding = await htmlCache.match(`${BASE}index.html`);
+        if (cachedLanding) return cachedLanding;
+
+        // last resort
+        return new Response("Offline", { status: 503, headers: { "Content-Type": "text/plain" } });
+      }
+    })());
     return;
   }
 
-  // 2) ASSETS: cache-first, then network
-  event.respondWith(
-    caches.match(req).then((cached) => {
+  // 2) Static assets: cache-first
+  if (shouldCacheStatic(url)) {
+    event.respondWith((async () => {
+      const cache = await caches.open(STATIC_CACHE);
+      const cached = await cache.match(req);
       if (cached) return cached;
 
-      return fetch(req)
-        .then((res) => {
-          // Cache successful responses
-          if (res && res.status === 200) {
-            const copy = res.clone();
-            caches.open(CACHE_NAME).then((c) => c.put(req, copy)).catch(() => {});
-          }
-          return res;
-        })
-        .catch(() => cached);
-    })
-  );
+      const fresh = await fetch(req);
+      // best-effort cache
+      cache.put(req, fresh.clone());
+      return fresh;
+    })());
+    return;
+  }
+
+  // 3) Everything else: passthrough
 });
