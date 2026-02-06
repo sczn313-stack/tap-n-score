@@ -2,7 +2,9 @@
    tap-n-score/index.js (FULL REPLACEMENT) — LANDING LOCK: ALWAYS OPEN ON HERO
    Fixes:
    - iOS Safari scroll restoration can reopen mid-page (scoring section).
-     We force scroll-top on load/pageshow and re-hide scoring UI on boot.
+     Force scroll-top on load/pageshow and re-hide scoring UI on boot.
+   - NEW: On pageshow, also clear any stale blob img src so UI can’t “wake up”
+     from a cached image.
    - Keeps vendor placeholder box + all tap logic.
 ============================================================ */
 
@@ -57,16 +59,54 @@
   // HARD LANDING LOCK: kill scroll restoration
   // ------------------------------------------------------------
   try { history.scrollRestoration = "manual"; } catch {}
+
   function forceTop() {
     try { window.scrollTo(0, 0); } catch {}
   }
+
+  function hardHideScoringUI() {
+    if (elScoreSection) elScoreSection.classList.add("scoreHidden");
+    if (elSettingsSection) elSettingsSection.classList.add("scoreHidden");
+  }
+
+  function hardClearStalePhoto() {
+    // KEY: prevent iOS from restoring a previous blob: image and “waking” the UI
+    try {
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    } catch {}
+    objectUrl = null;
+
+    if (elImg) {
+      elImg.onload = null;
+      elImg.onerror = null;
+      // fully clear (not just src="")
+      elImg.removeAttribute("src");
+    }
+
+    // Also clear dots + state
+    aim = null;
+    hits = [];
+    if (elDots) elDots.innerHTML = "";
+    if (elTapCount) elTapCount.textContent = "0";
+    if (elInstruction) elInstruction.textContent = "";
+    if (elStatus) elStatus.textContent = "Add a target photo to begin.";
+  }
+
+  function hideSticky() {
+    if (!elStickyBar) return;
+    elStickyBar.classList.add("stickyHidden");
+    elStickyBar.setAttribute("aria-hidden", "true");
+  }
+
   // pageshow fires on iOS back/forward cache restores (the main culprit)
   window.addEventListener("pageshow", () => {
     forceTop();
-    // make sure scoring is hidden unless a photo is actually loaded
     hardHideScoringUI();
     hideSticky();
+    hardClearStalePhoto();
+    hydrateVendorBox();
   });
+
   window.addEventListener("load", () => {
     forceTop();
   });
@@ -74,16 +114,9 @@
   function clamp01(v) { return Math.max(0, Math.min(1, v)); }
   function setText(el, t) { if (el) el.textContent = String(t ?? ""); }
 
-  function hardHideScoringUI() {
-    // ALWAYS start on landing hero view
-    if (elScoreSection) elScoreSection.classList.add("scoreHidden");
-    if (elSettingsSection) elSettingsSection.classList.add("scoreHidden");
-  }
-
   function revealScoringUI() {
     if (elScoreSection) elScoreSection.classList.remove("scoreHidden");
     if (elSettingsSection) elSettingsSection.classList.remove("scoreHidden");
-    // optional: scroll down ONLY after photo loads (intentional)
     try { elScoreSection?.scrollIntoView({ behavior: "smooth", block: "start" }); } catch {}
   }
 
@@ -102,7 +135,6 @@
       elVendorBox.style.opacity = "1";
       elVendorBox.style.pointerEvents = "auto";
     } else {
-      // placeholder state (visible but not clickable)
       elVendorBox.removeAttribute("href");
       elVendorBox.removeAttribute("target");
       elVendorBox.removeAttribute("rel");
@@ -110,14 +142,6 @@
       elVendorBox.style.opacity = ".92";
       elVendorBox.style.pointerEvents = "none";
     }
-  }
-
-  function setTapCount() { if (elTapCount) elTapCount.textContent = String(hits.length); }
-
-  function hideSticky() {
-    if (!elStickyBar) return;
-    elStickyBar.classList.add("stickyHidden");
-    elStickyBar.setAttribute("aria-hidden", "true");
   }
 
   function showSticky() {
@@ -132,6 +156,8 @@
       if (hits.length >= 1) showSticky();
     }, 650);
   }
+
+  function setTapCount() { if (elTapCount) elTapCount.textContent = String(hits.length); }
 
   function setInstructionForState() {
     if (!elInstruction) return;
@@ -342,7 +368,6 @@
     }, { passive: true });
 
     elWrap.addEventListener("touchend", (e) => {
-      const now = Date.now();
       const t = (e.changedTouches && e.changedTouches[0]) ? e.changedTouches[0] : null;
       if (!t || !touchStart) return;
 
@@ -351,7 +376,7 @@
 
       if (dx > 10 || dy > 10) { touchStart = null; return; }
 
-      lastTouchTapAt = now;
+      lastTouchTapAt = Date.now();
       acceptTap(t.clientX, t.clientY);
       touchStart = null;
     }, { passive: true });
@@ -377,5 +402,6 @@
 
   // critical: force landing view on first paint
   hardHideScoringUI();
+  hardClearStalePhoto();
   forceTop();
 })();
