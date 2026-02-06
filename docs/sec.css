@@ -1,14 +1,13 @@
-/* tap-n-score/sec.css (FULL REPLACEMENT) — SEC (RW&B) */
+/* tap-n-score/sec.css (FULL REPLACEMENT) — SEC LOCK (NO IMAGE) */
 
 :root{
   --bg0:#05060a;
   --bg1:#0a0c12;
 
-  --card: rgba(255,255,255,.05);
+  --card: rgba(255,255,255,.06);
   --stroke: rgba(255,255,255,.12);
   --text:#eef2f7;
-  --muted: rgba(238,242,247,.68);
-  --shadow: 0 20px 60px rgba(0,0,0,.55);
+  --muted: rgba(238,242,247,.65);
 
   --red:#d64040;
   --white:#eef2f7;
@@ -17,147 +16,205 @@
 
 *{ box-sizing:border-box; }
 html,body{ height:100%; }
+
 body{
   margin:0;
-  font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial;
   color: var(--text);
   background:
-    radial-gradient(1200px 800px at 20% 10%, rgba(46,102,255,.10), transparent 60%),
-    radial-gradient(1200px 800px at 80% 20%, rgba(214,64,64,.10), transparent 60%),
+    radial-gradient(1100px 700px at 18% 10%, rgba(47,102,255,.16), transparent 60%),
+    radial-gradient(1000px 700px at 82% 15%, rgba(214,64,64,.14), transparent 60%),
     linear-gradient(180deg, var(--bg0), var(--bg1));
 }
 
-.secWrap{
+.secPage{
   width: min(980px, 96vw);
   margin: 0 auto;
-  padding: 18px 12px 40px;
-  display:flex;
-  flex-direction:column;
-  gap: 14px;
+  padding: 14px 12px 26px;
 }
 
-.secHeader{
+/* Header */
+.secHdr{
+  padding: 8px 4px 12px;
+  text-align:center;
+}
+
+.secBrand{
+  font-weight: 1000;
+  letter-spacing: .10em;
+  text-transform: uppercase;
+  font-size: clamp(18px, 3.2vw, 26px);
+  line-height: 1.1;
+  user-select:none;
+  -webkit-user-select:none;
+  display:flex;
+  gap: 12px;
+  justify-content:center;
+  flex-wrap:wrap;
+}
+
+.secBrand .r{ color: var(--red); }
+.secBrand .w{ color: var(--white); }
+.secBrand .b{ color: var(--blue); }
+
+.secSession{
+  margin-top: 10px;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: rgba(238,242,247,.55);
+}
+
+/* Card shell */
+.secShell{
+  border: 1px solid var(--stroke);
+  background: var(--card);
+  border-radius: 22px;
+  box-shadow: 0 20px 60px rgba(0,0,0,.55);
+  overflow:hidden;
+  padding: 14px;
+}
+
+/* Score */
+.secScoreWrap{
+  text-align:center;
+  padding: 10px 10px 14px;
+  border: 1px solid rgba(255,255,255,.10);
+  background: rgba(0,0,0,.14);
+  border-radius: 18px;
+}
+
+.secScoreLabelTop{
+  font-size: 12px;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  font-weight: 950;
+  color: rgba(238,242,247,.62);
+}
+
+.secScoreValue{
+  margin-top: 10px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 1000;
+  letter-spacing: .03em;
+  line-height: 1;
+
+  /* This prevents “top cut off” on iOS */
+  padding-top: 10px;
+  padding-bottom: 6px;
+
+  font-size: clamp(84px, 18vw, 170px);
+  text-shadow:
+    0 0 10px rgba(255,255,255,.06),
+    0 10px 28px rgba(0,0,0,.55);
+}
+
+.secScoreLabel{
+  margin-top: 2px;
+  font-weight: 950;
+  font-size: 18px;
+  color: rgba(238,242,247,.90);
+}
+
+.secFairness{
+  margin-top: 10px;
+  font-weight: 850;
+  font-size: 13px;
+  line-height: 1.25;
+  color: rgba(238,242,247,.75);
+}
+
+/* Errors */
+.secErr{
+  margin: 10px 6px 0;
+  padding: 10px 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,.12);
+  background: rgba(255,0,0,.10);
+  color: rgba(255,220,220,.95);
+  font-weight: 900;
+}
+
+/* Stat grid */
+.secGrid{
+  display:grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+  margin-top: 14px;
+}
+@media (min-width: 720px){
+  .secGrid{ grid-template-columns: 1fr 1fr; }
+}
+
+.secStat{
+  border: 1px solid rgba(255,255,255,.10);
+  background: rgba(0,0,0,.14);
+  border-radius: 18px;
+  padding: 12px 14px;
+}
+
+.secStatK{
+  font-size: 12px;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  font-weight: 950;
+  color: rgba(238,242,247,.55);
+}
+
+.secStatV{
+  margin-top: 10px;
+  font-weight: 1000;
+  font-size: 22px;
+  color: rgba(238,242,247,.92);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Actions */
+.secActions{
   display:flex;
   flex-direction:column;
   gap: 10px;
-  padding: 6px 4px 2px;
-}
-
-.secBrandLine{
-  display:flex;
-  align-items:flex-end;
-  justify-content:space-between;
-  gap: 12px;
-}
-
-.secBrandTitle{
-  font-weight: 950;
-  letter-spacing: .08em;
-  font-size: clamp(24px, 5vw, 42px);
-  line-height: 1.05;
-  text-transform: uppercase;
-}
-
-.secBrandTitle .r{ color: var(--red); }
-.secBrandTitle .w{ color: var(--white); }
-.secBrandTitle .b{ color: var(--blue); }
-
-.secBrandSub{
-  display:flex;
-  align-items:center;
-  justify-content:flex-end;
-  min-width: 84px;
-}
-
-.secAcr{
-  font-weight: 1000;
-  letter-spacing: .22em;
-  font-size: clamp(16px, 2.8vw, 20px);
-  text-transform: uppercase;
-  opacity: .95;
-}
-.secAcr .r{ color: var(--red); }
-.secAcr .w{ color: var(--white); }
-.secAcr .b{ color: var(--blue); }
-
-.secMetaLine{
-  display:flex;
-  justify-content:flex-end;
-}
-
-.sessionLine{
-  font-size: 12px;
-  color: rgba(238,242,247,.55);
-  letter-spacing: .06em;
-  font-weight: 900;
-  text-transform: uppercase;
-}
-
-.secCard{
-  background: var(--card);
-  border: 1px solid var(--stroke);
-  border-radius: 18px;
-  padding: 14px;
-  box-shadow: 0 18px 60px rgba(0,0,0,.35);
-}
-
-.secCanvasWrap{
-  width:100%;
-  border-radius: 16px;
-  overflow:hidden;
-  border: 1px solid rgba(255,255,255,.10);
-  background: rgba(0,0,0,.25);
-}
-
-canvas#secCanvas{
-  display:block;
-  width:100%;
-  height:auto;
-}
-
-.secErr{
-  margin-top: 10px;
-  color: rgba(255,210,210,.92);
-  font-weight: 950;
-  letter-spacing: .02em;
-}
-
-.secActions{
-  display:flex;
-  gap: 12px;
-  flex-wrap:wrap;
   margin-top: 14px;
 }
 
 .secBtn{
-  flex: 1;
-  min-width: 220px;
-  height: 54px;
+  width:100%;
+  appearance:none;
+  border: 1px solid rgba(255,255,255,.16);
+  background: rgba(255,255,255,.07);
+  color: var(--text);
   border-radius: 16px;
-  border: 1px solid rgba(255,255,255,.14);
-  background: rgba(255,255,255,.08);
-  color: #eef2f7;
+  padding: 14px 14px;
   font-weight: 950;
-  font-size: 15px;
-  letter-spacing: .02em;
-  cursor:pointer;
+  font-size: 16px;
+  cursor: pointer;
+  user-select:none;
+  -webkit-tap-highlight-color: transparent;
 }
 .secBtn:active{ transform: translateY(1px); }
 
 .secBtnPrimary{
-  flex: 2;
-  min-width: 260px;
-  height: 58px;
-  border-radius: 18px;
-  border: 1px solid rgba(255,255,255,.18);
-  background: rgba(103,243,164,.14);
-  color: #eafff2;
+  border-color: rgba(47,102,255,.38);
+  background: rgba(47,102,255,.14);
 }
 
+/* Tip + footer */
 .secTip{
   margin-top: 10px;
-  color: rgba(238,242,247,.68);
+  padding: 0 4px;
+  color: rgba(238,242,247,.58);
   font-size: 13px;
-  line-height: 1.35;
-  font-weight: 750;
+  line-height: 1.3;
+}
+
+.secFoot{
+  margin-top: 12px;
+  text-align:center;
+  color: rgba(238,242,247,.30);
+  letter-spacing: .22em;
+  font-weight: 950;
+  text-transform: uppercase;
+  font-size: 12px;
+  padding: 6px 0 0;
 }
