@@ -1,9 +1,7 @@
 /* ============================================================
-   tap-n-score/sec.js (FULL REPLACEMENT) — SEC LOCK (NO IMAGE / NO DOTS)
-   Fixes:
-   - Robust payload reading (supports multiple key shapes)
-   - Diagnostics shown on-page when fields missing
-   - Generates PNG and saves to localStorage for download.html
+   tap-n-score/sec.js (FULL REPLACEMENT) — SEC LOCK + ENTRY GUARD
+   Change:
+   - If SEC is opened directly with no payload, redirect to landing.
 ============================================================ */
 
 (() => {
@@ -26,9 +24,6 @@
   const btnDownload = $("downloadBtn");
   const btnScoreAnother = $("scoreAnotherBtn");
 
-  // -----------------------------
-  // Utils
-  // -----------------------------
   function safeJsonParse(s) { try { return JSON.parse(s); } catch { return null; } }
 
   function getParam(name) {
@@ -43,6 +38,14 @@
     } catch {
       return null;
     }
+  }
+
+  function navToIndex() {
+    window.location.href = `./index.html?fresh=${Date.now()}`;
+  }
+
+  function navToDownloadAuto() {
+    window.location.href = `./download.html?auto=1&fresh=${Date.now()}`;
   }
 
   function showErr(msg) {
@@ -72,12 +75,11 @@
     return Math.max(0, Math.min(100, n));
   }
 
-  // Score colors
   function scoreColor(score) {
-    if (score >= 90) return "#67f3a4";     // green
-    if (score >= 75) return "#f5f0b3";     // pale yellow
-    if (score >= 60) return "#ffb84a";     // orange
-    return "#ff5b5b";                      // red
+    if (score >= 90) return "#67f3a4";
+    if (score >= 75) return "#f5f0b3";
+    if (score >= 60) return "#ffb84a";
+    return "#ff5b5b";
   }
 
   function scoreLabel(score) {
@@ -87,66 +89,6 @@
     return "Wide / Off-center";
   }
 
-  // -----------------------------
-  // Compatibility getters
-  // (this is the “where did clicks go” fix)
-  // -----------------------------
-  function pickFirst(...vals) {
-    for (const v of vals) {
-      if (v === 0) return 0;
-      if (v === false) return false;
-      if (v === "" || v == null) continue;
-      return v;
-    }
-    return undefined;
-  }
-
-  function getShots(payload) {
-    return Number(pickFirst(
-      payload?.shots,
-      payload?.debug?.shots,
-      payload?.meta?.shots,
-      payload?.summary?.shots
-    )) || 0;
-  }
-
-  function getDistanceYds(payload) {
-    return Number(pickFirst(
-      payload?.debug?.distanceYds,
-      payload?.distanceYds,
-      payload?.meta?.distanceYds,
-      payload?.distance,
-      payload?.debug?.distance,
-      100
-    )) || 100;
-  }
-
-  function getClickObj(payload, axis /* "windage"|"elevation" */) {
-    // Preferred shape:
-    // payload.windage = { dir:"RIGHT", clicks: 1.25 }
-    // payload.elevation = { dir:"DOWN", clicks: 0.75 }
-
-    const o = payload?.[axis];
-    if (o && typeof o === "object") return o;
-
-    // Older/alternate shapes:
-    // payload.clicks = { windage:{...}, elevation:{...} }
-    const o2 = payload?.clicks?.[axis];
-    if (o2 && typeof o2 === "object") return o2;
-
-    // Alternate: payload.windageDir, payload.windageClicks
-    const dirKey = axis + "Dir";
-    const clicksKey = axis + "Clicks";
-    const dir = pickFirst(payload?.[dirKey], payload?.debug?.[dirKey], payload?.meta?.[dirKey]);
-    const clicks = pickFirst(payload?.[clicksKey], payload?.debug?.[clicksKey], payload?.meta?.[clicksKey]);
-
-    if (dir || clicks || clicks === 0) {
-      return { dir, clicks };
-    }
-
-    return null;
-  }
-
   function fmtClicks(obj) {
     const dir = obj?.dir ? String(obj.dir) : "—";
     const c = Number(obj?.clicks);
@@ -154,26 +96,15 @@
     return `${dir}  ${clicks}`;
   }
 
-  function navToIndex() {
-    window.location.href = `./index.html?fresh=${Date.now()}`;
-  }
-
-  function navToDownloadAuto() {
-    window.location.href = `./download.html?auto=1&fresh=${Date.now()}`;
-  }
-
-  // -----------------------------
-  // PNG generation (no target photo)
-  // -----------------------------
+  // -------- PNG generation (no target photo)
   function buildSecPng(payload) {
     const score = clampScore(payload?.score ?? 0);
     const sid = payload?.sessionId || "—";
+    const shots = Number(payload?.shots ?? 0) || 0;
+    const dist = Number(payload?.debug?.distanceYds ?? 100) || 100;
 
-    const shots = getShots(payload);
-    const dist = getDistanceYds(payload);
-
-    const windTxt = fmtClicks(getClickObj(payload, "windage"));
-    const elevTxt = fmtClicks(getClickObj(payload, "elevation"));
+    const windTxt = fmtClicks(payload?.windage);
+    const elevTxt = fmtClicks(payload?.elevation);
 
     const W = 1600;
     const H = 900;
@@ -186,48 +117,54 @@
     ctx.fillStyle = "#06070a";
     ctx.fillRect(0, 0, W, H);
 
-    function radial(x, y, r, color) {
-      const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+    function radial(x,y,r, color){
+      const g = ctx.createRadialGradient(x,y,0,x,y,r);
       g.addColorStop(0, color);
       g.addColorStop(1, "rgba(0,0,0,0)");
       return g;
     }
     ctx.fillStyle = radial(350, 160, 700, "rgba(47,102,255,0.18)");
-    ctx.fillRect(0, 0, W, H);
+    ctx.fillRect(0,0,W,H);
     ctx.fillStyle = radial(1250, 180, 700, "rgba(214,64,64,0.14)");
-    ctx.fillRect(0, 0, W, H);
+    ctx.fillRect(0,0,W,H);
 
     ctx.fillStyle = "rgba(255,255,255,0.05)";
     ctx.strokeStyle = "rgba(255,255,255,0.12)";
     ctx.lineWidth = 2;
-    roundRect(ctx, 80, 70, W - 160, H - 140, 34);
+
+    roundRect(ctx, 80, 70, W-160, H-140, 34);
     ctx.fill();
     ctx.stroke();
 
+    // Title
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
+    drawRWBTitle(ctx, W/2, 155);
 
-    drawRWBTitle(ctx, W / 2, 155);
-
+    // Session
     ctx.font = "900 18px system-ui, -apple-system, Segoe UI, Roboto, Arial";
     ctx.fillStyle = "rgba(238,242,247,0.55)";
-    ctx.fillText(`Session: ${sid}`, W / 2, 205);
+    ctx.fillText(`Session: ${sid}`, W/2, 205);
 
+    // Score
     ctx.font = "1000 170px system-ui, -apple-system, Segoe UI, Roboto, Arial";
     ctx.fillStyle = scoreColor(score);
     ctx.shadowColor = "rgba(0,0,0,0.55)";
     ctx.shadowBlur = 26;
-    ctx.fillText(String(score), W / 2, 375);
+    ctx.fillText(String(score), W/2, 375);
     ctx.shadowBlur = 0;
 
+    // Label
     ctx.font = "950 26px system-ui, -apple-system, Segoe UI, Roboto, Arial";
     ctx.fillStyle = "rgba(238,242,247,0.90)";
-    ctx.fillText(scoreLabel(score), W / 2, 470);
+    ctx.fillText(scoreLabel(score), W/2, 470);
 
+    // Fairness
     ctx.font = "850 22px system-ui, -apple-system, Segoe UI, Roboto, Arial";
     ctx.fillStyle = "rgba(238,242,247,0.72)";
-    ctx.fillText("Tighter group + closer to aim point = higher score", W / 2, 520);
+    ctx.fillText("Tighter group + closer to aim point = higher score", W/2, 520);
 
+    // Stats
     const boxY = 585;
     const boxW = (W - 220) / 2;
     const boxH = 120;
@@ -241,44 +178,45 @@
     statBox(ctx, leftX, boxY2, boxW, boxH, "Windage", windTxt);
     statBox(ctx, rightX, boxY2, boxW, boxH, "Elevation", elevTxt);
 
+    // Footer
     ctx.font = "900 18px system-ui, -apple-system, Segoe UI, Roboto, Arial";
     ctx.fillStyle = "rgba(238,242,247,0.28)";
-    ctx.fillText("SCZN3", W / 2, H - 100);
+    ctx.fillText("SCZN3", W/2, H - 100);
 
     return c.toDataURL("image/png");
 
     function roundRect(ctx, x, y, w, h, r) {
-      const rr = Math.min(r, w / 2, h / 2);
+      const rr = Math.min(r, w/2, h/2);
       ctx.beginPath();
-      ctx.moveTo(x + rr, y);
-      ctx.arcTo(x + w, y, x + w, y + h, rr);
-      ctx.arcTo(x + w, y + h, x, y + h, rr);
-      ctx.arcTo(x, y + h, x, y, rr);
-      ctx.arcTo(x, y, x + w, y, rr);
+      ctx.moveTo(x+rr, y);
+      ctx.arcTo(x+w, y, x+w, y+h, rr);
+      ctx.arcTo(x+w, y+h, x, y+h, rr);
+      ctx.arcTo(x, y+h, x, y, rr);
+      ctx.arcTo(x, y, x+w, y, rr);
       ctx.closePath();
     }
 
-    function drawRWBTitle(ctx, cx, cy) {
+    function drawRWBTitle(ctx, cx, cy){
       const parts = [
-        { t: "SHOOTER", c: "#d64040" },
-        { t: "EXPERIENCE", c: "#eef2f7" },
-        { t: "CARD", c: "#2f66ff" },
-        { t: "SEC", c: "#eef2f7" },
+        {t:"SHOOTER", c:"#d64040"},
+        {t:"EXPERIENCE", c:"#eef2f7"},
+        {t:"CARD", c:"#2f66ff"},
+        {t:"SEC", c:"#eef2f7"},
       ];
       ctx.font = "1000 34px system-ui, -apple-system, Segoe UI, Roboto, Arial";
       const gap = 18;
-      const widths = parts.map((p) => ctx.measureText(p.t).width);
-      const total = widths.reduce((a, b) => a + b, 0) + gap * (parts.length - 1);
-      let x = cx - total / 2;
+      const widths = parts.map(p => ctx.measureText(p.t).width);
+      const total = widths.reduce((a,b)=>a+b,0) + gap*(parts.length-1);
+      let x = cx - total/2;
 
-      for (let i = 0; i < parts.length; i++) {
+      for (let i=0;i<parts.length;i++){
         ctx.fillStyle = parts[i].c;
-        ctx.fillText(parts[i].t, x + widths[i] / 2, cy);
+        ctx.fillText(parts[i].t, x + widths[i]/2, cy);
         x += widths[i] + gap;
       }
     }
 
-    function statBox(ctx, x, y, w, h, label, value) {
+    function statBox(ctx, x, y, w, h, label, value){
       ctx.fillStyle = "rgba(0,0,0,0.18)";
       ctx.strokeStyle = "rgba(255,255,255,0.10)";
       ctx.lineWidth = 2;
@@ -323,38 +261,21 @@
     }
     if (elScoreLabel) elScoreLabel.textContent = scoreLabel(score);
 
-    const shots = getShots(payload);
-    const dist = getDistanceYds(payload);
-
-    if (elShots) elShots.textContent = String(shots);
+    if (elShots) elShots.textContent = String(Number(payload?.shots ?? 0) || 0);
+    const dist = Number(payload?.debug?.distanceYds ?? 100) || 100;
     if (elDist) elDist.textContent = String(dist);
 
-    const windObj = getClickObj(payload, "windage");
-    const elevObj = getClickObj(payload, "elevation");
-
-    if (elWind) elWind.textContent = fmtClicks(windObj);
-    if (elElev) elElev.textContent = fmtClicks(elevObj);
-
-    // If anything important is missing, show diagnostics
-    const missing = [];
-    if (!payload?.sessionId) missing.push("sessionId");
-    if (payload?.score == null) missing.push("score");
-    if (shots === 0) missing.push("shots");
-    if (!windObj || !Number.isFinite(Number(windObj?.clicks))) missing.push("windage.clicks");
-    if (!elevObj || !Number.isFinite(Number(elevObj?.clicks))) missing.push("elevation.clicks");
-
-    if (missing.length) {
-      showErr(
-        "SEC DIAGNOSTICS — missing/empty fields: " + missing.join(", ")
-        + "\n\nPayload keys seen:\n" + Object.keys(payload || {}).sort().join(", ")
-      );
-    }
+    if (elWind) elWind.textContent = fmtClicks(payload?.windage);
+    if (elElev) elElev.textContent = fmtClicks(payload?.elevation);
   }
 
   async function boot() {
     const payload = loadPayload();
+
+    // ✅ ENTRY GUARD: SEC is not allowed to be the entry page
     if (!payload) {
-      showErr("Missing payload. Go back and re-score.");
+      // No error screen; just go home
+      navToIndex();
       return;
     }
 
@@ -363,15 +284,15 @@
     try {
       const png = buildSecPng(payload);
       await savePngToStorage(png);
-    } catch (e) {
-      showErr("SEC loaded, but PNG could not be generated. Try re-score or clear storage.");
+    } catch {
+      showErr("SEC loaded, but PNG could not be generated. Try re-score.");
     }
   }
 
   if (btnDownload) {
     btnDownload.addEventListener("click", async () => {
       const payload = loadPayload();
-      if (!payload) { showErr("Missing payload. Go back and re-score."); return; }
+      if (!payload) { navToIndex(); return; }
 
       try {
         const png = buildSecPng(payload);
