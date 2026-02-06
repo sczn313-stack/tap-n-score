@@ -7,17 +7,15 @@
   <meta name="color-scheme" content="dark" />
   <meta name="theme-color" content="#06070a" />
 
-  <!-- HARD NO-CACHE (Safari helpers) -->
   <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
 
   <title>Tap-n-Score™</title>
 
-  <link rel="stylesheet" href="/tap-n-score/styles.css?v=LAND-0205A" />
+  <link rel="stylesheet" href="/tap-n-score/styles.css?v=LAND-0205B" />
 
   <style>
-    /* ---- Landing hero (QRC destination) */
     .hero{
       position: relative;
       background: radial-gradient(1200px 600px at 25% 15%, rgba(47,102,255,.20), transparent 60%),
@@ -30,12 +28,7 @@
       overflow: hidden;
     }
 
-    .brandRow{
-      display:flex;
-      flex-direction:column;
-      gap:6px;
-      padding: 4px 2px 10px;
-    }
+    .brandRow{ display:flex; flex-direction:column; gap:6px; padding: 4px 2px 10px; }
 
     .brandTitle{
       font-weight: 1000;
@@ -80,8 +73,6 @@
       cursor:pointer;
       user-select:none;
       -webkit-tap-highlight-color: transparent;
-
-      /* prevent “garble” artifacts on iOS */
       transform: translateZ(0);
       -webkit-font-smoothing: antialiased;
       text-rendering: geometricPrecision;
@@ -96,38 +87,49 @@
       max-width: 820px;
     }
 
-    /* Vendor box (bottom-right INSIDE the hero) */
+    /* Vendor placeholder (ALWAYS visible on landing) */
     .vendorBox{
       position:absolute;
       right: 14px;
       bottom: 14px;
       width: min(290px, 54%);
-      padding: 12px 12px;
+      padding: 12px 14px;
       border-radius: 999px;
       border: 1px solid rgba(255,255,255,.14);
       background: rgba(0,0,0,.24);
       box-shadow: 0 16px 44px rgba(0,0,0,.35);
       text-decoration:none;
       color: rgba(238,242,247,.92);
-      display:none; /* shown only if vendorUrl exists */
-    }
-    .vendorBox .k{
-      font-weight: 1000;
-      letter-spacing: .10em;
-      font-size: 14px;
-      color: rgba(47,102,255,.92);
-      text-transform: uppercase;
-      line-height: 1.05;
-    }
-    .vendorBox .v{
-      margin-top: 6px;
-      font-weight: 1000;
-      font-size: 20px;
-      line-height: 1.1;
-      color: rgba(238,242,247,.92);
+      display: inline-flex; /* ALWAYS ON */
+      align-items:center;
+      justify-content:center;
+      gap: 10px;
+      -webkit-tap-highlight-color: transparent;
+      user-select:none;
+      -webkit-user-select:none;
     }
 
-    /* IMPORTANT (iOS): do NOT use display:none for file input */
+    .vendorPillText{
+      font-weight: 1000;
+      letter-spacing: .18em;
+      font-size: 14px;
+      text-transform: uppercase;
+      color: rgba(238,242,247,.90);
+      line-height: 1;
+    }
+
+    .vendorWire{
+      position:absolute;
+      right: 0;
+      bottom: 0;
+      width: 180px;
+      height: 90px;
+      pointer-events:none;
+      opacity: .55;
+      filter: drop-shadow(0 10px 20px rgba(0,0,0,.55));
+    }
+
+    /* iOS: do NOT display:none file input */
     .fileHidden{
       position:absolute;
       left:-9999px;
@@ -135,10 +137,7 @@
       opacity:0;
     }
 
-    /* ---- Scoring section hidden until photo selected */
     .scoreHidden{ display:none !important; }
-
-    /* small spacing helpers */
     .mt12{ margin-top:12px; }
   </style>
 </head>
@@ -164,21 +163,21 @@
         </div>
       </div>
 
-      <!-- Vendor (inside a box) -->
-      <a id="vendorBox" class="vendorBox" href="#" target="_blank" rel="noopener">
-        <div class="k">BUY MORE</div>
-        <div class="v">Targets Like This</div>
+      <!-- Vendor placeholder box (always visible) -->
+      <a id="vendorBox" class="vendorBox" href="#" aria-label="Vendor">
+        <span id="vendorLabel" class="vendorPillText">VENDOR</span>
       </a>
 
-      <input
-        id="photoInput"
-        class="fileHidden"
-        type="file"
-        accept="image/*"
-      />
+      <!-- simple “wire” to the vendor box (visual only) -->
+      <svg class="vendorWire" viewBox="0 0 180 90" aria-hidden="true">
+        <path d="M10 10 C 70 10, 70 70, 170 70" fill="none" stroke="rgba(255,255,255,.28)" stroke-width="3" stroke-linecap="round"/>
+        <path d="M10 18 C 78 18, 78 76, 170 76" fill="none" stroke="rgba(47,102,255,.18)" stroke-width="2" stroke-linecap="round"/>
+      </svg>
+
+      <input id="photoInput" class="fileHidden" type="file" accept="image/*" />
     </section>
 
-    <!-- SCORING UI (reveals after photo selected) -->
+    <!-- SCORING UI (hidden until photo selected) -->
     <section id="scoreSection" class="card mt12 scoreHidden">
       <div class="cardTitle">PHOTO</div>
 
@@ -196,9 +195,7 @@
           Taps: <span id="tapCount">0</span>
         </div>
 
-        <button id="clearTapsBtn" class="btnSecondary" type="button">
-          Clear
-        </button>
+        <button id="clearTapsBtn" class="btnSecondary" type="button">Clear</button>
       </div>
 
       <p id="instructionLine" class="hint"></p>
@@ -217,13 +214,15 @@
               border: 1px solid rgba(255,255,255,.10);
               border-radius: 14px;
               padding: 10px;">
-              <button id="distDown" class="stepBtn" type="button" style="width:46px;height:46px;border-radius:14px;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.07);color:#eef2f7;font-size:20px;font-weight:900;cursor:pointer;">−</button>
+              <button id="distDown" type="button"
+                style="width:46px;height:46px;border-radius:14px;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.07);color:#eef2f7;font-size:20px;font-weight:900;cursor:pointer;">−</button>
 
               <div style="flex:1;text-align:center;font-weight:900;font-size:18px;letter-spacing:.04em;color:#eef2f7;user-select:none;">
                 <span id="distDisplay">100</span> yd
               </div>
 
-              <button id="distUp" class="stepBtn" type="button" style="width:46px;height:46px;border-radius:14px;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.07);color:#eef2f7;font-size:20px;font-weight:900;cursor:pointer;">+</button>
+              <button id="distUp" type="button"
+                style="width:46px;height:46px;border-radius:14px;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.07);color:#eef2f7;font-size:20px;font-weight:900;cursor:pointer;">+</button>
 
               <input id="distanceYds" value="100" style="position:absolute; left:-9999px; top:-9999px; width:1px; height:1px; opacity:0;" />
             </div>
@@ -242,7 +241,6 @@
         </label>
       </div>
 
-      <!-- keep this id for compatibility (even though vendor box is in hero) -->
       <a id="vendorLink" class="vendorLink" href="#" target="_blank" rel="noopener" style="display:none;"></a>
     </section>
 
@@ -251,13 +249,11 @@
     </footer>
 
     <div id="stickyBar" class="stickyBar stickyHidden" aria-hidden="true">
-      <button id="stickyResultsBtn" class="stickyBtn" type="button">
-        Show results
-      </button>
+      <button id="stickyResultsBtn" class="stickyBtn" type="button">Show results</button>
     </div>
 
   </main>
 
-  <script defer src="/tap-n-score/index.js?v=LAND-0205A"></script>
+  <script defer src="/tap-n-score/index.js?v=LAND-0205B"></script>
 </body>
 </html>
