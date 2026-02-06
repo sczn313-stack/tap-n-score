@@ -1,4 +1,4 @@
-<!-- tap-n-score/sec.html (FULL REPLACEMENT) — SEC (RW&B) -->
+<!-- tap-n-score/sec.html (FULL REPLACEMENT) — SHOOTER EXPERIENCE CARD (RW&B) -->
 <!doctype html>
 <html lang="en">
 <head>
@@ -12,62 +12,90 @@
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
 
-  <title>Shooter Experience Card (SEC)</title>
+  <title>SEC — Shooter Experience Card</title>
 
-  <!-- Keep shared app styling -->
-  <link rel="stylesheet" href="/tap-n-score/styles.css?v=SEC-RWB1" />
-  <!-- SEC-specific styling -->
-  <link rel="stylesheet" href="/tap-n-score/sec.css?v=SEC-RWB1" />
+  <!-- Keep using your shared stylesheet for base UI if you want -->
+  <link rel="stylesheet" href="/tap-n-score/styles.css?v=SEC-LOCK-01" />
+  <!-- SEC-specific layout -->
+  <link rel="stylesheet" href="/tap-n-score/sec.css?v=SEC-LOCK-01" />
 </head>
 
 <body>
-  <main class="secWrap">
+  <main class="secPage">
 
-    <!-- BRAND (NO TAP-N-SCORE HERE) -->
-    <header class="secHeader">
-      <div class="secBrandLine">
-        <div class="secBrandTitle" aria-label="Shooter Experience Card">
-          <span class="r">Shooter</span>
-          <span class="w">Experience</span>
-          <span class="b">Card</span>
-        </div>
-        <div class="secBrandSub">
-          <span class="secAcr" aria-label="SEC acronym">
-            <span class="r">S</span><span class="w">E</span><span class="b">C</span>
-          </span>
-        </div>
+    <!-- Header -->
+    <header class="secHdr">
+      <div class="secBrand" aria-label="Shooter Experience Card">
+        <span class="r">SHOOTER</span>
+        <span class="w">EXPERIENCE</span>
+        <span class="b">CARD</span>
+        <span class="w">SEC</span>
       </div>
 
-      <div class="secMetaLine">
-        <div id="sessionLine" class="sessionLine">Session: —</div>
-      </div>
+      <div id="sessionLine" class="secSession">Session: —</div>
     </header>
 
-    <!-- CANVAS CARD -->
-    <section class="secCard">
-      <div class="secCanvasWrap">
-        <canvas id="secCanvas" width="1200" height="675"></canvas>
+    <!-- Main card -->
+    <section class="secShell">
+
+      <div class="secScoreWrap">
+        <div class="secScoreLabelTop">SCORE</div>
+
+        <div id="scoreValue" class="secScoreValue">0</div>
+
+        <div id="scoreLabel" class="secScoreLabel">—</div>
+
+        <div class="secFairness">
+          Tighter group + closer to aim point = higher score
+        </div>
       </div>
 
       <div id="errLine" class="secErr" style="display:none;"></div>
 
+      <!-- Stats -->
+      <div class="secGrid">
+        <div class="secStat">
+          <div class="secStatK">SHOTS</div>
+          <div class="secStatV"><span id="shotsVal">0</span> hits</div>
+        </div>
+
+        <div class="secStat">
+          <div class="secStatK">DISTANCE</div>
+          <div class="secStatV"><span id="distVal">100</span> yd</div>
+        </div>
+
+        <div class="secStat">
+          <div class="secStatK">WINDAGE</div>
+          <div class="secStatV" id="windVal">—</div>
+        </div>
+
+        <div class="secStat">
+          <div class="secStatK">ELEVATION</div>
+          <div class="secStatV" id="elevVal">—</div>
+        </div>
+      </div>
+
+      <!-- Actions -->
       <div class="secActions">
-        <button id="downloadBtn" class="secBtn secBtnPrimary" type="button">Download SEC PNG</button>
-        <button id="scoreAnotherBtn" class="secBtn" type="button">Score another</button>
-        <button id="backBtn" class="secBtn" type="button">Back to setup</button>
+        <button id="downloadBtn" class="secBtn secBtnPrimary" type="button">
+          Download SEC PNG
+        </button>
+
+        <button id="scoreAnotherBtn" class="secBtn" type="button">
+          Score another
+        </button>
       </div>
 
       <div class="secTip">
-        Tip (iPhone/iPad): If download doesn’t start, the next screen will open the PNG — press-and-hold and choose <b>Save to Photos</b>.
+        Tip (iPhone/iPad): if the download doesn’t start, it will open the PNG —
+        press-and-hold the image and choose <b>Save to Photos</b>.
       </div>
-    </section>
 
-    <footer class="footer" style="margin-top:10px;">
-      <span class="footerMark">SCZN3</span>
-    </footer>
+      <footer class="secFoot">SCZN3</footer>
+    </section>
 
   </main>
 
-  <script src="/tap-n-score/sec.js?v=SEC-RWB1"></script>
+  <script src="/tap-n-score/sec.js?v=SEC-LOCK-01"></script>
 </body>
 </html>
