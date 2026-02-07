@@ -1,221 +1,95 @@
 /* ============================================================
-   tap-n-score/index.js (FULL REPLACEMENT) — LOCKED FLOW
-   - Always start on Landing hero
-   - Photo => reveals Target page + Settings
-   - Aim point then hits (dots always visible)
-   - Sticky "Show results" appears after pause
-   - Two-decimal clicks in payload
-   - One-time cache/SW purge to kill "black screen" stale assets
-   - Vendor pill rotates text every 1.2s when vendor URL exists
+   tap-n-score/index.js (FULL REPLACEMENT) — LANDING POLISH SAFE
+   Fixes / Guarantees:
+   - Landing always opens at top (kills iOS scroll restore)
+   - Vendor pill is IN FLOW now (cannot overlay the photo button)
+   - Vendor pill rotates text every 1.2s when vendor exists
+   - Button always opens file picker
 ============================================================ */
 
 (() => {
   const $ = (id) => document.getElementById(id);
 
-  // --- Elements
-  const elHero = $("hero");
-
+  // Landing / hero
   const elPhotoBtn = $("photoBtn");
   const elFile = $("photoInput");
-
   const elVendorBox = $("vendorBox");
   const elVendorLabel = $("vendorLabel");
 
+  // Scoring UI
   const elScoreSection = $("scoreSection");
   const elSettingsSection = $("settingsSection");
 
   const elImg = $("targetImg");
   const elDots = $("dotsLayer");
   const elWrap = $("targetWrap");
-
   const elTapCount = $("tapCount");
-  const elUndo = $("undoBtn");
   const elClear = $("clearTapsBtn");
-
   const elInstruction = $("instructionLine");
   const elStatus = $("statusLine");
 
+  // Sticky
   const elStickyBar = $("stickyBar");
   const elStickyBtn = $("stickyResultsBtn");
 
+  // Settings
   const elDistance = $("distanceYds");
   const elDistDisplay = $("distDisplay");
   const elDistUp = $("distUp");
   const elDistDown = $("distDown");
   const elMoaClick = $("moaPerClick");
 
-  const elVendorLink = $("vendorLink");
-
-  // --- Storage keys
+  // Storage keys
   const KEY_PAYLOAD = "SCZN3_SEC_PAYLOAD_V1";
+  const KEY_TARGET_IMG_DATA = "SCZN3_TARGET_IMG_DATAURL_V1";
+  const KEY_TARGET_IMG_BLOB = "SCZN3_TARGET_IMG_BLOBURL_V1";
   const KEY_VENDOR_URL = "SCZN3_VENDOR_URL_V1";
-  const KEY_ONE_TIME_PURGE = "SCZN3_ONE_TIME_PURGE_0206A";
 
-  // --- State
   let objectUrl = null;
 
-  // points stored as {x01,y01}
+  // taps
   let aim = null;
   let hits = [];
 
-  // touch/click de-dupe
+  // touch anti-double-fire
   let lastTouchTapAt = 0;
   let touchStart = null;
-
-  // sticky pause
   let pauseTimer = null;
 
-  // vendor rotation
+  // vendor rotate
   let vendorRotateTimer = null;
-  let vendorRotateIdx = 0;
+  let vendorRotateOn = false;
 
   // ------------------------------------------------------------
-  // HARD LANDING LOCK: kill iOS scroll restore weirdness
+  // HARD LANDING LOCK: kill scroll restoration
   // ------------------------------------------------------------
   try { history.scrollRestoration = "manual"; } catch {}
   function forceTop() { try { window.scrollTo(0, 0); } catch {} }
-
+  function hardHideScoringUI() {
+    if (elScoreSection) elScoreSection.classList.add("scoreHidden");
+    if (elSettingsSection) elSettingsSection.classList.add("scoreHidden");
+  }
   window.addEventListener("pageshow", () => {
-    // iOS bfcache restore
     forceTop();
+    hardHideScoringUI();
     hideSticky();
-    // if no photo loaded, force landing view
-    if (!elImg?.src) hardHideScoringUI();
   });
+  window.addEventListener("load", () => forceTop());
 
-  window.addEventListener("load", () => {
-    forceTop();
-    if (!elImg?.src) hardHideScoringUI();
-  });
-
+  // ------------------------------------------------------------
+  // Helpers
+  // ------------------------------------------------------------
   function clamp01(v) { return Math.max(0, Math.min(1, v)); }
   function setText(el, t) { if (el) el.textContent = String(t ?? ""); }
 
-  // ------------------------------------------------------------
-  // ONE-TIME PURGE: kill old SW + caches (stale black screen fix)
-  // ------------------------------------------------------------
-  async function oneTimePurge() {
-    try {
-      const done = localStorage.getItem(KEY_ONE_TIME_PURGE);
-      if (done === "1") return;
-
-      // Unregister service workers
-      if ("serviceWorker" in navigator) {
-        const regs = await navigator.serviceWorker.getRegistrations();
-        for (const r of regs) {
-          try { await r.unregister(); } catch {}
-        }
-      }
-
-      // Delete caches
-      if (window.caches?.keys) {
-        const keys = await caches.keys();
-        for (const k of keys) {
-          try { await caches.delete(k); } catch {}
-        }
-      }
-
-      localStorage.setItem(KEY_ONE_TIME_PURGE, "1");
-    } catch {
-      // never block UI
-    }
-  }
-
-  // ------------------------------------------------------------
-  // UI show/hide
-  // ------------------------------------------------------------
-  function hardHideScoringUI() {
-    elScoreSection?.classList.add("scoreHidden");
-    elSettingsSection?.classList.add("scoreHidden");
-  }
-
   function revealScoringUI() {
-    elScoreSection?.classList.remove("scoreHidden");
-    elSettingsSection?.classList.remove("scoreHidden");
+    if (elScoreSection) elScoreSection.classList.remove("scoreHidden");
+    if (elSettingsSection) elSettingsSection.classList.remove("scoreHidden");
     try { elScoreSection?.scrollIntoView({ behavior: "smooth", block: "start" }); } catch {}
   }
 
-  // ------------------------------------------------------------
-  // Vendor pill + vendor link
-  // ------------------------------------------------------------
-  function getVendorUrl() {
-    const v = localStorage.getItem(KEY_VENDOR_URL) || "";
-    return (typeof v === "string" && v.startsWith("http")) ? v : "";
-  }
-
-  function setVendorClickable(url) {
-    if (!elVendorBox) return;
-    if (url) {
-      elVendorBox.href = url;
-      elVendorBox.target = "_blank";
-      elVendorBox.rel = "noopener";
-      elVendorBox.style.pointerEvents = "auto";
-      elVendorBox.style.opacity = "1";
-    } else {
-      elVendorBox.removeAttribute("href");
-      elVendorBox.removeAttribute("target");
-      elVendorBox.removeAttribute("rel");
-      elVendorBox.style.pointerEvents = "none";
-      elVendorBox.style.opacity = ".92";
-    }
-  }
-
-  function stopVendorRotate() {
-    if (vendorRotateTimer) clearInterval(vendorRotateTimer);
-    vendorRotateTimer = null;
-  }
-
-  function startVendorRotate(url) {
-    stopVendorRotate();
-
-    // always show something
-    const a = "BUY MORE TARGETS LIKE THIS";
-    const b = "VENDOR";
-
-    // if no vendor, just show buy-more message (no rotate)
-    if (!url) {
-      if (elVendorLabel) elVendorLabel.textContent = a;
-      return;
-    }
-
-    // rotate every 1.2s
-    vendorRotateIdx = 0;
-    vendorRotateTimer = setInterval(() => {
-      vendorRotateIdx = (vendorRotateIdx + 1) % 2;
-      if (elVendorLabel) elVendorLabel.textContent = vendorRotateIdx === 0 ? a : b;
-    }, 1200);
-
-    if (elVendorLabel) elVendorLabel.textContent = a;
-  }
-
-  function hydrateVendorUI() {
-    const url = getVendorUrl();
-    setVendorClickable(url);
-    startVendorRotate(url);
-
-    // target-page vendor link (optional)
-    if (elVendorLink) {
-      if (url) {
-        elVendorLink.classList.add("on");
-        elVendorLink.href = url;
-        elVendorLink.textContent = "Visit vendor";
-      } else {
-        elVendorLink.classList.remove("on");
-        elVendorLink.removeAttribute("href");
-        elVendorLink.textContent = "";
-      }
-    }
-  }
-
-  // ------------------------------------------------------------
-  // Tap dots + helpers
-  // ------------------------------------------------------------
   function setTapCount() {
     if (elTapCount) elTapCount.textContent = String(hits.length);
-  }
-
-  function clearDots() {
-    if (elDots) elDots.innerHTML = "";
   }
 
   function hideSticky() {
@@ -237,31 +111,6 @@
     }, 650);
   }
 
-  function addDot(x01, y01, kind) {
-    if (!elDots) return;
-    const d = document.createElement("div");
-    d.className = "tapDot";
-    d.style.left = (x01 * 100) + "%";
-    d.style.top = (y01 * 100) + "%";
-    d.style.background = (kind === "aim") ? "var(--aim)" : "var(--hit)";
-    d.style.border = "2px solid rgba(0,0,0,.55)";
-    d.style.boxShadow = "0 10px 28px rgba(0,0,0,.55)";
-    elDots.appendChild(d);
-  }
-
-  function redrawAllDots() {
-    clearDots();
-    if (aim) addDot(aim.x01, aim.y01, "aim");
-    for (const p of hits) addDot(p.x01, p.y01, "hit");
-  }
-
-  function getRelative01(clientX, clientY) {
-    const r = elImg.getBoundingClientRect();
-    const x = (clientX - r.left) / r.width;
-    const y = (clientY - r.top) / r.height;
-    return { x01: clamp01(x), y01: clamp01(y) };
-  }
-
   function setInstructionForState() {
     if (!elInstruction) return;
     if (!elImg?.src) { setText(elInstruction, ""); return; }
@@ -273,43 +122,105 @@
   function resetAll() {
     aim = null;
     hits = [];
-    clearDots();
+    if (elDots) elDots.innerHTML = "";
     setTapCount();
     hideSticky();
     setInstructionForState();
     setText(elStatus, elImg?.src ? "Tap Aim Point." : "Add a target photo to begin.");
   }
 
-  function undoLast() {
-    if (!elImg?.src) return;
+  // ------------------------------------------------------------
+  // Vendor pill (in-flow) — rotate text when vendor exists
+  // ------------------------------------------------------------
+  function stopVendorRotate() {
+    if (vendorRotateTimer) clearInterval(vendorRotateTimer);
+    vendorRotateTimer = null;
+    vendorRotateOn = false;
+  }
 
-    if (hits.length > 0) {
-      hits.pop();
-      redrawAllDots();
-      setTapCount();
-      hideSticky();
-      setInstructionForState();
-      return;
-    }
+  function startVendorRotate() {
+    stopVendorRotate();
+    if (!elVendorLabel) return;
 
-    if (aim) {
-      aim = null;
-      redrawAllDots();
-      setTapCount();
-      hideSticky();
-      setInstructionForState();
-      setText(elStatus, "Tap Aim Point.");
+    vendorRotateTimer = setInterval(() => {
+      vendorRotateOn = !vendorRotateOn;
+      elVendorLabel.textContent = vendorRotateOn ? "VENDOR" : "BUY MORE TARGETS LIKE THIS";
+    }, 1200);
+  }
+
+  function hydrateVendorBox() {
+    const v = localStorage.getItem(KEY_VENDOR_URL) || "";
+    const ok = typeof v === "string" && v.startsWith("http");
+
+    if (!elVendorBox) return;
+
+    if (ok) {
+      elVendorBox.href = v;
+      elVendorBox.target = "_blank";
+      elVendorBox.rel = "noopener";
+      elVendorBox.style.pointerEvents = "auto";
+      elVendorBox.style.opacity = "1";
+      if (elVendorLabel) elVendorLabel.textContent = "BUY MORE TARGETS LIKE THIS";
+      startVendorRotate();
+    } else {
+      // visible but not clickable
+      elVendorBox.removeAttribute("href");
+      elVendorBox.removeAttribute("target");
+      elVendorBox.removeAttribute("rel");
+      elVendorBox.style.pointerEvents = "none";
+      elVendorBox.style.opacity = ".92";
+      if (elVendorLabel) elVendorLabel.textContent = "BUY MORE TARGETS LIKE THIS";
+      stopVendorRotate();
     }
   }
 
   // ------------------------------------------------------------
-  // Distance / settings
+  // Target photo storage for SEC (even if SEC doesn’t show photo now)
+  // ------------------------------------------------------------
+  async function storeTargetPhotoForSEC(file, blobUrl) {
+    try { localStorage.setItem(KEY_TARGET_IMG_BLOB, blobUrl); } catch {}
+    try {
+      const dataUrl = await new Promise((resolve, reject) => {
+        const r = new FileReader();
+        r.onload = () => resolve(String(r.result || ""));
+        r.onerror = reject;
+        r.readAsDataURL(file);
+      });
+      if (dataUrl && dataUrl.startsWith("data:image/")) {
+        localStorage.setItem(KEY_TARGET_IMG_DATA, dataUrl);
+      }
+    } catch {}
+  }
+
+  // ------------------------------------------------------------
+  // Dot draw
+  // ------------------------------------------------------------
+  function addDot(x01, y01, kind) {
+    if (!elDots) return;
+    const d = document.createElement("div");
+    d.className = "tapDot";
+    d.style.left = (x01 * 100) + "%";
+    d.style.top = (y01 * 100) + "%";
+    d.style.background = (kind === "aim") ? "#67f3a4" : "#b7ff3c";
+    d.style.border = "2px solid rgba(0,0,0,.55)";
+    d.style.boxShadow = "0 10px 28px rgba(0,0,0,.55)";
+    elDots.appendChild(d);
+  }
+
+  function getRelative01(clientX, clientY) {
+    const r = elImg.getBoundingClientRect();
+    const x = (clientX - r.left) / r.width;
+    const y = (clientY - r.top) / r.height;
+    return { x01: clamp01(x), y01: clamp01(y) };
+  }
+
+  // ------------------------------------------------------------
+  // Distance
   // ------------------------------------------------------------
   function getDistance() {
     const n = Number(elDistance?.value ?? 100);
     return Number.isFinite(n) ? n : 100;
   }
-
   function setDistance(v) {
     let n = Math.round(Number(v));
     if (!Number.isFinite(n)) n = 100;
@@ -319,8 +230,7 @@
   }
 
   // ------------------------------------------------------------
-  // Compute score + clicks (simple placeholder math)
-  // NOTE: This is not your final ABF/CVC/CECH engine; just stable UX.
+  // Scoring placeholder (unchanged)
   // ------------------------------------------------------------
   const inchesPerFullWidth = 10;
 
@@ -361,12 +271,10 @@
     const clicksX = moaX / moaPerClick;
     const clicksY = moaY / moaPerClick;
 
-    const score = scoreFromRadiusInches(rIn);
-
     return {
       avgPoi: { x01: avg.x, y01: avg.y },
       inches: { x: inchesX, y: inchesY, r: rIn },
-      score,
+      score: scoreFromRadiusInches(rIn),
       windage: { dir: clicksX >= 0 ? "RIGHT" : "LEFT", clicks: Math.abs(clicksX) },
       elevation: { dir: clicksY >= 0 ? "DOWN" : "UP", clicks: Math.abs(clicksY) },
     };
@@ -387,7 +295,7 @@
     const out = computeCorrectionAndScore();
     if (!out) { alert("Tap Aim Point first, then tap at least one hit."); return; }
 
-    const vendorUrl = getVendorUrl();
+    const vendorUrl = localStorage.getItem(KEY_VENDOR_URL) || "";
 
     const payload = {
       sessionId: "S-" + Date.now(),
@@ -396,51 +304,54 @@
       windage: { dir: out.windage.dir, clicks: Number(out.windage.clicks.toFixed(2)) },
       elevation: { dir: out.elevation.dir, clicks: Number(out.elevation.clicks.toFixed(2)) },
       vendorUrl,
-      debug: {
-        aim,
-        avgPoi: out.avgPoi,
-        distanceYds: getDistance(),
-        inches: out.inches,
-        moaPerClick: Number(elMoaClick?.value ?? 0.25)
-      }
+      surveyUrl: "",
+      sourceImg: "",
+      debug: { aim, avgPoi: out.avgPoi, distanceYds: getDistance(), inches: out.inches }
     };
 
     goToSEC(payload);
   }
 
   // ------------------------------------------------------------
-  // Photo loading
+  // Photo picker (the 800lb gorilla)
   // ------------------------------------------------------------
-  function onPickPhotoClick() {
-    if (elFile) elFile.click();
+  if (elPhotoBtn && elFile) {
+    elPhotoBtn.addEventListener("click", () => elFile.click());
   }
 
-  async function loadPhoto(file) {
-    resetAll();
+  if (elFile) {
+    elFile.addEventListener("change", async () => {
+      const f = elFile.files && elFile.files[0];
+      if (!f) return;
 
-    if (objectUrl) URL.revokeObjectURL(objectUrl);
-    objectUrl = URL.createObjectURL(file);
+      resetAll();
 
-    elImg.onload = () => {
-      setText(elStatus, "Tap Aim Point.");
-      setInstructionForState();
-      revealScoringUI();
-    };
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+      objectUrl = URL.createObjectURL(f);
 
-    elImg.onerror = () => {
-      setText(elStatus, "Photo failed to load.");
-      setText(elInstruction, "Try again.");
-      revealScoringUI();
-    };
+      await storeTargetPhotoForSEC(f, objectUrl);
 
-    elImg.src = objectUrl;
+      elImg.onload = () => {
+        setText(elStatus, "Tap Aim Point.");
+        setInstructionForState();
+        revealScoringUI();
+      };
 
-    // Clear file input for iOS repeat selects
-    if (elFile) elFile.value = "";
+      elImg.onerror = () => {
+        setText(elStatus, "Photo failed to load.");
+        setText(elInstruction, "Try again.");
+        revealScoringUI();
+      };
+
+      elImg.src = objectUrl;
+
+      // allow selecting same file again
+      elFile.value = "";
+    });
   }
 
   // ------------------------------------------------------------
-  // Tap handling (touch + click, de-duped)
+  // Tap logic
   // ------------------------------------------------------------
   function acceptTap(clientX, clientY) {
     if (!elImg?.src) return;
@@ -465,84 +376,59 @@
     scheduleStickyMagic();
   }
 
-  function bindTaps() {
-    if (!elWrap) return;
-
+  if (elWrap) {
     elWrap.addEventListener("touchstart", (e) => {
       if (!e.touches || !e.touches[0]) return;
       const t = e.touches[0];
-      touchStart = { x: t.clientX, y: t.clientY };
+      touchStart = { x: t.clientX, y: t.clientY, t: Date.now() };
     }, { passive: true });
 
     elWrap.addEventListener("touchend", (e) => {
+      const now = Date.now();
       const t = (e.changedTouches && e.changedTouches[0]) ? e.changedTouches[0] : null;
       if (!t || !touchStart) return;
 
       const dx = Math.abs(t.clientX - touchStart.x);
       const dy = Math.abs(t.clientY - touchStart.y);
-      touchStart = null;
 
-      // treat drags as scroll/zoom
-      if (dx > 10 || dy > 10) return;
+      // scroll => ignore
+      if (dx > 10 || dy > 10) { touchStart = null; return; }
 
-      lastTouchTapAt = Date.now();
+      lastTouchTapAt = now;
       acceptTap(t.clientX, t.clientY);
+      touchStart = null;
     }, { passive: true });
 
     elWrap.addEventListener("click", (e) => {
-      // ignore ghost click right after touch
-      if (Date.now() - lastTouchTapAt < 800) return;
+      const now = Date.now();
+      if (now - lastTouchTapAt < 800) return; // kill ghost click
       acceptTap(e.clientX, e.clientY);
     }, { passive: true });
   }
 
   // ------------------------------------------------------------
-  // Boot
+  // Buttons / distance
   // ------------------------------------------------------------
-  async function boot() {
-    // Safety: if core hero is missing, do nothing (prevents blanking)
-    if (!elHero || !elPhotoBtn || !elFile) {
-      console.warn("Landing DOM missing. Aborting boot.");
-      return;
-    }
-
-    // kill stale SW/caches once
-    await oneTimePurge();
-
-    // Always start on landing view unless photo exists right now
-    if (!elImg?.src) hardHideScoringUI();
-
-    // Vendor UI
-    hydrateVendorUI();
-
-    // Buttons
-    elPhotoBtn.addEventListener("click", onPickPhotoClick);
-
-    elFile.addEventListener("change", async () => {
-      const f = elFile.files && elFile.files[0];
-      if (!f) return;
-      await loadPhoto(f);
-    });
-
-    elUndo?.addEventListener("click", undoLast);
-    elClear?.addEventListener("click", () => {
+  if (elClear) {
+    elClear.addEventListener("click", () => {
       resetAll();
       if (elImg?.src) setText(elStatus, "Tap Aim Point.");
     });
-
-    elStickyBtn?.addEventListener("click", onShowResults);
-
-    elDistUp?.addEventListener("click", () => setDistance(getDistance() + 5));
-    elDistDown?.addEventListener("click", () => setDistance(getDistance() - 5));
-
-    setDistance(100);
-    hideSticky();
-    resetAll();
-    bindTaps();
-
-    // force top after boot paint
-    try { forceTop(); } catch {}
   }
 
-  boot();
+  if (elStickyBtn) elStickyBtn.addEventListener("click", onShowResults);
+
+  if (elDistUp) elDistUp.addEventListener("click", () => setDistance(getDistance() + 5));
+  if (elDistDown) elDistDown.addEventListener("click", () => setDistance(getDistance() - 5));
+
+  // ------------------------------------------------------------
+  // Boot
+  // ------------------------------------------------------------
+  setDistance(100);
+  hideSticky();
+  resetAll();
+  hydrateVendorBox();
+
+  hardHideScoringUI();
+  forceTop();
 })();
