@@ -1,371 +1,434 @@
-:root{
-  --bg:#06070a;
-  --card: rgba(255,255,255,.06);
-  --stroke: rgba(255,255,255,.12);
-  --text:#eef2f7;
-  --muted: rgba(238,242,247,.65);
+/* ============================================================
+   tap-n-score/index.js (FULL REPLACEMENT) — LANDING POLISH SAFE
+   Fixes / Guarantees:
+   - Landing always opens at top (kills iOS scroll restore)
+   - Vendor pill is IN FLOW now (cannot overlay the photo button)
+   - Vendor pill rotates text every 1.2s when vendor exists
+   - Button always opens file picker
+============================================================ */
 
-  --red:#d64040;
-  --white:#eef2f7;
-  --blue:#2f66ff;
+(() => {
+  const $ = (id) => document.getElementById(id);
 
-  --btn: rgba(255,255,255,.08);
-  --btnStroke: rgba(255,255,255,.16);
+  // Landing / hero
+  const elPhotoBtn = $("photoBtn");
+  const elFile = $("photoInput");
+  const elVendorBox = $("vendorBox");
+  const elVendorLabel = $("vendorLabel");
 
-  --aim:#67f3a4;
-  --hit:#b7ff3c;
-}
+  // Scoring UI
+  const elScoreSection = $("scoreSection");
+  const elSettingsSection = $("settingsSection");
 
-*{ box-sizing:border-box; }
-html,body{ height:100%; }
-body{
-  margin:0;
-  font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial;
-  color: var(--text);
-  background:
-    radial-gradient(900px 600px at 15% 10%, rgba(47,102,255,.14), transparent 60%),
-    radial-gradient(800px 500px at 85% 0%, rgba(214,64,64,.10), transparent 60%),
-    linear-gradient(180deg, #04050a, var(--bg));
-}
+  const elImg = $("targetImg");
+  const elDots = $("dotsLayer");
+  const elWrap = $("targetWrap");
+  const elTapCount = $("tapCount");
+  const elClear = $("clearTapsBtn");
+  const elInstruction = $("instructionLine");
+  const elStatus = $("statusLine");
 
-.page{
-  max-width: 920px;
-  margin: 0 auto;
-  padding: 16px 12px 90px;
-}
+  // Sticky
+  const elStickyBar = $("stickyBar");
+  const elStickyBtn = $("stickyResultsBtn");
 
-/* ---------------- LANDING HERO ---------------- */
-.hero{
-  position: relative;
-  background:
-    radial-gradient(1200px 600px at 25% 15%, rgba(47,102,255,.20), transparent 60%),
-    radial-gradient(900px 600px at 80% 30%, rgba(214,64,64,.18), transparent 55%),
-    linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02));
-  border: 1px solid rgba(255,255,255,.10);
-  border-radius: 22px;
-  padding: 18px 16px 22px;
-  box-shadow: 0 20px 60px rgba(0,0,0,.45);
-  overflow: hidden;
-}
+  // Settings
+  const elDistance = $("distanceYds");
+  const elDistDisplay = $("distDisplay");
+  const elDistUp = $("distUp");
+  const elDistDown = $("distDown");
+  const elMoaClick = $("moaPerClick");
 
-.brandRow{ display:flex; flex-direction:column; gap:6px; padding: 4px 2px 10px; }
+  // Storage keys
+  const KEY_PAYLOAD = "SCZN3_SEC_PAYLOAD_V1";
+  const KEY_TARGET_IMG_DATA = "SCZN3_TARGET_IMG_DATAURL_V1";
+  const KEY_TARGET_IMG_BLOB = "SCZN3_TARGET_IMG_BLOBURL_V1";
+  const KEY_VENDOR_URL = "SCZN3_VENDOR_URL_V1";
 
-.brandTitle{
-  font-weight: 1000;
-  letter-spacing: .06em;
-  font-size: clamp(28px, 5.4vw, 46px);
-  line-height: 1.02;
-  text-transform: uppercase;
-  user-select:none;
-  -webkit-user-select:none;
-}
-.brandTitle .r{ color:var(--red); }
-.brandTitle .w{ color:var(--white); }
-.brandTitle .b{ color:var(--blue); }
+  let objectUrl = null;
 
-.brandSub{
-  font-size: clamp(16px, 2.6vw, 22px);
-  font-weight: 900;
-  color: rgba(238,242,247,.80);
-  letter-spacing: .02em;
-}
+  // taps
+  let aim = null;
+  let hits = [];
 
-.heroMid{
-  margin-top: 14px;
-  display:flex;
-  flex-direction:column;
-  gap: 14px;
-  align-items:center;
-  text-align:center;
-}
+  // touch anti-double-fire
+  let lastTouchTapAt = 0;
+  let touchStart = null;
+  let pauseTimer = null;
 
-.heroBtn{
-  width: 100%;
-  max-width: 720px;
-  height: 74px;
-  border-radius: 999px;
-  border: 1px solid rgba(255,255,255,.14);
-  background: rgba(214,64,64,.88);
-  color: #eef2f7;
-  font-weight: 1000;
-  font-size: clamp(18px, 3.2vw, 26px);
-  letter-spacing: .02em;
-  cursor:pointer;
-  user-select:none;
-  -webkit-tap-highlight-color: transparent;
-  transform: translateZ(0);
-  -webkit-font-smoothing: antialiased;
-  text-rendering: geometricPrecision;
-}
-.heroBtn:active{ transform: translateZ(0) translateY(1px); }
+  // vendor rotate
+  let vendorRotateTimer = null;
+  let vendorRotateOn = false;
 
-.heroTip{
-  font-weight: 900;
-  font-size: clamp(18px, 3.2vw, 30px);
-  line-height: 1.14;
-  color: rgba(238,242,247,.92);
-  max-width: 820px;
-}
+  // ------------------------------------------------------------
+  // HARD LANDING LOCK: kill scroll restoration
+  // ------------------------------------------------------------
+  try { history.scrollRestoration = "manual"; } catch {}
+  function forceTop() { try { window.scrollTo(0, 0); } catch {} }
+  function hardHideScoringUI() {
+    if (elScoreSection) elScoreSection.classList.add("scoreHidden");
+    if (elSettingsSection) elSettingsSection.classList.add("scoreHidden");
+  }
+  window.addEventListener("pageshow", () => {
+    forceTop();
+    hardHideScoringUI();
+    hideSticky();
+  });
+  window.addEventListener("load", () => forceTop());
 
-/* Vendor placeholder (ALWAYS visible) */
-.vendorBox{
-  position:absolute;
-  right: 14px;
-  bottom: 14px;
-  width: min(320px, 60%);
-  padding: 12px 14px;
-  border-radius: 999px;
-  border: 1px solid rgba(255,255,255,.14);
-  background: rgba(0,0,0,.24);
-  box-shadow: 0 16px 44px rgba(0,0,0,.35);
-  text-decoration:none;
-  color: rgba(238,242,247,.92);
-  display: inline-flex;
-  align-items:center;
-  justify-content:center;
-  gap: 10px;
-  -webkit-tap-highlight-color: transparent;
-  user-select:none;
-  -webkit-user-select:none;
-}
+  // ------------------------------------------------------------
+  // Helpers
+  // ------------------------------------------------------------
+  function clamp01(v) { return Math.max(0, Math.min(1, v)); }
+  function setText(el, t) { if (el) el.textContent = String(t ?? ""); }
 
-.vendorPillText{
-  font-weight: 1000;
-  letter-spacing: .10em;
-  font-size: 12px;
-  text-transform: uppercase;
-  color: rgba(238,242,247,.92);
-  line-height: 1.05;
-  text-align:center;
-}
+  function revealScoringUI() {
+    if (elScoreSection) elScoreSection.classList.remove("scoreHidden");
+    if (elSettingsSection) elSettingsSection.classList.remove("scoreHidden");
+    try { elScoreSection?.scrollIntoView({ behavior: "smooth", block: "start" }); } catch {}
+  }
 
-.vendorWire{
-  position:absolute;
-  right: 0;
-  bottom: 0;
-  width: 180px;
-  height: 90px;
-  pointer-events:none;
-  opacity: .55;
-  filter: drop-shadow(0 10px 20px rgba(0,0,0,.55));
-}
+  function setTapCount() {
+    if (elTapCount) elTapCount.textContent = String(hits.length);
+  }
 
-/* iOS: do NOT display:none file input */
-.fileHidden{
-  position:absolute;
-  left:-9999px;
-  width:1px; height:1px;
-  opacity:0;
-}
+  function hideSticky() {
+    if (!elStickyBar) return;
+    elStickyBar.classList.add("stickyHidden");
+    elStickyBar.setAttribute("aria-hidden", "true");
+  }
 
-/* ---------------- CARDS / TARGET PAGE ---------------- */
-.card{
-  border: 1px solid var(--stroke);
-  background: var(--card);
-  border-radius: 18px;
-  overflow:hidden;
-  margin-top: 12px;
-  box-shadow: 0 18px 50px rgba(0,0,0,.45);
-}
+  function showSticky() {
+    if (!elStickyBar) return;
+    elStickyBar.classList.remove("stickyHidden");
+    elStickyBar.setAttribute("aria-hidden", "false");
+  }
 
-.cardTitle{
-  padding: 12px 14px;
-  border-bottom: 1px solid rgba(255,255,255,.08);
-  background: rgba(255,255,255,.03);
-  letter-spacing:.14em;
-  text-transform: uppercase;
-  font-size: 12px;
-  font-weight: 850;
-  color: rgba(238,242,247,.75);
-}
+  function scheduleStickyMagic() {
+    clearTimeout(pauseTimer);
+    pauseTimer = setTimeout(() => {
+      if (hits.length >= 1) showSticky();
+    }, 650);
+  }
 
-.targetWrap{
-  width: calc(100% - 28px);
-  margin: 0 14px 12px;
-  border-radius: 16px;
-  overflow:hidden;
-  background: rgba(0,0,0,.22);
-  border: 1px solid rgba(255,255,255,.10);
-  position: relative;
-}
+  function setInstructionForState() {
+    if (!elInstruction) return;
+    if (!elImg?.src) { setText(elInstruction, ""); return; }
+    if (!aim) { setText(elInstruction, "Tap Aim Point."); return; }
+    if (hits.length < 1) { setText(elInstruction, "Tap Hits."); return; }
+    setText(elInstruction, "Tap more hits, or pause — results will appear.");
+  }
 
-#targetImg{
-  width: 100%;
-  height: auto;
-  display:block;
-  user-select:none;
-  -webkit-user-drag:none;
-}
+  function resetAll() {
+    aim = null;
+    hits = [];
+    if (elDots) elDots.innerHTML = "";
+    setTapCount();
+    hideSticky();
+    setInstructionForState();
+    setText(elStatus, elImg?.src ? "Tap Aim Point." : "Add a target photo to begin.");
+  }
 
-.dotsLayer{
-  position:absolute;
-  left:0; top:0; right:0; bottom:0;
-  pointer-events:none;
-}
+  // ------------------------------------------------------------
+  // Vendor pill (in-flow) — rotate text when vendor exists
+  // ------------------------------------------------------------
+  function stopVendorRotate() {
+    if (vendorRotateTimer) clearInterval(vendorRotateTimer);
+    vendorRotateTimer = null;
+    vendorRotateOn = false;
+  }
 
-.tapDot{
-  position:absolute;
-  width: 18px;
-  height: 18px;
-  border-radius: 999px;
-  transform: translate(-50%, -50%);
-}
+  function startVendorRotate() {
+    stopVendorRotate();
+    if (!elVendorLabel) return;
 
-.row{
-  display:flex;
-  gap:10px;
-  align-items:center;
-  flex-wrap:wrap;
-  padding: 0 14px 14px;
-}
-.rowTight{ padding-top: 0; }
+    vendorRotateTimer = setInterval(() => {
+      vendorRotateOn = !vendorRotateOn;
+      elVendorLabel.textContent = vendorRotateOn ? "VENDOR" : "BUY MORE TARGETS LIKE THIS";
+    }, 1200);
+  }
 
-.pill{
-  border: 1px solid rgba(255,255,255,.14);
-  background: rgba(255,255,255,.05);
-  border-radius: 999px;
-  padding: 9px 12px;
-  font-size: 13px;
-  color: rgba(238,242,247,.80);
-}
+  function hydrateVendorBox() {
+    const v = localStorage.getItem(KEY_VENDOR_URL) || "";
+    const ok = typeof v === "string" && v.startsWith("http");
 
-.btnSecondary{
-  border-radius: 14px;
-  padding: 12px 14px;
-  font-size: 14px;
-  font-weight: 850;
-  cursor:pointer;
-  border: 1px solid rgba(214,64,64,.45);
-  background: rgba(214,64,64,.12);
-  color: var(--text);
-}
-.btnSecondary:active{ transform: translateY(1px); }
+    if (!elVendorBox) return;
 
-.hint{
-  margin: 0;
-  padding: 0 14px 14px;
-  color: var(--muted);
-  font-size: 13px;
-  line-height: 1.35;
-}
+    if (ok) {
+      elVendorBox.href = v;
+      elVendorBox.target = "_blank";
+      elVendorBox.rel = "noopener";
+      elVendorBox.style.pointerEvents = "auto";
+      elVendorBox.style.opacity = "1";
+      if (elVendorLabel) elVendorLabel.textContent = "BUY MORE TARGETS LIKE THIS";
+      startVendorRotate();
+    } else {
+      // visible but not clickable
+      elVendorBox.removeAttribute("href");
+      elVendorBox.removeAttribute("target");
+      elVendorBox.removeAttribute("rel");
+      elVendorBox.style.pointerEvents = "none";
+      elVendorBox.style.opacity = ".92";
+      if (elVendorLabel) elVendorLabel.textContent = "BUY MORE TARGETS LIKE THIS";
+      stopVendorRotate();
+    }
+  }
 
-.scoreHidden{ display:none !important; }
+  // ------------------------------------------------------------
+  // Target photo storage for SEC (even if SEC doesn’t show photo now)
+  // ------------------------------------------------------------
+  async function storeTargetPhotoForSEC(file, blobUrl) {
+    try { localStorage.setItem(KEY_TARGET_IMG_BLOB, blobUrl); } catch {}
+    try {
+      const dataUrl = await new Promise((resolve, reject) => {
+        const r = new FileReader();
+        r.onload = () => resolve(String(r.result || ""));
+        r.onerror = reject;
+        r.readAsDataURL(file);
+      });
+      if (dataUrl && dataUrl.startsWith("data:image/")) {
+        localStorage.setItem(KEY_TARGET_IMG_DATA, dataUrl);
+      }
+    } catch {}
+  }
 
-/* Settings */
-.field{
-  min-width: 160px;
-  display:flex;
-  flex-direction:column;
-  gap:8px;
-}
-.fieldLabel{
-  font-size: 12px;
-  color: rgba(238,242,247,.60);
-  letter-spacing:.02em;
-}
-.fieldHelp{
-  font-size:12px;
-  color: rgba(238,242,247,.65);
-  line-height:1.35;
-}
+  // ------------------------------------------------------------
+  // Dot draw
+  // ------------------------------------------------------------
+  function addDot(x01, y01, kind) {
+    if (!elDots) return;
+    const d = document.createElement("div");
+    d.className = "tapDot";
+    d.style.left = (x01 * 100) + "%";
+    d.style.top = (y01 * 100) + "%";
+    d.style.background = (kind === "aim") ? "#67f3a4" : "#b7ff3c";
+    d.style.border = "2px solid rgba(0,0,0,.55)";
+    d.style.boxShadow = "0 10px 28px rgba(0,0,0,.55)";
+    elDots.appendChild(d);
+  }
 
-.select{
-  width:100%;
-  background: rgba(0,0,0,.22);
-  border: 1px solid rgba(255,255,255,.14);
-  border-radius: 14px;
-  padding: 12px 10px;
-  color: var(--text);
-}
+  function getRelative01(clientX, clientY) {
+    const r = elImg.getBoundingClientRect();
+    const x = (clientX - r.left) / r.width;
+    const y = (clientY - r.top) / r.height;
+    return { x01: clamp01(x), y01: clamp01(y) };
+  }
 
-.distBox{
-  display:flex;
-  align-items:center;
-  gap:10px;
-  background: rgba(255,255,255,.04);
-  border: 1px solid rgba(255,255,255,.10);
-  border-radius: 14px;
-  padding: 10px;
-  position: relative;
-}
-.distBtn{
-  width:46px;
-  height:46px;
-  border-radius:14px;
-  border:1px solid rgba(255,255,255,.14);
-  background:rgba(255,255,255,.07);
-  color:#eef2f7;
-  font-size:20px;
-  font-weight:900;
-  cursor:pointer;
-}
-.distBtn:active{ transform: translateY(1px); }
+  // ------------------------------------------------------------
+  // Distance
+  // ------------------------------------------------------------
+  function getDistance() {
+    const n = Number(elDistance?.value ?? 100);
+    return Number.isFinite(n) ? n : 100;
+  }
+  function setDistance(v) {
+    let n = Math.round(Number(v));
+    if (!Number.isFinite(n)) n = 100;
+    n = Math.max(5, Math.min(1000, n));
+    if (elDistance) elDistance.value = String(n);
+    if (elDistDisplay) elDistDisplay.textContent = String(n);
+  }
 
-.distMid{
-  flex:1;
-  text-align:center;
-  font-weight:900;
-  font-size:18px;
-  letter-spacing:.04em;
-  color:#eef2f7;
-  user-select:none;
-}
+  // ------------------------------------------------------------
+  // Scoring placeholder (unchanged)
+  // ------------------------------------------------------------
+  const inchesPerFullWidth = 10;
 
-.srOnly{
-  position:absolute;
-  left:-9999px;
-  top:-9999px;
-  width:1px;
-  height:1px;
-  opacity:0;
-}
+  function scoreFromRadiusInches(rIn) {
+    if (rIn <= 0.25) return 100;
+    if (rIn <= 0.50) return 95;
+    if (rIn <= 1.00) return 90;
+    if (rIn <= 1.50) return 85;
+    if (rIn <= 2.00) return 80;
+    if (rIn <= 2.50) return 75;
+    if (rIn <= 3.00) return 70;
+    if (rIn <= 3.50) return 65;
+    if (rIn <= 4.00) return 60;
+    return 50;
+  }
 
-/* Vendor link on target page */
-.vendorLink{
-  display:none;
-  margin: 0 14px 14px;
-  color: rgba(155,183,255,.95);
-  text-decoration:none;
-  font-weight: 900;
-  letter-spacing: .02em;
-}
-.vendorLink.on{ display:block; }
+  function computeCorrectionAndScore() {
+    if (!aim || hits.length < 1) return null;
 
-/* Footer */
-.footer{
-  margin-top: 14px;
-  text-align:center;
-  color: rgba(238,242,247,.30);
-  font-weight: 900;
-  letter-spacing:.22em;
-  text-transform: uppercase;
-  font-size: 12px;
-  padding: 10px 0 0;
-}
-.footerMark{ opacity:.9; }
+    const avg = hits.reduce((acc, p) => ({ x: acc.x + p.x01, y: acc.y + p.y01 }), { x: 0, y: 0 });
+    avg.x /= hits.length;
+    avg.y /= hits.length;
 
-/* Sticky Results Bar */
-.stickyBar{
-  position: fixed;
-  left: 0; right: 0; bottom: 0;
-  padding: 12px 12px 18px;
-  background: linear-gradient(180deg, rgba(6,7,10,0), rgba(6,7,10,.85) 30%, rgba(6,7,10,.95));
-  display:flex;
-  justify-content:center;
-  z-index: 9999;
-}
-.stickyHidden{ display:none; }
+    const dx = aim.x01 - avg.x;
+    const dy = aim.y01 - avg.y;
 
-.stickyBtn{
-  width: min(560px, 100%);
-  border-radius: 18px;
-  padding: 16px 14px;
-  font-size: 16px;
-  font-weight: 950;
-  border: 1px solid rgba(103,243,164,.35);
-  background: rgba(103,243,164,.12);
-  color: var(--text);
-  cursor:pointer;
-  box-shadow: 0 18px 45px rgba(0,0,0,.55);
-}
-.stickyBtn:active{ transform: translateY(1px); }
+    const inchesX = dx * inchesPerFullWidth;
+    const inchesY = dy * inchesPerFullWidth;
+    const rIn = Math.sqrt(inchesX * inchesX + inchesY * inchesY);
+
+    const dist = getDistance();
+    const moaPerClick = Number(elMoaClick?.value ?? 0.25);
+    const inchesPerMoa = (dist / 100) * 1.047;
+
+    const moaX = inchesX / inchesPerMoa;
+    const moaY = inchesY / inchesPerMoa;
+
+    const clicksX = moaX / moaPerClick;
+    const clicksY = moaY / moaPerClick;
+
+    return {
+      avgPoi: { x01: avg.x, y01: avg.y },
+      inches: { x: inchesX, y: inchesY, r: rIn },
+      score: scoreFromRadiusInches(rIn),
+      windage: { dir: clicksX >= 0 ? "RIGHT" : "LEFT", clicks: Math.abs(clicksX) },
+      elevation: { dir: clicksY >= 0 ? "DOWN" : "UP", clicks: Math.abs(clicksY) },
+    };
+  }
+
+  function b64FromObj(obj) {
+    const json = JSON.stringify(obj);
+    return btoa(unescape(encodeURIComponent(json)));
+  }
+
+  function goToSEC(payload) {
+    try { localStorage.setItem(KEY_PAYLOAD, JSON.stringify(payload)); } catch {}
+    const b64 = b64FromObj(payload);
+    window.location.href = `./sec.html?payload=${encodeURIComponent(b64)}&fresh=${Date.now()}`;
+  }
+
+  function onShowResults() {
+    const out = computeCorrectionAndScore();
+    if (!out) { alert("Tap Aim Point first, then tap at least one hit."); return; }
+
+    const vendorUrl = localStorage.getItem(KEY_VENDOR_URL) || "";
+
+    const payload = {
+      sessionId: "S-" + Date.now(),
+      score: out.score,
+      shots: hits.length,
+      windage: { dir: out.windage.dir, clicks: Number(out.windage.clicks.toFixed(2)) },
+      elevation: { dir: out.elevation.dir, clicks: Number(out.elevation.clicks.toFixed(2)) },
+      vendorUrl,
+      surveyUrl: "",
+      sourceImg: "",
+      debug: { aim, avgPoi: out.avgPoi, distanceYds: getDistance(), inches: out.inches }
+    };
+
+    goToSEC(payload);
+  }
+
+  // ------------------------------------------------------------
+  // Photo picker (the 800lb gorilla)
+  // ------------------------------------------------------------
+  if (elPhotoBtn && elFile) {
+    elPhotoBtn.addEventListener("click", () => elFile.click());
+  }
+
+  if (elFile) {
+    elFile.addEventListener("change", async () => {
+      const f = elFile.files && elFile.files[0];
+      if (!f) return;
+
+      resetAll();
+
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+      objectUrl = URL.createObjectURL(f);
+
+      await storeTargetPhotoForSEC(f, objectUrl);
+
+      elImg.onload = () => {
+        setText(elStatus, "Tap Aim Point.");
+        setInstructionForState();
+        revealScoringUI();
+      };
+
+      elImg.onerror = () => {
+        setText(elStatus, "Photo failed to load.");
+        setText(elInstruction, "Try again.");
+        revealScoringUI();
+      };
+
+      elImg.src = objectUrl;
+
+      // allow selecting same file again
+      elFile.value = "";
+    });
+  }
+
+  // ------------------------------------------------------------
+  // Tap logic
+  // ------------------------------------------------------------
+  function acceptTap(clientX, clientY) {
+    if (!elImg?.src) return;
+
+    const { x01, y01 } = getRelative01(clientX, clientY);
+
+    if (!aim) {
+      aim = { x01, y01 };
+      addDot(x01, y01, "aim");
+      setText(elStatus, "Tap Hits.");
+      setInstructionForState();
+      hideSticky();
+      return;
+    }
+
+    hits.push({ x01, y01 });
+    addDot(x01, y01, "hit");
+    setTapCount();
+    setInstructionForState();
+
+    hideSticky();
+    scheduleStickyMagic();
+  }
+
+  if (elWrap) {
+    elWrap.addEventListener("touchstart", (e) => {
+      if (!e.touches || !e.touches[0]) return;
+      const t = e.touches[0];
+      touchStart = { x: t.clientX, y: t.clientY, t: Date.now() };
+    }, { passive: true });
+
+    elWrap.addEventListener("touchend", (e) => {
+      const now = Date.now();
+      const t = (e.changedTouches && e.changedTouches[0]) ? e.changedTouches[0] : null;
+      if (!t || !touchStart) return;
+
+      const dx = Math.abs(t.clientX - touchStart.x);
+      const dy = Math.abs(t.clientY - touchStart.y);
+
+      // scroll => ignore
+      if (dx > 10 || dy > 10) { touchStart = null; return; }
+
+      lastTouchTapAt = now;
+      acceptTap(t.clientX, t.clientY);
+      touchStart = null;
+    }, { passive: true });
+
+    elWrap.addEventListener("click", (e) => {
+      const now = Date.now();
+      if (now - lastTouchTapAt < 800) return; // kill ghost click
+      acceptTap(e.clientX, e.clientY);
+    }, { passive: true });
+  }
+
+  // ------------------------------------------------------------
+  // Buttons / distance
+  // ------------------------------------------------------------
+  if (elClear) {
+    elClear.addEventListener("click", () => {
+      resetAll();
+      if (elImg?.src) setText(elStatus, "Tap Aim Point.");
+    });
+  }
+
+  if (elStickyBtn) elStickyBtn.addEventListener("click", onShowResults);
+
+  if (elDistUp) elDistUp.addEventListener("click", () => setDistance(getDistance() + 5));
+  if (elDistDown) elDistDown.addEventListener("click", () => setDistance(getDistance() - 5));
+
+  // ------------------------------------------------------------
+  // Boot
+  // ------------------------------------------------------------
+  setDistance(100);
+  hideSticky();
+  resetAll();
+  hydrateVendorBox();
+
+  hardHideScoringUI();
+  forceTop();
+})();
