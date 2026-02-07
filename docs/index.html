@@ -1,4 +1,4 @@
-<!-- tap-n-score/index.html (FULL REPLACEMENT) — LANDING POLISH: CENTER VENDOR PILL -->
+<!-- tap-n-score/index.html (FULL REPLACEMENT) — LANDING POLISH: VENDOR PILL CENTERED -->
 <!doctype html>
 <html lang="en">
 <head>
@@ -14,121 +14,6 @@
   <title>Tap-n-Score™</title>
 
   <link rel="stylesheet" href="/tap-n-score/styles.css?v=LAND-POLISH-01" />
-
-  <style>
-    .hero{
-      position: relative;
-      background: radial-gradient(1200px 600px at 25% 15%, rgba(47,102,255,.20), transparent 60%),
-                  radial-gradient(900px 600px at 80% 30%, rgba(214,64,64,.18), transparent 55%),
-                  linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02));
-      border: 1px solid rgba(255,255,255,.10);
-      border-radius: 22px;
-      padding: 18px 16px 22px;
-      box-shadow: 0 20px 60px rgba(0,0,0,.45);
-      overflow: hidden;
-    }
-
-    .brandRow{ display:flex; flex-direction:column; gap:6px; padding: 4px 2px 10px; }
-
-    .brandTitle{
-      font-weight: 1000;
-      letter-spacing: .06em;
-      font-size: clamp(28px, 5.4vw, 46px);
-      line-height: 1.02;
-      text-transform: uppercase;
-      user-select:none;
-      -webkit-user-select:none;
-    }
-    .brandTitle .r{ color:#d64040; }
-    .brandTitle .w{ color:#eef2f7; }
-    .brandTitle .b{ color:#2f66ff; }
-
-    .brandSub{
-      font-size: clamp(16px, 2.6vw, 22px);
-      font-weight: 900;
-      color: rgba(238,242,247,.80);
-      letter-spacing: .02em;
-    }
-
-    .heroMid{
-      margin-top: 14px;
-      display:flex;
-      flex-direction:column;
-      gap: 14px;
-      align-items:center;
-      text-align:center;
-    }
-
-    .heroBtn{
-      width: 100%;
-      max-width: 720px;
-      height: 74px;
-      border-radius: 999px;
-      border: 1px solid rgba(255,255,255,.14);
-      background: rgba(214,64,64,.88);
-      color: #eef2f7;
-      font-weight: 1000;
-      font-size: clamp(18px, 3.2vw, 26px);
-      letter-spacing: .02em;
-      cursor:pointer;
-      user-select:none;
-      -webkit-tap-highlight-color: transparent;
-      transform: translateZ(0);
-      -webkit-font-smoothing: antialiased;
-      text-rendering: geometricPrecision;
-    }
-    .heroBtn:active{ transform: translateZ(0) translateY(1px); }
-
-    .heroTip{
-      font-weight: 900;
-      font-size: clamp(18px, 3.2vw, 30px);
-      line-height: 1.14;
-      color: rgba(238,242,247,.92);
-      max-width: 820px;
-    }
-
-    /* ✅ Vendor pill relocated to centered, below Tip */
-    .vendorBox{
-      margin-top: 18px;              /* space away from Tip */
-      width: min(420px, 88%);
-      padding: 12px 18px;
-      border-radius: 999px;
-      border: 1px solid rgba(255,255,255,.14);
-      background: rgba(0,0,0,.22);
-      box-shadow: 0 16px 44px rgba(0,0,0,.35);
-      text-decoration:none;
-      color: rgba(238,242,247,.92);
-      display:inline-flex;
-      align-items:center;
-      justify-content:center;
-      gap: 10px;
-      -webkit-tap-highlight-color: transparent;
-      user-select:none;
-      -webkit-user-select:none;
-    }
-
-    .vendorPillText{
-      font-weight: 1000;
-      letter-spacing: .18em;
-      font-size: 13px;
-      text-transform: uppercase;
-      color: rgba(238,242,247,.92);
-      line-height: 1;
-      text-align:center;
-      white-space: nowrap;
-    }
-
-    /* iOS: do NOT display:none file input */
-    .fileHidden{
-      position:absolute;
-      left:-9999px;
-      width:1px; height:1px;
-      opacity:0;
-    }
-
-    .scoreHidden{ display:none !important; }
-    .mt12{ margin-top:12px; }
-  </style>
 </head>
 
 <body>
@@ -151,12 +36,21 @@
           results.
         </div>
 
-        <!-- ✅ Vendor pill is now centered under Tip -->
-        <a id="vendorBox" class="vendorBox" href="#" aria-label="Vendor">
-          <span id="vendorLabel" class="vendorPillText">VENDOR</span>
-        </a>
+        <!-- Vendor pill moved into normal flow (CENTERED, no overlap risk) -->
+        <div class="vendorCenterRow" aria-label="Vendor / Buy more targets">
+          <a id="vendorBox" class="vendorBox vendorBoxFlow" href="#" aria-label="Vendor">
+            <span id="vendorLabel" class="vendorPillText">BUY MORE TARGETS LIKE THIS</span>
+          </a>
+
+          <!-- optional small “wire” under pill (visual only) -->
+          <svg class="vendorWireFlow" viewBox="0 0 220 36" aria-hidden="true">
+            <path d="M10 10 C 60 30, 160 30, 210 10" fill="none" stroke="rgba(255,255,255,.26)" stroke-width="3" stroke-linecap="round"/>
+            <path d="M10 16 C 68 32, 152 32, 210 16" fill="none" stroke="rgba(47,102,255,.18)" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+        </div>
       </div>
 
+      <!-- IMPORTANT (iOS): do NOT display:none file input -->
       <input id="photoInput" class="fileHidden" type="file" accept="image/*" />
     </section>
 
