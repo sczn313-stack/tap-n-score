@@ -1,10 +1,9 @@
 /* ============================================================
-   tap-n-score/index.js (FULL REPLACEMENT) — TARGET PAGE POLISH
-   Locks:
-   - Distance + system must be set BEFORE taps (Start Tapping gate)
-   - Top & bottom tips are synchronized (same text + color)
-   - MOA/MRAD toggle (default MOA 0.25)
-   - US/Metric distance toggle (yd <-> m) (math uses yards internally)
+   tap-n-score/index.js (FULL REPLACEMENT) — TARGET PAGE POLISH v2
+   - NO Start Tapping button
+   - Compact ADJUST strip (tap to expand)
+   - Settings default: 100 yd, US, MOA, 0.25
+   - Tips top/bottom always synchronized + color changes
 ============================================================ */
 
 (() => {
@@ -16,24 +15,32 @@
   const elVendorBox = $("vendorBox");
   const elVendorLabel = $("vendorLabel");
 
-  // Sections
+  // Target section
   const elScoreSection = $("scoreSection");
-  const elSettingsSection = $("settingsSection");
-
-  // Target area
   const elImg = $("targetImg");
   const elDots = $("dotsLayer");
   const elWrap = $("targetWrap");
   const elTapCount = $("tapCount");
   const elClear = $("clearTapsBtn");
 
-  // Tips (synced)
+  // Tips (sync)
   const elTipTop = $("tipTop");
   const elTipBottom = $("tipBottom");
 
   // Sticky
   const elStickyBar = $("stickyBar");
   const elStickyBtn = $("stickyResultsBtn");
+
+  // Adjust UI
+  const elAdjustBar = $("adjustBar");
+  const elAdjustPanel = $("adjustPanel");
+
+  // Badges
+  const elDistBadge = $("distBadge");
+  const elDistUnitBadge = $("distUnitBadge");
+  const elUnitsBadge = $("unitsBadge");
+  const elSysBadge = $("sysBadge");
+  const elClickBadge = $("clickBadge");
 
   // Controls
   const elDistDown = $("distDown");
@@ -42,13 +49,11 @@
   const elDistUnit = $("distUnit");
   const elDistanceVal = $("distanceVal");
 
-  const elUnitsToggle = $("unitsToggle");   // US / Metric
-  const elSysToggle = $("sysToggle");       // MOA / MRAD
-  const elClickValue = $("clickValue");     // per click
+  const elUnitsToggle = $("unitsToggle"); // US / METRIC
+  const elSysToggle = $("sysToggle");     // MOA / MRAD
+  const elClickValue = $("clickValue");   // per click
 
-  const btnStart = $("startTappingBtn");
-
-  // Storage keys
+  // Storage
   const KEY_PAYLOAD = "SCZN3_SEC_PAYLOAD_V1";
   const KEY_VENDOR_URL = "SCZN3_VENDOR_URL_V1";
 
@@ -61,25 +66,15 @@
   let touchStart = null;
   let pauseTimer = null;
 
-  // Settings state
-  let unitsMode = "US";        // "US" or "METRIC"
-  let sysMode = "MOA";         // "MOA" or "MRAD"
-  let settingsConfirmed = false;
+  let unitsMode = "US";  // US | METRIC
+  let sysMode = "MOA";   // MOA | MRAD
 
   // ------------------------------------------------------------
   // iOS scroll restore kill
   // ------------------------------------------------------------
   try { history.scrollRestoration = "manual"; } catch {}
   function forceTop() { try { window.scrollTo(0, 0); } catch {} }
-  function hardHideScoringUI() {
-    elScoreSection?.classList.add("scoreHidden");
-    elSettingsSection?.classList.add("scoreHidden");
-  }
-  window.addEventListener("pageshow", () => {
-    forceTop();
-    hardHideScoringUI();
-    hideSticky();
-  });
+  window.addEventListener("pageshow", () => { forceTop(); hideSticky(); });
   window.addEventListener("load", () => forceTop());
 
   // ------------------------------------------------------------
@@ -168,7 +163,34 @@
   }
 
   // ------------------------------------------------------------
-  // Controls: distance + units + system
+  // Adjust bar expand/collapse
+  // ------------------------------------------------------------
+  function isExpanded() {
+    return elAdjustPanel && !elAdjustPanel.classList.contains("panelHidden");
+  }
+
+  function setExpanded(expand) {
+    if (!elAdjustPanel) return;
+    if (expand) {
+      elAdjustPanel.classList.remove("panelHidden");
+      elAdjustPanel.setAttribute("aria-hidden", "false");
+      elAdjustBar?.classList.add("adjustExpanded");
+    } else {
+      elAdjustPanel.classList.add("panelHidden");
+      elAdjustPanel.setAttribute("aria-hidden", "true");
+      elAdjustBar?.classList.remove("adjustExpanded");
+    }
+  }
+
+  function toggleExpanded() { setExpanded(!isExpanded()); }
+
+  elAdjustBar?.addEventListener("click", toggleExpanded);
+  elAdjustBar?.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggleExpanded(); }
+  });
+
+  // ------------------------------------------------------------
+  // Distance / units / system
   // ------------------------------------------------------------
   function clamp(n, lo, hi) { return Math.max(lo, Math.min(hi, n)); }
 
@@ -177,110 +199,94 @@
     return Number.isFinite(n) ? n : 100;
   }
 
-  // Distance display depends on unitsMode:
-  // - US: stored/displayed in yards
-  // - METRIC: stored/displayed in meters
   function setDistanceNumber(v) {
     let n = Math.round(Number(v));
-    if (!Number.isFinite(n)) n = (unitsMode === "US") ? 100 : 91; // 100 yd ~ 91 m
+    if (!Number.isFinite(n)) n = (unitsMode === "US") ? 100 : 91;
     n = clamp(n, 5, 1500);
 
-    if (elDistanceVal) elDistanceVal.value = String(n);
-    if (elDistDisplay) elDistDisplay.textContent = String(n);
-    if (elDistUnit) elDistUnit.textContent = (unitsMode === "US") ? "yd" : "m";
+    elDistanceVal && (elDistanceVal.value = String(n));
+    elDistDisplay && (elDistDisplay.textContent = String(n));
+    elDistUnit && (elDistUnit.textContent = (unitsMode === "US") ? "yd" : "m");
+
+    // badges
+    elDistBadge && (elDistBadge.textContent = String(n));
+    elDistUnitBadge && (elDistUnitBadge.textContent = (unitsMode === "US") ? "yd" : "m");
   }
 
   function distanceToYards() {
     const n = getDistanceNumber();
     if (unitsMode === "US") return n;
-    // meters -> yards
-    return n * 1.0936133;
+    return n * 1.0936133; // meters -> yards
   }
 
   function setUnitsMode(next) {
-    unitsMode = next;
-
-    // Convert current value to the other unit so the "real world" distance stays ~same
+    // keep real-world distance approximately same
     const cur = getDistanceNumber();
     if (next === "METRIC") {
-      // yards -> meters
+      unitsMode = "METRIC";
       const meters = Math.round(cur / 1.0936133);
+      elUnitsToggle && (elUnitsToggle.textContent = "METRIC");
+      elUnitsBadge && (elUnitsBadge.textContent = "METRIC");
       setDistanceNumber(meters);
     } else {
-      // meters -> yards
+      unitsMode = "US";
       const yards = Math.round(cur * 1.0936133);
+      elUnitsToggle && (elUnitsToggle.textContent = "US");
+      elUnitsBadge && (elUnitsBadge.textContent = "US");
       setDistanceNumber(yards);
     }
   }
 
   function setSysMode(next) {
     sysMode = next;
+    elSysToggle && (elSysToggle.textContent = next);
+    elSysBadge && (elSysBadge.textContent = next);
 
-    // Replace click value options depending on system
     if (!elClickValue) return;
     elClickValue.innerHTML = "";
 
     if (sysMode === "MOA") {
-      // default 0.25
-      const opts = [
+      [
         { v: "0.25", t: "0.25" },
-        { v: "0.5", t: "0.50" },
-        { v: "0.125", t: "0.13" },
-      ];
-      opts.forEach(o => {
+        { v: "0.5",  t: "0.50" },
+        { v: "0.125",t: "0.13" },
+      ].forEach(o => {
         const op = document.createElement("option");
         op.value = o.v; op.textContent = o.t;
         elClickValue.appendChild(op);
       });
       elClickValue.value = "0.25";
+      elClickBadge && (elClickBadge.textContent = "0.25");
     } else {
-      // MRAD defaults: 0.10
-      const opts = [
-        { v: "0.1", t: "0.10" },
-        { v: "0.2", t: "0.20" },
+      [
+        { v: "0.1",  t: "0.10" },
+        { v: "0.2",  t: "0.20" },
         { v: "0.05", t: "0.05" },
-      ];
-      opts.forEach(o => {
+      ].forEach(o => {
         const op = document.createElement("option");
         op.value = o.v; op.textContent = o.t;
         elClickValue.appendChild(op);
       });
       elClickValue.value = "0.1";
+      elClickBadge && (elClickBadge.textContent = "0.10");
     }
   }
 
-  // ------------------------------------------------------------
-  // Reveal flow
-  // ------------------------------------------------------------
-  function revealTargetFlow() {
-    elSettingsSection?.classList.remove("scoreHidden");
-    elScoreSection?.classList.remove("scoreHidden");
+  elDistUp?.addEventListener("click", () => setDistanceNumber(getDistanceNumber() + 5));
+  elDistDown?.addEventListener("click", () => setDistanceNumber(getDistanceNumber() - 5));
 
-    // show settings first (distance before taps)
-    try { elSettingsSection?.scrollIntoView({ behavior: "smooth", block: "start" }); } catch {}
-  }
+  elUnitsToggle?.addEventListener("click", () => setUnitsMode(unitsMode === "US" ? "METRIC" : "US"));
+  elSysToggle?.addEventListener("click", () => setSysMode(sysMode === "MOA" ? "MRAD" : "MOA"));
 
-  function resetTapsOnly() {
-    aim = null;
-    hits = [];
-    if (elDots) elDots.innerHTML = "";
-    if (elTapCount) elTapCount.textContent = "0";
-    hideSticky();
-
-    // Tips depend on settingsConfirmed
-    if (!elImg?.src) {
-      setTip("Add a target photo to begin.", "blue");
-      return;
+  elClickValue?.addEventListener("change", () => {
+    const v = Number(elClickValue.value);
+    if (Number.isFinite(v)) {
+      elClickBadge && (elClickBadge.textContent = v.toFixed(2));
     }
-    if (!settingsConfirmed) {
-      setTip("Set distance & click system, then press Start Tapping.", "blue");
-      return;
-    }
-    setTip("Tap Aim Point.", "red");
-  }
+  });
 
   // ------------------------------------------------------------
-  // Dot draw + coord helpers
+  // Dot draw + tap logic
   // ------------------------------------------------------------
   function clamp01(v) { return Math.max(0, Math.min(1, v)); }
 
@@ -303,8 +309,71 @@
     return { x01: clamp01(x), y01: clamp01(y) };
   }
 
+  function resetAll() {
+    aim = null;
+    hits = [];
+    elDots && (elDots.innerHTML = "");
+    elTapCount && (elTapCount.textContent = "0");
+    hideSticky();
+
+    if (!elImg?.src) setTip("Add a target photo to begin.", "blue");
+    else setTip("Tap Aim Point.", "red");
+  }
+
+  function acceptTap(clientX, clientY) {
+    if (!elImg?.src) return;
+
+    const { x01, y01 } = getRelative01(clientX, clientY);
+
+    if (!aim) {
+      aim = { x01, y01 };
+      addDot(x01, y01, "aim");
+      setTip("Tap Hits.", "green");
+      hideSticky();
+      return;
+    }
+
+    hits.push({ x01, y01 });
+    addDot(x01, y01, "hit");
+    elTapCount && (elTapCount.textContent = String(hits.length));
+    setTip("Tap more hits, or pause — results will appear.", "gold");
+
+    hideSticky();
+    scheduleStickyMagic();
+  }
+
+  // Touch anti-double fire
+  if (elWrap) {
+    elWrap.addEventListener("touchstart", (e) => {
+      if (!e.touches || !e.touches[0]) return;
+      const t = e.touches[0];
+      touchStart = { x: t.clientX, y: t.clientY, t: Date.now() };
+    }, { passive: true });
+
+    elWrap.addEventListener("touchend", (e) => {
+      const now = Date.now();
+      const t = (e.changedTouches && e.changedTouches[0]) ? e.changedTouches[0] : null;
+      if (!t || !touchStart) return;
+
+      const dx = Math.abs(t.clientX - touchStart.x);
+      const dy = Math.abs(t.clientY - touchStart.y);
+
+      if (dx > 10 || dy > 10) { touchStart = null; return; }
+
+      lastTouchTapAt = now;
+      acceptTap(t.clientX, t.clientY);
+      touchStart = null;
+    }, { passive: true });
+
+    elWrap.addEventListener("click", (e) => {
+      const now = Date.now();
+      if (now - lastTouchTapAt < 800) return;
+      acceptTap(e.clientX, e.clientY);
+    }, { passive: true });
+  }
+
   // ------------------------------------------------------------
-  // Scoring (placeholder, but click math supports MOA + MRAD)
+  // Scoring math (MOA + MRAD supported)
   // ------------------------------------------------------------
   const inchesPerFullWidth = 10;
 
@@ -338,8 +407,6 @@
     const yards = distanceToYards();
     const perClick = Number(elClickValue?.value ?? (sysMode === "MOA" ? 0.25 : 0.1));
 
-    // MOA: 1 MOA = 1.047" at 100yd
-    // MRAD: 1 mil = 3.6" at 100yd
     let clicksX = 0;
     let clicksY = 0;
 
@@ -408,51 +475,21 @@
   }
 
   // ------------------------------------------------------------
-  // Start Tapping gate
+  // Buttons
   // ------------------------------------------------------------
-  function confirmSettingsAndEnableTaps() {
-    settingsConfirmed = true;
-    hideSticky();
-    resetTapsOnly();
-    // take them to the image for tapping
-    try { elScoreSection?.scrollIntoView({ behavior: "smooth", block: "start" }); } catch {}
-  }
-
-  // ------------------------------------------------------------
-  // Tap acceptance (BLOCKED until settingsConfirmed)
-  // ------------------------------------------------------------
-  function acceptTap(clientX, clientY) {
-    if (!settingsConfirmed) {
-      setTip("Set distance & click system, then press Start Tapping.", "blue");
-      try { elSettingsSection?.scrollIntoView({ behavior: "smooth", block: "start" }); } catch {}
-      return;
-    }
-
-    if (!elImg?.src) return;
-
-    const { x01, y01 } = getRelative01(clientX, clientY);
-
-    if (!aim) {
-      aim = { x01, y01 };
-      addDot(x01, y01, "aim");
-      setTip("Tap Hits.", "green");
-      hideSticky();
-      return;
-    }
-
-    hits.push({ x01, y01 });
-    addDot(x01, y01, "hit");
-    if (elTapCount) elTapCount.textContent = String(hits.length);
-
-    setTip("Tap more hits, or pause — results will appear.", "gold");
-
-    hideSticky();
-    scheduleStickyMagic();
-  }
+  elClear?.addEventListener("click", resetAll);
+  elStickyBtn?.addEventListener("click", onShowResults);
 
   // ------------------------------------------------------------
   // Photo picker
   // ------------------------------------------------------------
+  function revealTargetUI() {
+    elScoreSection?.classList.remove("scoreHidden");
+    // keep panel collapsed by default (small footprint)
+    setExpanded(false);
+    try { elScoreSection?.scrollIntoView({ behavior: "smooth", block: "start" }); } catch {}
+  }
+
   if (elPhotoBtn && elFile) elPhotoBtn.addEventListener("click", () => elFile.click());
 
   if (elFile) {
@@ -460,114 +497,49 @@
       const f = elFile.files && elFile.files[0];
       if (!f) return;
 
-      // Reset state
-      settingsConfirmed = false;
+      // reset
       aim = null;
       hits = [];
-      if (elDots) elDots.innerHTML = "";
-      if (elTapCount) elTapCount.textContent = "0";
+      elDots && (elDots.innerHTML = "");
+      elTapCount && (elTapCount.textContent = "0");
       hideSticky();
 
-      // Show settings + target
-      revealTargetFlow();
-
-      // Tip: settings first
-      setTip("Set distance & click system, then press Start Tapping.", "blue");
+      revealTargetUI();
 
       if (objectUrl) URL.revokeObjectURL(objectUrl);
       objectUrl = URL.createObjectURL(f);
 
-      elImg.onload = () => {
-        // after photo loads, keep them on settings first
-        try { elSettingsSection?.scrollIntoView({ behavior: "smooth", block: "start" }); } catch {}
-      };
-
-      elImg.onerror = () => {
-        setTip("Photo failed to load. Try again.", "red");
-      };
+      elImg.onload = () => { setTip("Tap Aim Point.", "red"); };
+      elImg.onerror = () => { setTip("Photo failed to load. Try again.", "red"); };
 
       elImg.src = objectUrl;
-
-      // allow selecting same file again
       elFile.value = "";
     });
   }
 
   // ------------------------------------------------------------
-  // Touch + click handling (anti double fire)
-  // ------------------------------------------------------------
-  if (elWrap) {
-    elWrap.addEventListener("touchstart", (e) => {
-      if (!e.touches || !e.touches[0]) return;
-      const t = e.touches[0];
-      touchStart = { x: t.clientX, y: t.clientY, t: Date.now() };
-    }, { passive: true });
-
-    elWrap.addEventListener("touchend", (e) => {
-      const now = Date.now();
-      const t = (e.changedTouches && e.changedTouches[0]) ? e.changedTouches[0] : null;
-      if (!t || !touchStart) return;
-
-      const dx = Math.abs(t.clientX - touchStart.x);
-      const dy = Math.abs(t.clientY - touchStart.y);
-
-      if (dx > 10 || dy > 10) { touchStart = null; return; } // scroll
-
-      lastTouchTapAt = now;
-      acceptTap(t.clientX, t.clientY);
-      touchStart = null;
-    }, { passive: true });
-
-    elWrap.addEventListener("click", (e) => {
-      const now = Date.now();
-      if (now - lastTouchTapAt < 800) return;
-      acceptTap(e.clientX, e.clientY);
-    }, { passive: true });
-  }
-
-  // ------------------------------------------------------------
-  // Buttons
-  // ------------------------------------------------------------
-  elClear?.addEventListener("click", () => {
-    resetTapsOnly();
-  });
-
-  elStickyBtn?.addEventListener("click", onShowResults);
-
-  btnStart?.addEventListener("click", confirmSettingsAndEnableTaps);
-
-  // Distance steps (small footprint)
-  elDistUp?.addEventListener("click", () => setDistanceNumber(getDistanceNumber() + (unitsMode === "US" ? 5 : 5)));
-  elDistDown?.addEventListener("click", () => setDistanceNumber(getDistanceNumber() - (unitsMode === "US" ? 5 : 5)));
-
-  // Units toggle
-  elUnitsToggle?.addEventListener("click", () => {
-    const next = (unitsMode === "US") ? "METRIC" : "US";
-    elUnitsToggle.textContent = (next === "US") ? "US" : "METRIC";
-    setUnitsMode(next);
-  });
-
-  // System toggle
-  elSysToggle?.addEventListener("click", () => {
-    const next = (sysMode === "MOA") ? "MRAD" : "MOA";
-    elSysToggle.textContent = next;
-    setSysMode(next);
-  });
-
-  // ------------------------------------------------------------
-  // Boot
+  // Boot defaults (small, obvious, ignorable)
   // ------------------------------------------------------------
   hydrateVendorBox();
-  hardHideScoringUI();
-  forceTop();
 
-  // defaults
+  // Default collapsed panel (you only open if needed)
+  setExpanded(false);
+
   unitsMode = "US";
   sysMode = "MOA";
+
   elUnitsToggle && (elUnitsToggle.textContent = "US");
+  elUnitsBadge && (elUnitsBadge.textContent = "US");
+
   elSysToggle && (elSysToggle.textContent = "MOA");
+  elSysBadge && (elSysBadge.textContent = "MOA");
+
   setDistanceNumber(100);
   setSysMode("MOA");
+
+  // click badge init
+  elClickBadge && (elClickBadge.textContent = "0.25");
+
   setTip("Add a target photo to begin.", "blue");
   hideSticky();
 })();
