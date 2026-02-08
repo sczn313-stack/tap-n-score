@@ -1,8 +1,8 @@
 /* ============================================================
-   tap-n-score/sec.js (FULL REPLACEMENT) — NO PHOTO SEC
+   tap-n-score/sec.js (FULL REPLACEMENT) — NO PHOTO + NO DISTANCE
    - Reads payload from ?payload= (base64) OR localStorage
    - Renders score + two-decimal clicks
-   - Generates SEC PNG (no target image) and opens download.html
+   - Generates SEC PNG (no target image, no distance) and opens download.html
 ============================================================ */
 
 (() => {
@@ -15,7 +15,6 @@
   const elScore = $("scoreValue");
   const elScoreLabel = $("scoreLabel");
   const elShots = $("shotsVal");
-  const elDist = $("distVal");
   const elWind = $("windVal");
   const elElev = $("elevVal");
   const elErr = $("errLine");
@@ -109,21 +108,19 @@
     if (elScoreLabel) elScoreLabel.textContent = scoreLabel(score);
 
     if (elShots) elShots.textContent = String(Number(payload?.shots ?? 0) || 0);
-    const dist = Number(payload?.debug?.distanceYds ?? 100) || 100;
-    if (elDist) elDist.textContent = String(dist);
 
     if (elWind) elWind.textContent = fmtClicks(payload?.windage);
     if (elElev) elElev.textContent = fmtClicks(payload?.elevation);
   }
 
   function roundRect(ctx, x, y, w, h, r) {
-    const rr = Math.min(r, w/2, h/2);
+    const rr = Math.min(r, w / 2, h / 2);
     ctx.beginPath();
-    ctx.moveTo(x+rr, y);
-    ctx.arcTo(x+w, y, x+w, y+h, rr);
-    ctx.arcTo(x+w, y+h, x, y+h, rr);
-    ctx.arcTo(x, y+h, x, y, rr);
-    ctx.arcTo(x, y, x+w, y, rr);
+    ctx.moveTo(x + rr, y);
+    ctx.arcTo(x + w, y, x + w, y + h, rr);
+    ctx.arcTo(x + w, y + h, x, y + h, rr);
+    ctx.arcTo(x, y + h, x, y, rr);
+    ctx.arcTo(x, y, x + w, y, rr);
     ctx.closePath();
   }
 
@@ -131,7 +128,6 @@
     const score = clampScore(payload?.score ?? 0);
     const sid = payload?.sessionId || "—";
     const shots = Number(payload?.shots ?? 0) || 0;
-    const dist = Number(payload?.debug?.distanceYds ?? 100) || 100;
 
     const windTxt = fmtClicks(payload?.windage);
     const elevTxt = fmtClicks(payload?.elevation);
@@ -149,69 +145,69 @@
     ctx.fillRect(0, 0, W, H);
 
     // subtle gradients
-    function radial(x,y,r, color){
-      const g = ctx.createRadialGradient(x,y,0,x,y,r);
+    function radial(x, y, r, color) {
+      const g = ctx.createRadialGradient(x, y, 0, x, y, r);
       g.addColorStop(0, color);
       g.addColorStop(1, "rgba(0,0,0,0)");
       return g;
     }
     ctx.fillStyle = radial(350, 160, 700, "rgba(47,102,255,0.18)");
-    ctx.fillRect(0,0,W,H);
+    ctx.fillRect(0, 0, W, H);
     ctx.fillStyle = radial(1250, 180, 700, "rgba(214,64,64,0.14)");
-    ctx.fillRect(0,0,W,H);
+    ctx.fillRect(0, 0, W, H);
 
     // frame
     ctx.fillStyle = "rgba(255,255,255,0.05)";
     ctx.strokeStyle = "rgba(255,255,255,0.12)";
     ctx.lineWidth = 2;
-    roundRect(ctx, 80, 70, W-160, H-140, 34);
+    roundRect(ctx, 80, 70, W - 160, H - 140, 34);
     ctx.fill();
     ctx.stroke();
 
-    // title
+    // title (RWB)
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     ctx.font = "1000 34px system-ui, -apple-system, Segoe UI, Roboto, Arial";
     const parts = [
-      {t:"SHOOTER", c:"#d64040"},
-      {t:"EXPERIENCE", c:"#eef2f7"},
-      {t:"CARD", c:"#2f66ff"},
-      {t:"SEC", c:"#eef2f7"},
+      { t: "SHOOTER", c: "#d64040" },
+      { t: "EXPERIENCE", c: "#eef2f7" },
+      { t: "CARD", c: "#2f66ff" },
+      { t: "SEC", c: "#eef2f7" },
     ];
     const gap = 18;
-    const widths = parts.map(p => ctx.measureText(p.t).width);
-    const total = widths.reduce((a,b)=>a+b,0) + gap*(parts.length-1);
-    let x = W/2 - total/2;
-    for (let i=0;i<parts.length;i++){
+    const widths = parts.map((p) => ctx.measureText(p.t).width);
+    const total = widths.reduce((a, b) => a + b, 0) + gap * (parts.length - 1);
+    let x = W / 2 - total / 2;
+    for (let i = 0; i < parts.length; i++) {
       ctx.fillStyle = parts[i].c;
-      ctx.fillText(parts[i].t, x + widths[i]/2, 155);
+      ctx.fillText(parts[i].t, x + widths[i] / 2, 155);
       x += widths[i] + gap;
     }
 
     // session
     ctx.font = "900 18px system-ui, -apple-system, Segoe UI, Roboto, Arial";
     ctx.fillStyle = "rgba(238,242,247,0.55)";
-    ctx.fillText(`Session: ${sid}`, W/2, 205);
+    ctx.fillText(`Session: ${sid}`, W / 2, 205);
 
     // score
     ctx.font = "1000 170px system-ui, -apple-system, Segoe UI, Roboto, Arial";
     ctx.fillStyle = scoreColor(score);
     ctx.shadowColor = "rgba(0,0,0,0.55)";
     ctx.shadowBlur = 26;
-    ctx.fillText(String(score), W/2, 375);
+    ctx.fillText(String(score), W / 2, 375);
     ctx.shadowBlur = 0;
 
     // label + fairness
     ctx.font = "950 26px system-ui, -apple-system, Segoe UI, Roboto, Arial";
     ctx.fillStyle = "rgba(238,242,247,0.90)";
-    ctx.fillText(scoreLabel(score), W/2, 470);
+    ctx.fillText(scoreLabel(score), W / 2, 470);
 
     ctx.font = "850 22px system-ui, -apple-system, Segoe UI, Roboto, Arial";
     ctx.fillStyle = "rgba(238,242,247,0.72)";
-    ctx.fillText("Tighter group + closer to aim point = higher score", W/2, 520);
+    ctx.fillText("Tighter group + closer to aim point = higher score", W / 2, 520);
 
-    // stat boxes
-    function statBox(x, y, w, h, label, value){
+    // stat boxes (NO DISTANCE)
+    function statBox(x, y, w, h, label, value) {
       ctx.fillStyle = "rgba(0,0,0,0.18)";
       ctx.strokeStyle = "rgba(255,255,255,0.10)";
       ctx.lineWidth = 2;
@@ -231,22 +227,23 @@
       ctx.fillText(String(value), x + 24, y + 92);
     }
 
-    const boxY = 585;
+    const boxY = 600;
     const boxW = (W - 220) / 2;
-    const boxH = 120;
+    const boxH = 130;
     const leftX = 110;
     const rightX = leftX + boxW + 20;
 
     statBox(leftX, boxY, boxW, boxH, "Shots", `${shots} hits`);
-    statBox(rightX, boxY, boxW, boxH, "Distance", `${dist} yd`);
-    statBox(leftX, boxY + boxH + 18, boxW, boxH, "Windage", windTxt);
-    statBox(rightX, boxY + boxH + 18, boxW, boxH, "Elevation", elevTxt);
+    statBox(rightX, boxY, boxW, boxH, "Windage", windTxt);
+
+    statBox(leftX, boxY + boxH + 20, boxW, boxH, "Elevation", elevTxt);
+    statBox(rightX, boxY + boxH + 20, boxW, boxH, "SCZN3", "SEC");
 
     // footer
     ctx.textAlign = "center";
     ctx.font = "900 18px system-ui, -apple-system, Segoe UI, Roboto, Arial";
     ctx.fillStyle = "rgba(238,242,247,0.28)";
-    ctx.fillText("SCZN3", W/2, H - 100);
+    ctx.fillText("SCZN3", W / 2, H - 100);
 
     return c.toDataURL("image/png");
   }
