@@ -1,9 +1,11 @@
 /* ============================================================
    tap-n-score/index.js (FULL REPLACEMENT) — TARGET PAGE POLISH
-   Adds:
-   1) Distance manual entry (clamped 5–1000)
-   2) Auto-scroll lands at top of target image (entire pic visible)
-   3) Triple-tap ANY button => go back (or fallback to index)
+   Locks:
+   - Yardage + unit + click value are BEFORE taps (top controls).
+   - MOA/MRAD toggle ALWAYS snaps to common default:
+       MOA => 0.25, MRAD => 0.10 (no remembering).
+   - Mirrored instructions (TL + BR) always match wording + color.
+   - 3+ taps on ANY button => history.back()
 ============================================================ */
 
 (() => {
@@ -17,8 +19,6 @@
 
   // Scoring UI
   const elScoreSection = $("scoreSection");
-  const elSettingsSection = $("settingsSection");
-
   const elImg = $("targetImg");
   const elDots = $("dotsLayer");
   const elWrap = $("targetWrap");
@@ -27,17 +27,26 @@
   const elInstruction = $("instructionLine");
   const elStatus = $("statusLine");
 
+  // mirrored tips
+  const elTipTL = $("tipTL");
+  const elTipBR = $("tipBR");
+
   // Sticky
   const elStickyBar = $("stickyBar");
   const elStickyBtn = $("stickyResultsBtn");
 
-  // Settings
-  const elDistance = $("distanceYds");
+  // Top controls
+  const elDist = $("distanceYds");
   const elDistUp = $("distUp");
   const elDistDown = $("distDown");
-  const elMoaClick = $("moaPerClick");
 
-  // Storage keys
+  const elUnitMoa = $("unitMoa");
+  const elUnitMrad = $("unitMrad");
+
+  const elClickValue = $("clickValue");
+  const elClickUnitLabel = $("clickUnitLabel");
+
+  // Storage keys (kept)
   const KEY_PAYLOAD = "SCZN3_SEC_PAYLOAD_V1";
   const KEY_TARGET_IMG_DATA = "SCZN3_TARGET_IMG_DATAURL_V1";
   const KEY_TARGET_IMG_BLOB = "SCZN3_TARGET_IMG_BLOBURL_V1";
@@ -58,14 +67,21 @@
   let vendorRotateTimer = null;
   let vendorRotateOn = false;
 
+  // unit state (default locked)
+  let dialUnit = "MOA"; // "MOA" | "MRAD"
+
+  const DEFAULTS = {
+    MOA: 0.25,
+    MRAD: 0.10
+  };
+
   // ------------------------------------------------------------
-  // HARD LANDING LOCK: kill scroll restoration
+  // HARD LANDING LOCK (iOS scroll restore)
   // ------------------------------------------------------------
   try { history.scrollRestoration = "manual"; } catch {}
   function forceTop() { try { window.scrollTo(0, 0); } catch {} }
   function hardHideScoringUI() {
     if (elScoreSection) elScoreSection.classList.add("scoreHidden");
-    if (elSettingsSection) elSettingsSection.classList.add("scoreHidden");
   }
   window.addEventListener("pageshow", () => {
     forceTop();
@@ -75,38 +91,29 @@
   window.addEventListener("load", () => forceTop());
 
   // ------------------------------------------------------------
-  // Triple-tap ANY button => restore previous page
+  // GLOBAL: 3+ taps on ANY button => history.back()
   // ------------------------------------------------------------
-  function goBackSmart() {
-    // If there’s a usable history stack, go back
-    if (window.history && window.history.length > 1) {
-      window.history.back();
-      return;
+  const tripleTap = new WeakMap(); // button -> {t, n}
+  function registerButtonTap(btn) {
+    const now = Date.now();
+    const s = tripleTap.get(btn) || { t: 0, n: 0 };
+
+    if (now - s.t <= 750) s.n += 1;
+    else s.n = 1;
+
+    s.t = now;
+    tripleTap.set(btn, s);
+
+    if (s.n >= 3) {
+      try { window.history.back(); } catch {}
+      s.n = 0;
+      tripleTap.set(btn, s);
     }
-    // Otherwise, land safely on index
-    window.location.href = `./index.html?fresh=${Date.now()}`;
   }
-
-  function enableTripleTapOnButtons() {
-    const buttons = Array.from(document.querySelectorAll("button"));
-    buttons.forEach((btn) => {
-      let n = 0;
-      let t = 0;
-
-      btn.addEventListener("click", (e) => {
-        const now = Date.now();
-        if (now - t > 700) n = 0;
-        t = now;
-        n += 1;
-
-        if (n >= 3) {
-          e.preventDefault();
-          e.stopPropagation();
-          goBackSmart();
-        }
-      }, true);
-    });
-  }
+  document.addEventListener("click", (e) => {
+    const b = e.target && e.target.closest ? e.target.closest("button") : null;
+    if (b) registerButtonTap(b);
+  }, { capture: true });
 
   // ------------------------------------------------------------
   // Helpers
@@ -116,10 +123,7 @@
 
   function revealScoringUI() {
     if (elScoreSection) elScoreSection.classList.remove("scoreHidden");
-    if (elSettingsSection) elSettingsSection.classList.remove("scoreHidden");
-
-    // Key change: scroll to the TOP of the target image container
-    try { elWrap?.scrollIntoView({ behavior: "smooth", block: "start" }); } catch {}
+    try { elScoreSection?.scrollIntoView({ behavior: "smooth", block: "start" }); } catch {}
   }
 
   function setTapCount() {
@@ -145,11 +149,43 @@
     }, 650);
   }
 
-  function setInstructionForState() {
-    if (!elInstruction) return;
-    if (!elImg?.src) { setText(elInstruction, ""); return; }
-    if (!aim) { setText(elInstruction, "Tap Aim Point."); return; }
-    if (hits.length < 1) { setText(elInstruction, "Tap Hits."); return; }
+  // ------------------------------------------------------------
+  // Mirrored instruction tips (TL + BR) — same wording + same color
+  // ------------------------------------------------------------
+  function setTipState(text, stateClass) {
+    // stateClass: tipStateReady | tipStateAim | tipStateHits | tipStateResults
+    if (elTipTL) {
+      elTipTL.classList.remove("tipStateReady","tipStateAim","tipStateHits","tipStateResults");
+      elTipTL.classList.add(stateClass);
+      elTipTL.textContent = text;
+    }
+    if (elTipBR) {
+      elTipBR.classList.remove("tipStateReady","tipStateAim","tipStateHits","tipStateResults");
+      elTipBR.classList.add(stateClass);
+      elTipBR.textContent = text;
+    }
+  }
+
+  function syncInstruction() {
+    if (!elImg?.src) {
+      setTipState("", "tipStateReady");
+      setText(elInstruction, "");
+      return;
+    }
+
+    if (!aim) {
+      setTipState("Tap Aim Point.", "tipStateAim");
+      setText(elInstruction, "Tap Aim Point.");
+      return;
+    }
+
+    if (hits.length < 1) {
+      setTipState("Tap Hits.", "tipStateHits");
+      setText(elInstruction, "Tap Hits.");
+      return;
+    }
+
+    setTipState("Pause to show results.", "tipStateResults");
     setText(elInstruction, "Tap more hits, or pause — results will appear.");
   }
 
@@ -159,12 +195,12 @@
     if (elDots) elDots.innerHTML = "";
     setTapCount();
     hideSticky();
-    setInstructionForState();
+    syncInstruction();
     setText(elStatus, elImg?.src ? "Tap Aim Point." : "Add a target photo to begin.");
   }
 
   // ------------------------------------------------------------
-  // Vendor pill rotate
+  // Vendor pill rotation
   // ------------------------------------------------------------
   function stopVendorRotate() {
     if (vendorRotateTimer) clearInterval(vendorRotateTimer);
@@ -175,7 +211,6 @@
   function startVendorRotate() {
     stopVendorRotate();
     if (!elVendorLabel) return;
-
     vendorRotateTimer = setInterval(() => {
       vendorRotateOn = !vendorRotateOn;
       elVendorLabel.textContent = vendorRotateOn ? "VENDOR" : "BUY MORE TARGETS LIKE THIS";
@@ -208,7 +243,7 @@
   }
 
   // ------------------------------------------------------------
-  // Target photo storage for SEC
+  // Target photo storage (kept even though SEC uses no photo)
   // ------------------------------------------------------------
   async function storeTargetPhotoForSEC(file, blobUrl) {
     try { localStorage.setItem(KEY_TARGET_IMG_BLOB, blobUrl); } catch {}
@@ -248,40 +283,52 @@
   }
 
   // ------------------------------------------------------------
-  // Distance (manual input + clamp)
+  // Distance + Unit + Click Value (pilot rules)
   // ------------------------------------------------------------
-  function clampDistance(n) {
-    let v = Math.round(Number(n));
-    if (!Number.isFinite(v)) v = 100;
-    v = Math.max(5, Math.min(1000, v));
-    return v;
+  function getDistanceYds() {
+    const n = Number(elDist?.value ?? 100);
+    if (!Number.isFinite(n)) return 100;
+    return Math.max(5, Math.min(1000, Math.round(n)));
   }
 
-  function getDistance() {
-    return clampDistance(elDistance?.value ?? 100);
+  function setDistanceYds(v) {
+    let n = Math.round(Number(v));
+    if (!Number.isFinite(n)) n = 100;
+    n = Math.max(5, Math.min(1000, n));
+    if (elDist) elDist.value = String(n);
   }
 
-  function setDistance(v) {
-    const n = clampDistance(v);
-    if (elDistance) elDistance.value = String(n);
+  function setUnit(newUnit) {
+    dialUnit = newUnit === "MRAD" ? "MRAD" : "MOA";
+
+    // segment UI
+    if (elUnitMoa) elUnitMoa.classList.toggle("segOn", dialUnit === "MOA");
+    if (elUnitMrad) elUnitMrad.classList.toggle("segOn", dialUnit === "MRAD");
+
+    // ALWAYS snap to common default (your A rule)
+    const def = DEFAULTS[dialUnit];
+    if (elClickValue) elClickValue.value = String(def.toFixed(2));
+
+    // label
+    if (elClickUnitLabel) {
+      elClickUnitLabel.textContent = dialUnit === "MOA" ? "MOA/click" : "MRAD/click";
+    }
   }
 
-  // Manual typing support
-  if (elDistance) {
-    elDistance.addEventListener("input", () => {
-      // keep it tame while typing
-      const n = clampDistance(elDistance.value);
-      elDistance.value = String(n);
-    });
-
-    elDistance.addEventListener("blur", () => {
-      const n = clampDistance(elDistance.value);
-      elDistance.value = String(n);
-    });
+  function getClickValue() {
+    // Manual value is allowed, but no remembering.
+    let n = Number(elClickValue?.value);
+    if (!Number.isFinite(n) || n <= 0) {
+      n = DEFAULTS[dialUnit];
+      if (elClickValue) elClickValue.value = String(n.toFixed(2));
+    }
+    // reasonable clamp
+    n = Math.max(0.01, Math.min(5, n));
+    return n;
   }
 
   // ------------------------------------------------------------
-  // Scoring placeholder (unchanged)
+  // Scoring placeholder (kept) — now respects unit + click value
   // ------------------------------------------------------------
   const inchesPerFullWidth = 10;
 
@@ -312,15 +359,21 @@
     const inchesY = dy * inchesPerFullWidth;
     const rIn = Math.sqrt(inchesX * inchesX + inchesY * inchesY);
 
-    const dist = getDistance();
-    const moaPerClick = Number(elMoaClick?.value ?? 0.25);
-    const inchesPerMoa = (dist / 100) * 1.047;
+    const dist = getDistanceYds();
 
-    const moaX = inchesX / inchesPerMoa;
-    const moaY = inchesY / inchesPerMoa;
+    // convert inches => angular
+    // MOA: inchesPerMoa = (dist/100)*1.047
+    // MRAD: inchesPerMrad = (dist/100)*3.6  (approx; good enough for placeholder logic)
+    const inchesPerUnit = (dialUnit === "MOA")
+      ? (dist / 100) * 1.047
+      : (dist / 100) * 3.6;
 
-    const clicksX = moaX / moaPerClick;
-    const clicksY = moaY / moaPerClick;
+    const unitX = inchesX / inchesPerUnit;
+    const unitY = inchesY / inchesPerUnit;
+
+    const clickVal = getClickValue(); // MOA/click or MRAD/click
+    const clicksX = unitX / clickVal;
+    const clicksY = unitY / clickVal;
 
     return {
       avgPoi: { x01: avg.x, y01: avg.y },
@@ -328,6 +381,7 @@
       score: scoreFromRadiusInches(rIn),
       windage: { dir: clicksX >= 0 ? "RIGHT" : "LEFT", clicks: Math.abs(clicksX) },
       elevation: { dir: clicksY >= 0 ? "DOWN" : "UP", clicks: Math.abs(clicksY) },
+      dial: { unit: dialUnit, clickValue: clickVal }
     };
   }
 
@@ -354,10 +408,11 @@
       shots: hits.length,
       windage: { dir: out.windage.dir, clicks: Number(out.windage.clicks.toFixed(2)) },
       elevation: { dir: out.elevation.dir, clicks: Number(out.elevation.clicks.toFixed(2)) },
+      dial: { unit: out.dial.unit, clickValue: Number(out.dial.clickValue.toFixed(2)) },
       vendorUrl,
       surveyUrl: "",
       sourceImg: "",
-      debug: { aim, avgPoi: out.avgPoi, distanceYds: getDistance(), inches: out.inches }
+      debug: { aim, avgPoi: out.avgPoi, distanceYds: getDistanceYds(), inches: out.inches }
     };
 
     goToSEC(payload);
@@ -384,7 +439,7 @@
 
       elImg.onload = () => {
         setText(elStatus, "Tap Aim Point.");
-        setInstructionForState();
+        syncInstruction();
         revealScoringUI();
       };
 
@@ -395,8 +450,6 @@
       };
 
       elImg.src = objectUrl;
-
-      // allow selecting same file again
       elFile.value = "";
     });
   }
@@ -413,17 +466,17 @@
       aim = { x01, y01 };
       addDot(x01, y01, "aim");
       setText(elStatus, "Tap Hits.");
-      setInstructionForState();
       hideSticky();
+      syncInstruction();
       return;
     }
 
     hits.push({ x01, y01 });
     addDot(x01, y01, "hit");
     setTapCount();
-    setInstructionForState();
 
     hideSticky();
+    syncInstruction();
     scheduleStickyMagic();
   }
 
@@ -435,15 +488,16 @@
     }, { passive: true });
 
     elWrap.addEventListener("touchend", (e) => {
+      const now = Date.now();
       const t = (e.changedTouches && e.changedTouches[0]) ? e.changedTouches[0] : null;
       if (!t || !touchStart) return;
 
       const dx = Math.abs(t.clientX - touchStart.x);
       const dy = Math.abs(t.clientY - touchStart.y);
 
-      if (dx > 10 || dy > 10) { touchStart = null; return; }
+      if (dx > 10 || dy > 10) { touchStart = null; return; } // scroll => ignore
 
-      lastTouchTapAt = Date.now();
+      lastTouchTapAt = now;
       acceptTap(t.clientX, t.clientY);
       touchStart = null;
     }, { passive: true });
@@ -456,31 +510,37 @@
   }
 
   // ------------------------------------------------------------
-  // Buttons / distance
+  // Buttons
   // ------------------------------------------------------------
-  if (elClear) {
-    elClear.addEventListener("click", () => {
-      resetAll();
-      if (elImg?.src) setText(elStatus, "Tap Aim Point.");
-    });
-  }
+  elClear?.addEventListener("click", () => {
+    resetAll();
+    if (elImg?.src) setText(elStatus, "Tap Aim Point.");
+  });
 
-  if (elStickyBtn) elStickyBtn.addEventListener("click", onShowResults);
+  elStickyBtn?.addEventListener("click", onShowResults);
 
-  if (elDistUp) elDistUp.addEventListener("click", () => setDistance(getDistance() + 5));
-  if (elDistDown) elDistDown.addEventListener("click", () => setDistance(getDistance() - 5));
+  elDistUp?.addEventListener("click", () => setDistanceYds(getDistanceYds() + 5));
+  elDistDown?.addEventListener("click", () => setDistanceYds(getDistanceYds() - 5));
+
+  // manual input fix: always clamp on blur/change
+  elDist?.addEventListener("change", () => setDistanceYds(getDistanceYds()));
+  elDist?.addEventListener("blur", () => setDistanceYds(getDistanceYds()));
+
+  elUnitMoa?.addEventListener("click", () => setUnit("MOA"));
+  elUnitMrad?.addEventListener("click", () => setUnit("MRAD"));
+
+  // click value: clamp lightly on blur
+  elClickValue?.addEventListener("blur", () => { getClickValue(); });
+  elClickValue?.addEventListener("change", () => { getClickValue(); });
 
   // ------------------------------------------------------------
-  // Boot
+  // Boot (defaults locked)
   // ------------------------------------------------------------
-  setDistance(100);
+  setUnit("MOA");          // snaps click value to 0.25
+  setDistanceYds(100);     // default
   hideSticky();
   resetAll();
   hydrateVendorBox();
-
   hardHideScoringUI();
   forceTop();
-
-  // turn on triple-tap escape hatch
-  enableTripleTapOnButtons();
 })();
