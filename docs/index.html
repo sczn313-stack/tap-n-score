@@ -1,4 +1,4 @@
-<!-- tap-n-score/index.html (FULL REPLACEMENT) — TARGET PAGE POLISH v2 (COMPACT ADJUST STRIP) -->
+<!-- tap-n-score/index.html (FULL REPLACEMENT) — LANDING POLISH + DISTANCE MANUAL INPUT -->
 <!doctype html>
 <html lang="en">
 <head>
@@ -13,15 +13,13 @@
 
   <title>Tap-n-Score™</title>
 
-  <link rel="stylesheet" href="/tap-n-score/styles.css?v=TARGET-POLISH-02" />
+  <link rel="stylesheet" href="/tap-n-score/styles.css?v=TP-POLISH-01" />
 </head>
 
 <body>
   <main class="page">
 
-    <!-- =========================
-         LANDING HERO (LOCKED)
-         ========================= -->
+    <!-- QRC LANDING HERO (LOCKED) -->
     <section class="hero" aria-label="Tap-n-Score landing">
       <div class="brandRow">
         <div class="brandTitle">
@@ -38,6 +36,7 @@
           results.
         </div>
 
+        <!-- Vendor pill (CENTERED, no overlap risk) -->
         <div class="vendorCenterRow" aria-label="Vendor / Buy more targets">
           <a id="vendorBox" class="vendorBox vendorBoxFlow" href="#" aria-label="Vendor">
             <span id="vendorLabel" class="vendorPillText">BUY MORE TARGETS LIKE THIS</span>
@@ -50,82 +49,22 @@
         </div>
       </div>
 
+      <!-- IMPORTANT (iOS): do NOT display:none file input -->
       <input id="photoInput" class="fileHidden" type="file" accept="image/*" />
     </section>
 
-    <!-- =========================
-         TARGET PAGE (PAGE 2)
-         ========================= -->
-
+    <!-- SCORING UI (hidden until photo selected) -->
     <section id="scoreSection" class="card mt12 scoreHidden">
-      <div class="cardTitle">TARGET</div>
+      <div class="cardTitle">PHOTO</div>
 
-      <!-- Compact ADJUST strip (tap to expand) -->
-      <div id="adjustBar" class="adjustBar" role="button" tabindex="0" aria-label="Adjust settings if needed">
-        <div class="adjustLeft">
-          <span class="adjustK">ADJUST</span>
-          <span class="adjustMuted">(if needed)</span>
-        </div>
-
-        <div class="adjustBadges" aria-label="Current settings">
-          <span class="badge"><span id="distBadge">100</span><span id="distUnitBadge">yd</span></span>
-          <span class="badge" id="unitsBadge">US</span>
-          <span class="badge" id="sysBadge">MOA</span>
-          <span class="badge"><span id="clickBadge">0.25</span>/click</span>
-        </div>
-
-        <div class="chev" aria-hidden="true">▾</div>
+      <div id="statusLine" class="hint" style="margin-top:0; margin-bottom:10px;">
+        Add a target photo to begin.
       </div>
-
-      <!-- Expanded controls (hidden until adjustBar tapped) -->
-      <div id="adjustPanel" class="adjustPanel" aria-hidden="true">
-
-        <div class="panelRow">
-          <div class="panelItem">
-            <div class="panelK">Distance</div>
-            <div class="panelCtl">
-              <button id="distDown" class="miniBtn" type="button" aria-label="Decrease distance">−</button>
-              <div class="panelV"><span id="distDisplay">100</span> <span id="distUnit">yd</span></div>
-              <button id="distUp" class="miniBtn" type="button" aria-label="Increase distance">+</button>
-              <input id="distanceVal" value="100" class="srOnly" />
-            </div>
-          </div>
-
-          <div class="panelItem">
-            <div class="panelK">Units</div>
-            <button id="unitsToggle" class="toggleBtn" type="button">US</button>
-          </div>
-
-          <div class="panelItem">
-            <div class="panelK">System</div>
-            <button id="sysToggle" class="toggleBtn" type="button">MOA</button>
-          </div>
-
-          <div class="panelItem">
-            <div class="panelK">Per click</div>
-            <select id="clickValue" class="miniSelect" aria-label="Value per click">
-              <option value="0.25" selected>0.25</option>
-              <option value="0.5">0.50</option>
-              <option value="0.125">0.13</option>
-            </select>
-          </div>
-        </div>
-
-        <div class="panelHint">
-          If your scope uses MRAD or meters, tap and switch. Otherwise, ignore.
-        </div>
-      </div>
-
-      <!-- SYNCHRONIZED TIP (TOP) -->
-      <div id="tipTop" class="tipBar tipBlue">Add a target photo to begin.</div>
 
       <div id="targetWrap" class="targetWrap" aria-label="Target photo area">
         <img id="targetImg" alt="Target preview" />
         <div id="dotsLayer" class="dotsLayer" aria-hidden="true"></div>
       </div>
-
-      <!-- SYNCHRONIZED TIP (BOTTOM) -->
-      <div id="tipBottom" class="tipBar tipBlue">Add a target photo to begin.</div>
 
       <div class="row rowTight">
         <div class="pill">
@@ -134,6 +73,50 @@
 
         <button id="clearTapsBtn" class="btnSecondary" type="button">Clear</button>
       </div>
+
+      <p id="instructionLine" class="hint"></p>
+    </section>
+
+    <section id="settingsSection" class="card scoreHidden">
+      <div class="cardTitle">SETTINGS</div>
+
+      <div class="row" style="gap:12px; align-items:stretch;">
+        <!-- Distance: +/- PLUS manual input -->
+        <label class="field" style="flex:1;">
+          <span class="fieldLabel">Distance (yards)</span>
+
+          <div class="distCtl">
+            <button id="distDown" class="distBtn" type="button" aria-label="Decrease distance">−</button>
+
+            <input
+              id="distanceYds"
+              class="distInput"
+              type="number"
+              inputmode="numeric"
+              min="5"
+              max="1000"
+              step="1"
+              value="100"
+              aria-label="Distance in yards"
+            />
+
+            <button id="distUp" class="distBtn" type="button" aria-label="Increase distance">+</button>
+          </div>
+
+          <div class="distHelp">Default is 100. Adjust only if needed.</div>
+        </label>
+
+        <label class="field" style="flex:1;">
+          <span class="fieldLabel">MOA / click</span>
+          <select id="moaPerClick" class="select">
+            <option value="0.25" selected>0.25</option>
+            <option value="0.5">0.5</option>
+            <option value="0.125">0.125</option>
+          </select>
+        </label>
+      </div>
+
+      <a id="vendorLink" class="vendorLink" href="#" target="_blank" rel="noopener" style="display:none;"></a>
     </section>
 
     <footer class="footer">
@@ -146,6 +129,6 @@
 
   </main>
 
-  <script defer src="/tap-n-score/index.js?v=TARGET-POLISH-02"></script>
+  <script defer src="/tap-n-score/index.js?v=TP-POLISH-01"></script>
 </body>
 </html>
