@@ -1,4 +1,4 @@
-<!-- tap-n-score/index.html (FULL REPLACEMENT) — TARGET PAGE POLISH (LOCKED LANDING HERO) -->
+<!-- tap-n-score/index.html (FULL REPLACEMENT) — TARGET PAGE POLISH v2 (COMPACT ADJUST STRIP) -->
 <!doctype html>
 <html lang="en">
 <head>
@@ -13,7 +13,7 @@
 
   <title>Tap-n-Score™</title>
 
-  <link rel="stylesheet" href="/tap-n-score/styles.css?v=TARGET-POLISH-01" />
+  <link rel="stylesheet" href="/tap-n-score/styles.css?v=TARGET-POLISH-02" />
 </head>
 
 <body>
@@ -50,7 +50,6 @@
         </div>
       </div>
 
-      <!-- IMPORTANT (iOS): do NOT display:none file input -->
       <input id="photoInput" class="fileHidden" type="file" accept="image/*" />
     </section>
 
@@ -58,69 +57,64 @@
          TARGET PAGE (PAGE 2)
          ========================= -->
 
-    <!-- Compact controls (must happen BEFORE taps) -->
-    <section id="settingsSection" class="card mt12 scoreHidden">
-      <div class="cardTitle">SET BEFORE TAPPING</div>
-
-      <div class="controlsRow">
-        <!-- Distance (compact) -->
-        <div class="controlPill" aria-label="Distance control">
-          <div class="controlK">DIST</div>
-
-          <button id="distDown" class="miniBtn" type="button" aria-label="Decrease distance">−</button>
-
-          <div class="controlV">
-            <span id="distDisplay">100</span>
-            <span id="distUnit">yd</span>
-          </div>
-
-          <button id="distUp" class="miniBtn" type="button" aria-label="Increase distance">+</button>
-
-          <!-- hidden value store -->
-          <input id="distanceVal" value="100" class="srOnly" />
-        </div>
-
-        <!-- Units: US / Metric -->
-        <div class="controlPill" aria-label="Units toggle">
-          <div class="controlK">UNITS</div>
-          <button id="unitsToggle" class="toggleBtn" type="button">
-            US
-          </button>
-        </div>
-
-        <!-- MOA / MRAD system -->
-        <div class="controlPill" aria-label="Adjustment system">
-          <div class="controlK">SYSTEM</div>
-          <button id="sysToggle" class="toggleBtn" type="button">
-            MOA
-          </button>
-        </div>
-
-        <!-- Click value -->
-        <div class="controlPill" aria-label="Click value">
-          <div class="controlK">/CLICK</div>
-          <select id="clickValue" class="miniSelect" aria-label="Value per click">
-            <!-- MOA defaults -->
-            <option value="0.25" selected>0.25</option>
-            <option value="0.5">0.50</option>
-            <option value="0.125">0.13</option>
-          </select>
-        </div>
-      </div>
-
-      <div class="startRow">
-        <button id="startTappingBtn" class="startBtn" type="button">
-          Start Tapping
-        </button>
-        <div class="startHint">
-          Set distance + system first. Then tap Aim Point.
-        </div>
-      </div>
-    </section>
-
-    <!-- Photo + tap surface -->
     <section id="scoreSection" class="card mt12 scoreHidden">
       <div class="cardTitle">TARGET</div>
+
+      <!-- Compact ADJUST strip (tap to expand) -->
+      <div id="adjustBar" class="adjustBar" role="button" tabindex="0" aria-label="Adjust settings if needed">
+        <div class="adjustLeft">
+          <span class="adjustK">ADJUST</span>
+          <span class="adjustMuted">(if needed)</span>
+        </div>
+
+        <div class="adjustBadges" aria-label="Current settings">
+          <span class="badge"><span id="distBadge">100</span><span id="distUnitBadge">yd</span></span>
+          <span class="badge" id="unitsBadge">US</span>
+          <span class="badge" id="sysBadge">MOA</span>
+          <span class="badge"><span id="clickBadge">0.25</span>/click</span>
+        </div>
+
+        <div class="chev" aria-hidden="true">▾</div>
+      </div>
+
+      <!-- Expanded controls (hidden until adjustBar tapped) -->
+      <div id="adjustPanel" class="adjustPanel" aria-hidden="true">
+
+        <div class="panelRow">
+          <div class="panelItem">
+            <div class="panelK">Distance</div>
+            <div class="panelCtl">
+              <button id="distDown" class="miniBtn" type="button" aria-label="Decrease distance">−</button>
+              <div class="panelV"><span id="distDisplay">100</span> <span id="distUnit">yd</span></div>
+              <button id="distUp" class="miniBtn" type="button" aria-label="Increase distance">+</button>
+              <input id="distanceVal" value="100" class="srOnly" />
+            </div>
+          </div>
+
+          <div class="panelItem">
+            <div class="panelK">Units</div>
+            <button id="unitsToggle" class="toggleBtn" type="button">US</button>
+          </div>
+
+          <div class="panelItem">
+            <div class="panelK">System</div>
+            <button id="sysToggle" class="toggleBtn" type="button">MOA</button>
+          </div>
+
+          <div class="panelItem">
+            <div class="panelK">Per click</div>
+            <select id="clickValue" class="miniSelect" aria-label="Value per click">
+              <option value="0.25" selected>0.25</option>
+              <option value="0.5">0.50</option>
+              <option value="0.125">0.13</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="panelHint">
+          If your scope uses MRAD or meters, tap and switch. Otherwise, ignore.
+        </div>
+      </div>
 
       <!-- SYNCHRONIZED TIP (TOP) -->
       <div id="tipTop" class="tipBar tipBlue">Add a target photo to begin.</div>
@@ -152,6 +146,6 @@
 
   </main>
 
-  <script defer src="/tap-n-score/index.js?v=TARGET-POLISH-01"></script>
+  <script defer src="/tap-n-score/index.js?v=TARGET-POLISH-02"></script>
 </body>
 </html>
