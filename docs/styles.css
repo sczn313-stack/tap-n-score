@@ -1,7 +1,9 @@
 /* ============================================================
-   tap-n-score/styles.css (FULL REPLACEMENT) — LANDING POLISH SAFE
-   - Vendor pill moved to CENTER flow (no absolute overlay)
-   - Keeps 800lb gorilla button look
+   tap-n-score/styles.css (FULL REPLACEMENT) — TARGET PAGE POLISH
+   Adds:
+   - Compact controls row (small footprint)
+   - Start Tapping gate UI
+   - Synchronized tip bars (top + bottom)
 ============================================================ */
 
 :root{
@@ -17,6 +19,11 @@
 
   --aim:#67f3a4;
   --hit:#b7ff3c;
+
+  --tipBlue: rgba(47,102,255,.18);
+  --tipRed: rgba(214,64,64,.18);
+  --tipGreen: rgba(103,243,164,.16);
+  --tipGold: rgba(255,184,74,.16);
 }
 
 *{ box-sizing:border-box; }
@@ -81,7 +88,6 @@ body{
   text-align:center;
 }
 
-/* 800lb gorilla hero button */
 .heroBtn{
   width: 100%;
   max-width: 720px;
@@ -120,7 +126,6 @@ body{
   width: 100%;
 }
 
-/* Vendor pill (in flow) */
 .vendorBox{
   padding: 12px 16px;
   border-radius: 999px;
@@ -138,15 +143,8 @@ body{
   -webkit-user-select:none;
 }
 
-.vendorBoxFlow{
-  width: min(520px, 92%);
-  max-width: 720px;
-}
-
-/* IMPORTANT: this prevents “mystery overlays” from stealing taps */
-.vendorBoxFlow, .vendorBoxFlow *{
-  pointer-events: auto;
-}
+.vendorBoxFlow{ width: min(520px, 92%); max-width: 720px; }
+.vendorBoxFlow, .vendorBoxFlow *{ pointer-events: auto; }
 
 .vendorPillText{
   font-weight: 1000;
@@ -197,7 +195,108 @@ body{
 .scoreHidden{ display:none !important; }
 .mt12{ margin-top:12px; }
 
-/* Target wrap */
+/* ====== Target page compact controls ====== */
+.controlsRow{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+  padding: 12px 14px 12px;
+  align-items:stretch;
+}
+
+.controlPill{
+  flex: 1;
+  min-width: 150px;
+  display:flex;
+  align-items:center;
+  gap:10px;
+  border: 1px solid rgba(255,255,255,.12);
+  background: rgba(0,0,0,.18);
+  border-radius: 16px;
+  padding: 10px 10px;
+}
+
+.controlK{
+  font-size: 11px;
+  letter-spacing:.14em;
+  text-transform: uppercase;
+  font-weight: 950;
+  color: rgba(238,242,247,.55);
+  white-space:nowrap;
+}
+
+.controlV{
+  flex:1;
+  text-align:center;
+  font-weight: 1000;
+  color: rgba(238,242,247,.92);
+  letter-spacing:.02em;
+  white-space:nowrap;
+}
+
+.miniBtn{
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,.14);
+  background: rgba(255,255,255,.07);
+  color: rgba(238,242,247,.92);
+  font-size: 18px;
+  font-weight: 1000;
+  cursor:pointer;
+}
+.miniBtn:active{ transform: translateY(1px); }
+
+.toggleBtn{
+  flex:1;
+  height: 36px;
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,.14);
+  background: rgba(47,102,255,.10);
+  color: rgba(238,242,247,.92);
+  font-weight: 1000;
+  letter-spacing:.06em;
+  cursor:pointer;
+}
+.toggleBtn:active{ transform: translateY(1px); }
+
+.miniSelect{
+  flex:1;
+  height: 36px;
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,.14);
+  background: rgba(0,0,0,.20);
+  color: rgba(238,242,247,.92);
+  font-weight: 1000;
+  padding: 0 10px;
+}
+
+/* Start row */
+.startRow{
+  padding: 0 14px 14px;
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+}
+.startBtn{
+  width: 100%;
+  border-radius: 16px;
+  padding: 14px 14px;
+  font-weight: 1000;
+  font-size: 16px;
+  border: 1px solid rgba(47,102,255,.40);
+  background: rgba(47,102,255,.14);
+  color: rgba(238,242,247,.95);
+  cursor:pointer;
+}
+.startBtn:active{ transform: translateY(1px); }
+.startHint{
+  color: rgba(238,242,247,.60);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+/* ===== Target wrap ===== */
 .targetWrap{
   width: calc(100% - 28px);
   margin: 0 14px 12px;
@@ -222,7 +321,6 @@ body{
   pointer-events:none;
 }
 
-/* tap dots (size stays consistent) */
 .tapDot{
   position:absolute;
   width: 10px;
@@ -231,7 +329,25 @@ body{
   transform: translate(-50%, -50%);
 }
 
-/* Row + buttons */
+/* ===== Synced tips ===== */
+.tipBar{
+  margin: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,.12);
+  padding: 12px 12px;
+  font-weight: 1000;
+  letter-spacing:.02em;
+  color: rgba(238,242,247,.92);
+  text-align:center;
+  user-select:none;
+}
+
+.tipBlue{ background: var(--tipBlue); }
+.tipRed{ background: var(--tipRed); }
+.tipGreen{ background: var(--tipGreen); }
+.tipGold{ background: var(--tipGold); }
+
+/* ===== Row + buttons ===== */
 .row{
   display:flex;
   gap:10px;
@@ -261,36 +377,6 @@ body{
   color: var(--text);
 }
 .btnSecondary:active{ transform: translateY(1px); }
-
-.hint{
-  margin: 0;
-  padding: 0 14px 14px;
-  color: var(--muted);
-  font-size: 13px;
-  line-height: 1.35;
-}
-
-/* Settings */
-.field{
-  flex:1;
-  min-width: 160px;
-  display:flex;
-  flex-direction:column;
-  gap:8px;
-}
-.fieldLabel{
-  font-size: 12px;
-  color: rgba(238,242,247,.60);
-  letter-spacing:.02em;
-}
-.select{
-  width:100%;
-  background: rgba(0,0,0,.22);
-  border: 1px solid rgba(255,255,255,.14);
-  border-radius: 14px;
-  padding: 12px 10px;
-  color: var(--text);
-}
 
 /* Footer */
 .footer{
@@ -330,3 +416,12 @@ body{
   box-shadow: 0 18px 45px rgba(0,0,0,.55);
 }
 .stickyBtn:active{ transform: translateY(1px); }
+
+/* Accessibility helper */
+.srOnly{
+  position:absolute;
+  left:-9999px;
+  top:-9999px;
+  width:1px; height:1px;
+  opacity:0;
+}
