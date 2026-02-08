@@ -1,8 +1,7 @@
 /* ============================================================
-   tap-n-score/styles.css (FULL REPLACEMENT) — TARGET PAGE POLISH v2
-   - Replaces “big boxes” with a compact ADJUST strip
-   - Expanded panel appears only when tapped
-   - No overlap / minimal real estate
+   tap-n-score/styles.css (FULL REPLACEMENT) — TARGET POLISH SAFE
+   Adds:
+   - Distance controller styles w/ manual input
 ============================================================ */
 
 :root{
@@ -18,11 +17,6 @@
 
   --aim:#67f3a4;
   --hit:#b7ff3c;
-
-  --tipBlue: rgba(47,102,255,.18);
-  --tipRed: rgba(214,64,64,.18);
-  --tipGreen: rgba(103,243,164,.16);
-  --tipGold: rgba(255,184,74,.16);
 }
 
 *{ box-sizing:border-box; }
@@ -87,6 +81,7 @@ body{
   text-align:center;
 }
 
+/* 800lb gorilla hero button */
 .heroBtn{
   width: 100%;
   max-width: 720px;
@@ -125,6 +120,7 @@ body{
   width: 100%;
 }
 
+/* Vendor pill (in flow) */
 .vendorBox{
   padding: 12px 16px;
   border-radius: 999px;
@@ -141,8 +137,15 @@ body{
   user-select:none;
   -webkit-user-select:none;
 }
-.vendorBoxFlow{ width: min(520px, 92%); max-width: 720px; }
-.vendorBoxFlow, .vendorBoxFlow *{ pointer-events: auto; }
+
+.vendorBoxFlow{
+  width: min(520px, 92%);
+  max-width: 720px;
+}
+
+.vendorBoxFlow, .vendorBoxFlow *{
+  pointer-events: auto;
+}
 
 .vendorPillText{
   font-weight: 1000;
@@ -193,157 +196,7 @@ body{
 .scoreHidden{ display:none !important; }
 .mt12{ margin-top:12px; }
 
-/* ===== Compact ADJUST strip ===== */
-.adjustBar{
-  margin: 12px 14px 6px;
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap: 10px;
-  padding: 10px 12px;
-  border-radius: 14px;
-  border: 1px solid rgba(255,255,255,.12);
-  background: rgba(0,0,0,.18);
-  cursor:pointer;
-  user-select:none;
-  -webkit-tap-highlight-color: transparent;
-}
-
-.adjustLeft{
-  display:flex;
-  align-items:baseline;
-  gap: 8px;
-  white-space:nowrap;
-}
-.adjustK{
-  font-weight: 1000;
-  letter-spacing:.12em;
-  font-size: 12px;
-  text-transform: uppercase;
-  color: rgba(238,242,247,.85);
-}
-.adjustMuted{
-  font-weight: 900;
-  font-size: 12px;
-  color: rgba(238,242,247,.55);
-}
-
-.adjustBadges{
-  display:flex;
-  gap: 6px;
-  flex-wrap:wrap;
-  justify-content:flex-end;
-  align-items:center;
-}
-.badge{
-  padding: 6px 8px;
-  border-radius: 999px;
-  border: 1px solid rgba(255,255,255,.12);
-  background: rgba(255,255,255,.04);
-  font-size: 12px;
-  font-weight: 950;
-  color: rgba(238,242,247,.86);
-  letter-spacing:.01em;
-}
-
-.chev{
-  font-size: 16px;
-  opacity: .7;
-  margin-left: 4px;
-}
-.adjustExpanded .chev{ transform: rotate(180deg); }
-
-/* Expanded panel */
-.adjustPanel{
-  margin: 0 14px 8px;
-  padding: 10px 10px 12px;
-  border-radius: 14px;
-  border: 1px solid rgba(255,255,255,.12);
-  background: rgba(0,0,0,.14);
-}
-.panelHidden{ display:none; }
-
-.panelRow{
-  display:flex;
-  gap: 10px;
-  flex-wrap:wrap;
-  align-items:stretch;
-}
-
-.panelItem{
-  flex: 1;
-  min-width: 160px;
-  border: 1px solid rgba(255,255,255,.10);
-  background: rgba(255,255,255,.03);
-  border-radius: 14px;
-  padding: 10px 10px;
-}
-.panelK{
-  font-size: 11px;
-  font-weight: 950;
-  letter-spacing:.12em;
-  text-transform: uppercase;
-  color: rgba(238,242,247,.55);
-  margin-bottom: 8px;
-}
-.panelCtl{
-  display:flex;
-  align-items:center;
-  gap: 8px;
-}
-.panelV{
-  flex:1;
-  text-align:center;
-  font-weight: 1000;
-  color: rgba(238,242,247,.92);
-}
-
-.miniBtn{
-  width: 34px;
-  height: 34px;
-  border-radius: 12px;
-  border: 1px solid rgba(255,255,255,.14);
-  background: rgba(255,255,255,.07);
-  color: rgba(238,242,247,.92);
-  font-size: 18px;
-  font-weight: 1000;
-  cursor:pointer;
-}
-.miniBtn:active{ transform: translateY(1px); }
-
-.toggleBtn{
-  width: 100%;
-  height: 34px;
-  border-radius: 12px;
-  border: 1px solid rgba(255,255,255,.14);
-  background: rgba(47,102,255,.10);
-  color: rgba(238,242,247,.92);
-  font-weight: 1000;
-  letter-spacing:.06em;
-  cursor:pointer;
-}
-.toggleBtn:active{ transform: translateY(1px); }
-
-.miniSelect{
-  width: 100%;
-  height: 34px;
-  border-radius: 12px;
-  border: 1px solid rgba(255,255,255,.14);
-  background: rgba(0,0,0,.20);
-  color: rgba(238,242,247,.92);
-  font-weight: 1000;
-  padding: 0 10px;
-}
-
-.panelHint{
-  margin-top: 10px;
-  font-size: 12px;
-  color: rgba(238,242,247,.60);
-  line-height: 1.35;
-  padding: 0 2px;
-}
-
-/* ===== Target wrap ===== */
+/* Target wrap */
 .targetWrap{
   width: calc(100% - 28px);
   margin: 0 14px 12px;
@@ -352,6 +205,7 @@ body{
   background: rgba(0,0,0,.22);
   border: 1px solid rgba(255,255,255,.10);
   position: relative;
+  scroll-margin-top: 14px; /* so auto-scroll lands clean */
 }
 
 #targetImg{
@@ -368,6 +222,7 @@ body{
   pointer-events:none;
 }
 
+/* tap dots */
 .tapDot{
   position:absolute;
   width: 10px;
@@ -376,25 +231,7 @@ body{
   transform: translate(-50%, -50%);
 }
 
-/* ===== Synced tips ===== */
-.tipBar{
-  margin: 10px 14px;
-  border-radius: 14px;
-  border: 1px solid rgba(255,255,255,.12);
-  padding: 12px 12px;
-  font-weight: 1000;
-  letter-spacing:.02em;
-  color: rgba(238,242,247,.92);
-  text-align:center;
-  user-select:none;
-}
-
-.tipBlue{ background: var(--tipBlue); }
-.tipRed{ background: var(--tipRed); }
-.tipGreen{ background: var(--tipGreen); }
-.tipGold{ background: var(--tipGold); }
-
-/* ===== Row + buttons ===== */
+/* Row + buttons */
 .row{
   display:flex;
   gap:10px;
@@ -424,6 +261,78 @@ body{
   color: var(--text);
 }
 .btnSecondary:active{ transform: translateY(1px); }
+
+.hint{
+  margin: 0;
+  padding: 0 14px 14px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+/* Settings */
+.field{
+  flex:1;
+  min-width: 160px;
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+}
+.fieldLabel{
+  font-size: 12px;
+  color: rgba(238,242,247,.60);
+  letter-spacing:.02em;
+}
+.select{
+  width:100%;
+  background: rgba(0,0,0,.22);
+  border: 1px solid rgba(255,255,255,.14);
+  border-radius: 14px;
+  padding: 12px 10px;
+  color: var(--text);
+}
+
+/* Distance control */
+.distCtl{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  background: rgba(255,255,255,.04);
+  border: 1px solid rgba(255,255,255,.10);
+  border-radius: 14px;
+  padding: 10px;
+}
+
+.distBtn{
+  width:46px;
+  height:46px;
+  border-radius:14px;
+  border:1px solid rgba(255,255,255,.14);
+  background:rgba(255,255,255,.07);
+  color:#eef2f7;
+  font-size:20px;
+  font-weight:900;
+  cursor:pointer;
+}
+
+.distInput{
+  flex:1;
+  height:46px;
+  border-radius:12px;
+  border:1px solid rgba(255,255,255,.14);
+  background: rgba(0,0,0,.18);
+  color: #eef2f7;
+  font-weight: 1000;
+  font-size: 18px;
+  text-align:center;
+  outline:none;
+}
+
+.distHelp{
+  font-size:12px;
+  color:rgba(238,242,247,.65);
+  line-height:1.35;
+}
 
 /* Footer */
 .footer{
@@ -463,12 +372,3 @@ body{
   box-shadow: 0 18px 45px rgba(0,0,0,.55);
 }
 .stickyBtn:active{ transform: translateY(1px); }
-
-/* Accessibility helper */
-.srOnly{
-  position:absolute;
-  left:-9999px;
-  top:-9999px;
-  width:1px; height:1px;
-  opacity:0;
-}
