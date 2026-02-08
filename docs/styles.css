@@ -1,9 +1,8 @@
 /* ============================================================
-   tap-n-score/styles.css (FULL REPLACEMENT) — TARGET PAGE POLISH
-   Adds:
-   - Compact controls row (small footprint)
-   - Start Tapping gate UI
-   - Synchronized tip bars (top + bottom)
+   tap-n-score/styles.css (FULL REPLACEMENT) — TARGET PAGE POLISH v2
+   - Replaces “big boxes” with a compact ADJUST strip
+   - Expanded panel appears only when tapped
+   - No overlap / minimal real estate
 ============================================================ */
 
 :root{
@@ -142,7 +141,6 @@ body{
   user-select:none;
   -webkit-user-select:none;
 }
-
 .vendorBoxFlow{ width: min(520px, 92%); max-width: 720px; }
 .vendorBoxFlow, .vendorBoxFlow *{ pointer-events: auto; }
 
@@ -195,48 +193,114 @@ body{
 .scoreHidden{ display:none !important; }
 .mt12{ margin-top:12px; }
 
-/* ====== Target page compact controls ====== */
-.controlsRow{
+/* ===== Compact ADJUST strip ===== */
+.adjustBar{
+  margin: 12px 14px 6px;
   display:flex;
-  gap:10px;
+  align-items:center;
+  justify-content:space-between;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,.12);
+  background: rgba(0,0,0,.18);
+  cursor:pointer;
+  user-select:none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.adjustLeft{
+  display:flex;
+  align-items:baseline;
+  gap: 8px;
+  white-space:nowrap;
+}
+.adjustK{
+  font-weight: 1000;
+  letter-spacing:.12em;
+  font-size: 12px;
+  text-transform: uppercase;
+  color: rgba(238,242,247,.85);
+}
+.adjustMuted{
+  font-weight: 900;
+  font-size: 12px;
+  color: rgba(238,242,247,.55);
+}
+
+.adjustBadges{
+  display:flex;
+  gap: 6px;
   flex-wrap:wrap;
-  padding: 12px 14px 12px;
+  justify-content:flex-end;
+  align-items:center;
+}
+.badge{
+  padding: 6px 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,.12);
+  background: rgba(255,255,255,.04);
+  font-size: 12px;
+  font-weight: 950;
+  color: rgba(238,242,247,.86);
+  letter-spacing:.01em;
+}
+
+.chev{
+  font-size: 16px;
+  opacity: .7;
+  margin-left: 4px;
+}
+.adjustExpanded .chev{ transform: rotate(180deg); }
+
+/* Expanded panel */
+.adjustPanel{
+  margin: 0 14px 8px;
+  padding: 10px 10px 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,.12);
+  background: rgba(0,0,0,.14);
+}
+.panelHidden{ display:none; }
+
+.panelRow{
+  display:flex;
+  gap: 10px;
+  flex-wrap:wrap;
   align-items:stretch;
 }
 
-.controlPill{
+.panelItem{
   flex: 1;
-  min-width: 150px;
-  display:flex;
-  align-items:center;
-  gap:10px;
-  border: 1px solid rgba(255,255,255,.12);
-  background: rgba(0,0,0,.18);
-  border-radius: 16px;
+  min-width: 160px;
+  border: 1px solid rgba(255,255,255,.10);
+  background: rgba(255,255,255,.03);
+  border-radius: 14px;
   padding: 10px 10px;
 }
-
-.controlK{
+.panelK{
   font-size: 11px;
-  letter-spacing:.14em;
-  text-transform: uppercase;
   font-weight: 950;
+  letter-spacing:.12em;
+  text-transform: uppercase;
   color: rgba(238,242,247,.55);
-  white-space:nowrap;
+  margin-bottom: 8px;
 }
-
-.controlV{
+.panelCtl{
+  display:flex;
+  align-items:center;
+  gap: 8px;
+}
+.panelV{
   flex:1;
   text-align:center;
   font-weight: 1000;
   color: rgba(238,242,247,.92);
-  letter-spacing:.02em;
-  white-space:nowrap;
 }
 
 .miniBtn{
-  width: 36px;
-  height: 36px;
+  width: 34px;
+  height: 34px;
   border-radius: 12px;
   border: 1px solid rgba(255,255,255,.14);
   background: rgba(255,255,255,.07);
@@ -248,8 +312,8 @@ body{
 .miniBtn:active{ transform: translateY(1px); }
 
 .toggleBtn{
-  flex:1;
-  height: 36px;
+  width: 100%;
+  height: 34px;
   border-radius: 12px;
   border: 1px solid rgba(255,255,255,.14);
   background: rgba(47,102,255,.10);
@@ -261,8 +325,8 @@ body{
 .toggleBtn:active{ transform: translateY(1px); }
 
 .miniSelect{
-  flex:1;
-  height: 36px;
+  width: 100%;
+  height: 34px;
   border-radius: 12px;
   border: 1px solid rgba(255,255,255,.14);
   background: rgba(0,0,0,.20);
@@ -271,29 +335,12 @@ body{
   padding: 0 10px;
 }
 
-/* Start row */
-.startRow{
-  padding: 0 14px 14px;
-  display:flex;
-  flex-direction:column;
-  gap:8px;
-}
-.startBtn{
-  width: 100%;
-  border-radius: 16px;
-  padding: 14px 14px;
-  font-weight: 1000;
-  font-size: 16px;
-  border: 1px solid rgba(47,102,255,.40);
-  background: rgba(47,102,255,.14);
-  color: rgba(238,242,247,.95);
-  cursor:pointer;
-}
-.startBtn:active{ transform: translateY(1px); }
-.startHint{
-  color: rgba(238,242,247,.60);
+.panelHint{
+  margin-top: 10px;
   font-size: 12px;
+  color: rgba(238,242,247,.60);
   line-height: 1.35;
+  padding: 0 2px;
 }
 
 /* ===== Target wrap ===== */
@@ -331,7 +378,7 @@ body{
 
 /* ===== Synced tips ===== */
 .tipBar{
-  margin: 12px 14px;
+  margin: 10px 14px;
   border-radius: 14px;
   border: 1px solid rgba(255,255,255,.12);
   padding: 12px 12px;
