@@ -1,4 +1,4 @@
-<!-- tap-n-score/index.html (FULL REPLACEMENT) — TIGHT TOP BAR + YD/M TOGGLE + SEC HEADER -->
+<!-- tap-n-score/index.html (FULL REPLACEMENT) — TOP = 2 LINES DATA, ALL ADJUSTMENTS IN MATRIX, NO ON-IMAGE PILLS -->
 <!doctype html>
 <html lang="en">
 <head>
@@ -13,7 +13,7 @@
 
   <title>Tap-n-Score™</title>
 
-  <link rel="stylesheet" href="/tap-n-score/styles.css?v=TP-POLISH-03" />
+  <link rel="stylesheet" href="/tap-n-score/styles.css?v=TP-MATRIX-DATA-01" />
 </head>
 
 <body>
@@ -54,6 +54,7 @@
 
     <!-- TARGET PAGE (hidden until photo selected) -->
     <section id="scoreSection" class="card mt12 scoreHidden">
+
       <!-- HEADER: SHOOTER EXPERIENCE CARD + SEC -->
       <div class="cardTitle cardTitleSEC">
         <div class="secTitle">
@@ -67,67 +68,70 @@
         </div>
       </div>
 
-      <!-- SINGLE TOP BAR -->
-      <div class="topBar" aria-label="Range, dial unit, click value, matrix">
-        <div class="topBarLeft">
-          <div class="topLabelRow">
-            <div class="topLabel">RANGE</div>
+      <!-- TOP BAR = DATA ONLY (2 LINES) -->
+      <div class="topDataBar" aria-label="Live data">
+        <div id="topDistanceLine" class="topDataLine">100 yds</div>
+        <div id="topDialLine" class="topDataLineSub">0.25 MOA</div>
 
-            <!-- YD/M toggle lives up top (tight) -->
-            <div class="unitToggle" aria-label="Distance units">
-              <button id="distUnitYd" class="segBtn segBtnTiny segOn" type="button">YD</button>
-              <button id="distUnitM" class="segBtn segBtnTiny" type="button">M</button>
-            </div>
-          </div>
-
-          <div class="yardLine">
-            <button id="distDown" class="miniBtn miniBtnTight" type="button" aria-label="Distance down">−</button>
-            <input id="distanceYds" class="miniInput miniInputTight" type="number" inputmode="numeric" min="1" max="5000" step="1" value="100" aria-label="Range" />
-            <div id="distUnitLabel" class="miniUnit">yd</div>
-            <button id="distUp" class="miniBtn miniBtnTight" type="button" aria-label="Distance up">+</button>
-          </div>
-
-          <div class="topHint">Adjust only if needed.</div>
-        </div>
-
-        <div class="topBarRight">
-          <div class="topLabel">DIAL</div>
-
-          <div class="dialOneLine">
-            <button id="unitMoa" class="segBtn segOn" type="button">MOA</button>
-            <button id="unitMrad" class="segBtn" type="button">MRAD</button>
-
-            <input id="clickValue" class="miniInputWide miniInputWideTight" type="number" inputmode="decimal" step="0.01" value="0.25" aria-label="Click value" />
-
-            <!-- MUST sit on same line -->
-            <div id="clickUnitLabel" class="miniUnit clickUnitRight">MOA/click</div>
-
-            <button id="matrixBtn" class="matrixBtn" type="button" aria-label="Open matrix presets">MATRIX</button>
-          </div>
-
-          <div class="topHint">Auto defaults. Non-standard? change it.</div>
-        </div>
+        <button id="matrixBtn" class="matrixBtnTop" type="button" aria-label="Open settings">MATRIX</button>
       </div>
 
-      <!-- MATRIX PANEL -->
+      <!-- MATRIX DRAWER (ALL ADJUSTMENTS LIVE HERE) -->
       <div id="matrixPanel" class="matrixPanel matrixHidden" aria-hidden="true">
-        <div class="matrixTitle">Quick Presets</div>
+        <div class="matrixTitle">Adjustments</div>
 
+        <!-- Distance unit -->
         <div class="matrixGroup">
-          <div class="matrixLabel">MOA Click Values</div>
+          <div class="matrixLabel">Distance Unit</div>
           <div class="chipRow">
-            <button class="chip" type="button" data-unit="MOA" data-click="0.25">0.25</button>
-            <button class="chip" type="button" data-unit="MOA" data-click="0.50">0.50</button>
-            <button class="chip" type="button" data-unit="MOA" data-click="0.125">0.125</button>
+            <button id="distUnitYd" class="chip chipOn" type="button">YD</button>
+            <button id="distUnitM" class="chip" type="button">M</button>
           </div>
         </div>
 
+        <!-- Range adjust -->
         <div class="matrixGroup">
-          <div class="matrixLabel">MRAD Click Values</div>
+          <div class="matrixLabel">Distance</div>
+          <div class="rangeRow">
+            <button id="distDown" class="miniBtn miniBtnTight" type="button" aria-label="Distance down">−</button>
+            <input id="distanceYds" class="miniInput miniInputTight" type="number" inputmode="numeric" min="1" max="5000" step="1" value="100" aria-label="Distance value" />
+            <div id="distUnitLabel" class="miniUnit">yds</div>
+            <button id="distUp" class="miniBtn miniBtnTight" type="button" aria-label="Distance up">+</button>
+          </div>
+        </div>
+
+        <!-- Dial unit -->
+        <div class="matrixGroup">
+          <div class="matrixLabel">Dial Unit</div>
           <div class="chipRow">
-            <button class="chip" type="button" data-unit="MRAD" data-click="0.10">0.10</button>
-            <button class="chip" type="button" data-unit="MRAD" data-click="0.20">0.20</button>
-            <button class="chip" type="button" data-unit="MRAD" data-click="0.05">0.05</button>
+            <button id="unitMoa" class="chip chipOn" type="button">MOA</button>
+            <button id="unitMrad" class="chip" type="button">MRAD</button>
+          </div>
+        </div>
+
+        <!-- Click value -->
+        <div class="matrixGroup">
+          <div class="matrixLabel">Click Value</div>
+          <div class="clickRow">
+            <input id="clickValue" class="miniInputWide miniInputWideTight" type="number" inputmode="decimal" step="0.01" value="0.25" aria-label="Click value" />
+            <div id="clickUnitLabel" class="miniUnit">MOA/click</div>
+          </div>
+        </div>
+
+        <!-- Quick presets -->
+        <div class="matrixGroup">
+          <div class="matrixLabel">Quick Presets</div>
+
+          <div class="chipRow">
+            <button class="chip" type="button" data-unit="MOA" data-click="0.25">0.25 MOA</button>
+            <button class="chip" type="button" data-unit="MOA" data-click="0.50">0.50 MOA</button>
+            <button class="chip" type="button" data-unit="MOA" data-click="0.125">0.125 MOA</button>
+          </div>
+
+          <div class="chipRow" style="margin-top:10px;">
+            <button class="chip" type="button" data-unit="MRAD" data-click="0.10">0.10 MRAD</button>
+            <button class="chip" type="button" data-unit="MRAD" data-click="0.20">0.20 MRAD</button>
+            <button class="chip" type="button" data-unit="MRAD" data-click="0.05">0.05 MRAD</button>
           </div>
         </div>
 
@@ -143,10 +147,7 @@
       <div id="targetWrap" class="targetWrap" aria-label="Target photo area">
         <img id="targetImg" alt="Target preview" />
         <div id="dotsLayer" class="dotsLayer" aria-hidden="true"></div>
-
-        <!-- MIRRORED INSTRUCTION TIPS (LOCKED) -->
-        <div id="tipTL" class="tapTip tipTL tipStateReady">Tap Aim Point.</div>
-        <div id="tipBR" class="tapTip tipBR tipStateReady">Tap Aim Point.</div>
+        <!-- pills removed -->
       </div>
 
       <div class="row rowTight">
@@ -173,6 +174,6 @@
 
   </main>
 
-  <script defer src="/tap-n-score/index.js?v=TP-POLISH-03"></script>
+  <script defer src="/tap-n-score/index.js?v=TP-MATRIX-DATA-01"></script>
 </body>
 </html>
