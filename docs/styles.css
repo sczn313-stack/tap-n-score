@@ -1,4 +1,4 @@
-/* tap-n-score/styles.css (FULL REPLACEMENT) — TOP = 2 LINES DATA, MATRIX = ALL ADJUSTMENTS, NO ON-IMAGE PILLS */
+/* tap-n-score/styles.css (FULL REPLACEMENT) — TOP 2 LINES LIVE + MATRIX ONLY + NO ON-IMAGE PILLS */
 
 :root{
   --bg:#06070a;
@@ -91,11 +91,8 @@ body{
   cursor:pointer;
   user-select:none;
   -webkit-tap-highlight-color: transparent;
-  transform: translateZ(0);
-  -webkit-font-smoothing: antialiased;
-  text-rendering: geometricPrecision;
 }
-.heroBtn:active{ transform: translateZ(0) translateY(1px); }
+.heroBtn:active{ transform: translateY(1px); }
 
 .heroTip{
   font-weight: 900;
@@ -136,8 +133,6 @@ body{
   width: min(520px, 92%);
   max-width: 720px;
 }
-
-.vendorBoxFlow, .vendorBoxFlow *{ pointer-events:auto; }
 
 .vendorPillText{
   font-weight: 1000;
@@ -222,36 +217,38 @@ body{
 .mt12{ margin-top:12px; }
 
 /* ============================================================
-   TOP DATA BAR (2 lines + MATRIX button)
+   LIVE TOP TWO LINES
 ============================================================ */
-.topDataBar{
-  position: relative;
-  padding: 12px 14px 12px;
+.liveBar{
+  padding: 10px 14px 10px;
   border-bottom: 1px solid rgba(255,255,255,.08);
-  background: rgba(0,0,0,.12);
+  background: rgba(0,0,0,.10);
+}
+
+.liveRow{
   display:flex;
-  flex-direction:column;
-  gap: 6px;
+  align-items:center;
+  justify-content:space-between;
+  gap: 10px;
 }
 
-.topDataLine{
+.liveValue{
   font-weight: 1000;
-  font-size: 20px;
+  font-size: 18px;
   letter-spacing: .02em;
-  color: rgba(238,242,247,.96);
+  color: rgba(238,242,247,.95);
 }
 
-.topDataLineSub{
-  font-weight: 950;
+.liveValueSub{
+  font-weight: 1000;
   font-size: 16px;
   letter-spacing: .02em;
-  color: rgba(238,242,247,.82);
+  color: rgba(238,242,247,.85);
+  opacity: .95;
 }
 
-.matrixBtnTop{
-  position:absolute;
-  right: 12px;
-  top: 12px;
+/* Matrix button (top row) */
+.matrixBtn{
   height: 38px;
   padding: 0 12px;
   border-radius: 14px;
@@ -262,7 +259,9 @@ body{
   letter-spacing: .14em;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
+  flex: 0 0 auto;
 }
+.matrixBtnTight{ height: 34px; border-radius: 12px; }
 
 /* ============================================================
    MATRIX DRAWER
@@ -295,37 +294,11 @@ body{
   margin-bottom: 8px;
 }
 
-.chipRow{
+.matrixRow{
   display:flex;
   gap: 10px;
-  flex-wrap: wrap;
-}
-
-.chip{
-  height: 40px;
-  padding: 0 14px;
-  border-radius: 999px;
-  border: 1px solid rgba(255,255,255,.14);
-  background: rgba(255,255,255,.06);
-  color: rgba(238,242,247,.92);
-  font-weight: 1000;
-  letter-spacing: .06em;
-  cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
-}
-.chip:active{ transform: translateY(1px); }
-
-.chipOn{
-  border-color: rgba(103,243,164,.35);
-  background: rgba(103,243,164,.10);
-}
-
-.rangeRow, .clickRow{
-  display:flex;
   align-items:center;
-  gap: 8px;
-  flex-wrap: nowrap;
-  white-space: nowrap;
+  flex-wrap: wrap;
 }
 
 /* Buttons */
@@ -366,7 +339,6 @@ body{
   outline:none;
   flex: 0 0 auto;
 }
-
 .miniInputTight{
   width: 72px;
   max-width: 72px;
@@ -375,6 +347,7 @@ body{
   border-radius: 12px;
 }
 
+/* Click input */
 .miniInputWide{
   width: 120px;
   max-width: 120px;
@@ -389,10 +362,9 @@ body{
   outline:none;
   flex: 0 0 auto;
 }
-
 .miniInputWideTight{
-  width: 110px;
-  max-width: 110px;
+  width: 86px;
+  max-width: 86px;
   height: 38px;
   font-size: 18px;
   border-radius: 12px;
@@ -409,12 +381,66 @@ body{
   white-space: nowrap;
 }
 
+/* Segmented buttons */
+.segBtn{
+  height: 38px;
+  padding: 0 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,.14);
+  background: rgba(255,255,255,.06);
+  color: rgba(238,242,247,.92);
+  font-weight: 1000;
+  letter-spacing: .06em;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  flex: 0 0 auto;
+}
+.segBtn.segOn{
+  border-color: rgba(103,243,164,.35);
+  background: rgba(103,243,164,.10);
+}
+
+.segBtnTiny{
+  height: 28px;
+  padding: 0 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  letter-spacing: .10em;
+}
+
+/* Unit toggle (in matrix) */
+.unitToggle{
+  display:flex;
+  gap: 6px;
+  align-items:center;
+  flex: 0 0 auto;
+}
+
+/* Preset chips */
+.chipRow{
+  display:flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.chip{
+  height: 40px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,.14);
+  background: rgba(255,255,255,.06);
+  color: rgba(238,242,247,.92);
+  font-weight: 1000;
+  letter-spacing: .06em;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.chip:active{ transform: translateY(1px); }
+
 .matrixFoot{
   display:flex;
   justify-content:flex-end;
   padding-top: 4px;
 }
-
 .matrixCloseBtn{
   height: 40px;
   padding: 0 14px;
@@ -496,12 +522,27 @@ body{
 }
 .btnSecondary:active{ transform: translateY(1px); }
 
+/* Instruction line + status */
 .hint{
   margin: 0;
   padding: 0 14px 14px;
   color: var(--muted);
   font-size: 13px;
   line-height: 1.35;
+}
+
+/* Instruction color states (A+ request) */
+.hintAim{
+  color: rgba(103,243,164,.92);
+  font-weight: 950;
+}
+.hintHits{
+  color: rgba(183,255,60,.92);
+  font-weight: 950;
+}
+.hintResults{
+  color: rgba(47,102,255,.92);
+  font-weight: 950;
 }
 
 /* Footer */
