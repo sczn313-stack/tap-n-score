@@ -1,11 +1,11 @@
 /* ============================================================
-   tap-n-score/index.js (FULL REPLACEMENT) — COMPACT TOP + MATRIX
-   Adds:
-   - MATRIX button (preset panel)
-   Keeps:
-   - Yardage + unit + click value BEFORE taps
-   - MOA/MRAD snap defaults (MOA 0.25, MRAD 0.10)
-   - Mirrored instruction tips
+   tap-n-score/index.js (FULL REPLACEMENT) — SINGLE LINE CONTROLS + MATRIX
+   Locks:
+   - Yardage + unit + click value are BEFORE taps.
+   - MOA/MRAD toggle ALWAYS snaps to common default:
+       MOA => 0.25, MRAD => 0.10
+   - Mirrored tips (TL + BR) always match wording + color.
+   - Matrix presets: pick unit + click value instantly.
    - 3+ taps on ANY button => history.back()
 ============================================================ */
 
@@ -50,9 +50,9 @@
   // Matrix
   const elMatrixBtn = $("matrixBtn");
   const elMatrixPanel = $("matrixPanel");
-  const elMatrixCloseBtn = $("matrixCloseBtn");
+  const elMatrixClose = $("matrixCloseBtn");
 
-  // Storage keys
+  // Storage keys (kept)
   const KEY_PAYLOAD = "SCZN3_SEC_PAYLOAD_V1";
   const KEY_TARGET_IMG_DATA = "SCZN3_TARGET_IMG_DATAURL_V1";
   const KEY_TARGET_IMG_BLOB = "SCZN3_TARGET_IMG_BLOBURL_V1";
@@ -76,10 +76,13 @@
   // unit state (default locked)
   let dialUnit = "MOA"; // "MOA" | "MRAD"
 
-  const DEFAULTS = { MOA: 0.25, MRAD: 0.10 };
+  const DEFAULTS = {
+    MOA: 0.25,
+    MRAD: 0.10
+  };
 
   // ------------------------------------------------------------
-  // HARD LANDING LOCK
+  // HARD LANDING LOCK (iOS scroll restore)
   // ------------------------------------------------------------
   try { history.scrollRestoration = "manual"; } catch {}
   function forceTop() { try { window.scrollTo(0, 0); } catch {} }
@@ -90,13 +93,14 @@
     forceTop();
     hardHideScoringUI();
     hideSticky();
+    closeMatrix();
   });
   window.addEventListener("load", () => forceTop());
 
   // ------------------------------------------------------------
   // GLOBAL: 3+ taps on ANY button => history.back()
   // ------------------------------------------------------------
-  const tripleTap = new WeakMap();
+  const tripleTap = new WeakMap(); // button -> {t, n}
   function registerButtonTap(btn) {
     const now = Date.now();
     const s = tripleTap.get(btn) || { t: 0, n: 0 };
@@ -153,26 +157,7 @@
   }
 
   // ------------------------------------------------------------
-  // Matrix panel
-  // ------------------------------------------------------------
-  function openMatrix() {
-    if (!elMatrixPanel) return;
-    elMatrixPanel.classList.remove("matrixHidden");
-    elMatrixPanel.setAttribute("aria-hidden", "false");
-  }
-  function closeMatrix() {
-    if (!elMatrixPanel) return;
-    elMatrixPanel.classList.add("matrixHidden");
-    elMatrixPanel.setAttribute("aria-hidden", "true");
-  }
-  function toggleMatrix() {
-    if (!elMatrixPanel) return;
-    const hidden = elMatrixPanel.classList.contains("matrixHidden");
-    hidden ? openMatrix() : closeMatrix();
-  }
-
-  // ------------------------------------------------------------
-  // Mirrored instruction tips
+  // Mirrored instruction tips (TL + BR)
   // ------------------------------------------------------------
   function setTipState(text, stateClass) {
     if (elTipTL) {
@@ -218,6 +203,7 @@
     hideSticky();
     syncInstruction();
     setText(elStatus, elImg?.src ? "Tap Aim Point." : "Add a target photo to begin.");
+    closeMatrix();
   }
 
   // ------------------------------------------------------------
@@ -264,7 +250,7 @@
   }
 
   // ------------------------------------------------------------
-  // Target photo storage
+  // Target photo storage (kept)
   // ------------------------------------------------------------
   async function storeTargetPhotoForSEC(file, blobUrl) {
     try { localStorage.setItem(KEY_TARGET_IMG_BLOB, blobUrl); } catch {}
@@ -322,13 +308,15 @@
   function setUnit(newUnit) {
     dialUnit = newUnit === "MRAD" ? "MRAD" : "MOA";
 
+    // segment UI
     if (elUnitMoa) elUnitMoa.classList.toggle("segOn", dialUnit === "MOA");
     if (elUnitMrad) elUnitMrad.classList.toggle("segOn", dialUnit === "MRAD");
 
-    // snap to common default
+    // ALWAYS snap to common default
     const def = DEFAULTS[dialUnit];
     if (elClickValue) elClickValue.value = String(def.toFixed(2));
 
+    // label
     if (elClickUnitLabel) {
       elClickUnitLabel.textContent = dialUnit === "MOA" ? "MOA/click" : "MRAD/click";
     }
@@ -343,6 +331,63 @@
     n = Math.max(0.01, Math.min(5, n));
     return n;
   }
+
+  // ------------------------------------------------------------
+  // Matrix (panel)
+  // ------------------------------------------------------------
+  function openMatrix() {
+    if (!elMatrixPanel) return;
+    elMatrixPanel.classList.add("matrixOpen");
+    elMatrixPanel.setAttribute("aria-hidden", "false");
+  }
+
+  function closeMatrix() {
+    if (!elMatrixPanel) return;
+    elMatrixPanel.classList.remove("matrixOpen");
+    elMatrixPanel.setAttribute("aria-hidden", "true");
+  }
+
+  function isMatrixOpen() {
+    return !!elMatrixPanel && elMatrixPanel.classList.contains("matrixOpen");
+  }
+
+  function toggleMatrix() {
+    if (isMatrixOpen()) closeMatrix();
+    else openMatrix();
+  }
+
+  function applyPreset(unit, clickVal) {
+    setUnit(unit);
+    if (elClickValue) elClickValue.value = Number(clickVal).toFixed(2);
+    getClickValue();
+    closeMatrix();
+  }
+
+  function wireMatrixPresets() {
+    if (!elMatrixPanel) return;
+    const items = Array.from(elMatrixPanel.querySelectorAll("[data-unit][data-click]"));
+    items.forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const u = btn.getAttribute("data-unit") || "MOA";
+        const c = Number(btn.getAttribute("data-click") || "0.25");
+        applyPreset(u, c);
+      });
+    });
+  }
+
+  // close on escape
+  window.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") closeMatrix();
+  });
+
+  // close when tapping outside panel (optional safe)
+  document.addEventListener("click", (e) => {
+    if (!isMatrixOpen()) return;
+    if (!elMatrixPanel) return;
+    const inside = e.target && elMatrixPanel.contains(e.target);
+    const isBtn = e.target && elMatrixBtn && (e.target === elMatrixBtn || e.target.closest?.("#matrixBtn"));
+    if (!inside && !isBtn) closeMatrix();
+  }, { capture: true });
 
   // ------------------------------------------------------------
   // Scoring placeholder (kept)
@@ -378,6 +423,8 @@
 
     const dist = getDistanceYds();
 
+    // MOA inches per unit: (dist/100)*1.047
+    // MRAD inches per unit: (dist/100)*3.6 (approx)
     const inchesPerUnit = (dialUnit === "MOA")
       ? (dist / 100) * 1.047
       : (dist / 100) * 3.6;
@@ -445,7 +492,6 @@
       if (!f) return;
 
       resetAll();
-      closeMatrix();
 
       if (objectUrl) URL.revokeObjectURL(objectUrl);
       objectUrl = URL.createObjectURL(f);
@@ -503,16 +549,15 @@
     }, { passive: true });
 
     elWrap.addEventListener("touchend", (e) => {
-      const now = Date.now();
       const t = (e.changedTouches && e.changedTouches[0]) ? e.changedTouches[0] : null;
       if (!t || !touchStart) return;
 
       const dx = Math.abs(t.clientX - touchStart.x);
       const dy = Math.abs(t.clientY - touchStart.y);
 
-      if (dx > 10 || dy > 10) { touchStart = null; return; }
+      if (dx > 10 || dy > 10) { touchStart = null; return; } // scroll => ignore
 
-      lastTouchTapAt = now;
+      lastTouchTapAt = Date.now();
       acceptTap(t.clientX, t.clientY);
       touchStart = null;
     }, { passive: true });
@@ -529,7 +574,6 @@
   // ------------------------------------------------------------
   elClear?.addEventListener("click", () => {
     resetAll();
-    closeMatrix();
     if (elImg?.src) setText(elStatus, "Tap Aim Point.");
   });
 
@@ -538,41 +582,30 @@
   elDistUp?.addEventListener("click", () => setDistanceYds(getDistanceYds() + 5));
   elDistDown?.addEventListener("click", () => setDistanceYds(getDistanceYds() - 5));
 
+  // manual input fix: always clamp on blur/change
   elDist?.addEventListener("change", () => setDistanceYds(getDistanceYds()));
   elDist?.addEventListener("blur", () => setDistanceYds(getDistanceYds()));
 
-  elUnitMoa?.addEventListener("click", () => { setUnit("MOA"); });
-  elUnitMrad?.addEventListener("click", () => { setUnit("MRAD"); });
+  elUnitMoa?.addEventListener("click", () => setUnit("MOA"));
+  elUnitMrad?.addEventListener("click", () => setUnit("MRAD"));
 
+  // click value: clamp lightly on blur
   elClickValue?.addEventListener("blur", () => { getClickValue(); });
   elClickValue?.addEventListener("change", () => { getClickValue(); });
 
-  // MATRIX
+  // Matrix buttons
   elMatrixBtn?.addEventListener("click", toggleMatrix);
-  elMatrixCloseBtn?.addEventListener("click", closeMatrix);
-
-  // chip clicks
-  document.addEventListener("click", (e) => {
-    const chip = e.target && e.target.closest ? e.target.closest(".chip") : null;
-    if (!chip) return;
-
-    const unit = chip.getAttribute("data-unit");
-    const click = chip.getAttribute("data-click");
-    if (!unit || !click) return;
-
-    // set unit (snaps default), then override click to chip value
-    setUnit(unit);
-    if (elClickValue) elClickValue.value = Number(click).toFixed(2);
-  });
+  elMatrixClose?.addEventListener("click", closeMatrix);
 
   // ------------------------------------------------------------
-  // Boot
+  // Boot (defaults locked)
   // ------------------------------------------------------------
-  setUnit("MOA");
-  setDistanceYds(100);
+  setUnit("MOA");          // snaps click value to 0.25
+  setDistanceYds(100);     // default
   hideSticky();
   resetAll();
   hydrateVendorBox();
+  wireMatrixPresets();
   hardHideScoringUI();
   forceTop();
 })();
