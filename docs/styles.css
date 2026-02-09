@@ -1,7 +1,9 @@
-/* ============================================================
-   tap-n-score/styles.css (FULL REPLACEMENT) — TARGET POLISH SAFE
-   Adds:
-   - Distance controller styles w/ manual input
+ /* ============================================================
+   tap-n-score/styles.css (FULL REPLACEMENT) — TOP CONTROLS CLEAN
+   Fixes:
+   - Prevents "yd" from wrapping to its own line
+   - Tight, aligned top controls
+   - Adds mirrored Tap Tip styling + state colors
 ============================================================ */
 
 :root{
@@ -17,6 +19,9 @@
 
   --aim:#67f3a4;
   --hit:#b7ff3c;
+
+  --tipBg: rgba(0,0,0,.55);
+  --tipStroke: rgba(255,255,255,.14);
 }
 
 *{ box-sizing:border-box; }
@@ -154,6 +159,7 @@ body{
   text-transform: uppercase;
   color: rgba(238,242,247,.90);
   line-height: 1.1;
+  white-space: nowrap;
 }
 
 .vendorWireFlow{
@@ -196,7 +202,135 @@ body{
 .scoreHidden{ display:none !important; }
 .mt12{ margin-top:12px; }
 
-/* Target wrap */
+/* ============================================================
+   TOP CONTROLS (Distance / Dial Unit / Click Value)
+============================================================ */
+
+.topControls{
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+  padding: 12px 14px 10px;
+  border-bottom: 1px solid rgba(255,255,255,.08);
+  background: rgba(0,0,0,.10);
+}
+
+@media (min-width: 820px){
+  .topControls{
+    grid-template-columns: 1.1fr .9fr 1fr;
+    align-items: start;
+  }
+}
+
+.topCtrl{
+  min-width: 0;
+}
+
+.topCtrlLabel{
+  font-size: 12px;
+  font-weight: 950;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: rgba(238,242,247,.75);
+  margin-bottom: 8px;
+}
+
+.topCtrlRow{
+  display:flex;
+  align-items:center;
+  gap: 10px;
+  flex-wrap: nowrap;           /* KEY: stop the yd wrap */
+  white-space: nowrap;         /* KEY: keep unit inline */
+}
+
+.topCtrlHint{
+  margin-top: 8px;
+  font-size: 12px;
+  color: rgba(238,242,247,.55);
+  line-height: 1.2;
+}
+
+/* Small buttons */
+.miniBtn{
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,.14);
+  background: rgba(255,255,255,.07);
+  color: #eef2f7;
+  font-size: 20px;
+  font-weight: 1000;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  flex: 0 0 auto;
+}
+.miniBtn:active{ transform: translateY(1px); }
+
+/* Compact input */
+.miniInput{
+  width: 92px;
+  max-width: 92px;
+  height: 44px;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,.14);
+  background: rgba(0,0,0,.18);
+  color: #eef2f7;
+  font-weight: 1000;
+  font-size: 18px;
+  text-align:center;
+  outline:none;
+  flex: 0 0 auto;
+}
+
+.miniInputWide{
+  width: 120px;
+  max-width: 120px;
+  height: 44px;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,.14);
+  background: rgba(0,0,0,.18);
+  color: #eef2f7;
+  font-weight: 1000;
+  font-size: 18px;
+  text-align:center;
+  outline:none;
+  flex: 0 0 auto;
+}
+
+.miniUnit{
+  font-size: 14px;
+  font-weight: 950;
+  letter-spacing: .02em;
+  color: rgba(238,242,247,.82);
+  padding: 0 2px;
+  flex: 0 0 auto;
+  white-space: nowrap;         /* KEY: keep MOA/click in one piece */
+}
+
+/* Segmented buttons */
+.segBtn{
+  height: 44px;
+  padding: 0 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,.14);
+  background: rgba(255,255,255,.06);
+  color: rgba(238,242,247,.92);
+  font-weight: 1000;
+  letter-spacing: .06em;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  flex: 0 0 auto;
+}
+
+.segBtn.segOn{
+  border-color: rgba(103,243,164,.35);
+  background: rgba(103,243,164,.10);
+}
+
+/* ============================================================
+   Target wrap + dots + mirrored tips
+============================================================ */
+
 .targetWrap{
   width: calc(100% - 28px);
   margin: 0 14px 12px;
@@ -205,7 +339,7 @@ body{
   background: rgba(0,0,0,.22);
   border: 1px solid rgba(255,255,255,.10);
   position: relative;
-  scroll-margin-top: 14px; /* so auto-scroll lands clean */
+  scroll-margin-top: 14px;
 }
 
 #targetImg{
@@ -222,13 +356,51 @@ body{
   pointer-events:none;
 }
 
-/* tap dots */
 .tapDot{
   position:absolute;
   width: 10px;
   height: 10px;
   border-radius: 999px;
   transform: translate(-50%, -50%);
+}
+
+/* Mirrored instruction tips */
+.tapTip{
+  position:absolute;
+  z-index: 50;
+  padding: 8px 10px;
+  border-radius: 12px;
+  border: 1px solid var(--tipStroke);
+  background: var(--tipBg);
+  color: rgba(238,242,247,.95);
+  font-weight: 950;
+  font-size: 13px;
+  letter-spacing: .02em;
+  box-shadow: 0 14px 34px rgba(0,0,0,.45);
+  user-select:none;
+  -webkit-user-select:none;
+  pointer-events:none;
+}
+
+.tipTL{ left: 10px; top: 10px; }
+.tipBR{ right: 10px; bottom: 10px; }
+
+/* Tip state coloring (same wording + same color) */
+.tipStateReady{ opacity: .0; } /* hide when no image */
+.tipStateAim{
+  opacity: 1;
+  border-color: rgba(103,243,164,.38);
+  background: rgba(103,243,164,.10);
+}
+.tipStateHits{
+  opacity: 1;
+  border-color: rgba(183,255,60,.35);
+  background: rgba(183,255,60,.10);
+}
+.tipStateResults{
+  opacity: 1;
+  border-color: rgba(47,102,255,.30);
+  background: rgba(47,102,255,.10);
 }
 
 /* Row + buttons */
@@ -259,6 +431,7 @@ body{
   border: 1px solid rgba(214,64,64,.45);
   background: rgba(214,64,64,.12);
   color: var(--text);
+  -webkit-tap-highlight-color: transparent;
 }
 .btnSecondary:active{ transform: translateY(1px); }
 
@@ -268,70 +441,6 @@ body{
   color: var(--muted);
   font-size: 13px;
   line-height: 1.35;
-}
-
-/* Settings */
-.field{
-  flex:1;
-  min-width: 160px;
-  display:flex;
-  flex-direction:column;
-  gap:8px;
-}
-.fieldLabel{
-  font-size: 12px;
-  color: rgba(238,242,247,.60);
-  letter-spacing:.02em;
-}
-.select{
-  width:100%;
-  background: rgba(0,0,0,.22);
-  border: 1px solid rgba(255,255,255,.14);
-  border-radius: 14px;
-  padding: 12px 10px;
-  color: var(--text);
-}
-
-/* Distance control */
-.distCtl{
-  display:flex;
-  align-items:center;
-  gap:10px;
-  background: rgba(255,255,255,.04);
-  border: 1px solid rgba(255,255,255,.10);
-  border-radius: 14px;
-  padding: 10px;
-}
-
-.distBtn{
-  width:46px;
-  height:46px;
-  border-radius:14px;
-  border:1px solid rgba(255,255,255,.14);
-  background:rgba(255,255,255,.07);
-  color:#eef2f7;
-  font-size:20px;
-  font-weight:900;
-  cursor:pointer;
-}
-
-.distInput{
-  flex:1;
-  height:46px;
-  border-radius:12px;
-  border:1px solid rgba(255,255,255,.14);
-  background: rgba(0,0,0,.18);
-  color: #eef2f7;
-  font-weight: 1000;
-  font-size: 18px;
-  text-align:center;
-  outline:none;
-}
-
-.distHelp{
-  font-size:12px;
-  color:rgba(238,242,247,.65);
-  line-height:1.35;
 }
 
 /* Footer */
@@ -370,5 +479,6 @@ body{
   color: var(--text);
   cursor:pointer;
   box-shadow: 0 18px 45px rgba(0,0,0,.55);
+  -webkit-tap-highlight-color: transparent;
 }
 .stickyBtn:active{ transform: translateY(1px); }
