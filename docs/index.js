@@ -1,13 +1,11 @@
 /* ============================================================
-   tap-n-score/index.js (FULL REPLACEMENT) — TIGHT TOP BAR + YD/M + MATRIX FIX
-   Locks:
-   - Range + unit + click value are BEFORE taps.
-   - MOA/MRAD toggle ALWAYS snaps:
-       MOA => 0.25, MRAD => 0.10
-   - Mirrored tips (TL + BR) always match wording + color.
-   - Matrix presets: pick unit + click value instantly.
+   tap-n-score/index.js (FULL REPLACEMENT) — TOP = 2 LINES DATA
+   - Top shows ONLY: "100 yds" and "0.25 MOA" (or "91 m")
+   - ALL adjustments live inside MATRIX drawer
+   - Adds (s) to yds
+   - Removes on-target instruction pills
    - 3+ taps on ANY button => history.back()
-   - Distance unit toggle: display YD or M (internal storage stays in YARDS)
+   - Distance unit toggle: UI YD/M (internal storage stays in YARDS)
 ============================================================ */
 
 (() => {
@@ -29,15 +27,15 @@
   const elInstruction = $("instructionLine");
   const elStatus = $("statusLine");
 
-  // mirrored tips
-  const elTipTL = $("tipTL");
-  const elTipBR = $("tipBR");
-
   // Sticky
   const elStickyBar = $("stickyBar");
   const elStickyBtn = $("stickyResultsBtn");
 
-  // Top controls
+  // Top display lines
+  const elTopDistance = $("topDistanceLine");
+  const elTopDial = $("topDialLine");
+
+  // Matrix controls (still same IDs)
   const elDist = $("distanceYds");
   const elDistUp = $("distUp");
   const elDistDown = $("distDown");
@@ -52,7 +50,7 @@
   const elClickValue = $("clickValue");
   const elClickUnitLabel = $("clickUnitLabel");
 
-  // Matrix
+  // Matrix drawer
   const elMatrixBtn = $("matrixBtn");
   const elMatrixPanel = $("matrixPanel");
   const elMatrixClose = $("matrixCloseBtn");
@@ -168,41 +166,24 @@
   }
 
   // ------------------------------------------------------------
-  // Mirrored instruction tips (TL + BR)
+  // Instructions (no on-image pills)
   // ------------------------------------------------------------
-  function setTipState(text, stateClass) {
-    if (elTipTL) {
-      elTipTL.classList.remove("tipStateReady","tipStateAim","tipStateHits","tipStateResults");
-      elTipTL.classList.add(stateClass);
-      elTipTL.textContent = text;
-    }
-    if (elTipBR) {
-      elTipBR.classList.remove("tipStateReady","tipStateAim","tipStateHits","tipStateResults");
-      elTipBR.classList.add(stateClass);
-      elTipBR.textContent = text;
-    }
-  }
-
   function syncInstruction() {
     if (!elImg?.src) {
-      setTipState("", "tipStateReady");
       setText(elInstruction, "");
       return;
     }
 
     if (!aim) {
-      setTipState("Tap Aim Point.", "tipStateAim");
       setText(elInstruction, "Tap Aim Point.");
       return;
     }
 
     if (hits.length < 1) {
-      setTipState("Tap Hits.", "tipStateHits");
       setText(elInstruction, "Tap Hits.");
       return;
     }
 
-    setTipState("Pause to show results.", "tipStateResults");
     setText(elInstruction, "Tap more hits, or pause — results will appear.");
   }
 
@@ -314,19 +295,38 @@
     return n;
   }
 
+  function syncTopDataLines() {
+    // distance line
+    if (elTopDistance) {
+      if (rangeUnit === "M") {
+        const m = Math.round(ydsToM(rangeYds)); // you requested: 91 m (rounded)
+        elTopDistance.textContent = `${m} m`;
+      } else {
+        elTopDistance.textContent = `${rangeYds} yds`; // you requested: add (s)
+      }
+    }
+
+    // dial line
+    if (elTopDial) {
+      const cv = getClickValue();
+      elTopDial.textContent = `${cv.toFixed(2)} ${dialUnit}`;
+    }
+  }
+
   function setRangeUnit(u) {
     rangeUnit = (u === "M") ? "M" : "YDS";
     try { localStorage.setItem(KEY_DIST_UNIT, rangeUnit); } catch {}
 
-    // UI toggle
-    elDistUnitYd?.classList.toggle("segOn", rangeUnit === "YDS");
-    elDistUnitM?.classList.toggle("segOn", rangeUnit === "M");
+    // UI toggle (chips)
+    elDistUnitYd?.classList.toggle("chipOn", rangeUnit === "YDS");
+    elDistUnitM?.classList.toggle("chipOn", rangeUnit === "M");
 
-    // unit label
-    if (elDistUnitLabel) elDistUnitLabel.textContent = (rangeUnit === "M") ? "m" : "yd";
+    // unit label (in drawer)
+    if (elDistUnitLabel) elDistUnitLabel.textContent = (rangeUnit === "M") ? "m" : "yds";
 
     // refresh input display
     syncRangeInputFromInternal();
+    syncTopDataLines();
   }
 
   function syncRangeInputFromInternal() {
@@ -352,12 +352,14 @@
 
     try { localStorage.setItem(KEY_DIST_YDS, String(rangeYds)); } catch {}
     syncRangeInputFromInternal();
+    syncTopDataLines();
   }
 
   function bumpRange(stepYds) {
     rangeYds = clampRangeYds(rangeYds + stepYds);
     try { localStorage.setItem(KEY_DIST_YDS, String(rangeYds)); } catch {}
     syncRangeInputFromInternal();
+    syncTopDataLines();
   }
 
   function getDistanceYds() {
@@ -365,11 +367,9 @@
   }
 
   function hydrateRange() {
-    // yards value
     const savedYds = Number(localStorage.getItem(KEY_DIST_YDS) || "100");
     rangeYds = clampRangeYds(savedYds);
 
-    // unit
     const savedUnit = localStorage.getItem(KEY_DIST_UNIT) || "YDS";
     setRangeUnit(savedUnit === "M" ? "M" : "YDS");
   }
@@ -380,18 +380,20 @@
   function setUnit(newUnit) {
     dialUnit = newUnit === "MRAD" ? "MRAD" : "MOA";
 
-    // segment UI
-    if (elUnitMoa) elUnitMoa.classList.toggle("segOn", dialUnit === "MOA");
-    if (elUnitMrad) elUnitMrad.classList.toggle("segOn", dialUnit === "MRAD");
+    // segment UI (chips)
+    elUnitMoa?.classList.toggle("chipOn", dialUnit === "MOA");
+    elUnitMrad?.classList.toggle("chipOn", dialUnit === "MRAD");
 
     // ALWAYS snap to common default
     const def = DEFAULTS[dialUnit];
     if (elClickValue) elClickValue.value = String(def.toFixed(2));
 
-    // label
+    // drawer label
     if (elClickUnitLabel) {
       elClickUnitLabel.textContent = dialUnit === "MOA" ? "MOA/click" : "MRAD/click";
     }
+
+    syncTopDataLines();
   }
 
   function getClickValue() {
@@ -405,7 +407,7 @@
   }
 
   // ------------------------------------------------------------
-  // Matrix (panel) — FIXED (uses matrixHidden)
+  // Matrix (drawer)
   // ------------------------------------------------------------
   function openMatrix() {
     if (!elMatrixPanel) return;
@@ -432,6 +434,7 @@
     setUnit(unit);
     if (elClickValue) elClickValue.value = Number(clickVal).toFixed(2);
     getClickValue();
+    syncTopDataLines();
     closeMatrix();
   }
 
@@ -668,8 +671,8 @@
   elUnitMrad?.addEventListener("click", () => setUnit("MRAD"));
 
   // click value: clamp lightly on blur/change
-  elClickValue?.addEventListener("blur", () => { getClickValue(); });
-  elClickValue?.addEventListener("change", () => { getClickValue(); });
+  elClickValue?.addEventListener("blur", () => { getClickValue(); syncTopDataLines(); });
+  elClickValue?.addEventListener("change", () => { getClickValue(); syncTopDataLines(); });
 
   // Matrix buttons
   elMatrixBtn?.addEventListener("click", toggleMatrix);
@@ -688,4 +691,7 @@
   wireMatrixPresets();
   hardHideScoringUI();
   forceTop();
+
+  // ensure top data shows immediately
+  syncTopDataLines();
 })();
