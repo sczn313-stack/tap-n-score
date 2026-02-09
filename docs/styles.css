@@ -1,4 +1,4 @@
-/* tap-n-score/styles.css (FULL REPLACEMENT) — SINGLE LINE TOP BAR + SEC HEADER */
+/* tap-n-score/styles.css (FULL REPLACEMENT) — TIGHT TOP BAR + YD/M TOGGLE + MATRIX FIX */
 
 :root{
   --bg:#06070a;
@@ -140,9 +140,7 @@ body{
   max-width: 720px;
 }
 
-.vendorBoxFlow, .vendorBoxFlow *{
-  pointer-events: auto;
-}
+.vendorBoxFlow, .vendorBoxFlow *{ pointer-events:auto; }
 
 .vendorPillText{
   font-weight: 1000;
@@ -227,12 +225,12 @@ body{
 .mt12{ margin-top:12px; }
 
 /* ============================================================
-   TOP BAR (single line targets)
+   TOP BAR
 ============================================================ */
 .topBar{
   display:flex;
-  gap: 12px;                 /* tighter */
-  padding: 10px 12px 10px;   /* tighter */
+  gap: 12px;
+  padding: 10px 12px 10px;
   border-bottom: 1px solid rgba(255,255,255,.08);
   background: rgba(0,0,0,.10);
   flex-wrap: wrap;
@@ -254,40 +252,56 @@ body{
   letter-spacing: .10em;
   text-transform: uppercase;
   color: rgba(238,242,247,.75);
-  margin-bottom: 6px;        /* tighter */
+  margin-bottom: 6px;
+}
+
+.topLabelRow{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap: 10px;
+  margin-bottom: 6px;
 }
 
 .topHint{
-  margin-top: 6px;           /* tighter */
+  margin-top: 6px;
   font-size: 12px;
   color: rgba(238,242,247,.55);
   line-height: 1.2;
 }
 
-/* Yards row */
+/* Unit toggle (YD / M) */
+.unitToggle{
+  display:flex;
+  gap: 6px;
+  align-items:center;
+  flex: 0 0 auto;
+}
+
+/* Rows */
 .yardLine{
   display:flex;
   align-items:center;
-  gap: 6px;                  /* tighter */
+  gap: 6px;
   flex-wrap: nowrap;
   white-space: nowrap;
 }
 
-/* Dial row — FORCE “single line”, but allow horizontal swipe if needed */
+/* Dial row — keep single line; swipe if needed */
 .dialOneLine{
   display:flex;
   align-items:center;
-  gap: 8px;                  /* tighter */
+  gap: 8px;
   flex-wrap: nowrap;
   white-space: nowrap;
-  overflow-x: auto;          /* if tiny screens, swipe */
+  overflow-x: auto;
   -webkit-overflow-scrolling: touch;
-  scrollbar-width: none;     /* Firefox */
+  scrollbar-width: none;
   padding-bottom: 2px;
 }
-.dialOneLine::-webkit-scrollbar{ display:none; } /* iOS/Chrome */
+.dialOneLine::-webkit-scrollbar{ display:none; }
 
-/* Small buttons */
+/* Buttons */
 .miniBtn{
   width: 44px;
   height: 44px;
@@ -303,10 +317,10 @@ body{
 }
 .miniBtn:active{ transform: translateY(1px); }
 
-/* tighter yards +/- to free space for MOA/MRAD line */
+/* tighter yards +/- */
 .miniBtnTight{
-  width: 30px;     /* smaller than before */
-  height: 38px;    /* smaller than before */
+  width: 30px;
+  height: 38px;
   border-radius: 12px;
   font-size: 20px;
 }
@@ -328,13 +342,14 @@ body{
 }
 
 .miniInputTight{
-  width: 72px;     /* smaller than before */
+  width: 72px;
   max-width: 72px;
-  height: 38px;    /* match miniBtnTight */
+  height: 38px;
   font-size: 18px;
   border-radius: 12px;
 }
 
+/* Click value input */
 .miniInputWide{
   width: 120px;
   max-width: 120px;
@@ -350,15 +365,15 @@ body{
   flex: 0 0 auto;
 }
 
-/* tighter click value input */
 .miniInputWideTight{
-  width: 86px;    /* smaller than before */
+  width: 86px;
   max-width: 86px;
   height: 38px;
   font-size: 18px;
   border-radius: 12px;
 }
 
+/* Units */
 .miniUnit{
   font-size: 14px;
   font-weight: 950;
@@ -366,16 +381,14 @@ body{
   color: rgba(238,242,247,.82);
   padding: 0 2px;
   flex: 0 0 auto;
-  white-space: nowrap;     /* keeps MOA/click on one line */
+  white-space: nowrap;
 }
-.clickUnitRight{
-  opacity: .92;
-}
+.clickUnitRight{ opacity: .92; }
 
-/* Segmented buttons — tighten width so click label fits right of MRAD */
+/* Segmented buttons */
 .segBtn{
   height: 38px;
-  padding: 0 12px;       /* tighter */
+  padding: 0 12px;
   border-radius: 12px;
   border: 1px solid rgba(255,255,255,.14);
   background: rgba(255,255,255,.06);
@@ -391,10 +404,19 @@ body{
   background: rgba(103,243,164,.10);
 }
 
+/* Tiny seg for YD/M toggle */
+.segBtnTiny{
+  height: 28px;
+  padding: 0 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  letter-spacing: .10em;
+}
+
 /* Matrix button */
 .matrixBtn{
   height: 38px;
-  padding: 0 12px;       /* tighter */
+  padding: 0 12px;
   border-radius: 14px;
   border: 1px solid rgba(47,102,255,.35);
   background: rgba(47,102,255,.12);
@@ -509,7 +531,6 @@ body{
   transform: translate(-50%, -50%);
 }
 
-/* Mirrored instruction tips */
 .tapTip{
   position:absolute;
   z-index: 50;
