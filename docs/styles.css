@@ -80,7 +80,6 @@ body{
   text-align:center;
 }
 
-/* 800lb gorilla hero button */
 .heroBtn{
   width: 100%;
   max-width: 720px;
@@ -119,7 +118,6 @@ body{
   width: 100%;
 }
 
-/* Vendor pill (in flow) */
 .vendorBox{
   padding: 12px 16px;
   border-radius: 999px;
@@ -193,6 +191,7 @@ body{
   color: rgba(238,242,247,.75);
 }
 
+/* header row: SHOOTER EXPERIENCE CARD + SEC */
 .cardTitleSEC{
   display:flex;
   align-items:center;
@@ -218,6 +217,7 @@ body{
   letter-spacing: .22em;
   text-transform: uppercase;
   font-size: 12px;
+  white-space: nowrap;
 }
 .secTag .r{ color: var(--red); }
 .secTag .w{ color: var(--white); }
@@ -227,12 +227,12 @@ body{
 .mt12{ margin-top:12px; }
 
 /* ============================================================
-   TOP BAR (single line)
+   TOP BAR (single line targets)
 ============================================================ */
 .topBar{
   display:flex;
-  gap: 14px;
-  padding: 12px 14px 10px;
+  gap: 12px;                 /* tighter */
+  padding: 10px 12px 10px;   /* tighter */
   border-bottom: 1px solid rgba(255,255,255,.08);
   background: rgba(0,0,0,.10);
   flex-wrap: wrap;
@@ -240,11 +240,11 @@ body{
 
 .topBarLeft{
   flex: 0 0 auto;
-  min-width: 210px;
+  min-width: 190px;
 }
 
 .topBarRight{
-  flex: 1 1 320px;
+  flex: 1 1 360px;
   min-width: 260px;
 }
 
@@ -254,11 +254,11 @@ body{
   letter-spacing: .10em;
   text-transform: uppercase;
   color: rgba(238,242,247,.75);
-  margin-bottom: 8px;
+  margin-bottom: 6px;        /* tighter */
 }
 
 .topHint{
-  margin-top: 8px;
+  margin-top: 6px;           /* tighter */
   font-size: 12px;
   color: rgba(238,242,247,.55);
   line-height: 1.2;
@@ -268,22 +268,24 @@ body{
 .yardLine{
   display:flex;
   align-items:center;
-  gap: 8px;
+  gap: 6px;                  /* tighter */
   flex-wrap: nowrap;
   white-space: nowrap;
 }
 
-/* Dial row (one single line) */
+/* Dial row — FORCE “single line”, but allow horizontal swipe if needed */
 .dialOneLine{
   display:flex;
   align-items:center;
-  gap: 10px;
+  gap: 8px;                  /* tighter */
   flex-wrap: nowrap;
   white-space: nowrap;
-  overflow-x: auto;
+  overflow-x: auto;          /* if tiny screens, swipe */
   -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;     /* Firefox */
   padding-bottom: 2px;
 }
+.dialOneLine::-webkit-scrollbar{ display:none; } /* iOS/Chrome */
 
 /* Small buttons */
 .miniBtn{
@@ -301,14 +303,15 @@ body{
 }
 .miniBtn:active{ transform: translateY(1px); }
 
+/* tighter yards +/- to free space for MOA/MRAD line */
 .miniBtnTight{
-  width: 34px;
-  height: 40px;
-  border-radius: 14px;
+  width: 30px;     /* smaller than before */
+  height: 38px;    /* smaller than before */
+  border-radius: 12px;
   font-size: 20px;
 }
 
-/* Compact input */
+/* Inputs */
 .miniInput{
   width: 92px;
   max-width: 92px;
@@ -325,10 +328,11 @@ body{
 }
 
 .miniInputTight{
-  width: 78px;
-  max-width: 78px;
-  height: 40px;
+  width: 72px;     /* smaller than before */
+  max-width: 72px;
+  height: 38px;    /* match miniBtnTight */
   font-size: 18px;
+  border-radius: 12px;
 }
 
 .miniInputWide{
@@ -346,14 +350,15 @@ body{
   flex: 0 0 auto;
 }
 
+/* tighter click value input */
 .miniInputWideTight{
-  width: 92px;
-  max-width: 92px;
-  height: 40px;
+  width: 86px;    /* smaller than before */
+  max-width: 86px;
+  height: 38px;
   font-size: 18px;
+  border-radius: 12px;
 }
 
-/* unit label */
 .miniUnit{
   font-size: 14px;
   font-weight: 950;
@@ -361,17 +366,17 @@ body{
   color: rgba(238,242,247,.82);
   padding: 0 2px;
   flex: 0 0 auto;
-  white-space: nowrap;
+  white-space: nowrap;     /* keeps MOA/click on one line */
 }
 .clickUnitRight{
   opacity: .92;
 }
 
-/* Segmented buttons */
+/* Segmented buttons — tighten width so click label fits right of MRAD */
 .segBtn{
-  height: 40px;
-  padding: 0 14px;
-  border-radius: 14px;
+  height: 38px;
+  padding: 0 12px;       /* tighter */
+  border-radius: 12px;
   border: 1px solid rgba(255,255,255,.14);
   background: rgba(255,255,255,.06);
   color: rgba(238,242,247,.92);
@@ -388,9 +393,9 @@ body{
 
 /* Matrix button */
 .matrixBtn{
-  height: 40px;
-  padding: 0 14px;
-  border-radius: 16px;
+  height: 38px;
+  padding: 0 12px;       /* tighter */
+  border-radius: 14px;
   border: 1px solid rgba(47,102,255,.35);
   background: rgba(47,102,255,.12);
   color: rgba(238,242,247,.92);
@@ -525,7 +530,6 @@ body{
 .tipTL{ left: 10px; top: 10px; }
 .tipBR{ right: 10px; bottom: 10px; }
 
-/* Tip state coloring (same wording + same color) */
 .tipStateReady{ opacity: .0; }
 .tipStateAim{
   opacity: 1;
