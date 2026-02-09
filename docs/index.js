@@ -1,12 +1,13 @@
 /* ============================================================
-   tap-n-score/index.js (FULL REPLACEMENT) — SINGLE LINE CONTROLS + MATRIX
+   tap-n-score/index.js (FULL REPLACEMENT) — TIGHT TOP BAR + YD/M + MATRIX FIX
    Locks:
-   - Yardage + unit + click value are BEFORE taps.
-   - MOA/MRAD toggle ALWAYS snaps to common default:
+   - Range + unit + click value are BEFORE taps.
+   - MOA/MRAD toggle ALWAYS snaps:
        MOA => 0.25, MRAD => 0.10
    - Mirrored tips (TL + BR) always match wording + color.
    - Matrix presets: pick unit + click value instantly.
    - 3+ taps on ANY button => history.back()
+   - Distance unit toggle: display YD or M (internal storage stays in YARDS)
 ============================================================ */
 
 (() => {
@@ -40,6 +41,10 @@
   const elDist = $("distanceYds");
   const elDistUp = $("distUp");
   const elDistDown = $("distDown");
+  const elDistUnitLabel = $("distUnitLabel");
+
+  const elDistUnitYd = $("distUnitYd");
+  const elDistUnitM = $("distUnitM");
 
   const elUnitMoa = $("unitMoa");
   const elUnitMrad = $("unitMrad");
@@ -57,6 +62,8 @@
   const KEY_TARGET_IMG_DATA = "SCZN3_TARGET_IMG_DATAURL_V1";
   const KEY_TARGET_IMG_BLOB = "SCZN3_TARGET_IMG_BLOBURL_V1";
   const KEY_VENDOR_URL = "SCZN3_VENDOR_URL_V1";
+  const KEY_DIST_UNIT = "SCZN3_RANGE_UNIT_V1"; // "YDS" | "M"
+  const KEY_DIST_YDS = "SCZN3_RANGE_YDS_V1";   // numeric (yards)
 
   let objectUrl = null;
 
@@ -75,6 +82,10 @@
 
   // unit state (default locked)
   let dialUnit = "MOA"; // "MOA" | "MRAD"
+
+  // distance display unit (internal is yards)
+  let rangeUnit = "YDS"; // "YDS" | "M"
+  let rangeYds = 100;    // internal yards
 
   const DEFAULTS = {
     MOA: 0.25,
@@ -290,21 +301,82 @@
   }
 
   // ------------------------------------------------------------
-  // Distance + Unit + Click Value (pilot rules)
+  // Range: internal yards, display YD or M
   // ------------------------------------------------------------
-  function getDistanceYds() {
-    const n = Number(elDist?.value ?? 100);
-    if (!Number.isFinite(n)) return 100;
-    return Math.max(5, Math.min(1000, Math.round(n)));
-  }
+  function ydsToM(yds) { return yds * 0.9144; }
+  function mToYds(m) { return m / 0.9144; }
 
-  function setDistanceYds(v) {
-    let n = Math.round(Number(v));
+  function clampRangeYds(v) {
+    let n = Number(v);
     if (!Number.isFinite(n)) n = 100;
-    n = Math.max(5, Math.min(1000, n));
-    if (elDist) elDist.value = String(n);
+    n = Math.round(n);
+    n = Math.max(1, Math.min(5000, n));
+    return n;
   }
 
+  function setRangeUnit(u) {
+    rangeUnit = (u === "M") ? "M" : "YDS";
+    try { localStorage.setItem(KEY_DIST_UNIT, rangeUnit); } catch {}
+
+    // UI toggle
+    elDistUnitYd?.classList.toggle("segOn", rangeUnit === "YDS");
+    elDistUnitM?.classList.toggle("segOn", rangeUnit === "M");
+
+    // unit label
+    if (elDistUnitLabel) elDistUnitLabel.textContent = (rangeUnit === "M") ? "m" : "yd";
+
+    // refresh input display
+    syncRangeInputFromInternal();
+  }
+
+  function syncRangeInputFromInternal() {
+    if (!elDist) return;
+    if (rangeUnit === "M") {
+      const m = Math.round(ydsToM(rangeYds));
+      elDist.value = String(m);
+    } else {
+      elDist.value = String(rangeYds);
+    }
+  }
+
+  function syncInternalFromRangeInput() {
+    if (!elDist) return;
+    let n = Number(elDist.value);
+    if (!Number.isFinite(n)) n = (rangeUnit === "M") ? Math.round(ydsToM(rangeYds)) : rangeYds;
+
+    if (rangeUnit === "M") {
+      rangeYds = clampRangeYds(mToYds(n));
+    } else {
+      rangeYds = clampRangeYds(n);
+    }
+
+    try { localStorage.setItem(KEY_DIST_YDS, String(rangeYds)); } catch {}
+    syncRangeInputFromInternal();
+  }
+
+  function bumpRange(stepYds) {
+    rangeYds = clampRangeYds(rangeYds + stepYds);
+    try { localStorage.setItem(KEY_DIST_YDS, String(rangeYds)); } catch {}
+    syncRangeInputFromInternal();
+  }
+
+  function getDistanceYds() {
+    return clampRangeYds(rangeYds);
+  }
+
+  function hydrateRange() {
+    // yards value
+    const savedYds = Number(localStorage.getItem(KEY_DIST_YDS) || "100");
+    rangeYds = clampRangeYds(savedYds);
+
+    // unit
+    const savedUnit = localStorage.getItem(KEY_DIST_UNIT) || "YDS";
+    setRangeUnit(savedUnit === "M" ? "M" : "YDS");
+  }
+
+  // ------------------------------------------------------------
+  // Dial unit + click value
+  // ------------------------------------------------------------
   function setUnit(newUnit) {
     dialUnit = newUnit === "MRAD" ? "MRAD" : "MOA";
 
@@ -333,22 +405,22 @@
   }
 
   // ------------------------------------------------------------
-  // Matrix (panel)
+  // Matrix (panel) — FIXED (uses matrixHidden)
   // ------------------------------------------------------------
   function openMatrix() {
     if (!elMatrixPanel) return;
-    elMatrixPanel.classList.add("matrixOpen");
+    elMatrixPanel.classList.remove("matrixHidden");
     elMatrixPanel.setAttribute("aria-hidden", "false");
   }
 
   function closeMatrix() {
     if (!elMatrixPanel) return;
-    elMatrixPanel.classList.remove("matrixOpen");
+    elMatrixPanel.classList.add("matrixHidden");
     elMatrixPanel.setAttribute("aria-hidden", "true");
   }
 
   function isMatrixOpen() {
-    return !!elMatrixPanel && elMatrixPanel.classList.contains("matrixOpen");
+    return !!elMatrixPanel && !elMatrixPanel.classList.contains("matrixHidden");
   }
 
   function toggleMatrix() {
@@ -380,7 +452,7 @@
     if (e.key === "Escape") closeMatrix();
   });
 
-  // close when tapping outside panel (optional safe)
+  // close when tapping outside panel
   document.addEventListener("click", (e) => {
     if (!isMatrixOpen()) return;
     if (!elMatrixPanel) return;
@@ -472,7 +544,7 @@
       dial: { unit: out.dial.unit, clickValue: Number(out.dial.clickValue.toFixed(2)) },
       vendorUrl,
       surveyUrl: "",
-      sourceImg: "",
+      sourceImg: "", // thumbnail stays nuked (never used)
       debug: { aim, avgPoi: out.avgPoi, distanceYds: getDistanceYds(), inches: out.inches }
     };
 
@@ -579,17 +651,23 @@
 
   elStickyBtn?.addEventListener("click", onShowResults);
 
-  elDistUp?.addEventListener("click", () => setDistanceYds(getDistanceYds() + 5));
-  elDistDown?.addEventListener("click", () => setDistanceYds(getDistanceYds() - 5));
+  // range +/- always bumps internal yards (stable math)
+  elDistUp?.addEventListener("click", () => bumpRange(5));
+  elDistDown?.addEventListener("click", () => bumpRange(-5));
 
-  // manual input fix: always clamp on blur/change
-  elDist?.addEventListener("change", () => setDistanceYds(getDistanceYds()));
-  elDist?.addEventListener("blur", () => setDistanceYds(getDistanceYds()));
+  // manual input: always convert/clamp on blur/change
+  elDist?.addEventListener("change", () => syncInternalFromRangeInput());
+  elDist?.addEventListener("blur", () => syncInternalFromRangeInput());
 
+  // YD/M toggle
+  elDistUnitYd?.addEventListener("click", () => setRangeUnit("YD"));
+  elDistUnitM?.addEventListener("click", () => setRangeUnit("M"));
+
+  // dial unit
   elUnitMoa?.addEventListener("click", () => setUnit("MOA"));
   elUnitMrad?.addEventListener("click", () => setUnit("MRAD"));
 
-  // click value: clamp lightly on blur
+  // click value: clamp lightly on blur/change
   elClickValue?.addEventListener("blur", () => { getClickValue(); });
   elClickValue?.addEventListener("change", () => { getClickValue(); });
 
@@ -598,13 +676,15 @@
   elMatrixClose?.addEventListener("click", closeMatrix);
 
   // ------------------------------------------------------------
-  // Boot (defaults locked)
+  // Boot
   // ------------------------------------------------------------
   setUnit("MOA");          // snaps click value to 0.25
-  setDistanceYds(100);     // default
+  closeMatrix();
   hideSticky();
   resetAll();
   hydrateVendorBox();
+
+  hydrateRange();          // pulls saved yards + unit and updates UI
   wireMatrixPresets();
   hardHideScoringUI();
   forceTop();
