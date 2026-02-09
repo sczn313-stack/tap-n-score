@@ -1,4 +1,4 @@
-<!-- tap-n-score/index.html (FULL REPLACEMENT) — SINGLE LINE CONTROLS + SEC HEADER -->
+<!-- tap-n-score/index.html (FULL REPLACEMENT) — TIGHT TOP BAR + YD/M TOGGLE + SEC HEADER -->
 <!doctype html>
 <html lang="en">
 <head>
@@ -13,7 +13,7 @@
 
   <title>Tap-n-Score™</title>
 
-  <link rel="stylesheet" href="/tap-n-score/styles.css?v=TP-POLISH-02" />
+  <link rel="stylesheet" href="/tap-n-score/styles.css?v=TP-POLISH-03" />
 </head>
 
 <body>
@@ -54,7 +54,7 @@
 
     <!-- TARGET PAGE (hidden until photo selected) -->
     <section id="scoreSection" class="card mt12 scoreHidden">
-      <!-- NEW HEADER: SHOOTER EXPERIENCE CARD + SEC -->
+      <!-- HEADER: SHOOTER EXPERIENCE CARD + SEC -->
       <div class="cardTitle cardTitleSEC">
         <div class="secTitle">
           <span class="r">SHOOTER</span>
@@ -67,15 +67,23 @@
         </div>
       </div>
 
-      <!-- SINGLE LINE TOP BAR -->
-      <div class="topBar" aria-label="Distance, dial unit, click value, matrix">
+      <!-- SINGLE TOP BAR -->
+      <div class="topBar" aria-label="Range, dial unit, click value, matrix">
         <div class="topBarLeft">
-          <div class="topLabel">YARDS</div>
+          <div class="topLabelRow">
+            <div class="topLabel">RANGE</div>
+
+            <!-- YD/M toggle lives up top (tight) -->
+            <div class="unitToggle" aria-label="Distance units">
+              <button id="distUnitYd" class="segBtn segBtnTiny segOn" type="button">YD</button>
+              <button id="distUnitM" class="segBtn segBtnTiny" type="button">M</button>
+            </div>
+          </div>
 
           <div class="yardLine">
             <button id="distDown" class="miniBtn miniBtnTight" type="button" aria-label="Distance down">−</button>
-            <input id="distanceYds" class="miniInput miniInputTight" type="number" inputmode="numeric" min="5" max="1000" step="1" value="100" aria-label="Distance yards" />
-            <div class="miniUnit">yd</div>
+            <input id="distanceYds" class="miniInput miniInputTight" type="number" inputmode="numeric" min="1" max="5000" step="1" value="100" aria-label="Range" />
+            <div id="distUnitLabel" class="miniUnit">yd</div>
             <button id="distUp" class="miniBtn miniBtnTight" type="button" aria-label="Distance up">+</button>
           </div>
 
@@ -85,13 +93,13 @@
         <div class="topBarRight">
           <div class="topLabel">DIAL</div>
 
-          <!-- everything on one line: MOA/MRAD + click value + unit label -->
           <div class="dialOneLine">
             <button id="unitMoa" class="segBtn segOn" type="button">MOA</button>
             <button id="unitMrad" class="segBtn" type="button">MRAD</button>
 
             <input id="clickValue" class="miniInputWide miniInputWideTight" type="number" inputmode="decimal" step="0.01" value="0.25" aria-label="Click value" />
 
+            <!-- MUST sit on same line -->
             <div id="clickUnitLabel" class="miniUnit clickUnitRight">MOA/click</div>
 
             <button id="matrixBtn" class="matrixBtn" type="button" aria-label="Open matrix presets">MATRIX</button>
@@ -128,17 +136,15 @@
         </div>
       </div>
 
-      <!-- Status (kept light) -->
       <div id="statusLine" class="hint" style="margin-top:0; margin-bottom:8px;">
         Add a target photo to begin.
       </div>
 
-      <!-- Target frame -->
       <div id="targetWrap" class="targetWrap" aria-label="Target photo area">
         <img id="targetImg" alt="Target preview" />
         <div id="dotsLayer" class="dotsLayer" aria-hidden="true"></div>
 
-        <!-- MIRRORED INSTRUCTION TIPS -->
+        <!-- MIRRORED INSTRUCTION TIPS (LOCKED) -->
         <div id="tipTL" class="tapTip tipTL tipStateReady">Tap Aim Point.</div>
         <div id="tipBR" class="tapTip tipBR tipStateReady">Tap Aim Point.</div>
       </div>
@@ -167,6 +173,6 @@
 
   </main>
 
-  <script defer src="/tap-n-score/index.js?v=TP-POLISH-02"></script>
+  <script defer src="/tap-n-score/index.js?v=TP-POLISH-03"></script>
 </body>
 </html>
