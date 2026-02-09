@@ -1,4 +1,4 @@
-/* tap-n-score/styles.css (FULL REPLACEMENT) — TIGHT TOP BAR + YD/M TOGGLE + MATRIX FIX */
+/* tap-n-score/styles.css (FULL REPLACEMENT) — TOP = 2 LINES DATA, MATRIX = ALL ADJUSTMENTS, NO ON-IMAGE PILLS */
 
 :root{
   --bg:#06070a;
@@ -13,9 +13,6 @@
 
   --aim:#67f3a4;
   --hit:#b7ff3c;
-
-  --tipBg: rgba(0,0,0,.55);
-  --tipStroke: rgba(255,255,255,.14);
 }
 
 *{ box-sizing:border-box; }
@@ -225,81 +222,111 @@ body{
 .mt12{ margin-top:12px; }
 
 /* ============================================================
-   TOP BAR
+   TOP DATA BAR (2 lines + MATRIX button)
 ============================================================ */
-.topBar{
-  display:flex;
-  gap: 12px;
-  padding: 10px 12px 10px;
+.topDataBar{
+  position: relative;
+  padding: 12px 14px 12px;
   border-bottom: 1px solid rgba(255,255,255,.08);
-  background: rgba(0,0,0,.10);
+  background: rgba(0,0,0,.12);
+  display:flex;
+  flex-direction:column;
+  gap: 6px;
+}
+
+.topDataLine{
+  font-weight: 1000;
+  font-size: 20px;
+  letter-spacing: .02em;
+  color: rgba(238,242,247,.96);
+}
+
+.topDataLineSub{
+  font-weight: 950;
+  font-size: 16px;
+  letter-spacing: .02em;
+  color: rgba(238,242,247,.82);
+}
+
+.matrixBtnTop{
+  position:absolute;
+  right: 12px;
+  top: 12px;
+  height: 38px;
+  padding: 0 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(47,102,255,.35);
+  background: rgba(47,102,255,.12);
+  color: rgba(238,242,247,.92);
+  font-weight: 1000;
+  letter-spacing: .14em;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* ============================================================
+   MATRIX DRAWER
+============================================================ */
+.matrixPanel{
+  margin: 10px 14px 12px;
+  border-radius: 16px;
+  border: 1px solid rgba(255,255,255,.12);
+  background: rgba(0,0,0,.22);
+  box-shadow: 0 18px 50px rgba(0,0,0,.45);
+  padding: 12px;
+}
+.matrixHidden{ display:none; }
+
+.matrixTitle{
+  font-weight: 1000;
+  letter-spacing: .10em;
+  text-transform: uppercase;
+  font-size: 12px;
+  color: rgba(238,242,247,.85);
+  margin-bottom: 10px;
+}
+
+.matrixGroup{ margin-bottom: 12px; }
+
+.matrixLabel{
+  font-size: 12px;
+  font-weight: 900;
+  color: rgba(238,242,247,.65);
+  margin-bottom: 8px;
+}
+
+.chipRow{
+  display:flex;
+  gap: 10px;
   flex-wrap: wrap;
 }
 
-.topBarLeft{
-  flex: 0 0 auto;
-  min-width: 190px;
+.chip{
+  height: 40px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,.14);
+  background: rgba(255,255,255,.06);
+  color: rgba(238,242,247,.92);
+  font-weight: 1000;
+  letter-spacing: .06em;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.chip:active{ transform: translateY(1px); }
+
+.chipOn{
+  border-color: rgba(103,243,164,.35);
+  background: rgba(103,243,164,.10);
 }
 
-.topBarRight{
-  flex: 1 1 360px;
-  min-width: 260px;
-}
-
-.topLabel{
-  font-size: 12px;
-  font-weight: 950;
-  letter-spacing: .10em;
-  text-transform: uppercase;
-  color: rgba(238,242,247,.75);
-  margin-bottom: 6px;
-}
-
-.topLabelRow{
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap: 10px;
-  margin-bottom: 6px;
-}
-
-.topHint{
-  margin-top: 6px;
-  font-size: 12px;
-  color: rgba(238,242,247,.55);
-  line-height: 1.2;
-}
-
-/* Unit toggle (YD / M) */
-.unitToggle{
-  display:flex;
-  gap: 6px;
-  align-items:center;
-  flex: 0 0 auto;
-}
-
-/* Rows */
-.yardLine{
-  display:flex;
-  align-items:center;
-  gap: 6px;
-  flex-wrap: nowrap;
-  white-space: nowrap;
-}
-
-/* Dial row — keep single line; swipe if needed */
-.dialOneLine{
+.rangeRow, .clickRow{
   display:flex;
   align-items:center;
   gap: 8px;
   flex-wrap: nowrap;
   white-space: nowrap;
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: none;
-  padding-bottom: 2px;
 }
-.dialOneLine::-webkit-scrollbar{ display:none; }
 
 /* Buttons */
 .miniBtn{
@@ -317,7 +344,6 @@ body{
 }
 .miniBtn:active{ transform: translateY(1px); }
 
-/* tighter yards +/- */
 .miniBtnTight{
   width: 30px;
   height: 38px;
@@ -349,7 +375,6 @@ body{
   border-radius: 12px;
 }
 
-/* Click value input */
 .miniInputWide{
   width: 120px;
   max-width: 120px;
@@ -366,8 +391,8 @@ body{
 }
 
 .miniInputWideTight{
-  width: 86px;
-  max-width: 86px;
+  width: 110px;
+  max-width: 110px;
   height: 38px;
   font-size: 18px;
   border-radius: 12px;
@@ -383,98 +408,6 @@ body{
   flex: 0 0 auto;
   white-space: nowrap;
 }
-.clickUnitRight{ opacity: .92; }
-
-/* Segmented buttons */
-.segBtn{
-  height: 38px;
-  padding: 0 12px;
-  border-radius: 12px;
-  border: 1px solid rgba(255,255,255,.14);
-  background: rgba(255,255,255,.06);
-  color: rgba(238,242,247,.92);
-  font-weight: 1000;
-  letter-spacing: .06em;
-  cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
-  flex: 0 0 auto;
-}
-.segBtn.segOn{
-  border-color: rgba(103,243,164,.35);
-  background: rgba(103,243,164,.10);
-}
-
-/* Tiny seg for YD/M toggle */
-.segBtnTiny{
-  height: 28px;
-  padding: 0 10px;
-  border-radius: 999px;
-  font-size: 12px;
-  letter-spacing: .10em;
-}
-
-/* Matrix button */
-.matrixBtn{
-  height: 38px;
-  padding: 0 12px;
-  border-radius: 14px;
-  border: 1px solid rgba(47,102,255,.35);
-  background: rgba(47,102,255,.12);
-  color: rgba(238,242,247,.92);
-  font-weight: 1000;
-  letter-spacing: .14em;
-  cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
-  flex: 0 0 auto;
-}
-
-/* Matrix panel */
-.matrixPanel{
-  margin: 10px 14px 12px;
-  border-radius: 16px;
-  border: 1px solid rgba(255,255,255,.12);
-  background: rgba(0,0,0,.22);
-  box-shadow: 0 18px 50px rgba(0,0,0,.45);
-  padding: 12px;
-}
-.matrixHidden{ display:none; }
-
-.matrixTitle{
-  font-weight: 1000;
-  letter-spacing: .10em;
-  text-transform: uppercase;
-  font-size: 12px;
-  color: rgba(238,242,247,.85);
-  margin-bottom: 10px;
-}
-
-.matrixGroup{ margin-bottom: 12px; }
-.matrixLabel{
-  font-size: 12px;
-  font-weight: 900;
-  color: rgba(238,242,247,.65);
-  margin-bottom: 8px;
-}
-
-.chipRow{
-  display:flex;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-
-.chip{
-  height: 40px;
-  padding: 0 14px;
-  border-radius: 999px;
-  border: 1px solid rgba(255,255,255,.14);
-  background: rgba(255,255,255,.06);
-  color: rgba(238,242,247,.92);
-  font-weight: 1000;
-  letter-spacing: .06em;
-  cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
-}
-.chip:active{ transform: translateY(1px); }
 
 .matrixFoot{
   display:flex;
@@ -496,7 +429,7 @@ body{
 }
 
 /* ============================================================
-   Target wrap + dots + mirrored tips
+   Target wrap + dots
 ============================================================ */
 .targetWrap{
   width: calc(100% - 28px);
@@ -529,43 +462,6 @@ body{
   height: 10px;
   border-radius: 999px;
   transform: translate(-50%, -50%);
-}
-
-.tapTip{
-  position:absolute;
-  z-index: 50;
-  padding: 8px 10px;
-  border-radius: 12px;
-  border: 1px solid var(--tipStroke);
-  background: var(--tipBg);
-  color: rgba(238,242,247,.95);
-  font-weight: 950;
-  font-size: 13px;
-  letter-spacing: .02em;
-  box-shadow: 0 14px 34px rgba(0,0,0,.45);
-  user-select:none;
-  -webkit-user-select:none;
-  pointer-events:none;
-}
-
-.tipTL{ left: 10px; top: 10px; }
-.tipBR{ right: 10px; bottom: 10px; }
-
-.tipStateReady{ opacity: .0; }
-.tipStateAim{
-  opacity: 1;
-  border-color: rgba(103,243,164,.38);
-  background: rgba(103,243,164,.10);
-}
-.tipStateHits{
-  opacity: 1;
-  border-color: rgba(183,255,60,.35);
-  background: rgba(183,255,60,.10);
-}
-.tipStateResults{
-  opacity: 1;
-  border-color: rgba(47,102,255,.30);
-  background: rgba(47,102,255,.10);
 }
 
 /* Row + buttons */
