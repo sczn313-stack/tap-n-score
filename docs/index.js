@@ -1,10 +1,11 @@
 /* ============================================================
-   tap-n-score/index.js (FULL REPLACEMENT) — TARGET PAGE POLISH
-   Locks:
-   - Yardage + unit + click value are BEFORE taps (top controls).
-   - MOA/MRAD toggle ALWAYS snaps to common default:
-       MOA => 0.25, MRAD => 0.10 (no remembering).
-   - Mirrored instructions (TL + BR) always match wording + color.
+   tap-n-score/index.js (FULL REPLACEMENT) — COMPACT TOP + MATRIX
+   Adds:
+   - MATRIX button (preset panel)
+   Keeps:
+   - Yardage + unit + click value BEFORE taps
+   - MOA/MRAD snap defaults (MOA 0.25, MRAD 0.10)
+   - Mirrored instruction tips
    - 3+ taps on ANY button => history.back()
 ============================================================ */
 
@@ -46,7 +47,12 @@
   const elClickValue = $("clickValue");
   const elClickUnitLabel = $("clickUnitLabel");
 
-  // Storage keys (kept)
+  // Matrix
+  const elMatrixBtn = $("matrixBtn");
+  const elMatrixPanel = $("matrixPanel");
+  const elMatrixCloseBtn = $("matrixCloseBtn");
+
+  // Storage keys
   const KEY_PAYLOAD = "SCZN3_SEC_PAYLOAD_V1";
   const KEY_TARGET_IMG_DATA = "SCZN3_TARGET_IMG_DATAURL_V1";
   const KEY_TARGET_IMG_BLOB = "SCZN3_TARGET_IMG_BLOBURL_V1";
@@ -70,13 +76,10 @@
   // unit state (default locked)
   let dialUnit = "MOA"; // "MOA" | "MRAD"
 
-  const DEFAULTS = {
-    MOA: 0.25,
-    MRAD: 0.10
-  };
+  const DEFAULTS = { MOA: 0.25, MRAD: 0.10 };
 
   // ------------------------------------------------------------
-  // HARD LANDING LOCK (iOS scroll restore)
+  // HARD LANDING LOCK
   // ------------------------------------------------------------
   try { history.scrollRestoration = "manual"; } catch {}
   function forceTop() { try { window.scrollTo(0, 0); } catch {} }
@@ -93,7 +96,7 @@
   // ------------------------------------------------------------
   // GLOBAL: 3+ taps on ANY button => history.back()
   // ------------------------------------------------------------
-  const tripleTap = new WeakMap(); // button -> {t, n}
+  const tripleTap = new WeakMap();
   function registerButtonTap(btn) {
     const now = Date.now();
     const s = tripleTap.get(btn) || { t: 0, n: 0 };
@@ -150,10 +153,28 @@
   }
 
   // ------------------------------------------------------------
-  // Mirrored instruction tips (TL + BR) — same wording + same color
+  // Matrix panel
+  // ------------------------------------------------------------
+  function openMatrix() {
+    if (!elMatrixPanel) return;
+    elMatrixPanel.classList.remove("matrixHidden");
+    elMatrixPanel.setAttribute("aria-hidden", "false");
+  }
+  function closeMatrix() {
+    if (!elMatrixPanel) return;
+    elMatrixPanel.classList.add("matrixHidden");
+    elMatrixPanel.setAttribute("aria-hidden", "true");
+  }
+  function toggleMatrix() {
+    if (!elMatrixPanel) return;
+    const hidden = elMatrixPanel.classList.contains("matrixHidden");
+    hidden ? openMatrix() : closeMatrix();
+  }
+
+  // ------------------------------------------------------------
+  // Mirrored instruction tips
   // ------------------------------------------------------------
   function setTipState(text, stateClass) {
-    // stateClass: tipStateReady | tipStateAim | tipStateHits | tipStateResults
     if (elTipTL) {
       elTipTL.classList.remove("tipStateReady","tipStateAim","tipStateHits","tipStateResults");
       elTipTL.classList.add(stateClass);
@@ -243,7 +264,7 @@
   }
 
   // ------------------------------------------------------------
-  // Target photo storage (kept even though SEC uses no photo)
+  // Target photo storage
   // ------------------------------------------------------------
   async function storeTargetPhotoForSEC(file, blobUrl) {
     try { localStorage.setItem(KEY_TARGET_IMG_BLOB, blobUrl); } catch {}
@@ -301,34 +322,30 @@
   function setUnit(newUnit) {
     dialUnit = newUnit === "MRAD" ? "MRAD" : "MOA";
 
-    // segment UI
     if (elUnitMoa) elUnitMoa.classList.toggle("segOn", dialUnit === "MOA");
     if (elUnitMrad) elUnitMrad.classList.toggle("segOn", dialUnit === "MRAD");
 
-    // ALWAYS snap to common default (your A rule)
+    // snap to common default
     const def = DEFAULTS[dialUnit];
     if (elClickValue) elClickValue.value = String(def.toFixed(2));
 
-    // label
     if (elClickUnitLabel) {
       elClickUnitLabel.textContent = dialUnit === "MOA" ? "MOA/click" : "MRAD/click";
     }
   }
 
   function getClickValue() {
-    // Manual value is allowed, but no remembering.
     let n = Number(elClickValue?.value);
     if (!Number.isFinite(n) || n <= 0) {
       n = DEFAULTS[dialUnit];
       if (elClickValue) elClickValue.value = String(n.toFixed(2));
     }
-    // reasonable clamp
     n = Math.max(0.01, Math.min(5, n));
     return n;
   }
 
   // ------------------------------------------------------------
-  // Scoring placeholder (kept) — now respects unit + click value
+  // Scoring placeholder (kept)
   // ------------------------------------------------------------
   const inchesPerFullWidth = 10;
 
@@ -361,9 +378,6 @@
 
     const dist = getDistanceYds();
 
-    // convert inches => angular
-    // MOA: inchesPerMoa = (dist/100)*1.047
-    // MRAD: inchesPerMrad = (dist/100)*3.6  (approx; placeholder OK)
     const inchesPerUnit = (dialUnit === "MOA")
       ? (dist / 100) * 1.047
       : (dist / 100) * 3.6;
@@ -371,7 +385,7 @@
     const unitX = inchesX / inchesPerUnit;
     const unitY = inchesY / inchesPerUnit;
 
-    const clickVal = getClickValue(); // MOA/click or MRAD/click
+    const clickVal = getClickValue();
     const clicksX = unitX / clickVal;
     const clicksY = unitY / clickVal;
 
@@ -431,6 +445,7 @@
       if (!f) return;
 
       resetAll();
+      closeMatrix();
 
       if (objectUrl) URL.revokeObjectURL(objectUrl);
       objectUrl = URL.createObjectURL(f);
@@ -495,7 +510,7 @@
       const dx = Math.abs(t.clientX - touchStart.x);
       const dy = Math.abs(t.clientY - touchStart.y);
 
-      if (dx > 10 || dy > 10) { touchStart = null; return; } // scroll => ignore
+      if (dx > 10 || dy > 10) { touchStart = null; return; }
 
       lastTouchTapAt = now;
       acceptTap(t.clientX, t.clientY);
@@ -514,6 +529,7 @@
   // ------------------------------------------------------------
   elClear?.addEventListener("click", () => {
     resetAll();
+    closeMatrix();
     if (elImg?.src) setText(elStatus, "Tap Aim Point.");
   });
 
@@ -522,22 +538,38 @@
   elDistUp?.addEventListener("click", () => setDistanceYds(getDistanceYds() + 5));
   elDistDown?.addEventListener("click", () => setDistanceYds(getDistanceYds() - 5));
 
-  // manual input fix: always clamp on blur/change
   elDist?.addEventListener("change", () => setDistanceYds(getDistanceYds()));
   elDist?.addEventListener("blur", () => setDistanceYds(getDistanceYds()));
 
-  elUnitMoa?.addEventListener("click", () => setUnit("MOA"));
-  elUnitMrad?.addEventListener("click", () => setUnit("MRAD"));
+  elUnitMoa?.addEventListener("click", () => { setUnit("MOA"); });
+  elUnitMrad?.addEventListener("click", () => { setUnit("MRAD"); });
 
-  // click value: clamp lightly on blur
   elClickValue?.addEventListener("blur", () => { getClickValue(); });
   elClickValue?.addEventListener("change", () => { getClickValue(); });
 
+  // MATRIX
+  elMatrixBtn?.addEventListener("click", toggleMatrix);
+  elMatrixCloseBtn?.addEventListener("click", closeMatrix);
+
+  // chip clicks
+  document.addEventListener("click", (e) => {
+    const chip = e.target && e.target.closest ? e.target.closest(".chip") : null;
+    if (!chip) return;
+
+    const unit = chip.getAttribute("data-unit");
+    const click = chip.getAttribute("data-click");
+    if (!unit || !click) return;
+
+    // set unit (snaps default), then override click to chip value
+    setUnit(unit);
+    if (elClickValue) elClickValue.value = Number(click).toFixed(2);
+  });
+
   // ------------------------------------------------------------
-  // Boot (defaults locked)
+  // Boot
   // ------------------------------------------------------------
-  setUnit("MOA");          // snaps click value to 0.25
-  setDistanceYds(100);     // default
+  setUnit("MOA");
+  setDistanceYds(100);
   hideSticky();
   resetAll();
   hydrateVendorBox();
