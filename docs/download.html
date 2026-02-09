@@ -1,3 +1,4 @@
+<!-- tap-n-score/download.html (FULL REPLACEMENT) — iOS QUICK LOOK HELP OVERLAY -->
 <!doctype html>
 <html lang="en">
 <head>
@@ -11,31 +12,186 @@
   <title>Download SEC</title>
 
   <style>
-    body{margin:0;background:#06070a;color:#eef2f7;font-family:system-ui;}
+    :root{
+      --bg:#06070a;
+      --text:#eef2f7;
+      --muted:rgba(238,242,247,.65);
+      --card:rgba(255,255,255,.06);
+      --stroke:rgba(255,255,255,.12);
+      --blue:#2f66ff;
+      --green:#67f3a4;
+    }
+    body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;}
     .wrap{max-width:980px;margin:0 auto;padding:18px 12px;}
-    .card{border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.06);border-radius:18px;overflow:hidden;box-shadow:0 18px 60px rgba(0,0,0,.55);}
-    .hdr{padding:14px 16px;border-bottom:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.03);font-weight:1000;letter-spacing:.12em;text-transform:uppercase;font-size:12px;color:rgba(238,242,247,.75);}
+    .card{border:1px solid var(--stroke);background:var(--card);border-radius:18px;overflow:hidden;box-shadow:0 18px 60px rgba(0,0,0,.55);}
+    .hdr{padding:14px 16px;border-bottom:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.03);
+      font-weight:1000;letter-spacing:.12em;text-transform:uppercase;font-size:12px;color:rgba(238,242,247,.75);}
     .body{padding:16px;}
     img{width:100%;height:auto;display:block;border-radius:14px;border:1px solid rgba(255,255,255,.10);background:rgba(0,0,0,.22);}
-    .btn{width:100%;margin-top:12px;border-radius:16px;padding:14px 12px;font-size:16px;font-weight:950;border:1px solid rgba(47,102,255,.40);background:rgba(47,102,255,.14);color:#eef2f7;cursor:pointer;}
+    .btn{
+      width:100%;margin-top:12px;border-radius:16px;padding:14px 12px;
+      font-size:16px;font-weight:950;border:1px solid rgba(47,102,255,.40);
+      background:rgba(47,102,255,.14);color:var(--text);cursor:pointer;
+      -webkit-tap-highlight-color:transparent;
+    }
     .btn:active{transform:translateY(1px);}
-    .hint{margin-top:10px;color:rgba(238,242,247,.65);font-size:13px;line-height:1.35;}
+    .btn[disabled]{opacity:.55;cursor:not-allowed;}
+    .hint{margin-top:10px;color:var(--muted);font-size:13px;line-height:1.35;}
+
+    /* iOS help overlay */
+    .iosHelp{
+      position:fixed; inset:0;
+      background:rgba(0,0,0,.58);
+      display:none;
+      align-items:flex-end;
+      justify-content:center;
+      z-index:99999;
+      padding:14px 12px 18px;
+    }
+    .iosHelp.show{ display:flex; }
+    .iosSheet{
+      width:min(760px, 100%);
+      border-radius:18px;
+      border:1px solid rgba(255,255,255,.14);
+      background:rgba(6,7,10,.92);
+      box-shadow:0 20px 70px rgba(0,0,0,.65);
+      overflow:hidden;
+    }
+    .iosTop{
+      padding:14px 16px;
+      border-bottom:1px solid rgba(255,255,255,.10);
+      background:rgba(255,255,255,.03);
+      font-weight:1000;
+      letter-spacing:.10em;
+      text-transform:uppercase;
+      font-size:12px;
+      color:rgba(238,242,247,.78);
+    }
+    .iosBody{ padding:14px 16px 16px; }
+    .iosBig{
+      font-size:18px;
+      font-weight:950;
+      line-height:1.2;
+      margin:0 0 10px;
+    }
+    .iosSteps{
+      margin:0;
+      padding-left:18px;
+      color:rgba(238,242,247,.90);
+      font-size:15px;
+      line-height:1.35;
+      font-weight:800;
+    }
+    .checkPill{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      margin-top:10px;
+      padding:10px 12px;
+      border-radius:14px;
+      border:1px solid rgba(103,243,164,.30);
+      background:rgba(103,243,164,.10);
+      color:rgba(238,242,247,.95);
+      font-weight:950;
+      font-size:14px;
+    }
+    .checkIcon{
+      width:26px;height:26px;border-radius:10px;
+      display:inline-flex;align-items:center;justify-content:center;
+      border:1px solid rgba(103,243,164,.35);
+      background:rgba(103,243,164,.12);
+      color:var(--green);
+      font-weight:1000;
+      font-size:18px;
+      line-height:1;
+    }
+    .iosActions{
+      display:flex;
+      gap:10px;
+      padding:0 16px 16px;
+      flex-wrap:wrap;
+    }
+    .iosBtn{
+      flex:1 1 220px;
+      border-radius:16px;
+      padding:14px 12px;
+      font-size:15px;
+      font-weight:950;
+      cursor:pointer;
+      border:1px solid rgba(255,255,255,.14);
+      background:rgba(255,255,255,.06);
+      color:rgba(238,242,247,.92);
+      -webkit-tap-highlight-color:transparent;
+    }
+    .iosBtnPrimary{
+      border-color: rgba(47,102,255,.40);
+      background: rgba(47,102,255,.14);
+    }
+    .iosBtn:active{ transform: translateY(1px); }
+    .iosFine{
+      padding:0 16px 14px;
+      color:rgba(238,242,247,.62);
+      font-size:12px;
+      line-height:1.35;
+    }
+    .kbd{
+      display:inline-block;
+      padding:2px 8px;
+      border-radius:999px;
+      border:1px solid rgba(255,255,255,.14);
+      background:rgba(255,255,255,.06);
+      font-weight:900;
+      letter-spacing:.02em;
+    }
   </style>
 </head>
+
 <body>
   <div class="wrap">
     <div class="card">
       <div class="hdr">SEC PNG</div>
+
       <div class="body">
         <img id="pngImg" alt="SEC PNG Preview" />
         <button id="saveBtn" class="btn" type="button">Open / Save PNG</button>
-        <div class="hint">
-          iPhone/iPad: tap <b>Open / Save PNG</b>. If it opens the image, press-and-hold and choose <b>Save to Photos</b>.
+
+        <div class="hint" id="hintLine">
+          iPhone/iPad: tap <b>Open / Save PNG</b>. If it opens the image preview,
+          tap the <b>green ✓</b> (top-right), then choose <b>Save Image / Save to Photos</b>.
         </div>
       </div>
     </div>
   </div>
 
-  <script src="./download.js?v=DL-0206A"></script>
+  <!-- iOS help overlay -->
+  <div id="iosHelp" class="iosHelp" aria-hidden="true">
+    <div class="iosSheet" role="dialog" aria-label="How to save your SEC PNG on iPhone/iPad">
+      <div class="iosTop">iPhone / iPad — Save Steps</div>
+
+      <div class="iosBody">
+        <p class="iosBig">When the image preview opens:</p>
+        <ol class="iosSteps">
+          <li>Tap the <b>green check ✓</b> in the top-right</li>
+          <li>Select <b>Save Image</b> (or <b>Save to Photos</b>)</li>
+        </ol>
+
+        <div class="checkPill" aria-hidden="true">
+          <span class="checkIcon">✓</span>
+          That ✓ is the iOS preview “Done” button.
+        </div>
+      </div>
+
+      <div class="iosActions">
+        <button id="iosGotIt" class="iosBtn iosBtnPrimary" type="button">Got it</button>
+        <button id="iosOpenNow" class="iosBtn" type="button">Open PNG now</button>
+      </div>
+
+      <div class="iosFine">
+        Backup: if you only see the image, press-and-hold it and choose <span class="kbd">Save to Photos</span>.
+      </div>
+    </div>
+  </div>
+
+  <script src="./download.js?v=DL-IOSHELP-01"></script>
 </body>
 </html>
