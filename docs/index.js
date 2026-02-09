@@ -363,7 +363,7 @@
 
     // convert inches => angular
     // MOA: inchesPerMoa = (dist/100)*1.047
-    // MRAD: inchesPerMrad = (dist/100)*3.6  (approx; good enough for placeholder logic)
+    // MRAD: inchesPerMrad = (dist/100)*3.6  (approx; placeholder OK)
     const inchesPerUnit = (dialUnit === "MOA")
       ? (dist / 100) * 1.047
       : (dist / 100) * 3.6;
