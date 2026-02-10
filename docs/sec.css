@@ -1,3 +1,5 @@
+/* docs/sec.css (FULL REPLACEMENT) — CLEAN SEC LAYOUT (NO OVERLAYS) */
+
 :root{
   --bg:#06070a;
   --card: rgba(255,255,255,.06);
@@ -10,204 +12,203 @@
   --blue:#2f66ff;
 
   --good:#67f3a4;
-  --mid:#f5f0b3;
-  --warn:#ffb84a;
+  --warn:#f5f0b3;
+  --mid:#ffb84a;
   --bad:#ff5b5b;
 }
 
 *{ box-sizing:border-box; }
 html,body{ height:100%; }
-
 body{
   margin:0;
   font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial;
-  color: var(--text);
   background:
     radial-gradient(900px 600px at 15% 10%, rgba(47,102,255,.14), transparent 60%),
     radial-gradient(800px 500px at 85% 0%, rgba(214,64,64,.10), transparent 60%),
     linear-gradient(180deg, #04050a, var(--bg));
+  color: var(--text);
 }
 
 .secPage{
-  max-width: 920px;
-  margin: 0 auto;
-  padding: 18px 12px 26px;
+  min-height:100%;
+  display:flex;
+  align-items:flex-start;
+  justify-content:center;
+  padding: 18px 12px 28px;
 }
 
 .secShell{
+  width: min(980px, 100%);
   border: 1px solid var(--stroke);
   background: var(--card);
   border-radius: 18px;
-  overflow: hidden;
+  overflow:hidden;
   box-shadow: 0 18px 60px rgba(0,0,0,.55);
 }
 
 .secHdr{
-  padding: 12px 14px;
+  padding: 14px 16px;
   border-bottom: 1px solid rgba(255,255,255,.08);
   background: rgba(255,255,255,.03);
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap: 12px;
+  flex-wrap: wrap;
 }
 
 .secBrand{
   font-weight: 1000;
-  letter-spacing: .12em;
+  letter-spacing: .10em;
   text-transform: uppercase;
   font-size: 12px;
   display:flex;
   gap: 10px;
-  align-items: baseline;
-  flex-wrap: wrap;
+  align-items:baseline;
 }
 .secBrand .r{ color: var(--red); }
 .secBrand .w{ color: var(--white); }
 .secBrand .b{ color: var(--blue); }
 
 .secSession{
-  margin-top: 8px;
-  font-size: 13px;
   color: rgba(238,242,247,.65);
-  font-weight: 800;
+  font-weight: 850;
+  font-size: 12px;
+  letter-spacing:.06em;
 }
 
 .secScoreWrap{
-  padding: 16px 14px 10px;
-  text-align: left;
+  padding: 18px 16px 8px;
+  text-align:center;
 }
 
 .secScoreLabelTop{
-  font-size: 12px;
-  font-weight: 950;
-  letter-spacing: .12em;
+  font-weight: 1000;
+  letter-spacing: .22em;
   text-transform: uppercase;
-  color: rgba(238,242,247,.70);
-  margin-bottom: 10px;
+  font-size: 12px;
+  color: rgba(238,242,247,.65);
 }
 
 .secScoreValue{
-  font-size: clamp(72px, 14vw, 120px);
+  font-weight: 1000;
+  font-size: clamp(90px, 14vw, 170px);
   line-height: 1.0;
-  font-weight: 1100;
-  letter-spacing: .02em;
-  margin: 0 0 6px;
-  color: var(--good);
-  text-shadow: 0 18px 45px rgba(0,0,0,.55);
+  margin-top: 6px;
 }
 
 .secScoreLabel{
-  font-size: 20px;
   font-weight: 950;
+  font-size: 18px;
+  margin-top: 6px;
   color: rgba(238,242,247,.92);
-  margin-bottom: 10px;
 }
 
 .secFairness{
-  font-size: 14px;
-  color: rgba(238,242,247,.70);
-  line-height: 1.25;
-  padding-bottom: 6px;
+  margin-top: 8px;
+  font-size: 13px;
+  color: rgba(238,242,247,.68);
+}
+
+.secAvg{
+  margin-top: 12px;
+  font-size: 13px;
+  color: rgba(238,242,247,.75);
+  font-weight: 900;
+  letter-spacing:.02em;
 }
 
 .secErr{
-  margin: 8px 14px 0;
+  margin: 10px 16px 0;
+  padding: 10px 12px;
+  border-radius: 14px;
   border: 1px solid rgba(255,91,91,.35);
   background: rgba(255,91,91,.10);
   color: rgba(238,242,247,.92);
-  border-radius: 14px;
-  padding: 12px 12px;
-  font-weight: 850;
+  font-weight: 900;
 }
 
 .secGrid{
-  display: grid;
+  padding: 14px 16px 10px;
+  display:grid;
   gap: 10px;
-  padding: 12px 14px 6px;
 }
-
 .secGrid3{
-  grid-template-columns: 1fr;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
-
-@media (min-width: 720px){
-  .secGrid3{
-    grid-template-columns: 1fr 1fr 1fr;
-  }
+@media (max-width: 720px){
+  .secGrid3{ grid-template-columns: 1fr; }
 }
 
 .secStat{
   border: 1px solid rgba(255,255,255,.10);
-  background: rgba(0,0,0,.16);
+  background: rgba(0,0,0,.18);
   border-radius: 16px;
-  padding: 12px 12px 12px;
-  box-shadow: 0 12px 35px rgba(0,0,0,.35);
+  padding: 12px 12px;
 }
 
 .secStatK{
-  font-size: 12px;
-  font-weight: 950;
-  letter-spacing: .12em;
+  font-weight: 1000;
+  letter-spacing: .18em;
   text-transform: uppercase;
-  color: rgba(238,242,247,.62);
-  margin-bottom: 6px;
+  font-size: 11px;
+  color: rgba(238,242,247,.55);
 }
 
 .secStatV{
-  font-size: 20px;
-  font-weight: 1050;
-  color: rgba(238,242,247,.95);
-  letter-spacing: .02em;
-  display:flex;
-  gap: 10px;
-  align-items: baseline;
-  flex-wrap: wrap;
+  margin-top: 8px;
+  font-weight: 1000;
+  font-size: 18px;
+  color: rgba(238,242,247,.92);
 }
 
 .secUnit{
   font-size: 12px;
   font-weight: 950;
-  letter-spacing: .10em;
-  color: rgba(238,242,247,.55);
+  letter-spacing:.12em;
+  opacity:.7;
+  margin-left: 6px;
 }
 
 .secActions{
+  padding: 14px 16px 10px;
   display:flex;
   gap: 10px;
-  padding: 14px;
-  padding-top: 10px;
   flex-wrap: wrap;
 }
 
 .secBtn{
-  flex: 1 1 220px;
-  border-radius: 16px;
+  flex: 1 1 160px;
+  border-radius: 14px;
   padding: 14px 12px;
   font-size: 15px;
   font-weight: 950;
-  cursor: pointer;
+  cursor:pointer;
   border: 1px solid rgba(255,255,255,.14);
   background: rgba(255,255,255,.06);
-  color: var(--text);
+  color: rgba(238,242,247,.92);
   -webkit-tap-highlight-color: transparent;
 }
 .secBtn:active{ transform: translateY(1px); }
 
 .secBtnPrimary{
-  border-color: rgba(47,102,255,.40);
-  background: rgba(47,102,255,.14);
+  border-color: rgba(47,102,255,.45);
+  background: rgba(47,102,255,.18);
 }
 
 .secTip{
-  padding: 0 14px 12px;
-  color: rgba(238,242,247,.65);
+  padding: 0 16px 16px;
   font-size: 13px;
+  color: rgba(238,242,247,.65);
   line-height: 1.35;
 }
 
 .secFoot{
+  padding: 10px 0 14px;
   text-align:center;
-  color: rgba(238,242,247,.30);
+  color: rgba(238,242,247,.28);
   font-weight: 900;
   letter-spacing:.22em;
   text-transform: uppercase;
   font-size: 12px;
-  padding: 10px 0 14px;
 }
