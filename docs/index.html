@@ -1,4 +1,4 @@
-<!-- tap-n-score/index.html (FULL REPLACEMENT) — TOP 2 LINES LIVE + MATRIX ONLY CONTROLS -->
+<!-- docs/index.html (FULL REPLACEMENT) — TOP 2 LINES LIVE + MATRIX ONLY CONTROLS -->
 <!doctype html>
 <html lang="en">
 <head>
@@ -13,7 +13,8 @@
 
   <title>Tap-n-Score™</title>
 
-  <link rel="stylesheet" href="/tap-n-score/styles.css?v=TP-Aplus-0209" />
+  <!-- ✅ GitHub Pages friendly: RELATIVE PATH -->
+  <link rel="stylesheet" href="./styles.css?v=TP-Aplus-0209" />
 </head>
 
 <body>
@@ -141,7 +142,7 @@
       <div id="targetWrap" class="targetWrap" aria-label="Target photo area">
         <img id="targetImg" alt="Target preview" />
         <div id="dotsLayer" class="dotsLayer" aria-hidden="true"></div>
-        <!-- NOTE: on-image instruction pills removed (per request) -->
+        <!-- on-image instruction pills removed -->
       </div>
 
       <div class="row rowTight">
@@ -153,10 +154,9 @@
       </div>
 
       <!-- Instruction line (color shifts with state) -->
-      <p id="instructionLine" class="hint"></p>
+      <p id="instructionLine" class="hint instr instrIdle"></p>
     </section>
 
-    <!-- keep for compatibility (hidden) -->
     <section id="settingsSection" class="card scoreHidden" aria-hidden="true" style="display:none;"></section>
 
     <footer class="footer">
@@ -169,6 +169,7 @@
 
   </main>
 
-  <script defer src="/tap-n-score/index.js?v=TP-Aplus-0209"></script>
+  <!-- ✅ GitHub Pages friendly: RELATIVE PATH -->
+  <script defer src="./index.js?v=TP-Aplus-0209"></script>
 </body>
 </html>
