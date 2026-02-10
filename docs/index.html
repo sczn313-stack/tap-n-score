@@ -1,4 +1,4 @@
-<!-- index.html (FULL REPLACEMENT) — ROOT PATHS (./styles.css, ./index.js) -->
+<!-- docs/index.html (FULL REPLACEMENT) — RELATIVE ASSETS (GHP SAFE) -->
 <!doctype html>
 <html lang="en">
 <head>
@@ -13,8 +13,8 @@
 
   <title>Tap-n-Score™</title>
 
-  <!-- ROOT PATH (repo root files) -->
-  <link rel="stylesheet" href="./styles.css?v=ROOT-0210A" />
+  <!-- RELATIVE PATH -->
+  <link rel="stylesheet" href="./styles.css?v=TP-Aplus-0210A" />
 </head>
 
 <body>
@@ -85,6 +85,21 @@
 
         <div class="matrixTitle">Adjust</div>
 
+        <!-- Target size -->
+        <div class="matrixGroup">
+          <div class="matrixLabel">Target Size</div>
+
+          <div class="matrixRow">
+            <button id="size85x11" class="chip" type="button">8.5×11</button>
+            <button id="size23x35" class="chip" type="button">23×35</button>
+            <button id="size23x23" class="chip" type="button">23×23</button>
+          </div>
+
+          <div class="heroTip" style="margin-top:8px; opacity:.85;">
+            This only affects “play mode” math. Pilot mode will use printer target dimensions.
+          </div>
+        </div>
+
         <!-- Distance + Units -->
         <div class="matrixGroup">
           <div class="matrixLabel">Distance</div>
@@ -152,7 +167,6 @@
         <button id="clearTapsBtn" class="btnSecondary" type="button">Clear</button>
       </div>
 
-      <!-- Instruction line (color shifts with state) -->
       <p id="instructionLine" class="hint"></p>
     </section>
 
@@ -166,7 +180,7 @@
 
   </main>
 
-  <!-- ROOT PATH (repo root files) -->
-  <script defer src="./index.js?v=ROOT-0210A"></script>
+  <!-- RELATIVE PATH -->
+  <script defer src="./index.js?v=TP-Aplus-0210A"></script>
 </body>
 </html>
