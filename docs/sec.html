@@ -12,7 +12,8 @@
 
   <title>SEC — Shooter Experience Card</title>
 
-  <link rel="stylesheet" href="./sec.css?v=SEC-NODIST-Aplus-0209" />
+  <!-- IMPORTANT: ABSOLUTE PATH (matches your Tap page pattern) -->
+  <link rel="stylesheet" href="/tap-n-score/sec.css?v=SEC-FIX-0209A" />
 </head>
 
 <body>
@@ -41,7 +42,6 @@
 
       <div id="errLine" class="secErr" style="display:none;"></div>
 
-      <!-- NO DISTANCE ON SEC -->
       <div class="secGrid secGrid3">
         <div class="secStat">
           <div class="secStatK">SHOTS</div>
@@ -64,12 +64,16 @@
         <button id="scoreAnotherBtn" class="secBtn" type="button">Score another</button>
       </div>
 
-      <!-- NOTE: iOS preview/save instructions REMOVED from SEC page (per request) -->
+      <div class="secTip">
+        Tip (iPhone/iPad): if download doesn’t auto-start, the PNG will open —
+        press-and-hold the image and choose <b>Save to Photos</b>.
+      </div>
 
       <footer class="secFoot">SCZN3</footer>
     </section>
   </main>
 
-  <script src="./sec.js?v=SEC-NODIST-Aplus-0209"></script>
+  <!-- IMPORTANT: ABSOLUTE PATH -->
+  <script src="/tap-n-score/sec.js?v=SEC-FIX-0209A"></script>
 </body>
 </html>
