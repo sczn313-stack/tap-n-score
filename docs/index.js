@@ -1,10 +1,12 @@
 /* ============================================================
-   docs/index.js (FULL REPLACEMENT) — A+ LIVE TOP + MATRIX DRAWER ONLY
-   Fixes:
-   - Show results always works (multi-bind + late bind)
-   - Removes fake inchesPerFullWidth=10; uses real target width (default 8.50")
-   Notes:
-   - Still "no backend": this is a front-end receipt to mimic one-truth behavior.
+   docs/index.js (FULL REPLACEMENT) — LIVE TOP + MATRIX ONLY + TARGET SIZE + LIT CHIP
+   - Target size presets (adds 17×35) + chip highlight persists
+   - Click math uses width/height inches (windage uses width, elevation uses height)
+   - LIVE TOP: distance + dial + target size
+   - All adjustments in MATRIX
+   - Instruction line color changes with state
+   - Show results hard-wired (always works)
+   - Distance unit toggle shows YDS or M (internal math stays yards)
 ============================================================ */
 
 (() => {
@@ -30,15 +32,17 @@
   const elStickyBar = $("stickyBar");
   const elStickyBtn = $("stickyResultsBtn");
 
-  // LIVE display (top two lines)
+  // LIVE top
   const elLiveDistance = $("liveDistance");
   const elLiveDial = $("liveDial");
+  const elLiveTarget = $("liveTarget");
 
-  // Matrix controls
+  // Matrix
   const elMatrixBtn = $("matrixBtn");
   const elMatrixPanel = $("matrixPanel");
   const elMatrixClose = $("matrixCloseBtn");
 
+  // Distance controls
   const elDist = $("distanceYds");
   const elDistUp = $("distUp");
   const elDistDown = $("distDown");
@@ -46,10 +50,14 @@
   const elDistUnitYd = $("distUnitYd");
   const elDistUnitM = $("distUnitM");
 
+  // Dial controls
   const elUnitMoa = $("unitMoa");
   const elUnitMrad = $("unitMrad");
   const elClickValue = $("clickValue");
   const elClickUnitLabel = $("clickUnitLabel");
+
+  // Target size chip row
+  const elSizeChipRow = $("sizeChipRow");
 
   // Storage keys
   const KEY_PAYLOAD = "SCZN3_SEC_PAYLOAD_V1";
@@ -58,6 +66,11 @@
   const KEY_VENDOR_URL = "SCZN3_VENDOR_URL_V1";
   const KEY_DIST_UNIT = "SCZN3_RANGE_UNIT_V1"; // "YDS" | "M"
   const KEY_DIST_YDS = "SCZN3_RANGE_YDS_V1";   // numeric (yards)
+
+  // NEW: Target size persistence
+  const KEY_TARGET_SIZE = "SCZN3_TARGET_SIZE_KEY_V1"; // e.g., "23x35"
+  const KEY_TARGET_W = "SCZN3_TARGET_W_IN_V1";
+  const KEY_TARGET_H = "SCZN3_TARGET_H_IN_V1";
 
   let objectUrl = null;
 
@@ -74,30 +87,30 @@
   let vendorRotateTimer = null;
   let vendorRotateOn = false;
 
-  // dial unit state
+  // dial unit
   let dialUnit = "MOA"; // "MOA" | "MRAD"
 
-  // distance display unit (internal is yards)
+  // distance state
   let rangeUnit = "YDS"; // "YDS" | "M"
   let rangeYds = 100;    // internal yards
+
+  // target size (inches)
+  let targetSizeKey = "23x35";
+  let targetWIn = 23;
+  let targetHIn = 35;
 
   const DEFAULTS = {
     MOA: 0.25,
     MRAD: 0.10
   };
 
-  // ✅ REAL-WORLD TARGET WIDTH (inches) — replaces fake inchesPerFullWidth=10
-  // If your target is not 8.5" wide, change this value.
-  const TARGET_WIDTH_IN = 8.50;
-
   // ------------------------------------------------------------
-  // HARD LANDING LOCK (iOS)
+  // HARD LANDING LOCK
   // ------------------------------------------------------------
   try { history.scrollRestoration = "manual"; } catch {}
   function forceTop() { try { window.scrollTo(0, 0); } catch {} }
-  function hardHideScoringUI() {
-    if (elScoreSection) elScoreSection.classList.add("scoreHidden");
-  }
+  function hardHideScoringUI() { elScoreSection?.classList.add("scoreHidden"); }
+
   window.addEventListener("pageshow", () => {
     forceTop();
     hardHideScoringUI();
@@ -109,7 +122,7 @@
   // ------------------------------------------------------------
   // GLOBAL: 3+ taps on ANY button => history.back()
   // ------------------------------------------------------------
-  const tripleTap = new WeakMap(); // button -> {t, n}
+  const tripleTap = new WeakMap();
   function registerButtonTap(btn) {
     const now = Date.now();
     const s = tripleTap.get(btn) || { t: 0, n: 0 };
@@ -127,7 +140,7 @@
     }
   }
   document.addEventListener("click", (e) => {
-    const b = e.target && e.target.closest ? e.target.closest("button") : null;
+    const b = e.target?.closest?.("button");
     if (b) registerButtonTap(b);
   }, { capture: true });
 
@@ -138,13 +151,11 @@
   function setText(el, t) { if (el) el.textContent = String(t ?? ""); }
 
   function revealScoringUI() {
-    if (elScoreSection) elScoreSection.classList.remove("scoreHidden");
+    elScoreSection?.classList.remove("scoreHidden");
     try { elScoreSection?.scrollIntoView({ behavior: "smooth", block: "start" }); } catch {}
   }
 
-  function setTapCount() {
-    if (elTapCount) elTapCount.textContent = String(hits.length);
-  }
+  function setTapCount() { if (elTapCount) elTapCount.textContent = String(hits.length); }
 
   function hideSticky() {
     if (!elStickyBar) return;
@@ -171,9 +182,9 @@
     elInstruction.textContent = text || "";
 
     elInstruction.style.color = "rgba(238,242,247,.65)";
-    if (kind === "aim")  elInstruction.style.color = "rgba(103,243,164,.95)"; // green
-    if (kind === "hits") elInstruction.style.color = "rgba(183,255,60,.95)";  // lime
-    if (kind === "go")   elInstruction.style.color = "rgba(47,102,255,.92)";  // blue
+    if (kind === "aim")  elInstruction.style.color = "rgba(103,243,164,.95)";
+    if (kind === "hits") elInstruction.style.color = "rgba(183,255,60,.95)";
+    if (kind === "go")   elInstruction.style.color = "rgba(47,102,255,.92)";
   }
 
   function syncInstruction() {
@@ -238,7 +249,7 @@
   }
 
   // ------------------------------------------------------------
-  // Target photo storage (kept)
+  // Target photo storage
   // ------------------------------------------------------------
   async function storeTargetPhotoForSEC(file, blobUrl) {
     try { localStorage.setItem(KEY_TARGET_IMG_BLOB, blobUrl); } catch {}
@@ -256,7 +267,7 @@
   }
 
   // ------------------------------------------------------------
-  // Dot draw
+  // Dots
   // ------------------------------------------------------------
   function addDot(x01, y01, kind) {
     if (!elDots) return;
@@ -291,21 +302,7 @@
     return n;
   }
 
-  function syncLiveTop() {
-    if (elLiveDistance) {
-      if (rangeUnit === "M") {
-        const m = Math.round(ydsToM(rangeYds));
-        elLiveDistance.textContent = `${m} m`;
-      } else {
-        elLiveDistance.textContent = `${rangeYds} yds`;
-      }
-    }
-
-    if (elLiveDial) {
-      const cv = getClickValue();
-      elLiveDial.textContent = `${cv.toFixed(2)} ${dialUnit}`;
-    }
-  }
+  function getDistanceYds() { return clampRangeYds(rangeYds); }
 
   function setRangeUnit(u) {
     rangeUnit = (u === "M") ? "M" : "YDS";
@@ -335,8 +332,9 @@
     let n = Number(elDist.value);
     if (!Number.isFinite(n)) n = (rangeUnit === "M") ? Math.round(ydsToM(rangeYds)) : rangeYds;
 
-    if (rangeUnit === "M") rangeYds = clampRangeYds(mToYds(n));
-    else rangeYds = clampRangeYds(n);
+    rangeYds = (rangeUnit === "M")
+      ? clampRangeYds(mToYds(n))
+      : clampRangeYds(n);
 
     try { localStorage.setItem(KEY_DIST_YDS, String(rangeYds)); } catch {}
     syncRangeInputFromInternal();
@@ -350,10 +348,6 @@
     syncLiveTop();
   }
 
-  function getDistanceYds() {
-    return clampRangeYds(rangeYds);
-  }
-
   function hydrateRange() {
     const savedYds = Number(localStorage.getItem(KEY_DIST_YDS) || "100");
     rangeYds = clampRangeYds(savedYds);
@@ -363,13 +357,13 @@
   }
 
   // ------------------------------------------------------------
-  // Dial unit + click value
+  // Dial unit + click
   // ------------------------------------------------------------
   function setUnit(newUnit) {
     dialUnit = newUnit === "MRAD" ? "MRAD" : "MOA";
 
-    if (elUnitMoa) elUnitMoa.classList.toggle("segOn", dialUnit === "MOA");
-    if (elUnitMrad) elUnitMrad.classList.toggle("segOn", dialUnit === "MRAD");
+    elUnitMoa?.classList.toggle("segOn", dialUnit === "MOA");
+    elUnitMrad?.classList.toggle("segOn", dialUnit === "MRAD");
 
     const def = DEFAULTS[dialUnit];
     if (elClickValue) elClickValue.value = String(def.toFixed(2));
@@ -392,6 +386,95 @@
   }
 
   // ------------------------------------------------------------
+  // Target size
+  // ------------------------------------------------------------
+  function clampInches(v, fallback) {
+    let n = Number(v);
+    if (!Number.isFinite(n) || n <= 0) n = fallback;
+    return Math.max(1, Math.min(200, n));
+  }
+
+  function highlightSizeChip() {
+    if (!elSizeChipRow) return;
+    const chips = Array.from(elSizeChipRow.querySelectorAll("[data-size]"));
+    chips.forEach((c) => {
+      const key = c.getAttribute("data-size") || "";
+      c.classList.toggle("chipOn", key === targetSizeKey);
+    });
+  }
+
+  function setTargetSize(key, wIn, hIn) {
+    targetSizeKey = String(key || "23x35");
+    targetWIn = clampInches(wIn, 23);
+    targetHIn = clampInches(hIn, 35);
+
+    try { localStorage.setItem(KEY_TARGET_SIZE, targetSizeKey); } catch {}
+    try { localStorage.setItem(KEY_TARGET_W, String(targetWIn)); } catch {}
+    try { localStorage.setItem(KEY_TARGET_H, String(targetHIn)); } catch {}
+
+    highlightSizeChip();
+    syncLiveTop();
+  }
+
+  function hydrateTargetSize() {
+    const key = localStorage.getItem(KEY_TARGET_SIZE) || "23x35";
+    const w = clampInches(localStorage.getItem(KEY_TARGET_W) || "23", 23);
+    const h = clampInches(localStorage.getItem(KEY_TARGET_H) || "35", 35);
+
+    // If key exists but w/h missing, try to infer from known presets:
+    const presetMap = {
+      "8.5x11": { w: 8.5, h: 11 },
+      "17x35": { w: 17, h: 35 },
+      "23x35": { w: 23, h: 35 },
+      "23x23": { w: 23, h: 23 }
+    };
+
+    const p = presetMap[key];
+    if (p) setTargetSize(key, p.w, p.h);
+    else setTargetSize(key, w, h);
+  }
+
+  function wireTargetSizeChips() {
+    if (!elSizeChipRow) return;
+    const chips = Array.from(elSizeChipRow.querySelectorAll("[data-size][data-w][data-h]"));
+    chips.forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const key = btn.getAttribute("data-size") || "23x35";
+        const w = Number(btn.getAttribute("data-w") || "23");
+        const h = Number(btn.getAttribute("data-h") || "35");
+        setTargetSize(key, w, h);
+      });
+    });
+  }
+
+  // ------------------------------------------------------------
+  // LIVE TOP
+  // ------------------------------------------------------------
+  function syncLiveTop() {
+    // distance line
+    if (elLiveDistance) {
+      if (rangeUnit === "M") {
+        const m = Math.round(ydsToM(rangeYds));
+        elLiveDistance.textContent = `${m} m`;
+      } else {
+        elLiveDistance.textContent = `${rangeYds} yds`;
+      }
+    }
+
+    // dial line
+    if (elLiveDial) {
+      const cv = getClickValue();
+      elLiveDial.textContent = `${cv.toFixed(2)} ${dialUnit}`;
+    }
+
+    // target size line
+    if (elLiveTarget) {
+      const label = (targetSizeKey || "").replace("x", "×");
+      elLiveTarget.textContent = `Target: ${label}`;
+    }
+  }
+
+  // ------------------------------------------------------------
   // Matrix drawer
   // ------------------------------------------------------------
   function openMatrix() {
@@ -410,10 +493,7 @@
     return !!elMatrixPanel && !elMatrixPanel.classList.contains("matrixHidden");
   }
 
-  function toggleMatrix() {
-    if (isMatrixOpen()) closeMatrix();
-    else openMatrix();
-  }
+  function toggleMatrix() { isMatrixOpen() ? closeMatrix() : openMatrix(); }
 
   function applyPreset(unit, clickVal) {
     setUnit(unit);
@@ -435,20 +515,18 @@
     });
   }
 
-  window.addEventListener("keydown", (e) => {
-    if (e.key === "Escape") closeMatrix();
-  });
+  window.addEventListener("keydown", (e) => { if (e.key === "Escape") closeMatrix(); });
 
   document.addEventListener("click", (e) => {
     if (!isMatrixOpen()) return;
     if (!elMatrixPanel) return;
-    const inside = e.target && elMatrixPanel.contains(e.target);
-    const isBtn = e.target && elMatrixBtn && (e.target === elMatrixBtn || e.target.closest?.("#matrixBtn"));
+    const inside = elMatrixPanel.contains(e.target);
+    const isBtn = (e.target === elMatrixBtn) || e.target.closest?.("#matrixBtn");
     if (!inside && !isBtn) closeMatrix();
   }, { capture: true });
 
   // ------------------------------------------------------------
-  // Score placeholder
+  // Score (LOCAL placeholder) — NOW DIMENSION-CORRECT
   // ------------------------------------------------------------
   function scoreFromRadiusInches(rIn) {
     if (rIn <= 0.25) return 100;
@@ -470,21 +548,23 @@
     avg.x /= hits.length;
     avg.y /= hits.length;
 
-    const dx = aim.x01 - avg.x; // + => aim is right of POI => dial RIGHT
-    const dy = aim.y01 - avg.y; // + => aim is lower than POI => dial DOWN (screen-space)
+    // correction vector = aim - avgPoi (bull - poib)
+    const dx = aim.x01 - avg.x; // + means move RIGHT
+    const dy = aim.y01 - avg.y; // + means move DOWN (screen y)
 
-    // ✅ Convert relative to inches using real target width
-    // (This is still an approximation: assumes your photo crop matches the paper width.)
-    const inchesX = dx * TARGET_WIDTH_IN;
-    const inchesY = dy * TARGET_WIDTH_IN;
+    // DIMENSION-CORRECT inches:
+    // X uses target width inches, Y uses target height inches.
+    const inchesX = dx * targetWIn;
+    const inchesY = dy * targetHIn;
+
     const rIn = Math.sqrt(inchesX * inchesX + inchesY * inchesY);
 
     const dist = getDistanceYds();
 
-    // Inches per unit
+    // inches per unit at distance
     const inchesPerUnit = (dialUnit === "MOA")
       ? (dist / 100) * 1.047
-      : (dist / 100) * 3.6;
+      : (dist / 100) * 3.6; // approx for mrad (works for pilot)
 
     const unitX = inchesX / inchesPerUnit;
     const unitY = inchesY / inchesPerUnit;
@@ -529,61 +609,52 @@
       dial: { unit: out.dial.unit, clickValue: Number(out.dial.clickValue.toFixed(2)) },
       vendorUrl,
       surveyUrl: "",
-      sourceImg: "",
-      debug: {
-        aim,
-        avgPoi: out.avgPoi,
-        distanceYds: getDistanceYds(),
-        targetWidthIn: TARGET_WIDTH_IN,
-        inches: out.inches
-      }
+      // pass target meta so SEC knows what rules were used
+      target: { key: targetSizeKey, wIn: Number(targetWIn), hIn: Number(targetHIn) },
+      debug: { aim, avgPoi: out.avgPoi, distanceYds: getDistanceYds(), inches: out.inches }
     };
 
     goToSEC(payload);
   }
 
-  // For emergency console
-  window.__SCZN3_SHOW_RESULTS__ = onShowResults;
-
   // ------------------------------------------------------------
   // Photo picker
   // ------------------------------------------------------------
-  if (elPhotoBtn && elFile) elPhotoBtn.addEventListener("click", () => elFile.click());
+  elPhotoBtn?.addEventListener("click", () => elFile?.click());
 
-  if (elFile) {
-    elFile.addEventListener("change", async () => {
-      const f = elFile.files && elFile.files[0];
-      if (!f) return;
+  elFile?.addEventListener("change", async () => {
+    const f = elFile.files?.[0];
+    if (!f) return;
 
-      resetAll();
+    resetAll();
 
-      if (objectUrl) URL.revokeObjectURL(objectUrl);
-      objectUrl = URL.createObjectURL(f);
+    if (objectUrl) URL.revokeObjectURL(objectUrl);
+    objectUrl = URL.createObjectURL(f);
 
-      await storeTargetPhotoForSEC(f, objectUrl);
+    await storeTargetPhotoForSEC(f, objectUrl);
 
-      elImg.onload = () => {
-        setText(elStatus, "Tap Aim Point.");
-        syncInstruction();
-        revealScoringUI();
-      };
+    elImg.onload = () => {
+      setText(elStatus, "Tap Aim Point.");
+      syncInstruction();
+      revealScoringUI();
+    };
 
-      elImg.onerror = () => {
-        setText(elStatus, "Photo failed to load.");
-        setInstruction("Try again.", "");
-        revealScoringUI();
-      };
+    elImg.onerror = () => {
+      setText(elStatus, "Photo failed to load.");
+      setInstruction("Try again.", "");
+      revealScoringUI();
+    };
 
-      elImg.src = objectUrl;
-      elFile.value = "";
-    });
-  }
+    elImg.src = objectUrl;
+    elFile.value = "";
+  });
 
   // ------------------------------------------------------------
   // Tap logic
   // ------------------------------------------------------------
   function acceptTap(clientX, clientY) {
     if (!elImg?.src) return;
+
     const { x01, y01 } = getRelative01(clientX, clientY);
 
     if (!aim) {
@@ -606,18 +677,18 @@
 
   if (elWrap) {
     elWrap.addEventListener("touchstart", (e) => {
-      if (!e.touches || !e.touches[0]) return;
-      const t = e.touches[0];
+      const t = e.touches?.[0];
+      if (!t) return;
       touchStart = { x: t.clientX, y: t.clientY, t: Date.now() };
     }, { passive: true });
 
     elWrap.addEventListener("touchend", (e) => {
-      const t = (e.changedTouches && e.changedTouches[0]) ? e.changedTouches[0] : null;
+      const t = e.changedTouches?.[0];
       if (!t || !touchStart) return;
 
       const dx = Math.abs(t.clientX - touchStart.x);
       const dy = Math.abs(t.clientY - touchStart.y);
-      if (dx > 10 || dy > 10) { touchStart = null; return; }
+      if (dx > 10 || dy > 10) { touchStart = null; return; } // scroll => ignore
 
       lastTouchTapAt = Date.now();
       acceptTap(t.clientX, t.clientY);
@@ -632,58 +703,38 @@
   }
 
   // ------------------------------------------------------------
-  // Buttons
+  // Buttons (results ALWAYS works)
   // ------------------------------------------------------------
   elClear?.addEventListener("click", () => {
     resetAll();
     if (elImg?.src) setText(elStatus, "Tap Aim Point.");
   });
 
-  // ✅ SUPER-ROBUST "Show results" binding
-  function bindResultsButtons() {
-    const candidates = [
-      $("stickyResultsBtn"),
-      $("showResultsBtn"),
-      elStickyBtn,
-      document.querySelector("#stickyResultsBtn"),
-      document.querySelector('[id*="results" i]'),
-      document.querySelector('button.stickyBtn'),
-    ].filter(Boolean);
-
-    candidates.forEach((b) => {
-      b.addEventListener("click", (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        onShowResults();
-      }, { passive: false });
+  // hard bind results buttons
+  [elStickyBtn, $("showResultsBtn")].filter(Boolean).forEach((b) => {
+    b.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      onShowResults();
     });
-  }
+  });
 
-  // Bind immediately + bind again after a tick (covers late DOM paint / iOS weirdness)
-  bindResultsButtons();
-  setTimeout(bindResultsButtons, 350);
-
-  // Range +/- always bumps internal yards
+  // Distance +/- (internal yards)
   elDistUp?.addEventListener("click", () => bumpRange(5));
   elDistDown?.addEventListener("click", () => bumpRange(-5));
 
-  // manual input conversion/clamp
-  elDist?.addEventListener("change", () => syncInternalFromRangeInput());
-  elDist?.addEventListener("blur", () => syncInternalFromRangeInput());
+  elDist?.addEventListener("change", syncInternalFromRangeInput);
+  elDist?.addEventListener("blur", syncInternalFromRangeInput);
 
-  // YD/M toggle
   elDistUnitYd?.addEventListener("click", () => setRangeUnit("YDS"));
   elDistUnitM?.addEventListener("click", () => setRangeUnit("M"));
 
-  // dial unit
   elUnitMoa?.addEventListener("click", () => setUnit("MOA"));
   elUnitMrad?.addEventListener("click", () => setUnit("MRAD"));
 
-  // click value clamp
   elClickValue?.addEventListener("blur", () => { getClickValue(); syncLiveTop(); });
   elClickValue?.addEventListener("change", () => { getClickValue(); syncLiveTop(); });
 
-  // Matrix open/close
   elMatrixBtn?.addEventListener("click", toggleMatrix);
   elMatrixClose?.addEventListener("click", closeMatrix);
 
@@ -694,12 +745,17 @@
   closeMatrix();
   hideSticky();
   resetAll();
+
   hydrateVendorBox();
-
   hydrateRange();
-  wireMatrixPresets();
+  hydrateTargetSize();
 
+  wireMatrixPresets();
+  wireTargetSizeChips();
+
+  highlightSizeChip();
   syncLiveTop();
+
   hardHideScoringUI();
   forceTop();
 })();
