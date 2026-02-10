@@ -1,12 +1,16 @@
 /* ============================================================
-   docs/index.js (FULL REPLACEMENT) — LIVE TOP 2 LINES + MATRIX ONLY CONTROLS
-   - Top bar is display-only: shows distance + dial on 2 lines
-   - MATRIX drawer contains ALL adjustments
-   - Adds (s) to yd. => "yds"
-   - Removes on-image instruction pills (only instruction line remains)
-   - Instruction line changes COLOR with state (Aim/Hits/Results)
+   docs/index.js (FULL REPLACEMENT) — A+ LIVE TOP + MATRIX DRAWER ONLY
+   Matches your latest docs/index.html (TP-Aplus-0209)
+
+   Fixes / Locks:
+   - LIVE TOP (2 lines): "100 yds" + "0.25 MOA" always reflects current settings
+   - ALL adjustments live inside MATRIX drawer
+   - Adds (s) to yds ("yds")
+   - Removes on-image instruction pills (already removed in HTML)
+   - Instruction line color changes with state (Aim / Hits / Results)
+   - Show results always works (hard-wired + fallback binding)
    - 3+ taps on ANY button => history.back()
-   - Distance unit toggle: display YDS or M (internal storage stays in YARDS)
+   - Distance unit toggle shows YDS or M (internal math stays in YARDS)
 ============================================================ */
 
 (() => {
@@ -28,13 +32,13 @@
   const elInstruction = $("instructionLine");
   const elStatus = $("statusLine");
 
-  // Live top display
-  const elLiveDistance = $("liveDistance");
-  const elLiveDial = $("liveDial");
-
   // Sticky
   const elStickyBar = $("stickyBar");
   const elStickyBtn = $("stickyResultsBtn");
+
+  // LIVE display (top two lines)
+  const elLiveDistance = $("liveDistance");
+  const elLiveDial = $("liveDial");
 
   // Matrix controls
   const elMatrixBtn = $("matrixBtn");
@@ -76,7 +80,7 @@
   let vendorRotateTimer = null;
   let vendorRotateOn = false;
 
-  // unit state (default locked)
+  // dial unit state (default locked)
   let dialUnit = "MOA"; // "MOA" | "MRAD"
 
   // distance display unit (internal is yards)
@@ -88,13 +92,16 @@
     MRAD: 0.10
   };
 
+  // scoring placeholder inches per full width
+  const inchesPerFullWidth = 10;
+
   // ------------------------------------------------------------
   // HARD LANDING LOCK (iOS scroll restore)
   // ------------------------------------------------------------
   try { history.scrollRestoration = "manual"; } catch {}
   function forceTop() { try { window.scrollTo(0, 0); } catch {} }
   function hardHideScoringUI() {
-    elScoreSection?.classList.add("scoreHidden");
+    if (elScoreSection) elScoreSection.classList.add("scoreHidden");
   }
   window.addEventListener("pageshow", () => {
     forceTop();
@@ -111,10 +118,13 @@
   function registerButtonTap(btn) {
     const now = Date.now();
     const s = tripleTap.get(btn) || { t: 0, n: 0 };
+
     if (now - s.t <= 750) s.n += 1;
     else s.n = 1;
+
     s.t = now;
     tripleTap.set(btn, s);
+
     if (s.n >= 3) {
       try { window.history.back(); } catch {}
       s.n = 0;
@@ -133,7 +143,7 @@
   function setText(el, t) { if (el) el.textContent = String(t ?? ""); }
 
   function revealScoringUI() {
-    elScoreSection?.classList.remove("scoreHidden");
+    if (elScoreSection) elScoreSection.classList.remove("scoreHidden");
     try { elScoreSection?.scrollIntoView({ behavior: "smooth", block: "start" }); } catch {}
   }
 
@@ -160,30 +170,36 @@
     }, 650);
   }
 
-  // ------------------------------------------------------------
-  // Instruction line (text + COLOR state)
-  // ------------------------------------------------------------
-  function setInstr(text, cls) {
+  // Instruction line state coloring
+  function setInstruction(text, kind) {
     if (!elInstruction) return;
-    elInstruction.classList.remove("instrIdle","instrAim","instrHits","instrResults");
-    elInstruction.classList.add(cls || "instrIdle");
     elInstruction.textContent = text || "";
+
+    // default
+    elInstruction.style.color = "rgba(238,242,247,.65)";
+
+    if (kind === "aim")  elInstruction.style.color = "rgba(103,243,164,.95)"; // green
+    if (kind === "hits") elInstruction.style.color = "rgba(183,255,60,.95)";  // lime
+    if (kind === "go")   elInstruction.style.color = "rgba(47,102,255,.92)";  // blue
   }
 
   function syncInstruction() {
     if (!elImg?.src) {
-      setInstr("", "instrIdle");
+      setInstruction("", "");
       return;
     }
+
     if (!aim) {
-      setInstr("Tap Aim Point.", "instrAim");
+      setInstruction("Tap Aim Point.", "aim");
       return;
     }
+
     if (hits.length < 1) {
-      setInstr("Tap Hits.", "instrHits");
+      setInstruction("Tap Hits.", "hits");
       return;
     }
-    setInstr("Tap more hits, or pause — results will appear.", "instrResults");
+
+    setInstruction("Tap more hits, or pause — results will appear.", "go");
   }
 
   function resetAll() {
@@ -294,6 +310,24 @@
     return n;
   }
 
+  function syncLiveTop() {
+    // line 1: distance (display unit)
+    if (elLiveDistance) {
+      if (rangeUnit === "M") {
+        const m = Math.round(ydsToM(rangeYds));
+        elLiveDistance.textContent = `${m} m`;
+      } else {
+        elLiveDistance.textContent = `${rangeYds} yds`;
+      }
+    }
+
+    // line 2: click + unit
+    if (elLiveDial) {
+      const cv = getClickValue();
+      elLiveDial.textContent = `${cv.toFixed(2)} ${dialUnit}`;
+    }
+  }
+
   function setRangeUnit(u) {
     rangeUnit = (u === "M") ? "M" : "YDS";
     try { localStorage.setItem(KEY_DIST_UNIT, rangeUnit); } catch {}
@@ -302,11 +336,11 @@
     elDistUnitYd?.classList.toggle("segOn", rangeUnit === "YDS");
     elDistUnitM?.classList.toggle("segOn", rangeUnit === "M");
 
-    // unit label (REQUEST: add "s" => yds)
+    // unit label (adds the (s) requirement)
     if (elDistUnitLabel) elDistUnitLabel.textContent = (rangeUnit === "M") ? "m" : "yds";
 
     syncRangeInputFromInternal();
-    syncLiveBar();
+    syncLiveTop();
   }
 
   function syncRangeInputFromInternal() {
@@ -324,19 +358,22 @@
     let n = Number(elDist.value);
     if (!Number.isFinite(n)) n = (rangeUnit === "M") ? Math.round(ydsToM(rangeYds)) : rangeYds;
 
-    if (rangeUnit === "M") rangeYds = clampRangeYds(mToYds(n));
-    else rangeYds = clampRangeYds(n);
+    if (rangeUnit === "M") {
+      rangeYds = clampRangeYds(mToYds(n));
+    } else {
+      rangeYds = clampRangeYds(n);
+    }
 
     try { localStorage.setItem(KEY_DIST_YDS, String(rangeYds)); } catch {}
     syncRangeInputFromInternal();
-    syncLiveBar();
+    syncLiveTop();
   }
 
   function bumpRange(stepYds) {
     rangeYds = clampRangeYds(rangeYds + stepYds);
     try { localStorage.setItem(KEY_DIST_YDS, String(rangeYds)); } catch {}
     syncRangeInputFromInternal();
-    syncLiveBar();
+    syncLiveTop();
   }
 
   function getDistanceYds() {
@@ -346,6 +383,7 @@
   function hydrateRange() {
     const savedYds = Number(localStorage.getItem(KEY_DIST_YDS) || "100");
     rangeYds = clampRangeYds(savedYds);
+
     const savedUnit = localStorage.getItem(KEY_DIST_UNIT) || "YDS";
     setRangeUnit(savedUnit === "M" ? "M" : "YDS");
   }
@@ -356,17 +394,20 @@
   function setUnit(newUnit) {
     dialUnit = newUnit === "MRAD" ? "MRAD" : "MOA";
 
-    elUnitMoa?.classList.toggle("segOn", dialUnit === "MOA");
-    elUnitMrad?.classList.toggle("segOn", dialUnit === "MRAD");
+    // segment UI
+    if (elUnitMoa) elUnitMoa.classList.toggle("segOn", dialUnit === "MOA");
+    if (elUnitMrad) elUnitMrad.classList.toggle("segOn", dialUnit === "MRAD");
 
-    // snap default
+    // ALWAYS snap default
     const def = DEFAULTS[dialUnit];
     if (elClickValue) elClickValue.value = String(def.toFixed(2));
 
+    // label
     if (elClickUnitLabel) {
       elClickUnitLabel.textContent = dialUnit === "MOA" ? "MOA/click" : "MRAD/click";
     }
-    syncLiveBar();
+
+    syncLiveTop();
   }
 
   function getClickValue() {
@@ -376,33 +417,11 @@
       if (elClickValue) elClickValue.value = String(n.toFixed(2));
     }
     n = Math.max(0.01, Math.min(5, n));
-    syncLiveBar();
     return n;
   }
 
   // ------------------------------------------------------------
-  // Live bar sync (TOP TWO LINES)
-  // ------------------------------------------------------------
-  function syncLiveBar() {
-    // line 1: distance (in current display unit)
-    if (elLiveDistance) {
-      if (rangeUnit === "M") {
-        const m = Math.round(ydsToM(rangeYds));
-        elLiveDistance.textContent = `${m} m`;
-      } else {
-        elLiveDistance.textContent = `${rangeYds} yds`;
-      }
-    }
-
-    // line 2: click value + unit (format: "0.25 MOA" / "0.10 MRAD")
-    if (elLiveDial) {
-      const cv = getClickValue();
-      elLiveDial.textContent = `${cv.toFixed(2)} ${dialUnit}`;
-    }
-  }
-
-  // ------------------------------------------------------------
-  // Matrix open/close
+  // Matrix drawer
   // ------------------------------------------------------------
   function openMatrix() {
     if (!elMatrixPanel) return;
@@ -430,6 +449,7 @@
     if (elClickValue) elClickValue.value = Number(clickVal).toFixed(2);
     getClickValue();
     closeMatrix();
+    syncLiveTop();
   }
 
   function wireMatrixPresets() {
@@ -459,10 +479,8 @@
   }, { capture: true });
 
   // ------------------------------------------------------------
-  // Scoring placeholder (kept)
+  // Score placeholder
   // ------------------------------------------------------------
-  const inchesPerFullWidth = 10;
-
   function scoreFromRadiusInches(rIn) {
     if (rIn <= 0.25) return 100;
     if (rIn <= 0.50) return 95;
@@ -492,6 +510,8 @@
 
     const dist = getDistanceYds();
 
+    // MOA inches per unit: (dist/100)*1.047
+    // MRAD inches per unit: (dist/100)*3.6 (approx)
     const inchesPerUnit = (dialUnit === "MOA")
       ? (dist / 100) * 1.047
       : (dist / 100) * 3.6;
@@ -526,7 +546,10 @@
 
   function onShowResults() {
     const out = computeCorrectionAndScore();
-    if (!out) { alert("Tap Aim Point first, then tap at least one hit."); return; }
+    if (!out) {
+      alert("Tap Aim Point first, then tap at least one hit.");
+      return;
+    }
 
     const vendorUrl = localStorage.getItem(KEY_VENDOR_URL) || "";
 
@@ -539,12 +562,15 @@
       dial: { unit: out.dial.unit, clickValue: Number(out.dial.clickValue.toFixed(2)) },
       vendorUrl,
       surveyUrl: "",
-      sourceImg: "",
+      sourceImg: "", // thumbnail stays nuked
       debug: { aim, avgPoi: out.avgPoi, distanceYds: getDistanceYds(), inches: out.inches }
     };
 
     goToSEC(payload);
   }
+
+  // expose fallback (for quick console test if needed)
+  window.__SCZN3_SHOW_RESULTS__ = onShowResults;
 
   // ------------------------------------------------------------
   // Photo picker
@@ -573,7 +599,7 @@
 
       elImg.onerror = () => {
         setText(elStatus, "Photo failed to load.");
-        setInstr("Try again.", "instrIdle");
+        setInstruction("Try again.", "");
         revealScoringUI();
       };
 
@@ -622,7 +648,7 @@
       const dx = Math.abs(t.clientX - touchStart.x);
       const dy = Math.abs(t.clientY - touchStart.y);
 
-      if (dx > 10 || dy > 10) { touchStart = null; return; }
+      if (dx > 10 || dy > 10) { touchStart = null; return; } // scroll => ignore
 
       lastTouchTapAt = Date.now();
       acceptTap(t.clientX, t.clientY);
@@ -637,46 +663,61 @@
   }
 
   // ------------------------------------------------------------
-  // Buttons
+  // Buttons (IMPORTANT: hard wire results so it ALWAYS works)
   // ------------------------------------------------------------
   elClear?.addEventListener("click", () => {
     resetAll();
     if (elImg?.src) setText(elStatus, "Tap Aim Point.");
   });
 
-  elStickyBtn?.addEventListener("click", onShowResults);
+  // results buttons (in case ID changes later)
+  const btnA = $("stickyResultsBtn");
+  const btnB = $("showResultsBtn");
+  [btnA, btnB].filter(Boolean).forEach((b) => {
+    b.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      onShowResults();
+    });
+  });
 
+  // Range +/- always bumps internal yards
   elDistUp?.addEventListener("click", () => bumpRange(5));
   elDistDown?.addEventListener("click", () => bumpRange(-5));
 
+  // manual input conversion/clamp
   elDist?.addEventListener("change", () => syncInternalFromRangeInput());
   elDist?.addEventListener("blur", () => syncInternalFromRangeInput());
 
+  // YD/M toggle
   elDistUnitYd?.addEventListener("click", () => setRangeUnit("YDS"));
   elDistUnitM?.addEventListener("click", () => setRangeUnit("M"));
 
+  // dial unit
   elUnitMoa?.addEventListener("click", () => setUnit("MOA"));
   elUnitMrad?.addEventListener("click", () => setUnit("MRAD"));
 
-  elClickValue?.addEventListener("blur", () => { getClickValue(); });
-  elClickValue?.addEventListener("change", () => { getClickValue(); });
+  // click value clamp
+  elClickValue?.addEventListener("blur", () => { getClickValue(); syncLiveTop(); });
+  elClickValue?.addEventListener("change", () => { getClickValue(); syncLiveTop(); });
 
+  // Matrix open/close
   elMatrixBtn?.addEventListener("click", toggleMatrix);
   elMatrixClose?.addEventListener("click", closeMatrix);
 
   // ------------------------------------------------------------
   // Boot
   // ------------------------------------------------------------
-  setUnit("MOA");
+  setUnit("MOA");          // snaps click value to 0.25
   closeMatrix();
   hideSticky();
   resetAll();
   hydrateVendorBox();
 
-  hydrateRange();
+  hydrateRange();          // pulls saved yards + unit and updates UI
   wireMatrixPresets();
 
-  syncLiveBar();      // ✅ ensures top 2 lines are correct immediately
+  syncLiveTop();
   hardHideScoringUI();
   forceTop();
 })();
