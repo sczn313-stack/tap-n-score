@@ -1,10 +1,3 @@
-/* ============================================================
-   tap-n-score/sec.js (FULL REPLACEMENT) — NO PHOTO + NO DISTANCE
-   - Reads payload from ?payload= (base64) OR localStorage
-   - Renders score + two-decimal clicks
-   - Generates SEC PNG (no target image, no distance) and opens download.html
-============================================================ */
-
 (() => {
   const KEY_PAYLOAD = "SCZN3_SEC_PAYLOAD_V1";
   const KEY_PNG_DATA = "SCZN3_SEC_PNG_DATAURL_V1";
@@ -140,11 +133,9 @@
     c.height = H;
     const ctx = c.getContext("2d");
 
-    // background
     ctx.fillStyle = "#06070a";
     ctx.fillRect(0, 0, W, H);
 
-    // subtle gradients
     function radial(x, y, r, color) {
       const g = ctx.createRadialGradient(x, y, 0, x, y, r);
       g.addColorStop(0, color);
@@ -156,7 +147,6 @@
     ctx.fillStyle = radial(1250, 180, 700, "rgba(214,64,64,0.14)");
     ctx.fillRect(0, 0, W, H);
 
-    // frame
     ctx.fillStyle = "rgba(255,255,255,0.05)";
     ctx.strokeStyle = "rgba(255,255,255,0.12)";
     ctx.lineWidth = 2;
@@ -164,7 +154,6 @@
     ctx.fill();
     ctx.stroke();
 
-    // title (RWB)
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     ctx.font = "1000 34px system-ui, -apple-system, Segoe UI, Roboto, Arial";
@@ -184,12 +173,10 @@
       x += widths[i] + gap;
     }
 
-    // session
     ctx.font = "900 18px system-ui, -apple-system, Segoe UI, Roboto, Arial";
     ctx.fillStyle = "rgba(238,242,247,0.55)";
     ctx.fillText(`Session: ${sid}`, W / 2, 205);
 
-    // score
     ctx.font = "1000 170px system-ui, -apple-system, Segoe UI, Roboto, Arial";
     ctx.fillStyle = scoreColor(score);
     ctx.shadowColor = "rgba(0,0,0,0.55)";
@@ -197,7 +184,6 @@
     ctx.fillText(String(score), W / 2, 375);
     ctx.shadowBlur = 0;
 
-    // label + fairness
     ctx.font = "950 26px system-ui, -apple-system, Segoe UI, Roboto, Arial";
     ctx.fillStyle = "rgba(238,242,247,0.90)";
     ctx.fillText(scoreLabel(score), W / 2, 470);
@@ -206,7 +192,6 @@
     ctx.fillStyle = "rgba(238,242,247,0.72)";
     ctx.fillText("Tighter group + closer to aim point = higher score", W / 2, 520);
 
-    // stat boxes (NO DISTANCE)
     function statBox(x, y, w, h, label, value) {
       ctx.fillStyle = "rgba(0,0,0,0.18)";
       ctx.strokeStyle = "rgba(255,255,255,0.10)";
@@ -239,7 +224,6 @@
     statBox(leftX, boxY + boxH + 20, boxW, boxH, "Elevation", elevTxt);
     statBox(rightX, boxY + boxH + 20, boxW, boxH, "SCZN3", "SEC");
 
-    // footer
     ctx.textAlign = "center";
     ctx.font = "900 18px system-ui, -apple-system, Segoe UI, Roboto, Arial";
     ctx.fillStyle = "rgba(238,242,247,0.28)";
@@ -261,7 +245,6 @@
 
     paintUI(payload);
 
-    // pre-generate so download page always works
     try {
       const png = buildSecPng(payload);
       await savePng(png);
