@@ -1,3 +1,7 @@
+/* ============================================================
+   docs/sec.js (FULL REPLACEMENT) — EXIT BUTTONS + RELATIVE NAV
+============================================================ */
+
 (() => {
   const KEY_PAYLOAD = "SCZN3_SEC_PAYLOAD_V1";
   const KEY_PNG_DATA = "SCZN3_SEC_PNG_DATAURL_V1";
@@ -13,7 +17,8 @@
   const elErr = $("errLine");
 
   const btnDownload = $("downloadBtn");
-  const btnScoreAnother = $("scoreAnotherBtn");
+  const btnBackToCamera = $("backToCameraBtn");
+  const btnBackHome = $("backHomeBtn");
 
   function safeJsonParse(s) { try { return JSON.parse(s); } catch { return null; } }
 
@@ -79,31 +84,18 @@
     return `${dir} ${clicks}`;
   }
 
-  function navToIndex() {
+  function navToHome() {
+    // go back to landing/index
     window.location.href = `./index.html?fresh=${Date.now()}`;
+  }
+
+  function navBackToCamera() {
+    // same as home for now (simple + clean)
+    window.location.href = `./index.html?fresh=${Date.now()}#camera`;
   }
 
   function navToDownload() {
     window.location.href = `./download.html?auto=1&fresh=${Date.now()}`;
-  }
-
-  function paintUI(payload) {
-    hideErr();
-
-    const sid = payload?.sessionId || "—";
-    if (elSession) elSession.textContent = `Session: ${sid}`;
-
-    const score = clampScore(payload?.score ?? 0);
-    if (elScore) {
-      elScore.textContent = String(score);
-      elScore.style.color = scoreColor(score);
-    }
-    if (elScoreLabel) elScoreLabel.textContent = scoreLabel(score);
-
-    if (elShots) elShots.textContent = String(Number(payload?.shots ?? 0) || 0);
-
-    if (elWind) elWind.textContent = fmtClicks(payload?.windage);
-    if (elElev) elElev.textContent = fmtClicks(payload?.elevation);
   }
 
   function roundRect(ctx, x, y, w, h, r) {
@@ -133,9 +125,11 @@
     c.height = H;
     const ctx = c.getContext("2d");
 
+    // background
     ctx.fillStyle = "#06070a";
     ctx.fillRect(0, 0, W, H);
 
+    // subtle gradients
     function radial(x, y, r, color) {
       const g = ctx.createRadialGradient(x, y, 0, x, y, r);
       g.addColorStop(0, color);
@@ -147,6 +141,7 @@
     ctx.fillStyle = radial(1250, 180, 700, "rgba(214,64,64,0.14)");
     ctx.fillRect(0, 0, W, H);
 
+    // frame
     ctx.fillStyle = "rgba(255,255,255,0.05)";
     ctx.strokeStyle = "rgba(255,255,255,0.12)";
     ctx.lineWidth = 2;
@@ -154,6 +149,7 @@
     ctx.fill();
     ctx.stroke();
 
+    // title (RWB)
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     ctx.font = "1000 34px system-ui, -apple-system, Segoe UI, Roboto, Arial";
@@ -173,10 +169,12 @@
       x += widths[i] + gap;
     }
 
+    // session
     ctx.font = "900 18px system-ui, -apple-system, Segoe UI, Roboto, Arial";
     ctx.fillStyle = "rgba(238,242,247,0.55)";
     ctx.fillText(`Session: ${sid}`, W / 2, 205);
 
+    // score
     ctx.font = "1000 170px system-ui, -apple-system, Segoe UI, Roboto, Arial";
     ctx.fillStyle = scoreColor(score);
     ctx.shadowColor = "rgba(0,0,0,0.55)";
@@ -184,6 +182,7 @@
     ctx.fillText(String(score), W / 2, 375);
     ctx.shadowBlur = 0;
 
+    // label + fairness
     ctx.font = "950 26px system-ui, -apple-system, Segoe UI, Roboto, Arial";
     ctx.fillStyle = "rgba(238,242,247,0.90)";
     ctx.fillText(scoreLabel(score), W / 2, 470);
@@ -192,6 +191,7 @@
     ctx.fillStyle = "rgba(238,242,247,0.72)";
     ctx.fillText("Tighter group + closer to aim point = higher score", W / 2, 520);
 
+    // stat boxes
     function statBox(x, y, w, h, label, value) {
       ctx.fillStyle = "rgba(0,0,0,0.18)";
       ctx.strokeStyle = "rgba(255,255,255,0.10)";
@@ -220,10 +220,10 @@
 
     statBox(leftX, boxY, boxW, boxH, "Shots", `${shots} hits`);
     statBox(rightX, boxY, boxW, boxH, "Windage", windTxt);
-
     statBox(leftX, boxY + boxH + 20, boxW, boxH, "Elevation", elevTxt);
     statBox(rightX, boxY + boxH + 20, boxW, boxH, "SCZN3", "SEC");
 
+    // footer
     ctx.textAlign = "center";
     ctx.font = "900 18px system-ui, -apple-system, Segoe UI, Roboto, Arial";
     ctx.fillStyle = "rgba(238,242,247,0.28)";
@@ -232,8 +232,23 @@
     return c.toDataURL("image/png");
   }
 
-  async function savePng(dataUrl) {
-    localStorage.setItem(KEY_PNG_DATA, dataUrl);
+  function paintUI(payload) {
+    hideErr();
+
+    const sid = payload?.sessionId || "—";
+    if (elSession) elSession.textContent = `Session: ${sid}`;
+
+    const score = clampScore(payload?.score ?? 0);
+    if (elScore) {
+      elScore.textContent = String(score);
+      elScore.style.color = scoreColor(score);
+    }
+    if (elScoreLabel) elScoreLabel.textContent = scoreLabel(score);
+
+    if (elShots) elShots.textContent = String(Number(payload?.shots ?? 0) || 0);
+
+    if (elWind) elWind.textContent = fmtClicks(payload?.windage);
+    if (elElev) elElev.textContent = fmtClicks(payload?.elevation);
   }
 
   async function boot() {
@@ -245,27 +260,29 @@
 
     paintUI(payload);
 
+    // pre-generate so download page always works
     try {
       const png = buildSecPng(payload);
-      await savePng(png);
+      localStorage.setItem(KEY_PNG_DATA, png);
     } catch {
       showErr("SEC loaded, but PNG could not be generated. Re-score.");
     }
   }
 
-  btnDownload?.addEventListener("click", async () => {
+  btnDownload?.addEventListener("click", () => {
     const payload = loadPayload();
     if (!payload) { showErr("Missing payload. Go back and re-score."); return; }
     try {
       const png = buildSecPng(payload);
-      await savePng(png);
+      localStorage.setItem(KEY_PNG_DATA, png);
       navToDownload();
     } catch {
       showErr("Could not generate PNG. Try again.");
     }
   });
 
-  btnScoreAnother?.addEventListener("click", navToIndex);
+  btnBackToCamera?.addEventListener("click", navBackToCamera);
+  btnBackHome?.addEventListener("click", navToHome);
 
   boot();
 })();
