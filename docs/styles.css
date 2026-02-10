@@ -1,4 +1,4 @@
-/* docs/styles.css (FULL REPLACEMENT) — LIVE TOP 2 LINES + MATRIX ONLY CONTROLS + INSTRUCTION COLOR STATES */
+/* docs/styles.css (FULL REPLACEMENT) — LIVE TOP + MATRIX + TARGET SIZE HIGHLIGHT */
 
 :root{
   --bg:#06070a;
@@ -13,6 +13,9 @@
 
   --aim:#67f3a4;
   --hit:#b7ff3c;
+
+  --tipBg: rgba(0,0,0,.55);
+  --tipStroke: rgba(255,255,255,.14);
 }
 
 *{ box-sizing:border-box; }
@@ -91,8 +94,11 @@ body{
   cursor:pointer;
   user-select:none;
   -webkit-tap-highlight-color: transparent;
+  transform: translateZ(0);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: geometricPrecision;
 }
-.heroBtn:active{ transform: translateY(1px); }
+.heroBtn:active{ transform: translateZ(0) translateY(1px); }
 
 .heroTip{
   font-weight: 900;
@@ -133,6 +139,7 @@ body{
   width: min(520px, 92%);
   max-width: 720px;
 }
+
 .vendorBoxFlow, .vendorBoxFlow *{ pointer-events:auto; }
 
 .vendorPillText{
@@ -218,33 +225,43 @@ body{
 .mt12{ margin-top:12px; }
 
 /* ============================================================
-   LIVE TOP 2 LINES
+   LIVE BAR (TOP)
 ============================================================ */
 .liveBar{
-  padding: 10px 14px 10px;
+  padding: 12px 14px;
   border-bottom: 1px solid rgba(255,255,255,.08);
   background: rgba(0,0,0,.10);
+  display:flex;
+  flex-direction:column;
+  gap: 8px;
 }
 
 .liveRow{
   display:flex;
   align-items:center;
   justify-content:space-between;
-  gap: 10px;
+  gap: 12px;
 }
 
 .liveValue{
-  font-size: 18px;
+  font-size: 22px;
   font-weight: 1000;
   letter-spacing: .02em;
-  color: rgba(238,242,247,.95);
 }
 
 .liveValueSub{
   font-size: 18px;
-  font-weight: 1000;
+  font-weight: 950;
+  color: rgba(238,242,247,.88);
   letter-spacing: .02em;
-  color: rgba(238,242,247,.92);
+}
+
+.liveValueMini{
+  font-size: 13px;
+  font-weight: 850;
+  color: rgba(238,242,247,.62);
+  letter-spacing: .06em;
+  text-transform: uppercase;
 }
 
 /* Matrix button (tight) */
@@ -261,16 +278,15 @@ body{
   -webkit-tap-highlight-color: transparent;
   flex: 0 0 auto;
 }
-.matrixBtn:active{ transform: translateY(1px); }
-
 .matrixBtnTight{
   height: 34px;
-  border-radius: 14px;
-  letter-spacing: .12em;
+  padding: 0 12px;
+  border-radius: 999px;
+  letter-spacing: .16em;
 }
 
 /* ============================================================
-   MATRIX DRAWER
+   MATRIX PANEL
 ============================================================ */
 .matrixPanel{
   margin: 10px 14px 12px;
@@ -299,22 +315,69 @@ body{
   margin-bottom: 8px;
 }
 
-/* A single “row” inside matrix */
 .matrixRow{
   display:flex;
   align-items:center;
-  gap: 8px;
+  gap: 10px;
   flex-wrap: wrap;
 }
 
-.unitToggle{
-  display:flex;
-  gap: 6px;
-  align-items:center;
-  flex: 0 0 auto;
+.matrixMicro{
+  margin-top: 8px;
+  font-size: 12px;
+  color: rgba(238,242,247,.52);
+  line-height: 1.2;
 }
 
-/* Buttons */
+/* chips */
+.chipRow{
+  display:flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.chipRowTight{ gap: 8px; }
+
+.chip{
+  height: 40px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,.14);
+  background: rgba(255,255,255,.06);
+  color: rgba(238,242,247,.92);
+  font-weight: 1000;
+  letter-spacing: .06em;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.chip:active{ transform: translateY(1px); }
+
+/* SELECTED TARGET SIZE HIGHLIGHT */
+.chipOn{
+  border-color: rgba(103,243,164,.38) !important;
+  background: rgba(103,243,164,.12) !important;
+  color: rgba(238,242,247,.98) !important;
+}
+
+.matrixFoot{
+  display:flex;
+  justify-content:flex-end;
+  padding-top: 4px;
+}
+
+.matrixCloseBtn{
+  height: 40px;
+  padding: 0 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(103,243,164,.28);
+  background: rgba(103,243,164,.10);
+  color: rgba(238,242,247,.92);
+  font-weight: 1000;
+  letter-spacing: .08em;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* controls */
 .miniBtn{
   width: 44px;
   height: 44px;
@@ -329,7 +392,6 @@ body{
   flex: 0 0 auto;
 }
 .miniBtn:active{ transform: translateY(1px); }
-
 .miniBtnTight{
   width: 30px;
   height: 38px;
@@ -337,7 +399,6 @@ body{
   font-size: 20px;
 }
 
-/* Inputs */
 .miniInput{
   width: 92px;
   max-width: 92px;
@@ -352,7 +413,6 @@ body{
   outline:none;
   flex: 0 0 auto;
 }
-
 .miniInputTight{
   width: 72px;
   max-width: 72px;
@@ -361,7 +421,6 @@ body{
   border-radius: 12px;
 }
 
-/* Click value input */
 .miniInputWide{
   width: 120px;
   max-width: 120px;
@@ -384,7 +443,6 @@ body{
   border-radius: 12px;
 }
 
-/* Units */
 .miniUnit{
   font-size: 14px;
   font-weight: 950;
@@ -395,7 +453,6 @@ body{
   white-space: nowrap;
 }
 
-/* Segmented buttons */
 .segBtn{
   height: 38px;
   padding: 0 12px;
@@ -409,13 +466,10 @@ body{
   -webkit-tap-highlight-color: transparent;
   flex: 0 0 auto;
 }
-.segBtn:active{ transform: translateY(1px); }
-
 .segBtn.segOn{
   border-color: rgba(103,243,164,.35);
   background: rgba(103,243,164,.10);
 }
-
 .segBtnTiny{
   height: 28px;
   padding: 0 10px;
@@ -423,47 +477,7 @@ body{
   font-size: 12px;
   letter-spacing: .10em;
 }
-
-/* Quick preset chips */
-.chipRow{
-  display:flex;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-
-.chip{
-  height: 40px;
-  padding: 0 14px;
-  border-radius: 999px;
-  border: 1px solid rgba(255,255,255,.14);
-  background: rgba(255,255,255,.06);
-  color: rgba(238,242,247,.92);
-  font-weight: 1000;
-  letter-spacing: .06em;
-  cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
-}
-.chip:active{ transform: translateY(1px); }
-
-.matrixFoot{
-  display:flex;
-  justify-content:flex-end;
-  padding-top: 4px;
-}
-
-.matrixCloseBtn{
-  height: 40px;
-  padding: 0 14px;
-  border-radius: 14px;
-  border: 1px solid rgba(103,243,164,.28);
-  background: rgba(103,243,164,.10);
-  color: rgba(238,242,247,.92);
-  font-weight: 1000;
-  letter-spacing: .08em;
-  cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
-}
-.matrixCloseBtn:active{ transform: translateY(1px); }
+.unitToggle{ display:flex; gap: 6px; align-items:center; }
 
 /* ============================================================
    Target wrap + dots
@@ -540,13 +554,6 @@ body{
   font-size: 13px;
   line-height: 1.35;
 }
-
-/* Instruction line color states (A+ detail) */
-.instr{ font-weight: 950; }
-.instrIdle{ color: rgba(238,242,247,.55); }
-.instrAim{ color: rgba(103,243,164,.92); }     /* aim = green */
-.instrHits{ color: rgba(183,255,60,.92); }     /* hits = lime */
-.instrResults{ color: rgba(47,102,255,.92); }  /* results = blue */
 
 /* Footer */
 .footer{
