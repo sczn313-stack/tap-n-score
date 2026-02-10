@@ -1,4 +1,4 @@
-<!-- docs/index.html (FULL REPLACEMENT) — TOP 2 LINES LIVE + MATRIX ONLY CONTROLS -->
+<!-- index.html (FULL REPLACEMENT) — ROOT PATHS (./styles.css, ./index.js) -->
 <!doctype html>
 <html lang="en">
 <head>
@@ -13,8 +13,8 @@
 
   <title>Tap-n-Score™</title>
 
-  <!-- ✅ GitHub Pages friendly: RELATIVE PATH -->
-  <link rel="stylesheet" href="./styles.css?v=TP-Aplus-0209" />
+  <!-- ROOT PATH (repo root files) -->
+  <link rel="stylesheet" href="./styles.css?v=ROOT-0210A" />
 </head>
 
 <body>
@@ -142,7 +142,6 @@
       <div id="targetWrap" class="targetWrap" aria-label="Target photo area">
         <img id="targetImg" alt="Target preview" />
         <div id="dotsLayer" class="dotsLayer" aria-hidden="true"></div>
-        <!-- on-image instruction pills removed -->
       </div>
 
       <div class="row rowTight">
@@ -154,10 +153,8 @@
       </div>
 
       <!-- Instruction line (color shifts with state) -->
-      <p id="instructionLine" class="hint instr instrIdle"></p>
+      <p id="instructionLine" class="hint"></p>
     </section>
-
-    <section id="settingsSection" class="card scoreHidden" aria-hidden="true" style="display:none;"></section>
 
     <footer class="footer">
       <span class="footerMark">SCZN3</span>
@@ -169,7 +166,7 @@
 
   </main>
 
-  <!-- ✅ GitHub Pages friendly: RELATIVE PATH -->
-  <script defer src="./index.js?v=TP-Aplus-0209"></script>
+  <!-- ROOT PATH (repo root files) -->
+  <script defer src="./index.js?v=ROOT-0210A"></script>
 </body>
 </html>
