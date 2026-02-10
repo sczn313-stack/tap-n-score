@@ -1,4 +1,4 @@
-<!-- docs/index.html (FULL REPLACEMENT) — RELATIVE ASSETS (GHP SAFE) -->
+<!-- docs/index.html (FULL REPLACEMENT) — LIVE TOP + MATRIX DRAWER + TARGET SIZE PRESETS -->
 <!doctype html>
 <html lang="en">
 <head>
@@ -13,7 +13,7 @@
 
   <title>Tap-n-Score™</title>
 
-  <!-- RELATIVE PATH -->
+  <!-- RELATIVE PATHS (docs/) -->
   <link rel="stylesheet" href="./styles.css?v=TP-Aplus-0210A" />
 </head>
 
@@ -78,6 +78,9 @@
         <div class="liveRow">
           <div id="liveDial" class="liveValueSub">0.25 MOA</div>
         </div>
+        <div class="liveRow">
+          <div id="liveTarget" class="liveValueMini">Target: 23×35</div>
+        </div>
       </div>
 
       <!-- MATRIX DRAWER (ALL ADJUSTMENTS LIVE HERE) -->
@@ -85,19 +88,16 @@
 
         <div class="matrixTitle">Adjust</div>
 
-        <!-- Target size -->
+        <!-- Target Size -->
         <div class="matrixGroup">
           <div class="matrixLabel">Target Size</div>
-
-          <div class="matrixRow">
-            <button id="size85x11" class="chip" type="button">8.5×11</button>
-            <button id="size23x35" class="chip" type="button">23×35</button>
-            <button id="size23x23" class="chip" type="button">23×23</button>
+          <div class="chipRow chipRowTight" id="sizeChipRow">
+            <button class="chip chipSize" type="button" data-size="8.5x11" data-w="8.5" data-h="11">8.5×11</button>
+            <button class="chip chipSize" type="button" data-size="17x35" data-w="17" data-h="35">17×35</button>
+            <button class="chip chipSize" type="button" data-size="23x35" data-w="23" data-h="35">23×35</button>
+            <button class="chip chipSize" type="button" data-size="23x23" data-w="23" data-h="23">23×23</button>
           </div>
-
-          <div class="heroTip" style="margin-top:8px; opacity:.85;">
-            This only affects “play mode” math. Pilot mode will use printer target dimensions.
-          </div>
+          <div class="matrixMicro">This sets inches math so clicks come out right.</div>
         </div>
 
         <!-- Distance + Units -->
@@ -167,6 +167,7 @@
         <button id="clearTapsBtn" class="btnSecondary" type="button">Clear</button>
       </div>
 
+      <!-- Instruction line (color shifts with state) -->
       <p id="instructionLine" class="hint"></p>
     </section>
 
@@ -180,7 +181,6 @@
 
   </main>
 
-  <!-- RELATIVE PATH -->
   <script defer src="./index.js?v=TP-Aplus-0210A"></script>
 </body>
 </html>
