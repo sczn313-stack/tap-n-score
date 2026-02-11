@@ -1,21 +1,31 @@
 /* ============================================================
-   server.js — SCZN3 / Tap-n-Score SEC Backend (Clean Bridge)
+   server.js — SCZN3 / Tap-n-Score SEC Backend (Truth Authority)
 
    Goals:
    - Always-available health check: GET /api/health
    - Fix "Cannot GET /api/poster": GET /api/poster
    - Authoritative math endpoint: POST /api/calc
-     (backend is the ONLY authority for directions)
-   - Screen-space convention:
-       x increases to the RIGHT
-       y increases DOWN (like canvas / DOM)
-     delta = bull - poib
-       deltaX < 0 => move LEFT,  deltaX > 0 => move RIGHT
-       deltaY < 0 => move UP,    deltaY > 0 => move DOWN
+     Backend becomes the authority for movement math.
 
-   Notes:
-   - Inputs are assumed to already be in INCHES (per your system).
-   - Click outputs are two decimals.
+   IMPORTANT:
+   - Backward compatible:
+     A) Inches mode (existing):
+        { bull:{x,y}, shots:[{x,y}], distanceYds, clickMoa }
+
+     B) Normalized mode (NEW - preferred truth):
+        {
+          aim:{x01,y01},
+          hits:[{x01,y01}, ...],
+          target:{ wIn, hIn },   // inches
+          distanceYds,
+          dialUnit: "MOA" | "MRAD",
+          clickValue
+        }
+
+   Conventions:
+   - Screen-space: x RIGHT positive, y DOWN positive
+   - delta = bull - poib
+   - Two-decimal clicks ALWAYS
    ============================================================ */
 
 const express = require("express");
@@ -33,23 +43,34 @@ function clampNum(n, fallback = 0) {
   return Number.isFinite(x) ? x : fallback;
 }
 
+function clamp01(n) {
+  const x = Number(n);
+  if (!Number.isFinite(x)) return 0;
+  return Math.max(0, Math.min(1, x));
+}
+
 function round2(n) {
-  return Math.round(n * 100) / 100;
+  const x = Number(n);
+  if (!Number.isFinite(x)) return 0;
+  return Math.round(x * 100) / 100;
 }
 
 // Inches per MOA at a given distance (yards)
 function inchesPerMoa(distanceYds) {
   const d = clampNum(distanceYds, 0);
-  // 1 MOA ≈ 1.047" at 100 yards
-  return 1.047 * (d / 100);
+  return 1.047 * (d / 100); // 1 MOA ≈ 1.047" at 100y
+}
+
+// Inches per MRAD at a given distance (yards)
+// Using your pilot approximation (keeps behavior consistent with your UI)
+function inchesPerMrad(distanceYds) {
+  const d = clampNum(distanceYds, 0);
+  return 3.6 * (d / 100);
 }
 
 function directionFromDelta(deltaX, deltaY) {
-  // Screen-space: y down is positive
-  const windage =
-    deltaX === 0 ? "NONE" : deltaX < 0 ? "LEFT" : "RIGHT";
-  const elevation =
-    deltaY === 0 ? "NONE" : deltaY < 0 ? "UP" : "DOWN";
+  const windage = deltaX === 0 ? "NONE" : deltaX < 0 ? "LEFT" : "RIGHT";
+  const elevation = deltaY === 0 ? "NONE" : deltaY < 0 ? "UP" : "DOWN";
   return { windage, elevation };
 }
 
@@ -60,11 +81,43 @@ function meanPoint(points) {
     const x = clampNum(p?.x, NaN);
     const y = clampNum(p?.y, NaN);
     if (Number.isFinite(x) && Number.isFinite(y)) {
-      sx += x; sy += y; n += 1;
+      sx += x;
+      sy += y;
+      n += 1;
     }
   }
   if (n === 0) return null;
   return { x: sx / n, y: sy / n };
+}
+
+function meanPoint01(points) {
+  if (!Array.isArray(points) || points.length === 0) return null;
+  let sx = 0, sy = 0, n = 0;
+  for (const p of points) {
+    const x01 = clamp01(p?.x01);
+    const y01 = clamp01(p?.y01);
+    sx += x01;
+    sy += y01;
+    n += 1;
+  }
+  if (n === 0) return null;
+  return { x01: sx / n, y01: sy / n };
+}
+
+// Square-based conversion: normalized deltas -> inches deltas
+// This is the fix that removes rectangle bias.
+function delta01ToInches(dx01, dy01, targetWIn, targetHIn) {
+  const w = Math.max(1, clampNum(targetWIn, 23));
+  const h = Math.max(1, clampNum(targetHIn, 35));
+
+  // SCZN3 rule: grid is square; movement uses ONE physical scale for both axes
+  const scaleIn = Math.min(w, h);
+
+  return {
+    inchesX: dx01 * scaleIn,
+    inchesY: dy01 * scaleIn,
+    scaleIn
+  };
 }
 
 // ---- Routes
@@ -80,10 +133,6 @@ app.get("/api/health", (req, res) => {
   });
 });
 
-/**
- * Fixes the exact browser error: "Cannot GET /api/poster"
- * You can later expand this into real SEC “poster” metadata.
- */
 app.get("/api/poster", (req, res) => {
   res.json({
     ok: true,
@@ -98,32 +147,121 @@ app.get("/api/poster", (req, res) => {
 
 /**
  * POST /api/calc
- * Body (recommended):
+ *
+ * Supports TWO input modes:
+ *
+ * 1) INCHES MODE (backward compatible):
  * {
- *   "bull": {"x": 10.5, "y": 12.25},
- *   "shots": [{"x": 9.8, "y": 13.1}, {"x": 10.2, "y": 12.9}],
- *   "distanceYds": 100,
- *   "clickMoa": 0.25
+ *   bull: {x,y},
+ *   shots: [{x,y},...],
+ *   distanceYds: 100,
+ *   clickMoa: 0.25
  * }
  *
- * All x/y are in INCHES.
+ * 2) NORMALIZED MODE (truth mode — recommended):
+ * {
+ *   aim: {x01,y01},
+ *   hits: [{x01,y01},...],
+ *   target: { wIn, hIn },
+ *   distanceYds: 100,
+ *   dialUnit: "MOA" | "MRAD",
+ *   clickValue: 0.25
+ * }
  */
 app.post("/api/calc", (req, res) => {
   try {
-    const bull = req.body?.bull;
-    const shots = req.body?.shots;
+    const body = req.body || {};
 
-    const bullX = clampNum(bull?.x, NaN);
-    const bullY = clampNum(bull?.y, NaN);
+    // ---------- Detect mode
+    const hasNormalized =
+      body?.aim && Number.isFinite(Number(body?.aim?.x01)) && Number.isFinite(Number(body?.aim?.y01)) &&
+      Array.isArray(body?.hits) && body.hits.length > 0;
 
-    if (!Number.isFinite(bullX) || !Number.isFinite(bullY)) {
+    const hasInches =
+      body?.bull && Number.isFinite(Number(body?.bull?.x)) && Number.isFinite(Number(body?.bull?.y)) &&
+      Array.isArray(body?.shots) && body.shots.length > 0;
+
+    if (!hasNormalized && !hasInches) {
       return res.status(400).json({
         ok: false,
-        error: "bull.x and bull.y are required numbers (in inches)."
+        error:
+          "Missing inputs. Provide either (A) bull+shots in inches or (B) aim+hits normalized (0–1) with target wIn/hIn."
       });
     }
 
-    const poib = meanPoint(shots);
+    // ---------- Shared settings
+    const distanceYds = clampNum(body?.distanceYds, 100);
+    if (!(distanceYds > 0)) {
+      return res.status(400).json({ ok: false, error: "distanceYds must be > 0." });
+    }
+
+    // ---------- NORMALIZED MODE (NEW TRUTH)
+    if (hasNormalized) {
+      const aim = { x01: clamp01(body.aim.x01), y01: clamp01(body.aim.y01) };
+      const avgHit = meanPoint01(body.hits);
+      if (!avgHit) {
+        return res.status(400).json({ ok: false, error: "hits must be a non-empty array of {x01,y01}." });
+      }
+
+      // delta01 = bull - poib (still normalized)
+      const dx01 = aim.x01 - avgHit.x01;
+      const dy01 = aim.y01 - avgHit.y01;
+
+      // target inches
+      const wIn = clampNum(body?.target?.wIn, 23);
+      const hIn = clampNum(body?.target?.hIn, 35);
+
+      // FIX: square scaling
+      const { inchesX, inchesY, scaleIn } = delta01ToInches(dx01, dy01, wIn, hIn);
+
+      const { windage, elevation } = directionFromDelta(inchesX, inchesY);
+
+      const dialUnit = (String(body?.dialUnit || "MOA").toUpperCase() === "MRAD") ? "MRAD" : "MOA";
+      const clickValue = clampNum(body?.clickValue, dialUnit === "MRAD" ? 0.10 : 0.25);
+      if (!(clickValue > 0)) {
+        return res.status(400).json({ ok: false, error: "clickValue must be > 0." });
+      }
+
+      const ipu = (dialUnit === "MOA") ? inchesPerMoa(distanceYds) : inchesPerMrad(distanceYds);
+      if (!(ipu > 0)) {
+        return res.status(400).json({ ok: false, error: "Invalid distanceYds." });
+      }
+
+      const unitsX = Math.abs(inchesX) / ipu;
+      const unitsY = Math.abs(inchesY) / ipu;
+
+      const clicksX = unitsX / clickValue;
+      const clicksY = unitsY / clickValue;
+
+      return res.json({
+        ok: true,
+        mode: "normalized_truth",
+        inputs: {
+          distanceYds,
+          dialUnit,
+          clickValue: round2(clickValue),
+          target: { wIn: round2(wIn), hIn: round2(hIn) },
+          scaleIn: round2(scaleIn)
+        },
+        aim01: { x01: round2(aim.x01), y01: round2(aim.y01) },
+        poib01: { x01: round2(avgHit.x01), y01: round2(avgHit.y01) },
+        deltaInches: { x: round2(inchesX), y: round2(inchesY) },
+        directions: { windage, elevation },
+        clicks: {
+          windage: round2(clicksX),
+          elevation: round2(clicksY)
+        }
+      });
+    }
+
+    // ---------- INCHES MODE (BACKWARD COMPATIBLE)
+    const bullX = clampNum(body?.bull?.x, NaN);
+    const bullY = clampNum(body?.bull?.y, NaN);
+    if (!Number.isFinite(bullX) || !Number.isFinite(bullY)) {
+      return res.status(400).json({ ok: false, error: "bull.x and bull.y are required numbers (in inches)." });
+    }
+
+    const poib = meanPoint(body?.shots);
     if (!poib) {
       return res.status(400).json({
         ok: false,
@@ -131,50 +269,33 @@ app.post("/api/calc", (req, res) => {
       });
     }
 
-    const distanceYds = clampNum(req.body?.distanceYds, 100);
-    const clickMoa = clampNum(req.body?.clickMoa, 0.25);
-
+    const clickMoa = clampNum(body?.clickMoa, 0.25);
     const ipm = inchesPerMoa(distanceYds);
     if (!(ipm > 0) || !(clickMoa > 0)) {
-      return res.status(400).json({
-        ok: false,
-        error: "distanceYds and clickMoa must be > 0."
-      });
+      return res.status(400).json({ ok: false, error: "distanceYds and clickMoa must be > 0." });
     }
 
-    // delta = bull - poib (screen-space)
+    // delta = bull - poib (inches)
     const deltaX = bullX - poib.x;
     const deltaY = bullY - poib.y;
 
     const { windage, elevation } = directionFromDelta(deltaX, deltaY);
 
-    // Convert inches -> MOA -> clicks
     const moaX = Math.abs(deltaX) / ipm;
     const moaY = Math.abs(deltaY) / ipm;
 
     const clicksX = moaX / clickMoa;
     const clicksY = moaY / clickMoa;
 
-    res.json({
+    return res.json({
       ok: true,
-      inputs: {
-        distanceYds,
-        clickMoa
-      },
-      bull: { x: bullX, y: bullY },
+      mode: "inches_legacy",
+      inputs: { distanceYds, clickMoa: round2(clickMoa) },
+      bull: { x: round2(bullX), y: round2(bullY) },
       poib: { x: round2(poib.x), y: round2(poib.y) },
-      delta: {
-        x: round2(deltaX),
-        y: round2(deltaY)
-      },
-      directions: {
-        windage,
-        elevation
-      },
-      clicks: {
-        windage: round2(clicksX),
-        elevation: round2(clicksY)
-      }
+      delta: { x: round2(deltaX), y: round2(deltaY) },
+      directions: { windage, elevation },
+      clicks: { windage: round2(clicksX), elevation: round2(clicksY) }
     });
   } catch (err) {
     res.status(500).json({
