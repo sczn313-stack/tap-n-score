@@ -1,12 +1,9 @@
 /* ============================================================
    docs/index.js (FULL REPLACEMENT) — LIVE TOP + MATRIX ONLY + TARGET SIZE + LIT CHIP
-   - Target size presets (adds 17×35) + chip highlight persists
-   - Click math uses width/height inches (windage uses width, elevation uses height)
-   - LIVE TOP: distance + dial + target size
-   - All adjustments in MATRIX
-   - Instruction line color changes with state
-   - Show results hard-wired (always works)
-   - Distance unit toggle shows YDS or M (internal math stays yards)
+   FIX: SQUARE SCORING PLANE (NO RECTANGLE BIAS)
+   - Movement math no longer uses width for X and height for Y.
+   - Both axes scale from ONE square size: min(targetWIn, targetHIn).
+   - Target W/H still used for UI + chip + metadata only (and physical boundary).
 ============================================================ */
 
 (() => {
@@ -67,7 +64,7 @@
   const KEY_DIST_UNIT = "SCZN3_RANGE_UNIT_V1"; // "YDS" | "M"
   const KEY_DIST_YDS = "SCZN3_RANGE_YDS_V1";   // numeric (yards)
 
-  // NEW: Target size persistence
+  // Target size persistence
   const KEY_TARGET_SIZE = "SCZN3_TARGET_SIZE_KEY_V1"; // e.g., "23x35"
   const KEY_TARGET_W = "SCZN3_TARGET_W_IN_V1";
   const KEY_TARGET_H = "SCZN3_TARGET_H_IN_V1";
@@ -94,7 +91,7 @@
   let rangeUnit = "YDS"; // "YDS" | "M"
   let rangeYds = 100;    // internal yards
 
-  // target size (inches)
+  // target size (inches) — still used for UI/meta, NOT rectangle movement math
   let targetSizeKey = "23x35";
   let targetWIn = 23;
   let targetHIn = 35;
@@ -421,7 +418,6 @@
     const w = clampInches(localStorage.getItem(KEY_TARGET_W) || "23", 23);
     const h = clampInches(localStorage.getItem(KEY_TARGET_H) || "35", 35);
 
-    // If key exists but w/h missing, try to infer from known presets:
     const presetMap = {
       "8.5x11": { w: 8.5, h: 11 },
       "17x35": { w: 17, h: 35 },
@@ -451,7 +447,6 @@
   // LIVE TOP
   // ------------------------------------------------------------
   function syncLiveTop() {
-    // distance line
     if (elLiveDistance) {
       if (rangeUnit === "M") {
         const m = Math.round(ydsToM(rangeYds));
@@ -461,13 +456,11 @@
       }
     }
 
-    // dial line
     if (elLiveDial) {
       const cv = getClickValue();
       elLiveDial.textContent = `${cv.toFixed(2)} ${dialUnit}`;
     }
 
-    // target size line
     if (elLiveTarget) {
       const label = (targetSizeKey || "").replace("x", "×");
       elLiveTarget.textContent = `Target: ${label}`;
@@ -526,7 +519,7 @@
   }, { capture: true });
 
   // ------------------------------------------------------------
-  // Score (LOCAL placeholder) — NOW DIMENSION-CORRECT
+  // Score (LOCAL placeholder)
   // ------------------------------------------------------------
   function scoreFromRadiusInches(rIn) {
     if (rIn <= 0.25) return 100;
@@ -552,10 +545,15 @@
     const dx = aim.x01 - avg.x; // + means move RIGHT
     const dy = aim.y01 - avg.y; // + means move DOWN (screen y)
 
-    // DIMENSION-CORRECT inches:
-    // X uses target width inches, Y uses target height inches.
-    const inchesX = dx * targetWIn;
-    const inchesY = dy * targetHIn;
+    // ----------------------------------------------------------
+    // FIX: SQUARE SCORING PLANE (NO RECTANGLE BIAS)
+    // Both axes use the SAME physical inches-per-1.0 scale.
+    // Using the smaller side guarantees the square fits inside target.
+    // ----------------------------------------------------------
+    const squareIn = Math.min(targetWIn, targetHIn);
+
+    const inchesX = dx * squareIn;
+    const inchesY = dy * squareIn;
 
     const rIn = Math.sqrt(inchesX * inchesX + inchesY * inchesY);
 
@@ -564,7 +562,7 @@
     // inches per unit at distance
     const inchesPerUnit = (dialUnit === "MOA")
       ? (dist / 100) * 1.047
-      : (dist / 100) * 3.6; // approx for mrad (works for pilot)
+      : (dist / 100) * 3.6; // approx for mrad (pilot)
 
     const unitX = inchesX / inchesPerUnit;
     const unitY = inchesY / inchesPerUnit;
@@ -579,7 +577,8 @@
       score: scoreFromRadiusInches(rIn),
       windage: { dir: clicksX >= 0 ? "RIGHT" : "LEFT", clicks: Math.abs(clicksX) },
       elevation: { dir: clicksY >= 0 ? "DOWN" : "UP", clicks: Math.abs(clicksY) },
-      dial: { unit: dialUnit, clickValue: clickVal }
+      dial: { unit: dialUnit, clickValue: clickVal },
+      squareIn
     };
   }
 
@@ -609,9 +608,10 @@
       dial: { unit: out.dial.unit, clickValue: Number(out.dial.clickValue.toFixed(2)) },
       vendorUrl,
       surveyUrl: "",
-      // pass target meta so SEC knows what rules were used
+      // keep target meta so SEC knows what was selected
       target: { key: targetSizeKey, wIn: Number(targetWIn), hIn: Number(targetHIn) },
-      debug: { aim, avgPoi: out.avgPoi, distanceYds: getDistanceYds(), inches: out.inches }
+      // debug now shows squareIn too
+      debug: { aim, avgPoi: out.avgPoi, distanceYds: getDistanceYds(), inches: out.inches, squareIn: out.squareIn }
     };
 
     goToSEC(payload);
@@ -710,7 +710,6 @@
     if (elImg?.src) setText(elStatus, "Tap Aim Point.");
   });
 
-  // hard bind results buttons
   [elStickyBtn, $("showResultsBtn")].filter(Boolean).forEach((b) => {
     b.addEventListener("click", (e) => {
       e.preventDefault();
