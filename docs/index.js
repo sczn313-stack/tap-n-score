@@ -1,9 +1,9 @@
 /* ============================================================
    docs/index.js (FULL REPLACEMENT) — LIVE TOP + MATRIX ONLY + TARGET SIZE + LIT CHIP
    FIX: SQUARE SCORING PLANE (NO RECTANGLE BIAS)
-   - Movement math no longer uses width for X and height for Y.
-   - Both axes scale from ONE square size: min(targetWIn, targetHIn).
-   - Target W/H still used for UI + chip + metadata only (and physical boundary).
+   + FIX: iOS WEIRD MOTION (SCROLL CHAINING) WITHOUT KILLING PINCH-ZOOM
+   - Blocks 1-finger scroll/rubber-band on target area
+   - Allows 2-finger pinch zoom
 ============================================================ */
 
 (() => {
@@ -194,6 +194,7 @@
   function resetAll() {
     aim = null;
     hits = [];
+    touchStart = null;
     if (elDots) elDots.innerHTML = "";
     setTapCount();
     hideSticky();
@@ -650,7 +651,7 @@
   });
 
   // ------------------------------------------------------------
-  // Tap logic
+  // Tap logic (with iOS anti-scroll chaining, pinch-zoom allowed)
   // ------------------------------------------------------------
   function acceptTap(clientX, clientY) {
     if (!elImg?.src) return;
@@ -676,9 +677,16 @@
   }
 
   if (elWrap) {
+    // Key fix: block ONE-finger scroll/rubber-band on target area,
+    // but allow TWO-finger pinch zoom.
+    elWrap.addEventListener("touchmove", (e) => {
+      if (e.touches && e.touches.length === 1) e.preventDefault();
+    }, { passive: false });
+
     elWrap.addEventListener("touchstart", (e) => {
-      const t = e.touches?.[0];
-      if (!t) return;
+      // Only track tap-start for single-finger touches
+      if (!e.touches || e.touches.length !== 1) { touchStart = null; return; }
+      const t = e.touches[0];
       touchStart = { x: t.clientX, y: t.clientY, t: Date.now() };
     }, { passive: true });
 
@@ -688,7 +696,7 @@
 
       const dx = Math.abs(t.clientX - touchStart.x);
       const dy = Math.abs(t.clientY - touchStart.y);
-      if (dx > 10 || dy > 10) { touchStart = null; return; } // scroll => ignore
+      if (dx > 10 || dy > 10) { touchStart = null; return; } // gesture => ignore
 
       lastTouchTapAt = Date.now();
       acceptTap(t.clientX, t.clientY);
