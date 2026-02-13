@@ -4,6 +4,8 @@
    + FIX: iOS WEIRD MOTION (SCROLL CHAINING) WITHOUT KILLING PINCH-ZOOM
    - Blocks 1-finger scroll/rubber-band on target area
    - Allows 2-finger pinch zoom
+   + FIX: SEC EXPORT BULLET HOLES
+   - Includes ALL hit taps in payload.debug.hits
 ============================================================ */
 
 (() => {
@@ -546,11 +548,7 @@
     const dx = aim.x01 - avg.x; // + means move RIGHT
     const dy = aim.y01 - avg.y; // + means move DOWN (screen y)
 
-    // ----------------------------------------------------------
-    // FIX: SQUARE SCORING PLANE (NO RECTANGLE BIAS)
-    // Both axes use the SAME physical inches-per-1.0 scale.
-    // Using the smaller side guarantees the square fits inside target.
-    // ----------------------------------------------------------
+    // FIX: square scoring plane
     const squareIn = Math.min(targetWIn, targetHIn);
 
     const inchesX = dx * squareIn;
@@ -609,10 +607,17 @@
       dial: { unit: out.dial.unit, clickValue: Number(out.dial.clickValue.toFixed(2)) },
       vendorUrl,
       surveyUrl: "",
-      // keep target meta so SEC knows what was selected
       target: { key: targetSizeKey, wIn: Number(targetWIn), hIn: Number(targetHIn) },
-      // debug now shows squareIn too
-      debug: { aim, avgPoi: out.avgPoi, distanceYds: getDistanceYds(), inches: out.inches, squareIn: out.squareIn }
+
+      // ✅ IMPORTANT: include ALL hit taps so SEC export draws bullet holes
+      debug: {
+        aim,
+        hits, // ✅ added
+        avgPoi: out.avgPoi,
+        distanceYds: getDistanceYds(),
+        inches: out.inches,
+        squareIn: out.squareIn
+      }
     };
 
     goToSEC(payload);
@@ -677,7 +682,7 @@
   }
 
   if (elWrap) {
-    // Key fix: block ONE-finger scroll/rubber-band on target area,
+    // Block ONE-finger scroll/rubber-band on target area (iOS),
     // but allow TWO-finger pinch zoom.
     elWrap.addEventListener("touchmove", (e) => {
       if (e.touches && e.touches.length === 1) e.preventDefault();
