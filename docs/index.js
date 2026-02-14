@@ -1,10 +1,6 @@
 /* ============================================================
-   docs/index.js (FULL REPLACEMENT) — MATRIX "ACTIVE" LABELS (SCREAMERS)
-   + Section titles flip to:  "TARGET SIZE — ACTIVE" while interacting
-   + Restores original label when you leave the section
-   + Dot classes added so CSS sizes apply:
-       - Aim dot uses .tapDotAim
-       - Bullet holes use .tapDotHit
+   docs/index.js (FULL REPLACEMENT) — MATRIX + SQUARE PLANE
+   + RESTORE MIRRORED CORNER PROMPTS (TL aim / BR bullet holes)
 ============================================================ */
 
 (() => {
@@ -25,6 +21,10 @@
   const elClear = $("clearTapsBtn");
   const elInstruction = $("instructionLine");
   const elStatus = $("statusLine");
+
+  // ✅ Corner prompts
+  const elCornerAim = $("cornerAim");
+  const elCornerHoles = $("cornerHoles");
 
   // Sticky
   const elStickyBar = $("stickyBar");
@@ -92,15 +92,12 @@
   let rangeUnit = "YDS"; // "YDS" | "M"
   let rangeYds = 100;    // internal yards
 
-  // target size (inches) — used for UI/meta + square scoring plane
+  // target size (inches)
   let targetSizeKey = "23x35";
   let targetWIn = 23;
   let targetHIn = 35;
 
-  const DEFAULTS = {
-    MOA: 0.25,
-    MRAD: 0.10
-  };
+  const DEFAULTS = { MOA: 0.25, MRAD: 0.10 };
 
   // ------------------------------------------------------------
   // HARD LANDING LOCK
@@ -174,6 +171,22 @@
     }, 650);
   }
 
+  // ✅ Corner stage controller
+  function setStage(stage) {
+    if (elWrap) elWrap.setAttribute("data-stage", stage);
+
+    // hide both by default
+    if (elCornerAim) elCornerAim.setAttribute("aria-hidden", "true");
+    if (elCornerHoles) elCornerHoles.setAttribute("aria-hidden", "true");
+
+    if (stage === "aim") {
+      if (elCornerAim) elCornerAim.setAttribute("aria-hidden", "false");
+    }
+    if (stage === "holes") {
+      if (elCornerHoles) elCornerHoles.setAttribute("aria-hidden", "false");
+    }
+  }
+
   // Instruction line state coloring
   function setInstruction(text, kind) {
     if (!elInstruction) return;
@@ -186,11 +199,19 @@
   }
 
   function syncInstruction() {
-    if (!elImg?.src) { setInstruction("", ""); return; }
-    if (!aim) { setInstruction("Tap Aim Point.", "aim"); return; }
-    if (hits.length < 1) { setInstruction("Tap Bullet Holes.", "holes"); return; }
-    // keep it simple (no “tap more…”)
+    if (!elImg?.src) {
+      setInstruction("", "");
+      setStage("noimg");
+      return;
+    }
+    if (!aim) {
+      setInstruction("Tap Aim Point.", "aim");
+      setStage("aim");
+      return;
+    }
+    // after aim
     setInstruction("Tap Bullet Holes.", "holes");
+    setStage("holes");
   }
 
   function resetAll() {
@@ -267,7 +288,7 @@
   }
 
   // ------------------------------------------------------------
-  // Dots (now with classes so CSS sizing works)
+  // Dots
   // ------------------------------------------------------------
   function addDot(x01, y01, kind) {
     if (!elDots) return;
@@ -319,12 +340,8 @@
 
   function syncRangeInputFromInternal() {
     if (!elDist) return;
-    if (rangeUnit === "M") {
-      const m = Math.round(ydsToM(rangeYds));
-      elDist.value = String(m);
-    } else {
-      elDist.value = String(rangeYds);
-    }
+    if (rangeUnit === "M") elDist.value = String(Math.round(ydsToM(rangeYds)));
+    else elDist.value = String(rangeYds);
   }
 
   function syncInternalFromRangeInput() {
@@ -332,9 +349,7 @@
     let n = Number(elDist.value);
     if (!Number.isFinite(n)) n = (rangeUnit === "M") ? Math.round(ydsToM(rangeYds)) : rangeYds;
 
-    rangeYds = (rangeUnit === "M")
-      ? clampRangeYds(mToYds(n))
-      : clampRangeYds(n);
+    rangeYds = (rangeUnit === "M") ? clampRangeYds(mToYds(n)) : clampRangeYds(n);
 
     try { localStorage.setItem(KEY_DIST_YDS, String(rangeYds)); } catch {}
     syncRangeInputFromInternal();
@@ -349,9 +364,7 @@
   }
 
   function hydrateRange() {
-    const savedYds = Number(localStorage.getItem(KEY_DIST_YDS) || "100");
-    rangeYds = clampRangeYds(savedYds);
-
+    rangeYds = clampRangeYds(Number(localStorage.getItem(KEY_DIST_YDS) || "100"));
     const savedUnit = localStorage.getItem(KEY_DIST_UNIT) || "YDS";
     setRangeUnit(savedUnit === "M" ? "M" : "YDS");
   }
@@ -368,9 +381,7 @@
     const def = DEFAULTS[dialUnit];
     if (elClickValue) elClickValue.value = String(def.toFixed(2));
 
-    if (elClickUnitLabel) {
-      elClickUnitLabel.textContent = dialUnit === "MOA" ? "MOA/click" : "MRAD/click";
-    }
+    if (elClickUnitLabel) elClickUnitLabel.textContent = dialUnit === "MOA" ? "MOA/click" : "MRAD/click";
 
     syncLiveTop();
   }
@@ -381,8 +392,7 @@
       n = DEFAULTS[dialUnit];
       if (elClickValue) elClickValue.value = String(n.toFixed(2));
     }
-    n = Math.max(0.01, Math.min(5, n));
-    return n;
+    return Math.max(0.01, Math.min(5, n));
   }
 
   // ------------------------------------------------------------
@@ -418,19 +428,15 @@
 
   function hydrateTargetSize() {
     const key = localStorage.getItem(KEY_TARGET_SIZE) || "23x35";
-    const w = clampInches(localStorage.getItem(KEY_TARGET_W) || "23", 23);
-    const h = clampInches(localStorage.getItem(KEY_TARGET_H) || "35", 35);
-
     const presetMap = {
       "8.5x11": { w: 8.5, h: 11 },
       "17x35": { w: 17, h: 35 },
       "23x35": { w: 23, h: 35 },
       "23x23": { w: 23, h: 23 }
     };
-
-    const p = presetMap[key];
-    if (p) setTargetSize(key, p.w, p.h);
-    else setTargetSize(key, w, h);
+    const p = presetMap[key] || { w: clampInches(localStorage.getItem(KEY_TARGET_W) || "23", 23),
+                                  h: clampInches(localStorage.getItem(KEY_TARGET_H) || "35", 35) };
+    setTargetSize(key in presetMap ? key : "23x35", p.w, p.h);
   }
 
   function wireTargetSizeChips() {
@@ -451,23 +457,14 @@
   // ------------------------------------------------------------
   function syncLiveTop() {
     if (elLiveDistance) {
-      if (rangeUnit === "M") {
-        const m = Math.round(ydsToM(rangeYds));
-        elLiveDistance.textContent = `${m} m`;
-      } else {
-        elLiveDistance.textContent = `${rangeYds} yds`;
-      }
+      elLiveDistance.textContent = (rangeUnit === "M")
+        ? `${Math.round(ydsToM(rangeYds))} m`
+        : `${rangeYds} yds`;
     }
 
-    if (elLiveDial) {
-      const cv = getClickValue();
-      elLiveDial.textContent = `${cv.toFixed(2)} ${dialUnit}`;
-    }
+    if (elLiveDial) elLiveDial.textContent = `${getClickValue().toFixed(2)} ${dialUnit}`;
 
-    if (elLiveTarget) {
-      const label = (targetSizeKey || "").replace("x", "×");
-      elLiveTarget.textContent = label; // value only (label handled in HTML/CSS)
-    }
+    if (elLiveTarget) elLiveTarget.textContent = (targetSizeKey || "").replace("x", "×");
   }
 
   // ------------------------------------------------------------
@@ -522,34 +519,6 @@
   }, { capture: true });
 
   // ------------------------------------------------------------
-  // MATRIX SCREAMER: flip titles to "— ACTIVE" while editing
-  // ------------------------------------------------------------
-  function wireMatrixActiveLabels() {
-    if (!elMatrixPanel) return;
-
-    const groups = Array.from(elMatrixPanel.querySelectorAll(".matrixGroup"));
-    groups.forEach((group) => {
-      const label = group.querySelector(".matrixLabel");
-      if (!label) return;
-
-      const base = (label.textContent || "").trim();
-      label.dataset.baseLabel = base;
-
-      group.addEventListener("focusin", () => {
-        const b = (label.dataset.baseLabel || base).trim();
-        label.textContent = b.endsWith("— ACTIVE") ? b : `${b} — ACTIVE`;
-      });
-
-      group.addEventListener("focusout", (e) => {
-        // only restore when focus leaves the group entirely
-        const next = e.relatedTarget;
-        if (next && group.contains(next)) return;
-        label.textContent = (label.dataset.baseLabel || base).trim();
-      });
-    });
-  }
-
-  // ------------------------------------------------------------
   // Score (LOCAL placeholder)
   // ------------------------------------------------------------
   function scoreFromRadiusInches(rIn) {
@@ -576,19 +545,16 @@
     const dx = aim.x01 - avg.x; // + means move RIGHT
     const dy = aim.y01 - avg.y; // + means move DOWN (screen y)
 
-    // Square scoring plane (prevents rectangle bias)
+    // square scoring plane
     const squareIn = Math.min(targetWIn, targetHIn);
-
     const inchesX = dx * squareIn;
     const inchesY = dy * squareIn;
-
     const rIn = Math.sqrt(inchesX * inchesX + inchesY * inchesY);
-    const dist = getDistanceYds();
 
-    // inches per unit at distance
+    const dist = getDistanceYds();
     const inchesPerUnit = (dialUnit === "MOA")
       ? (dist / 100) * 1.047
-      : (dist / 100) * 3.6; // pilot approx for mrad
+      : (dist / 100) * 3.6; // pilot
 
     const unitX = inchesX / inchesPerUnit;
     const unitY = inchesY / inchesPerUnit;
@@ -636,15 +602,8 @@
       surveyUrl: "",
       target: { key: targetSizeKey, wIn: Number(targetWIn), hIn: Number(targetHIn) },
 
-      // include all taps for SEC export (holes)
-      debug: {
-        aim,
-        hits,
-        avgPoi: out.avgPoi,
-        distanceYds: getDistanceYds(),
-        inches: out.inches,
-        squareIn: out.squareIn
-      }
+      // include ALL taps for export holes
+      debug: { aim, hits, avgPoi: out.avgPoi, distanceYds: getDistanceYds(), inches: out.inches, squareIn: out.squareIn }
     };
 
     goToSEC(payload);
@@ -683,7 +642,7 @@
   });
 
   // ------------------------------------------------------------
-  // Tap logic (with iOS anti-scroll chaining, pinch-zoom allowed)
+  // Tap logic (iOS anti-scroll chaining, pinch-zoom allowed)
   // ------------------------------------------------------------
   function acceptTap(clientX, clientY) {
     if (!elImg?.src) return;
@@ -709,8 +668,6 @@
   }
 
   if (elWrap) {
-    // Block ONE-finger scroll/rubber-band on target area (iOS),
-    // but allow TWO-finger pinch zoom.
     elWrap.addEventListener("touchmove", (e) => {
       if (e.touches && e.touches.length === 1) e.preventDefault();
     }, { passive: false });
@@ -790,7 +747,6 @@
 
   wireMatrixPresets();
   wireTargetSizeChips();
-  wireMatrixActiveLabels();
 
   highlightSizeChip();
   syncLiveTop();
