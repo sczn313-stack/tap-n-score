@@ -777,3 +777,119 @@ body{
   -webkit-tap-highlight-color: transparent;
 }
 .stickyBtn:active{ transform: translateY(1px); }
+
+/* ============================================================
+   MATRIX TIGHTEN (PASTE AT BOTTOM)
+   Goal: fit the entire Matrix drawer on one phone screen.
+============================================================ */
+
+/* Drawer box tighter */
+.matrixPanel{
+  margin: 8px 12px 10px;
+  padding: 10px;
+  border-radius: 14px;
+}
+
+/* Headings tighter + bolder */
+.matrixTitle{
+  font-size: 11px;
+  font-weight: 1000;
+  margin-bottom: 8px;
+  letter-spacing: .14em;
+}
+
+.matrixGroup{ margin-bottom: 10px; }
+.matrixLabel{
+  font-size: 11px;
+  font-weight: 1000;
+  margin-bottom: 6px;
+  letter-spacing: .10em;
+}
+
+/* Rows tighter */
+.matrixRow{ gap: 8px; }
+.chipRow{ gap: 8px; }
+.chipRowTight{ gap: 6px; }
+
+/* Chips smaller */
+.chip{
+  height: 34px;
+  padding: 0 10px;
+  font-size: 12px;
+  letter-spacing: .06em;
+}
+
+/* Segment buttons smaller */
+.segBtn{
+  height: 34px;
+  padding: 0 10px;
+  border-radius: 12px;
+  font-size: 12px;
+}
+.segBtnTiny{
+  height: 26px;
+  padding: 0 9px;
+  font-size: 11px;
+  letter-spacing: .12em;
+}
+
+/* +/- and inputs smaller */
+.miniBtn{
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  font-size: 18px;
+}
+.miniBtnTight{
+  width: 30px;
+  height: 34px;
+  border-radius: 10px;
+  font-size: 18px;
+}
+
+.miniInput{
+  height: 38px;
+  border-radius: 12px;
+  font-size: 16px;
+}
+.miniInputTight{
+  height: 34px;
+  border-radius: 10px;
+  font-size: 16px;
+}
+
+.miniInputWide{
+  height: 38px;
+  border-radius: 12px;
+  font-size: 16px;
+}
+.miniInputWideTight{
+  height: 34px;
+  border-radius: 10px;
+  font-size: 16px;
+}
+
+/* Micro helper text smaller + optional hide on small screens */
+.matrixMicro{
+  margin-top: 6px;
+  font-size: 11px;
+  line-height: 1.15;
+  color: rgba(238,242,247,.50);
+}
+
+@media (max-width: 420px){
+  .matrixMicro{ display:none; }
+}
+
+/* Close button tighter */
+.matrixCloseBtn{
+  height: 36px;
+  padding: 0 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  letter-spacing: .12em;
+}
+
+/* Unit toggle tighter */
+.unitToggle{ gap: 4px; }
+
