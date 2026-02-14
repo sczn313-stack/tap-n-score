@@ -892,4 +892,91 @@ body{
 
 /* Unit toggle tighter */
 .unitToggle{ gap: 4px; }
+/* ============================================================
+   MATRIX FINAL: 2-ROW QUICK PRESETS + STRONG RW&B AUTHORITY
+   - Quick Presets become 3 columns x 2 rows
+   - Matrix section labels become a thin RW&B banner
+   - Distance/Dial/Quick Preset controls get stronger RW&B styling
+============================================================ */
 
+/* --- RW&B thin banner for Matrix section titles --- */
+.matrixPanel .matrixLabel{
+  font-weight: 1000;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  font-size: 11px;
+
+  padding: 6px 10px;
+  border-radius: 12px;
+
+  color: rgba(238,242,247,.98);
+  background: linear-gradient(90deg,
+    rgba(214,64,64,.92) 0%,
+    rgba(238,242,247,.18) 50%,
+    rgba(47,102,255,.92) 100%
+  );
+  border: 1px solid rgba(255,255,255,.18);
+  box-shadow: 0 10px 24px rgba(0,0,0,.35);
+}
+
+/* --- Make matrix controls pop (not faded) --- */
+.matrixPanel .miniBtn,
+.matrixPanel .miniInput,
+.matrixPanel .miniInputWide,
+.matrixPanel .segBtn,
+.matrixPanel .chip{
+  border-color: rgba(255,255,255,.22) !important;
+  background: rgba(255,255,255,.10) !important;
+  color: rgba(238,242,247,.96) !important;
+}
+
+/* Give the MOA/MRAD + YDS/M buttons a stronger “active” look */
+.matrixPanel .segBtn.segOn{
+  border-color: rgba(255,255,255,.26) !important;
+  background: linear-gradient(90deg,
+    rgba(214,64,64,.35) 0%,
+    rgba(238,242,247,.10) 50%,
+    rgba(47,102,255,.35) 100%
+  ) !important;
+  box-shadow:
+    0 10px 22px rgba(0,0,0,.35),
+    0 0 0 1px rgba(255,255,255,.10) inset;
+}
+
+/* Chips: add subtle RW&B sheen */
+.matrixPanel .chip{
+  background: linear-gradient(90deg,
+    rgba(214,64,64,.18) 0%,
+    rgba(255,255,255,.08) 50%,
+    rgba(47,102,255,.18) 100%
+  ) !important;
+}
+
+/* Keep selected target size chip (chipOn) dominant */
+.matrixPanel .chipOn{
+  border-color: rgba(103,243,164,.55) !important;
+  background: rgba(103,243,164,.14) !important;
+  box-shadow: 0 10px 22px rgba(0,0,0,.35);
+}
+
+/* --- Quick Presets: force 2 lines (3 across) --- */
+#presetChipRow{
+  display: grid !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+/* Tighten preset chip size just a touch so it never overflows */
+#presetChipRow .chip{
+  height: 32px;
+  padding: 0 8px;
+  font-size: 11px;
+  letter-spacing: .08em;
+  text-align: center;
+  justify-content: center;
+}
+
+/* If someone’s on an ultra-narrow screen, drop to 2 columns */
+@media (max-width: 360px){
+  #presetChipRow{ grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
