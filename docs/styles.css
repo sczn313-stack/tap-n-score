@@ -1,4 +1,4 @@
-/* docs/styles.css (FULL REPLACEMENT) — LIVE TOP 2-LINE + MATRIX RW&B AUTHORITY */
+/* docs/styles.css (FULL REPLACEMENT) — LIVE TOP 2-LINE + MATRIX RW&B SCREAMERS */
 
 :root{
   --bg:#06070a;
@@ -13,6 +13,11 @@
 
   --aim:#67f3a4;
   --hit:#b7ff3c;
+
+  /* Screamer tuning */
+  --screamGlow: rgba(103,243,164,.22);
+  --screamGlow2: rgba(47,102,255,.18);
+  --screamEdge: rgba(214,64,64,.22);
 }
 
 *{ box-sizing:border-box; }
@@ -303,7 +308,7 @@ body{
 }
 
 /* ============================================================
-   MATRIX PANEL — RW&B AUTHORITY
+   MATRIX PANEL — RW&B AUTHORITY + SCREAMERS
 ============================================================ */
 .matrixPanel{
   margin: 10px 14px 12px;
@@ -315,10 +320,18 @@ body{
     radial-gradient(900px 320px at 80% 0%, rgba(214,64,64,.14), transparent 60%);
   box-shadow: 0 18px 50px rgba(0,0,0,.45);
   padding: 12px;
+
+  /* Screamer outer aura */
+  outline: 1px solid rgba(103,243,164,.08);
+  box-shadow:
+    0 18px 50px rgba(0,0,0,.45),
+    0 0 0 1px rgba(255,255,255,.06),
+    0 0 30px rgba(103,243,164,.10),
+    0 0 34px rgba(47,102,255,.10);
 }
 .matrixHidden{ display:none; }
 
-/* MATRIX title = RW&B bar */
+/* MATRIX title = RW&B authority bar */
 .matrixTitle{
   font-weight: 1200;
   letter-spacing: .18em;
@@ -331,14 +344,74 @@ body{
   border: 1px solid rgba(255,255,255,.14);
   background:
     linear-gradient(90deg,
-      rgba(214,64,64,.24),
+      rgba(214,64,64,.26),
       rgba(238,242,247,.10),
-      rgba(47,102,255,.22)
+      rgba(47,102,255,.24)
     );
+  position: relative;
+  overflow:hidden;
+}
+
+/* Title shimmer (one tasteful pass) */
+.matrixTitle::after{
+  content:"";
+  position:absolute;
+  top:-40%;
+  left:-30%;
+  width: 60%;
+  height: 180%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.10), transparent);
+  transform: rotate(18deg);
+  animation: screamShine 2.4s ease-in-out 1;
+  pointer-events:none;
+}
+@keyframes screamShine{
+  0%{ transform: translateX(-40%) rotate(18deg); opacity:0; }
+  30%{ opacity:.9; }
+  100%{ transform: translateX(240%) rotate(18deg); opacity:0; }
 }
 
 /* each section */
-.matrixGroup{ margin-bottom: 14px; }
+.matrixGroup{
+  margin-bottom: 14px;
+  padding: 10px 10px 12px;
+  border-radius: 16px;
+  border: 1px solid rgba(255,255,255,.10);
+  background: rgba(0,0,0,.12);
+  transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+  position: relative;
+  overflow:hidden;
+}
+
+/* ACTIVE SECTION = SCREAMER SPOTLIGHT */
+.matrixGroup:focus-within{
+  border-color: rgba(103,243,164,.22);
+  box-shadow:
+    0 18px 46px rgba(0,0,0,.55),
+    0 0 0 1px rgba(103,243,164,.12),
+    0 0 26px var(--screamGlow),
+    0 0 22px var(--screamGlow2);
+  transform: translateY(-1px);
+}
+
+/* RW&B stripe on active section */
+.matrixGroup:focus-within::before{
+  content:"";
+  position:absolute;
+  left:12px;
+  right:12px;
+  top:10px;
+  height: 5px;
+  border-radius: 999px;
+  background: linear-gradient(90deg,
+    rgba(214,64,64,.75),
+    rgba(238,242,247,.30),
+    rgba(47,102,255,.70)
+  );
+  box-shadow:
+    0 0 0 1px rgba(255,255,255,.08),
+    0 0 18px rgba(103,243,164,.14);
+}
 
 /* section labels = bold + colored */
 .matrixLabel{
@@ -348,15 +421,23 @@ body{
   text-transform: uppercase;
   color: rgba(238,242,247,.92);
   margin-bottom: 10px;
-  padding: 8px 10px;
-  border-radius: 12px;
+  padding: 10px 10px;
+  border-radius: 14px;
   border: 1px solid rgba(255,255,255,.12);
   background:
     linear-gradient(90deg,
-      rgba(214,64,64,.16),
+      rgba(214,64,64,.18),
       rgba(255,255,255,.06),
-      rgba(47,102,255,.14)
+      rgba(47,102,255,.16)
     );
+}
+
+/* label gets louder when active */
+.matrixGroup:focus-within .matrixLabel{
+  border-color: rgba(103,243,164,.24);
+  box-shadow:
+    0 0 0 1px rgba(103,243,164,.10),
+    0 0 18px rgba(103,243,164,.10);
 }
 
 .matrixRow{
@@ -367,7 +448,7 @@ body{
 }
 
 .matrixMicro{
-  margin-top: 8px;
+  margin-top: 10px;
   font-size: 12px;
   font-weight: 900;
   color: rgba(238,242,247,.62);
@@ -389,14 +470,27 @@ body{
   letter-spacing: .08em;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
+  transition: transform .14s ease, box-shadow .14s ease, border-color .14s ease, background .14s ease;
 }
 .chip:active{ transform: translateY(1px); }
 
+/* Focus ring = screamer */
+.chip:focus-visible{
+  outline: none;
+  border-color: rgba(103,243,164,.40);
+  box-shadow:
+    0 0 0 2px rgba(103,243,164,.18),
+    0 0 22px rgba(103,243,164,.14);
+}
+
 /* selected chip highlight */
 .chipOn{
-  border-color: rgba(103,243,164,.42) !important;
+  border-color: rgba(103,243,164,.44) !important;
   background: rgba(103,243,164,.12) !important;
   color: rgba(238,242,247,.98) !important;
+  box-shadow:
+    0 0 0 1px rgba(103,243,164,.14),
+    0 0 22px rgba(103,243,164,.16);
 }
 
 /* matrix footer */
@@ -413,6 +507,12 @@ body{
   letter-spacing: .10em;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
+  transition: transform .14s ease, box-shadow .14s ease;
+}
+.matrixCloseBtn:active{ transform: translateY(1px); }
+.matrixCloseBtn:focus-visible{
+  outline:none;
+  box-shadow: 0 0 0 2px rgba(103,243,164,.18), 0 0 24px rgba(103,243,164,.14);
 }
 
 /* controls */
@@ -428,8 +528,14 @@ body{
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
   flex: 0 0 auto;
+  transition: transform .14s ease, box-shadow .14s ease, border-color .14s ease;
 }
 .miniBtn:active{ transform: translateY(1px); }
+.miniBtn:focus-visible{
+  outline:none;
+  border-color: rgba(103,243,164,.34);
+  box-shadow: 0 0 0 2px rgba(103,243,164,.16), 0 0 22px rgba(103,243,164,.12);
+}
 
 .miniBtnTight{
   width: 30px;
@@ -451,6 +557,11 @@ body{
   text-align:center;
   outline:none;
   flex: 0 0 auto;
+  transition: border-color .14s ease, box-shadow .14s ease;
+}
+.miniInput:focus{
+  border-color: rgba(103,243,164,.34);
+  box-shadow: 0 0 0 2px rgba(103,243,164,.16), 0 0 26px rgba(103,243,164,.10);
 }
 .miniInputTight{
   width: 72px;
@@ -473,6 +584,11 @@ body{
   text-align:center;
   outline:none;
   flex: 0 0 auto;
+  transition: border-color .14s ease, box-shadow .14s ease;
+}
+.miniInputWide:focus{
+  border-color: rgba(103,243,164,.34);
+  box-shadow: 0 0 0 2px rgba(103,243,164,.16), 0 0 26px rgba(103,243,164,.10);
 }
 .miniInputWideTight{
   width: 86px;
@@ -503,12 +619,19 @@ body{
   letter-spacing: .08em;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
-  flex: 0 0 auto;
+  transition: transform .14s ease, box-shadow .14s ease, border-color .14s ease;
+}
+.segBtn:active{ transform: translateY(1px); }
+.segBtn:focus-visible{
+  outline:none;
+  border-color: rgba(103,243,164,.30);
+  box-shadow: 0 0 0 2px rgba(103,243,164,.14), 0 0 22px rgba(103,243,164,.10);
 }
 
 .segBtn.segOn{
   border-color: rgba(103,243,164,.35);
   background: rgba(103,243,164,.10);
+  box-shadow: 0 0 18px rgba(103,243,164,.10);
 }
 
 .segBtnTiny{
