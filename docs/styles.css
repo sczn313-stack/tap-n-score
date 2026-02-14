@@ -1,4 +1,4 @@
-/* docs/styles.css (FULL REPLACEMENT) — LIVE TOP ONE-LINE + MATRIX AUTHORITY (RW&B) + iOS FILE INPUT HIDE */
+/* docs/styles.css (FULL REPLACEMENT) — LIVE TOP ONE-LINE + MATRIX AUTHORITY (BALANCED RW&B) + iOS FILE INPUT HIDE */
 
 :root{
   --bg:#06070a;
@@ -16,6 +16,17 @@
 
   --tipBg: rgba(0,0,0,.55);
   --tipStroke: rgba(255,255,255,.14);
+
+  /* BALANCED RW&B band */
+  --rwbBand: linear-gradient(
+    90deg,
+    rgba(214,64,64,.92) 0%,
+    rgba(214,64,64,.92) 33.33%,
+    rgba(238,242,247,.88) 33.33%,
+    rgba(238,242,247,.88) 66.66%,
+    rgba(47,102,255,.92) 66.66%,
+    rgba(47,102,255,.92) 100%
+  );
 }
 
 *{ box-sizing:border-box; }
@@ -301,19 +312,22 @@ body{
 }
 
 /* ============================================================
-   MATRIX PANEL — AUTHORITY (RW&B)
+   MATRIX PANEL — AUTHORITY (BALANCED RW&B)
 ============================================================ */
 .matrixPanel{
   margin: 10px 14px 12px;
   border-radius: 16px;
   border: 1px solid rgba(255,255,255,.14);
-  background: rgba(0,0,0,.26);
+  background:
+    radial-gradient(800px 260px at 18% 0%, rgba(214,64,64,.10), transparent 58%),
+    radial-gradient(800px 260px at 82% 0%, rgba(47,102,255,.10), transparent 58%),
+    rgba(0,0,0,.26);
   box-shadow: 0 18px 50px rgba(0,0,0,.45);
   padding: 12px;
   position: relative;
 }
 
-/* subtle tricolor edge across the top of the entire panel */
+/* tricolor edge across the top of the entire panel */
 .matrixPanel::before{
   content:"";
   position:absolute;
@@ -322,8 +336,8 @@ body{
   top: 10px;
   height: 4px;
   border-radius: 999px;
-  background: linear-gradient(90deg, rgba(214,64,64,.95), rgba(238,242,247,.90), rgba(47,102,255,.95));
-  opacity: .65;
+  background: var(--rwbBand);
+  opacity: .62;
   pointer-events:none;
 }
 
@@ -331,14 +345,14 @@ body{
 
 .matrixTitle{
   font-weight: 1100;
-  letter-spacing: .16em;
+  letter-spacing: .18em;
   text-transform: uppercase;
   font-size: 13px;
   color: rgba(238,242,247,.92);
   margin: 6px 0 12px;
 }
 
-/* each group gets a tighter, more “panel” feel */
+/* each group gets a tighter “panel” feel */
 .matrixGroup{
   margin-bottom: 12px;
   padding: 10px 10px 12px;
@@ -357,23 +371,25 @@ body{
   top: 10px;
   height: 3px;
   border-radius: 999px;
-  background: linear-gradient(90deg, rgba(214,64,64,.95), rgba(238,242,247,.90), rgba(47,102,255,.95));
-  opacity: .55;
+  background: var(--rwbBand);
+  opacity: .52;
   pointer-events:none;
 }
 
-/* section title: BOLDER + more obvious */
+/* section title: BOLDER + “authority” */
 .matrixLabel{
   margin-top: 6px;
   margin-bottom: 10px;
   font-size: 13px;
   font-weight: 1100;
-  letter-spacing: .18em;
+  letter-spacing: .20em;
   text-transform: uppercase;
-  color: rgba(238,242,247,.92);
+  color: rgba(238,242,247,.96);
+  text-shadow:
+    0 1px 0 rgba(0,0,0,.55),
+    0 0 14px rgba(238,242,247,.06);
 }
 
-/* micro text: still readable but stronger */
 .matrixMicro{
   margin-top: 8px;
   font-size: 12px;
