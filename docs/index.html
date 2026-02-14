@@ -1,4 +1,4 @@
-<!-- docs/index.html (FULL REPLACEMENT) — LIVE TOP + MATRIX DRAWER + TARGET SIZE PRESETS -->
+<!-- docs/index.html (FULL REPLACEMENT) — LIVE TOP ONE-LINE + MATRIX DRAWER + TARGET SIZE PRESETS -->
 <!doctype html>
 <html lang="en">
 <head>
@@ -14,7 +14,7 @@
   <title>Tap-n-Score™</title>
 
   <!-- RELATIVE PATHS (docs/) -->
-  <link rel="stylesheet" href="./styles.css?v=TP-Aplus-0210A" />
+  <link rel="stylesheet" href="./styles.css?v=TP-Aplus-0210B" />
 </head>
 
 <body>
@@ -69,17 +69,20 @@
         </div>
       </div>
 
-      <!-- LIVE DISPLAY (TOP TWO LINES) -->
+      <!-- LIVE DISPLAY (ONE LINE: YARDS | DIAL | TARGET) -->
       <div class="liveBar" aria-label="Live data display">
-        <div class="liveRow">
-          <div id="liveDistance" class="liveValue">100 yds</div>
-          <button id="matrixBtn" class="matrixBtn matrixBtnTight" type="button" aria-label="Open matrix presets">MATRIX</button>
-        </div>
-        <div class="liveRow">
-          <div id="liveDial" class="liveValueSub">0.25 MOA</div>
-        </div>
-        <div class="liveRow">
-          <div id="liveTarget" class="liveValueMini">Target: 23×35</div>
+        <div class="liveRow liveRowOneLine">
+          <div class="liveLine" aria-label="Distance, dial, and target size">
+            <span id="liveDistance" class="liveLinePrimary">100 yds</span>
+            <span class="liveSep" aria-hidden="true">|</span>
+            <span id="liveDial" class="liveLinePrimary">0.25 MOA</span>
+            <span class="liveSep" aria-hidden="true">|</span>
+            <span id="liveTarget" class="liveLineMini">23×35</span>
+          </div>
+
+          <button id="matrixBtn" class="matrixBtn matrixBtnTight" type="button" aria-label="Open matrix presets">
+            MATRIX
+          </button>
         </div>
       </div>
 
@@ -167,8 +170,8 @@
         <button id="clearTapsBtn" class="btnSecondary" type="button">Clear</button>
       </div>
 
-      <!-- Instruction line (color shifts with state) -->
-      <p id="instructionLine" class="hint"></p>
+      <!-- Instruction line (larger / mirrored authority) -->
+      <p id="instructionLine" class="hint instructionLine"></p>
     </section>
 
     <footer class="footer">
@@ -181,6 +184,6 @@
 
   </main>
 
-  <script defer src="./index.js?v=TP-Aplus-0210A"></script>
+  <script defer src="./index.js?v=TP-Aplus-0210B"></script>
 </body>
 </html>
