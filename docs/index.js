@@ -6,11 +6,8 @@
    - Allows 2-finger pinch zoom
    + FIX: SEC EXPORT BULLET HOLES
    - Includes ALL hit taps in payload.debug.hits
-
-   FINESSE (REQUEST):
-   - UL: TAP AIM POINT (statusLine)
-   - LR: TAP BULLET HOLES (instructionLine)
-   - Aim dot slightly larger than bullet holes
+   + FIX: LIVE TARGET LINE NOW SHOWS ONLY "23×23"
+     (HTML already shows "Target:" label)
 ============================================================ */
 
 (() => {
@@ -39,7 +36,7 @@
   // LIVE top
   const elLiveDistance = $("liveDistance");
   const elLiveDial = $("liveDial");
-  const elLiveTarget = $("liveTarget");
+  const elLiveTarget = $("liveTarget"); // now should display only "23×23"
 
   // Matrix
   const elMatrixBtn = $("matrixBtn");
@@ -98,12 +95,15 @@
   let rangeUnit = "YDS"; // "YDS" | "M"
   let rangeYds = 100;    // internal yards
 
-  // target size (inches)
+  // target size (inches) — used for UI/meta + scoring plane inches math
   let targetSizeKey = "23x35";
   let targetWIn = 23;
   let targetHIn = 35;
 
-  const DEFAULTS = { MOA: 0.25, MRAD: 0.10 };
+  const DEFAULTS = {
+    MOA: 0.25,
+    MRAD: 0.10
+  };
 
   // ------------------------------------------------------------
   // HARD LANDING LOCK
@@ -177,51 +177,22 @@
     }, 650);
   }
 
-  // ------------------------------------------------------------
-  // FINESSE: Instruction system (UL aim, LR bullet holes)
-  // ------------------------------------------------------------
-  function setStatus(text, kind) {
-    if (!elStatus) return;
-
-    elStatus.textContent = text || "";
-    elStatus.classList.remove("statusAim", "statusNeutral");
-    elStatus.classList.add(kind === "aim" ? "statusAim" : "statusNeutral");
-
-    elStatus.style.color = "rgba(238,242,247,.65)";
-    if (kind === "aim") elStatus.style.color = "rgba(103,243,164,.95)";
-  }
-
+  // Instruction line state coloring
   function setInstruction(text, kind) {
     if (!elInstruction) return;
-
     elInstruction.textContent = text || "";
-    elInstruction.classList.remove("instAim", "instHoles", "instNeutral");
-
-    if (kind === "hits") elInstruction.classList.add("instHoles");
-    else if (kind === "aim") elInstruction.classList.add("instAim");
-    else elInstruction.classList.add("instNeutral");
 
     elInstruction.style.color = "rgba(238,242,247,.65)";
-    if (kind === "hits") elInstruction.style.color = "rgba(183,255,60,.95)";
     if (kind === "aim")  elInstruction.style.color = "rgba(103,243,164,.95)";
+    if (kind === "hits") elInstruction.style.color = "rgba(183,255,60,.95)";
     if (kind === "go")   elInstruction.style.color = "rgba(47,102,255,.92)";
   }
 
   function syncInstruction() {
-    if (!elImg?.src) {
-      setStatus("Add a target photo to begin.", "neutral");
-      setInstruction("", "neutral");
-      return;
-    }
-
-    if (!aim) {
-      setStatus("TAP AIM POINT", "aim");
-      setInstruction("", "neutral");
-      return;
-    }
-
-    setStatus("", "neutral");
-    setInstruction("TAP BULLET HOLES", "hits");
+    if (!elImg?.src) { setInstruction("", ""); return; }
+    if (!aim) { setInstruction("Tap Aim Point.", "aim"); return; }
+    if (hits.length < 1) { setInstruction("Tap Bullet Holes.", "hits"); return; }
+    setInstruction("Tap Bullet Holes.", "hits");
   }
 
   function resetAll() {
@@ -231,8 +202,9 @@
     if (elDots) elDots.innerHTML = "";
     setTapCount();
     hideSticky();
-    closeMatrix();
     syncInstruction();
+    setText(elStatus, elImg?.src ? "Tap Aim Point." : "Add a target photo to begin.");
+    closeMatrix();
   }
 
   // ------------------------------------------------------------
@@ -256,6 +228,7 @@
   function hydrateVendorBox() {
     const v = localStorage.getItem(KEY_VENDOR_URL) || "";
     const ok = typeof v === "string" && v.startsWith("http");
+
     if (!elVendorBox) return;
 
     if (ok) {
@@ -296,21 +269,17 @@
   }
 
   // ------------------------------------------------------------
-  // Dots  ✅ (aim vs hit classes for sizing)
+  // Dots
   // ------------------------------------------------------------
   function addDot(x01, y01, kind) {
     if (!elDots) return;
-
     const d = document.createElement("div");
     d.className = "tapDot " + (kind === "aim" ? "tapDotAim" : "tapDotHit");
-
     d.style.left = (x01 * 100) + "%";
     d.style.top = (y01 * 100) + "%";
-
     d.style.background = (kind === "aim") ? "#67f3a4" : "#b7ff3c";
     d.style.border = "2px solid rgba(0,0,0,.55)";
     d.style.boxShadow = "0 10px 28px rgba(0,0,0,.55)";
-
     elDots.appendChild(d);
   }
 
@@ -497,9 +466,11 @@
       elLiveDial.textContent = `${cv.toFixed(2)} ${dialUnit}`;
     }
 
+    // IMPORTANT: HTML already prints "Target:" label.
+    // So this span should be ONLY "23×23".
     if (elLiveTarget) {
       const label = (targetSizeKey || "").replace("x", "×");
-      elLiveTarget.textContent = `Target: ${label}`;
+      elLiveTarget.textContent = `${label}`;
     }
   }
 
@@ -577,9 +548,11 @@
     avg.x /= hits.length;
     avg.y /= hits.length;
 
+    // correction vector = aim - avgPoi (bull - poib)
     const dx = aim.x01 - avg.x; // + means move RIGHT
     const dy = aim.y01 - avg.y; // + means move DOWN (screen y)
 
+    // FIX: square scoring plane
     const squareIn = Math.min(targetWIn, targetHIn);
 
     const inchesX = dx * squareIn;
@@ -589,9 +562,10 @@
 
     const dist = getDistanceYds();
 
+    // inches per unit at distance
     const inchesPerUnit = (dialUnit === "MOA")
       ? (dist / 100) * 1.047
-      : (dist / 100) * 3.6;
+      : (dist / 100) * 3.6; // approx for mrad (pilot)
 
     const unitX = inchesX / inchesPerUnit;
     const unitY = inchesY / inchesPerUnit;
@@ -624,7 +598,7 @@
 
   function onShowResults() {
     const out = computeCorrectionAndScore();
-    if (!out) { alert("Tap Aim Point first, then tap at least one hit."); return; }
+    if (!out) { alert("Tap Aim Point first, then tap at least one bullet hole."); return; }
 
     const vendorUrl = localStorage.getItem(KEY_VENDOR_URL) || "";
 
@@ -638,6 +612,8 @@
       vendorUrl,
       surveyUrl: "",
       target: { key: targetSizeKey, wIn: Number(targetWIn), hIn: Number(targetHIn) },
+
+      // ✅ include ALL hit taps so SEC export draws bullet holes
       debug: {
         aim,
         hits,
@@ -668,13 +644,14 @@
     await storeTargetPhotoForSEC(f, objectUrl);
 
     elImg.onload = () => {
+      setText(elStatus, "Tap Aim Point.");
       syncInstruction();
       revealScoringUI();
     };
 
     elImg.onerror = () => {
-      setStatus("Photo failed to load.", "neutral");
-      setInstruction("", "neutral");
+      setText(elStatus, "Photo failed to load.");
+      setInstruction("Try again.", "");
       revealScoringUI();
     };
 
@@ -693,6 +670,7 @@
     if (!aim) {
       aim = { x01, y01 };
       addDot(x01, y01, "aim");
+      setText(elStatus, "Tap Bullet Holes.");
       hideSticky();
       syncInstruction();
       return;
@@ -708,6 +686,8 @@
   }
 
   if (elWrap) {
+    // Block ONE-finger scroll/rubber-band on target area (iOS),
+    // but allow TWO-finger pinch zoom.
     elWrap.addEventListener("touchmove", (e) => {
       if (e.touches && e.touches.length === 1) e.preventDefault();
     }, { passive: false });
@@ -741,7 +721,10 @@
   // ------------------------------------------------------------
   // Buttons
   // ------------------------------------------------------------
-  elClear?.addEventListener("click", () => resetAll());
+  elClear?.addEventListener("click", () => {
+    resetAll();
+    if (elImg?.src) setText(elStatus, "Tap Aim Point.");
+  });
 
   [elStickyBtn, $("showResultsBtn")].filter(Boolean).forEach((b) => {
     b.addEventListener("click", (e) => {
@@ -767,7 +750,7 @@
   elClickValue?.addEventListener("blur", () => { getClickValue(); syncLiveTop(); });
   elClickValue?.addEventListener("change", () => { getClickValue(); syncLiveTop(); });
 
-  elMatrixBtn?.addEventListener("click", () => (isMatrixOpen() ? closeMatrix() : openMatrix()));
+  elMatrixBtn?.addEventListener("click", toggleMatrix);
   elMatrixClose?.addEventListener("click", closeMatrix);
 
   // ------------------------------------------------------------
@@ -776,6 +759,7 @@
   setUnit("MOA");
   closeMatrix();
   hideSticky();
+  resetAll();
 
   hydrateVendorBox();
   hydrateRange();
@@ -787,7 +771,6 @@
   highlightSizeChip();
   syncLiveTop();
 
-  resetAll();
   hardHideScoringUI();
   forceTop();
 })();
