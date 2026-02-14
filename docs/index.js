@@ -8,9 +8,9 @@
    - Includes ALL hit taps in payload.debug.hits
 
    FINESSE (REQUEST):
-   - Upper-left instruction via statusLine: TAP AIM POINT
-   - Lower-right instruction via instructionLine: TAP BULLET HOLES
-   - Remove "tap more hits..." copy
+   - UL: TAP AIM POINT (statusLine)
+   - LR: TAP BULLET HOLES (instructionLine)
+   - Aim dot slightly larger than bullet holes
 ============================================================ */
 
 (() => {
@@ -184,7 +184,6 @@
     if (!elStatus) return;
 
     elStatus.textContent = text || "";
-
     elStatus.classList.remove("statusAim", "statusNeutral");
     elStatus.classList.add(kind === "aim" ? "statusAim" : "statusNeutral");
 
@@ -196,8 +195,8 @@
     if (!elInstruction) return;
 
     elInstruction.textContent = text || "";
-
     elInstruction.classList.remove("instAim", "instHoles", "instNeutral");
+
     if (kind === "hits") elInstruction.classList.add("instHoles");
     else if (kind === "aim") elInstruction.classList.add("instAim");
     else elInstruction.classList.add("instNeutral");
@@ -216,14 +215,11 @@
     }
 
     if (!aim) {
-      // Upper-left instruction
       setStatus("TAP AIM POINT", "aim");
-      // Lower-right blank until aim is set
       setInstruction("", "neutral");
       return;
     }
 
-    // Once aim is set: keep the lower-right instruction only
     setStatus("", "neutral");
     setInstruction("TAP BULLET HOLES", "hits");
   }
@@ -260,7 +256,6 @@
   function hydrateVendorBox() {
     const v = localStorage.getItem(KEY_VENDOR_URL) || "";
     const ok = typeof v === "string" && v.startsWith("http");
-
     if (!elVendorBox) return;
 
     if (ok) {
@@ -301,17 +296,21 @@
   }
 
   // ------------------------------------------------------------
-  // Dots
+  // Dots  ✅ (aim vs hit classes for sizing)
   // ------------------------------------------------------------
   function addDot(x01, y01, kind) {
     if (!elDots) return;
+
     const d = document.createElement("div");
-    d.className = "tapDot";
+    d.className = "tapDot " + (kind === "aim" ? "tapDotAim" : "tapDotHit");
+
     d.style.left = (x01 * 100) + "%";
     d.style.top = (y01 * 100) + "%";
+
     d.style.background = (kind === "aim") ? "#67f3a4" : "#b7ff3c";
     d.style.border = "2px solid rgba(0,0,0,.55)";
     d.style.boxShadow = "0 10px 28px rgba(0,0,0,.55)";
+
     elDots.appendChild(d);
   }
 
@@ -578,11 +577,9 @@
     avg.x /= hits.length;
     avg.y /= hits.length;
 
-    // correction vector = aim - avgPoi (bull - poib)
     const dx = aim.x01 - avg.x; // + means move RIGHT
     const dy = aim.y01 - avg.y; // + means move DOWN (screen y)
 
-    // FIX: square scoring plane
     const squareIn = Math.min(targetWIn, targetHIn);
 
     const inchesX = dx * squareIn;
@@ -594,7 +591,7 @@
 
     const inchesPerUnit = (dialUnit === "MOA")
       ? (dist / 100) * 1.047
-      : (dist / 100) * 3.6; // approx for mrad (pilot)
+      : (dist / 100) * 3.6;
 
     const unitX = inchesX / inchesPerUnit;
     const unitY = inchesY / inchesPerUnit;
@@ -641,8 +638,6 @@
       vendorUrl,
       surveyUrl: "",
       target: { key: targetSizeKey, wIn: Number(targetWIn), hIn: Number(targetHIn) },
-
-      // ✅ include ALL bullet holes so SEC export draws them
       debug: {
         aim,
         hits,
@@ -713,8 +708,6 @@
   }
 
   if (elWrap) {
-    // Block ONE-finger scroll/rubber-band on target area (iOS),
-    // but allow TWO-finger pinch zoom.
     elWrap.addEventListener("touchmove", (e) => {
       if (e.touches && e.touches.length === 1) e.preventDefault();
     }, { passive: false });
@@ -774,7 +767,7 @@
   elClickValue?.addEventListener("blur", () => { getClickValue(); syncLiveTop(); });
   elClickValue?.addEventListener("change", () => { getClickValue(); syncLiveTop(); });
 
-  elMatrixBtn?.addEventListener("click", toggleMatrix);
+  elMatrixBtn?.addEventListener("click", () => (isMatrixOpen() ? closeMatrix() : openMatrix()));
   elMatrixClose?.addEventListener("click", closeMatrix);
 
   // ------------------------------------------------------------
