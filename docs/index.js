@@ -1,13 +1,10 @@
 /* ============================================================
-   docs/index.js (FULL REPLACEMENT) — LIVE TOP + MATRIX ONLY + TARGET SIZE + LIT CHIP
-   FIX: SQUARE SCORING PLANE (NO RECTANGLE BIAS)
-   + FIX: iOS WEIRD MOTION (SCROLL CHAINING) WITHOUT KILLING PINCH-ZOOM
-   - Blocks 1-finger scroll/rubber-band on target area
-   - Allows 2-finger pinch zoom
-   + FIX: SEC EXPORT BULLET HOLES
-   - Includes ALL hit taps in payload.debug.hits
-   + FIX: LIVE TARGET LINE NOW SHOWS ONLY "23×23"
-     (HTML already shows "Target:" label)
+   docs/index.js (FULL REPLACEMENT) — MATRIX "ACTIVE" LABELS (SCREAMERS)
+   + Section titles flip to:  "TARGET SIZE — ACTIVE" while interacting
+   + Restores original label when you leave the section
+   + Dot classes added so CSS sizes apply:
+       - Aim dot uses .tapDotAim
+       - Bullet holes use .tapDotHit
 ============================================================ */
 
 (() => {
@@ -36,7 +33,7 @@
   // LIVE top
   const elLiveDistance = $("liveDistance");
   const elLiveDial = $("liveDial");
-  const elLiveTarget = $("liveTarget"); // now should display only "23×23"
+  const elLiveTarget = $("liveTarget");
 
   // Matrix
   const elMatrixBtn = $("matrixBtn");
@@ -95,7 +92,7 @@
   let rangeUnit = "YDS"; // "YDS" | "M"
   let rangeYds = 100;    // internal yards
 
-  // target size (inches) — used for UI/meta + scoring plane inches math
+  // target size (inches) — used for UI/meta + square scoring plane
   let targetSizeKey = "23x35";
   let targetWIn = 23;
   let targetHIn = 35;
@@ -184,15 +181,16 @@
 
     elInstruction.style.color = "rgba(238,242,247,.65)";
     if (kind === "aim")  elInstruction.style.color = "rgba(103,243,164,.95)";
-    if (kind === "hits") elInstruction.style.color = "rgba(183,255,60,.95)";
+    if (kind === "holes") elInstruction.style.color = "rgba(183,255,60,.95)";
     if (kind === "go")   elInstruction.style.color = "rgba(47,102,255,.92)";
   }
 
   function syncInstruction() {
     if (!elImg?.src) { setInstruction("", ""); return; }
     if (!aim) { setInstruction("Tap Aim Point.", "aim"); return; }
-    if (hits.length < 1) { setInstruction("Tap Bullet Holes.", "hits"); return; }
-    setInstruction("Tap Bullet Holes.", "hits");
+    if (hits.length < 1) { setInstruction("Tap Bullet Holes.", "holes"); return; }
+    // keep it simple (no “tap more…”)
+    setInstruction("Tap Bullet Holes.", "holes");
   }
 
   function resetAll() {
@@ -269,7 +267,7 @@
   }
 
   // ------------------------------------------------------------
-  // Dots
+  // Dots (now with classes so CSS sizing works)
   // ------------------------------------------------------------
   function addDot(x01, y01, kind) {
     if (!elDots) return;
@@ -466,11 +464,9 @@
       elLiveDial.textContent = `${cv.toFixed(2)} ${dialUnit}`;
     }
 
-    // IMPORTANT: HTML already prints "Target:" label.
-    // So this span should be ONLY "23×23".
     if (elLiveTarget) {
       const label = (targetSizeKey || "").replace("x", "×");
-      elLiveTarget.textContent = `${label}`;
+      elLiveTarget.textContent = label; // value only (label handled in HTML/CSS)
     }
   }
 
@@ -526,6 +522,34 @@
   }, { capture: true });
 
   // ------------------------------------------------------------
+  // MATRIX SCREAMER: flip titles to "— ACTIVE" while editing
+  // ------------------------------------------------------------
+  function wireMatrixActiveLabels() {
+    if (!elMatrixPanel) return;
+
+    const groups = Array.from(elMatrixPanel.querySelectorAll(".matrixGroup"));
+    groups.forEach((group) => {
+      const label = group.querySelector(".matrixLabel");
+      if (!label) return;
+
+      const base = (label.textContent || "").trim();
+      label.dataset.baseLabel = base;
+
+      group.addEventListener("focusin", () => {
+        const b = (label.dataset.baseLabel || base).trim();
+        label.textContent = b.endsWith("— ACTIVE") ? b : `${b} — ACTIVE`;
+      });
+
+      group.addEventListener("focusout", (e) => {
+        // only restore when focus leaves the group entirely
+        const next = e.relatedTarget;
+        if (next && group.contains(next)) return;
+        label.textContent = (label.dataset.baseLabel || base).trim();
+      });
+    });
+  }
+
+  // ------------------------------------------------------------
   // Score (LOCAL placeholder)
   // ------------------------------------------------------------
   function scoreFromRadiusInches(rIn) {
@@ -552,20 +576,19 @@
     const dx = aim.x01 - avg.x; // + means move RIGHT
     const dy = aim.y01 - avg.y; // + means move DOWN (screen y)
 
-    // FIX: square scoring plane
+    // Square scoring plane (prevents rectangle bias)
     const squareIn = Math.min(targetWIn, targetHIn);
 
     const inchesX = dx * squareIn;
     const inchesY = dy * squareIn;
 
     const rIn = Math.sqrt(inchesX * inchesX + inchesY * inchesY);
-
     const dist = getDistanceYds();
 
     // inches per unit at distance
     const inchesPerUnit = (dialUnit === "MOA")
       ? (dist / 100) * 1.047
-      : (dist / 100) * 3.6; // approx for mrad (pilot)
+      : (dist / 100) * 3.6; // pilot approx for mrad
 
     const unitX = inchesX / inchesPerUnit;
     const unitY = inchesY / inchesPerUnit;
@@ -613,7 +636,7 @@
       surveyUrl: "",
       target: { key: targetSizeKey, wIn: Number(targetWIn), hIn: Number(targetHIn) },
 
-      // ✅ include ALL hit taps so SEC export draws bullet holes
+      // include all taps for SEC export (holes)
       debug: {
         aim,
         hits,
@@ -767,6 +790,7 @@
 
   wireMatrixPresets();
   wireTargetSizeChips();
+  wireMatrixActiveLabels();
 
   highlightSizeChip();
   syncLiveTop();
