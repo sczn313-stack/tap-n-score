@@ -1,4 +1,4 @@
-/* docs/styles.css (FULL REPLACEMENT) — LIVE TOP ONE-LINE + MATRIX AUTHORITY (BALANCED RW&B) + iOS FILE INPUT HIDE */
+/* docs/styles.css (FULL REPLACEMENT) — LIVE TOP 2-LINE (TARGET ON LINE 2) + MATRIX + RW&B */
 
 :root{
   --bg:#06070a;
@@ -16,17 +16,6 @@
 
   --tipBg: rgba(0,0,0,.55);
   --tipStroke: rgba(255,255,255,.14);
-
-  /* BALANCED RW&B band */
-  --rwbBand: linear-gradient(
-    90deg,
-    rgba(214,64,64,.92) 0%,
-    rgba(214,64,64,.92) 33.33%,
-    rgba(238,242,247,.88) 33.33%,
-    rgba(238,242,247,.88) 66.66%,
-    rgba(47,102,255,.92) 66.66%,
-    rgba(47,102,255,.92) 100%
-  );
 }
 
 *{ box-sizing:border-box; }
@@ -77,7 +66,7 @@ body{
 
 .brandSub{
   font-size: clamp(16px, 2.6vw, 22px);
-  font-weight: 950;
+  font-weight: 900;
   color: rgba(238,242,247,.80);
   letter-spacing: .02em;
 }
@@ -112,7 +101,7 @@ body{
 .heroBtn:active{ transform: translateZ(0) translateY(1px); }
 
 .heroTip{
-  font-weight: 950;
+  font-weight: 900;
   font-size: clamp(18px, 3.2vw, 30px);
   line-height: 1.14;
   color: rgba(238,242,247,.92);
@@ -171,19 +160,12 @@ body{
   filter: drop-shadow(0 10px 20px rgba(0,0,0,.55));
 }
 
-/* ============================================================
-   HOTFIX: iOS FILE INPUT MUST NOT SHOW
-   (keep it in DOM, but off-screen)
-============================================================ */
+/* iOS: do NOT display:none file input */
 .fileHidden{
-  position: fixed !important;
-  left: -9999px !important;
-  top: -9999px !important;
-  width: 1px !important;
-  height: 1px !important;
-  opacity: 0 !important;
-  overflow: hidden !important;
-  pointer-events: none !important;
+  position:absolute;
+  left:-9999px;
+  width:1px; height:1px;
+  opacity:0;
 }
 
 /* ===== shared cards ===== */
@@ -203,7 +185,7 @@ body{
   letter-spacing:.14em;
   text-transform: uppercase;
   font-size: 12px;
-  font-weight: 900;
+  font-weight: 850;
   color: rgba(238,242,247,.75);
 }
 
@@ -243,10 +225,10 @@ body{
 .mt12{ margin-top:12px; }
 
 /* ============================================================
-   LIVE BAR (TOP) — ONE LINE
+   LIVE BAR (TOP) — 2 LINES
 ============================================================ */
 .liveBar{
-  padding: 10px 14px;
+  padding: 10px 14px 12px;
   border-bottom: 1px solid rgba(255,255,255,.08);
   background: rgba(0,0,0,.10);
 }
@@ -257,7 +239,15 @@ body{
   justify-content:space-between;
   gap: 12px;
 }
-.liveRowOneLine{ flex-wrap: nowrap; }
+
+.liveRowTop{
+  flex-wrap: nowrap;
+}
+
+.liveRowBottom{
+  justify-content:flex-start;
+  margin-top: 6px;
+}
 
 .liveLine{
   display:flex;
@@ -274,23 +264,40 @@ body{
   white-space: nowrap;
 }
 
-.liveLineMini{
-  font-size: 13px;
-  font-weight: 1000;
-  color: rgba(238,242,247,.72);
-  letter-spacing: .08em;
-  text-transform: uppercase;
-  white-space: nowrap;
-}
-
 .liveSep{
   opacity: .40;
-  font-weight: 1000;
+  font-weight: 900;
   letter-spacing: .12em;
   white-space: nowrap;
 }
 
-/* Matrix button (tight) */
+/* Target line (line 2, left) */
+.liveTargetLine{
+  display:flex;
+  align-items:baseline;
+  gap: 8px;
+  min-width: 0;
+}
+
+.liveLineMiniLabel{
+  font-size: 12px;
+  font-weight: 1000;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: rgba(238,242,247,.60);
+  white-space: nowrap;
+}
+
+.liveLineMiniValue{
+  font-size: 13px;
+  font-weight: 1000;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: rgba(238,242,247,.80);
+  white-space: nowrap;
+}
+
+/* Matrix button */
 .matrixBtn{
   height: 38px;
   padding: 0 12px;
@@ -312,90 +319,33 @@ body{
 }
 
 /* ============================================================
-   MATRIX PANEL — AUTHORITY (BALANCED RW&B)
+   MATRIX PANEL
 ============================================================ */
 .matrixPanel{
   margin: 10px 14px 12px;
   border-radius: 16px;
-  border: 1px solid rgba(255,255,255,.14);
-  background:
-    radial-gradient(800px 260px at 18% 0%, rgba(214,64,64,.10), transparent 58%),
-    radial-gradient(800px 260px at 82% 0%, rgba(47,102,255,.10), transparent 58%),
-    rgba(0,0,0,.26);
+  border: 1px solid rgba(255,255,255,.12);
+  background: rgba(0,0,0,.22);
   box-shadow: 0 18px 50px rgba(0,0,0,.45);
   padding: 12px;
-  position: relative;
 }
-
-/* tricolor edge across the top of the entire panel */
-.matrixPanel::before{
-  content:"";
-  position:absolute;
-  left: 10px;
-  right: 10px;
-  top: 10px;
-  height: 4px;
-  border-radius: 999px;
-  background: var(--rwbBand);
-  opacity: .62;
-  pointer-events:none;
-}
-
 .matrixHidden{ display:none; }
 
 .matrixTitle{
-  font-weight: 1100;
-  letter-spacing: .18em;
+  font-weight: 1000;
+  letter-spacing: .10em;
   text-transform: uppercase;
-  font-size: 13px;
-  color: rgba(238,242,247,.92);
-  margin: 6px 0 12px;
-}
-
-/* each group gets a tighter “panel” feel */
-.matrixGroup{
-  margin-bottom: 12px;
-  padding: 10px 10px 12px;
-  border-radius: 14px;
-  border: 1px solid rgba(255,255,255,.10);
-  background: rgba(255,255,255,.03);
-  position: relative;
-}
-
-/* RW&B band for each section */
-.matrixGroup::before{
-  content:"";
-  position:absolute;
-  left: 10px;
-  right: 10px;
-  top: 10px;
-  height: 3px;
-  border-radius: 999px;
-  background: var(--rwbBand);
-  opacity: .52;
-  pointer-events:none;
-}
-
-/* section title: BOLDER + “authority” */
-.matrixLabel{
-  margin-top: 6px;
+  font-size: 12px;
+  color: rgba(238,242,247,.85);
   margin-bottom: 10px;
-  font-size: 13px;
-  font-weight: 1100;
-  letter-spacing: .20em;
-  text-transform: uppercase;
-  color: rgba(238,242,247,.96);
-  text-shadow:
-    0 1px 0 rgba(0,0,0,.55),
-    0 0 14px rgba(238,242,247,.06);
 }
 
-.matrixMicro{
-  margin-top: 8px;
+.matrixGroup{ margin-bottom: 12px; }
+.matrixLabel{
   font-size: 12px;
   font-weight: 900;
-  color: rgba(238,242,247,.62);
-  line-height: 1.25;
+  color: rgba(238,242,247,.65);
+  margin-bottom: 8px;
 }
 
 .matrixRow{
@@ -403,6 +353,13 @@ body{
   align-items:center;
   gap: 10px;
   flex-wrap: wrap;
+}
+
+.matrixMicro{
+  margin-top: 8px;
+  font-size: 12px;
+  color: rgba(238,242,247,.52);
+  line-height: 1.2;
 }
 
 /* chips */
@@ -417,21 +374,40 @@ body{
   height: 40px;
   padding: 0 14px;
   border-radius: 999px;
-  border: 1px solid rgba(255,255,255,.16);
+  border: 1px solid rgba(255,255,255,.14);
   background: rgba(255,255,255,.06);
   color: rgba(238,242,247,.92);
-  font-weight: 1100;
-  letter-spacing: .08em;
+  font-weight: 1000;
+  letter-spacing: .06em;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
 }
 .chip:active{ transform: translateY(1px); }
 
-/* SELECTED TARGET SIZE HIGHLIGHT */
+/* selected chip highlight */
 .chipOn{
-  border-color: rgba(103,243,164,.42) !important;
+  border-color: rgba(103,243,164,.38) !important;
   background: rgba(103,243,164,.12) !important;
   color: rgba(238,242,247,.98) !important;
+}
+
+.matrixFoot{
+  display:flex;
+  justify-content:flex-end;
+  padding-top: 4px;
+}
+
+.matrixCloseBtn{
+  height: 40px;
+  padding: 0 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(103,243,164,.28);
+  background: rgba(103,243,164,.10);
+  color: rgba(238,242,247,.92);
+  font-weight: 1000;
+  letter-spacing: .08em;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
 }
 
 /* controls */
@@ -439,17 +415,16 @@ body{
   width: 44px;
   height: 44px;
   border-radius: 14px;
-  border: 1px solid rgba(255,255,255,.16);
+  border: 1px solid rgba(255,255,255,.14);
   background: rgba(255,255,255,.07);
   color: #eef2f7;
   font-size: 20px;
-  font-weight: 1100;
+  font-weight: 1000;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
   flex: 0 0 auto;
 }
 .miniBtn:active{ transform: translateY(1px); }
-
 .miniBtnTight{
   width: 30px;
   height: 38px;
@@ -462,16 +437,15 @@ body{
   max-width: 92px;
   height: 44px;
   border-radius: 14px;
-  border: 1px solid rgba(255,255,255,.16);
-  background: rgba(0,0,0,.22);
+  border: 1px solid rgba(255,255,255,.14);
+  background: rgba(0,0,0,.18);
   color: #eef2f7;
-  font-weight: 1100;
+  font-weight: 1000;
   font-size: 18px;
   text-align:center;
   outline:none;
   flex: 0 0 auto;
 }
-
 .miniInputTight{
   width: 72px;
   max-width: 72px;
@@ -485,16 +459,15 @@ body{
   max-width: 120px;
   height: 44px;
   border-radius: 14px;
-  border: 1px solid rgba(255,255,255,.16);
-  background: rgba(0,0,0,.22);
+  border: 1px solid rgba(255,255,255,.14);
+  background: rgba(0,0,0,.18);
   color: #eef2f7;
-  font-weight: 1100;
+  font-weight: 1000;
   font-size: 18px;
   text-align:center;
   outline:none;
   flex: 0 0 auto;
 }
-
 .miniInputWideTight{
   width: 86px;
   max-width: 86px;
@@ -505,9 +478,9 @@ body{
 
 .miniUnit{
   font-size: 14px;
-  font-weight: 1100;
-  letter-spacing: .06em;
-  color: rgba(238,242,247,.86);
+  font-weight: 950;
+  letter-spacing: .02em;
+  color: rgba(238,242,247,.82);
   padding: 0 2px;
   flex: 0 0 auto;
   white-space: nowrap;
@@ -517,49 +490,27 @@ body{
   height: 38px;
   padding: 0 12px;
   border-radius: 12px;
-  border: 1px solid rgba(255,255,255,.16);
+  border: 1px solid rgba(255,255,255,.14);
   background: rgba(255,255,255,.06);
   color: rgba(238,242,247,.92);
-  font-weight: 1100;
-  letter-spacing: .10em;
+  font-weight: 1000;
+  letter-spacing: .06em;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
   flex: 0 0 auto;
 }
-
 .segBtn.segOn{
-  border-color: rgba(103,243,164,.40);
-  background: rgba(103,243,164,.12);
+  border-color: rgba(103,243,164,.35);
+  background: rgba(103,243,164,.10);
 }
-
 .segBtnTiny{
   height: 28px;
   padding: 0 10px;
   border-radius: 999px;
   font-size: 12px;
-  letter-spacing: .14em;
-}
-
-.unitToggle{ display:flex; gap: 6px; align-items:center; }
-
-.matrixFoot{
-  display:flex;
-  justify-content:flex-end;
-  padding-top: 2px;
-}
-
-.matrixCloseBtn{
-  height: 40px;
-  padding: 0 14px;
-  border-radius: 14px;
-  border: 1px solid rgba(103,243,164,.30);
-  background: rgba(103,243,164,.12);
-  color: rgba(238,242,247,.95);
-  font-weight: 1100;
   letter-spacing: .10em;
-  cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
 }
+.unitToggle{ display:flex; gap: 6px; align-items:center; }
 
 /* ============================================================
    Target wrap + dots
@@ -613,7 +564,6 @@ body{
   border-radius: 999px;
   padding: 9px 12px;
   font-size: 13px;
-  font-weight: 900;
   color: rgba(238,242,247,.80);
 }
 
@@ -621,7 +571,7 @@ body{
   border-radius: 14px;
   padding: 12px 14px;
   font-size: 14px;
-  font-weight: 1000;
+  font-weight: 850;
   cursor:pointer;
   border: 1px solid rgba(214,64,64,.45);
   background: rgba(214,64,64,.12);
@@ -638,12 +588,12 @@ body{
   line-height: 1.35;
 }
 
-/* BIG INSTRUCTION (Tap Aim Point / Tap Hits) */
+/* BIG INSTRUCTION */
 .instructionLine{
   padding: 2px 14px 16px;
   text-align:center;
   font-size: 18px;
-  font-weight: 1100;
+  font-weight: 1000;
   letter-spacing: .10em;
   text-transform: uppercase;
   color: rgba(238,242,247,.86);
@@ -679,7 +629,7 @@ body{
   border-radius: 18px;
   padding: 16px 14px;
   font-size: 16px;
-  font-weight: 1000;
+  font-weight: 950;
   border: 1px solid rgba(103,243,164,.35);
   background: rgba(103,243,164,.12);
   color: var(--text);
