@@ -1,4 +1,4 @@
-<!-- docs/index.html (FULL REPLACEMENT) — LIVE TOP ONE-LINE + MATRIX DRAWER + TARGET SIZE PRESETS -->
+<!-- docs/index.html (FULL REPLACEMENT) — LIVE TOP: 2-LINE (TARGET ON LINE 2) + MATRIX DRAWER -->
 <!doctype html>
 <html lang="en">
 <head>
@@ -13,8 +13,7 @@
 
   <title>Tap-n-Score™</title>
 
-  <!-- RELATIVE PATHS (docs/) -->
-  <link rel="stylesheet" href="./styles.css?v=TP-Aplus-0210B" />
+  <link rel="stylesheet" href="./styles.css?v=TP-Aplus-0214A" />
 </head>
 
 <body>
@@ -69,21 +68,28 @@
         </div>
       </div>
 
-      <!-- LIVE DISPLAY (ONE LINE: YARDS | DIAL | TARGET) -->
+      <!-- LIVE DISPLAY (2 LINES: line 1 = yds|dial + matrix, line 2 = target left) -->
       <div class="liveBar" aria-label="Live data display">
-        <div class="liveRow liveRowOneLine">
-          <div class="liveLine" aria-label="Distance, dial, and target size">
+
+        <div class="liveRow liveRowTop">
+          <div class="liveLine" aria-label="Distance and dial">
             <span id="liveDistance" class="liveLinePrimary">100 yds</span>
             <span class="liveSep" aria-hidden="true">|</span>
             <span id="liveDial" class="liveLinePrimary">0.25 MOA</span>
-            <span class="liveSep" aria-hidden="true">|</span>
-            <span id="liveTarget" class="liveLineMini">23×35</span>
           </div>
 
           <button id="matrixBtn" class="matrixBtn matrixBtnTight" type="button" aria-label="Open matrix presets">
             MATRIX
           </button>
         </div>
+
+        <div class="liveRow liveRowBottom" aria-label="Target size">
+          <div class="liveTargetLine">
+            <span class="liveLineMiniLabel">Target:</span>
+            <span id="liveTarget" class="liveLineMiniValue">23×35</span>
+          </div>
+        </div>
+
       </div>
 
       <!-- MATRIX DRAWER (ALL ADJUSTMENTS LIVE HERE) -->
@@ -170,7 +176,7 @@
         <button id="clearTapsBtn" class="btnSecondary" type="button">Clear</button>
       </div>
 
-      <!-- Instruction line (larger / mirrored authority) -->
+      <!-- Instruction line -->
       <p id="instructionLine" class="hint instructionLine"></p>
     </section>
 
