@@ -1,4 +1,4 @@
-/* docs/styles.css (FULL REPLACEMENT) — LIVE TOP 2-LINE (TARGET ON LINE 2) + MATRIX + RW&B */
+/* docs/styles.css (FULL REPLACEMENT) — LIVE TOP 2-LINE + MATRIX RW&B AUTHORITY */
 
 :root{
   --bg:#06070a;
@@ -13,9 +13,6 @@
 
   --aim:#67f3a4;
   --hit:#b7ff3c;
-
-  --tipBg: rgba(0,0,0,.55);
-  --tipStroke: rgba(255,255,255,.14);
 }
 
 *{ box-sizing:border-box; }
@@ -95,8 +92,6 @@ body{
   user-select:none;
   -webkit-tap-highlight-color: transparent;
   transform: translateZ(0);
-  -webkit-font-smoothing: antialiased;
-  text-rendering: geometricPrecision;
 }
 .heroBtn:active{ transform: translateZ(0) translateY(1px); }
 
@@ -135,11 +130,7 @@ body{
   -webkit-user-select:none;
 }
 
-.vendorBoxFlow{
-  width: min(520px, 92%);
-  max-width: 720px;
-}
-
+.vendorBoxFlow{ width: min(520px, 92%); max-width: 720px; }
 .vendorBoxFlow, .vendorBoxFlow *{ pointer-events:auto; }
 
 .vendorPillText{
@@ -185,7 +176,7 @@ body{
   letter-spacing:.14em;
   text-transform: uppercase;
   font-size: 12px;
-  font-weight: 850;
+  font-weight: 900;
   color: rgba(238,242,247,.75);
 }
 
@@ -225,7 +216,7 @@ body{
 .mt12{ margin-top:12px; }
 
 /* ============================================================
-   LIVE BAR (TOP) — 2 LINES
+   LIVE BAR — 2 LINES
 ============================================================ */
 .liveBar{
   padding: 10px 14px 12px;
@@ -240,14 +231,8 @@ body{
   gap: 12px;
 }
 
-.liveRowTop{
-  flex-wrap: nowrap;
-}
-
-.liveRowBottom{
-  justify-content:flex-start;
-  margin-top: 6px;
-}
+.liveRowTop{ flex-wrap: nowrap; }
+.liveRowBottom{ justify-content:flex-start; margin-top: 6px; }
 
 .liveLine{
   display:flex;
@@ -281,19 +266,19 @@ body{
 
 .liveLineMiniLabel{
   font-size: 12px;
-  font-weight: 1000;
+  font-weight: 1100;
   letter-spacing: .14em;
   text-transform: uppercase;
-  color: rgba(238,242,247,.60);
+  color: rgba(238,242,247,.70);
   white-space: nowrap;
 }
 
 .liveLineMiniValue{
   font-size: 13px;
-  font-weight: 1000;
-  letter-spacing: .08em;
+  font-weight: 1100;
+  letter-spacing: .10em;
   text-transform: uppercase;
-  color: rgba(238,242,247,.80);
+  color: rgba(238,242,247,.92);
   white-space: nowrap;
 }
 
@@ -305,8 +290,8 @@ body{
   border: 1px solid rgba(47,102,255,.35);
   background: rgba(47,102,255,.12);
   color: rgba(238,242,247,.92);
-  font-weight: 1000;
-  letter-spacing: .14em;
+  font-weight: 1100;
+  letter-spacing: .16em;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
   flex: 0 0 auto;
@@ -315,37 +300,63 @@ body{
   height: 34px;
   padding: 0 12px;
   border-radius: 999px;
-  letter-spacing: .16em;
 }
 
 /* ============================================================
-   MATRIX PANEL
+   MATRIX PANEL — RW&B AUTHORITY
 ============================================================ */
 .matrixPanel{
   margin: 10px 14px 12px;
   border-radius: 16px;
-  border: 1px solid rgba(255,255,255,.12);
-  background: rgba(0,0,0,.22);
+  border: 1px solid rgba(255,255,255,.14);
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.06), rgba(0,0,0,.20)),
+    radial-gradient(900px 320px at 20% 0%, rgba(47,102,255,.16), transparent 60%),
+    radial-gradient(900px 320px at 80% 0%, rgba(214,64,64,.14), transparent 60%);
   box-shadow: 0 18px 50px rgba(0,0,0,.45);
   padding: 12px;
 }
 .matrixHidden{ display:none; }
 
+/* MATRIX title = RW&B bar */
 .matrixTitle{
-  font-weight: 1000;
-  letter-spacing: .10em;
+  font-weight: 1200;
+  letter-spacing: .18em;
   text-transform: uppercase;
   font-size: 12px;
-  color: rgba(238,242,247,.85);
-  margin-bottom: 10px;
+  color: rgba(238,242,247,.95);
+  margin-bottom: 12px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,.14);
+  background:
+    linear-gradient(90deg,
+      rgba(214,64,64,.24),
+      rgba(238,242,247,.10),
+      rgba(47,102,255,.22)
+    );
 }
 
-.matrixGroup{ margin-bottom: 12px; }
+/* each section */
+.matrixGroup{ margin-bottom: 14px; }
+
+/* section labels = bold + colored */
 .matrixLabel{
   font-size: 12px;
-  font-weight: 900;
-  color: rgba(238,242,247,.65);
-  margin-bottom: 8px;
+  font-weight: 1200;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: rgba(238,242,247,.92);
+  margin-bottom: 10px;
+  padding: 8px 10px;
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,.12);
+  background:
+    linear-gradient(90deg,
+      rgba(214,64,64,.16),
+      rgba(255,255,255,.06),
+      rgba(47,102,255,.14)
+    );
 }
 
 .matrixRow{
@@ -358,27 +369,24 @@ body{
 .matrixMicro{
   margin-top: 8px;
   font-size: 12px;
-  color: rgba(238,242,247,.52);
+  font-weight: 900;
+  color: rgba(238,242,247,.62);
   line-height: 1.2;
 }
 
 /* chips */
-.chipRow{
-  display:flex;
-  gap: 10px;
-  flex-wrap: wrap;
-}
+.chipRow{ display:flex; gap: 10px; flex-wrap: wrap; }
 .chipRowTight{ gap: 8px; }
 
 .chip{
   height: 40px;
   padding: 0 14px;
   border-radius: 999px;
-  border: 1px solid rgba(255,255,255,.14);
-  background: rgba(255,255,255,.06);
-  color: rgba(238,242,247,.92);
-  font-weight: 1000;
-  letter-spacing: .06em;
+  border: 1px solid rgba(255,255,255,.16);
+  background: rgba(0,0,0,.16);
+  color: rgba(238,242,247,.95);
+  font-weight: 1100;
+  letter-spacing: .08em;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
 }
@@ -386,16 +394,13 @@ body{
 
 /* selected chip highlight */
 .chipOn{
-  border-color: rgba(103,243,164,.38) !important;
+  border-color: rgba(103,243,164,.42) !important;
   background: rgba(103,243,164,.12) !important;
   color: rgba(238,242,247,.98) !important;
 }
 
-.matrixFoot{
-  display:flex;
-  justify-content:flex-end;
-  padding-top: 4px;
-}
+/* matrix footer */
+.matrixFoot{ display:flex; justify-content:flex-end; padding-top: 4px; }
 
 .matrixCloseBtn{
   height: 40px;
@@ -404,8 +409,8 @@ body{
   border: 1px solid rgba(103,243,164,.28);
   background: rgba(103,243,164,.10);
   color: rgba(238,242,247,.92);
-  font-weight: 1000;
-  letter-spacing: .08em;
+  font-weight: 1100;
+  letter-spacing: .10em;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
 }
@@ -415,16 +420,17 @@ body{
   width: 44px;
   height: 44px;
   border-radius: 14px;
-  border: 1px solid rgba(255,255,255,.14);
+  border: 1px solid rgba(255,255,255,.16);
   background: rgba(255,255,255,.07);
   color: #eef2f7;
   font-size: 20px;
-  font-weight: 1000;
+  font-weight: 1100;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
   flex: 0 0 auto;
 }
 .miniBtn:active{ transform: translateY(1px); }
+
 .miniBtnTight{
   width: 30px;
   height: 38px;
@@ -437,10 +443,10 @@ body{
   max-width: 92px;
   height: 44px;
   border-radius: 14px;
-  border: 1px solid rgba(255,255,255,.14);
+  border: 1px solid rgba(255,255,255,.16);
   background: rgba(0,0,0,.18);
   color: #eef2f7;
-  font-weight: 1000;
+  font-weight: 1100;
   font-size: 18px;
   text-align:center;
   outline:none;
@@ -459,10 +465,10 @@ body{
   max-width: 120px;
   height: 44px;
   border-radius: 14px;
-  border: 1px solid rgba(255,255,255,.14);
+  border: 1px solid rgba(255,255,255,.16);
   background: rgba(0,0,0,.18);
   color: #eef2f7;
-  font-weight: 1000;
+  font-weight: 1100;
   font-size: 18px;
   text-align:center;
   outline:none;
@@ -478,9 +484,9 @@ body{
 
 .miniUnit{
   font-size: 14px;
-  font-weight: 950;
+  font-weight: 1100;
   letter-spacing: .02em;
-  color: rgba(238,242,247,.82);
+  color: rgba(238,242,247,.86);
   padding: 0 2px;
   flex: 0 0 auto;
   white-space: nowrap;
@@ -490,26 +496,29 @@ body{
   height: 38px;
   padding: 0 12px;
   border-radius: 12px;
-  border: 1px solid rgba(255,255,255,.14);
-  background: rgba(255,255,255,.06);
-  color: rgba(238,242,247,.92);
-  font-weight: 1000;
-  letter-spacing: .06em;
+  border: 1px solid rgba(255,255,255,.16);
+  background: rgba(0,0,0,.14);
+  color: rgba(238,242,247,.95);
+  font-weight: 1100;
+  letter-spacing: .08em;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
   flex: 0 0 auto;
 }
+
 .segBtn.segOn{
   border-color: rgba(103,243,164,.35);
   background: rgba(103,243,164,.10);
 }
+
 .segBtnTiny{
   height: 28px;
   padding: 0 10px;
   border-radius: 999px;
   font-size: 12px;
-  letter-spacing: .10em;
+  letter-spacing: .12em;
 }
+
 .unitToggle{ display:flex; gap: 6px; align-items:center; }
 
 /* ============================================================
@@ -540,13 +549,16 @@ body{
   pointer-events:none;
 }
 
+/* Dot sizes (aim bigger, bullet holes smaller) */
 .tapDot{
   position:absolute;
-  width: 10px;
-  height: 10px;
   border-radius: 999px;
   transform: translate(-50%, -50%);
+  width: 9px;
+  height: 9px;
 }
+.tapDotAim{ width: 14px; height: 14px; }
+.tapDotHit{ width: 8px; height: 8px; }
 
 /* Row + buttons */
 .row{
@@ -565,13 +577,14 @@ body{
   padding: 9px 12px;
   font-size: 13px;
   color: rgba(238,242,247,.80);
+  font-weight: 900;
 }
 
 .btnSecondary{
   border-radius: 14px;
   padding: 12px 14px;
   font-size: 14px;
-  font-weight: 850;
+  font-weight: 950;
   cursor:pointer;
   border: 1px solid rgba(214,64,64,.45);
   background: rgba(214,64,64,.12);
@@ -593,7 +606,7 @@ body{
   padding: 2px 14px 16px;
   text-align:center;
   font-size: 18px;
-  font-weight: 1000;
+  font-weight: 1100;
   letter-spacing: .10em;
   text-transform: uppercase;
   color: rgba(238,242,247,.86);
@@ -629,12 +642,15 @@ body{
   border-radius: 18px;
   padding: 16px 14px;
   font-size: 16px;
-  font-weight: 950;
+  font-weight: 1000;
   border: 1px solid rgba(103,243,164,.35);
   background: rgba(103,243,164,.12);
   color: var(--text);
   cursor:pointer;
-  box-shadow: 0 18px 45px rgba(0,0,0,.55);
+  box-shadow:
+    0 18px 45px rgba(0,0,0,.55),
+    0 0 0 1px rgba(103,243,164,.22),
+    0 0 22px rgba(103,243,164,.18);
   -webkit-tap-highlight-color: transparent;
 }
 .stickyBtn:active{ transform: translateY(1px); }
