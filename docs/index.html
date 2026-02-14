@@ -1,4 +1,4 @@
-<!-- docs/index.html (FULL REPLACEMENT) — LIVE TOP: 2-LINE (TARGET ON LINE 2) + MATRIX DRAWER -->
+<!-- docs/index.html (FULL REPLACEMENT) — LIVE TOP ONE-LINE + MATRIX DRAWER + MIRRORED CORNER PROMPTS -->
 <!doctype html>
 <html lang="en">
 <head>
@@ -68,28 +68,21 @@
         </div>
       </div>
 
-      <!-- LIVE DISPLAY (2 LINES: line 1 = yds|dial + matrix, line 2 = target left) -->
+      <!-- LIVE DISPLAY (ONE LINE: YARDS | DIAL | TARGET) -->
       <div class="liveBar" aria-label="Live data display">
-
-        <div class="liveRow liveRowTop">
-          <div class="liveLine" aria-label="Distance and dial">
+        <div class="liveRow liveRowOneLine">
+          <div class="liveLine" aria-label="Distance, dial, and target size">
             <span id="liveDistance" class="liveLinePrimary">100 yds</span>
             <span class="liveSep" aria-hidden="true">|</span>
             <span id="liveDial" class="liveLinePrimary">0.25 MOA</span>
+            <span class="liveSep" aria-hidden="true">|</span>
+            <span id="liveTarget" class="liveLineMini">23×35</span>
           </div>
 
           <button id="matrixBtn" class="matrixBtn matrixBtnTight" type="button" aria-label="Open matrix presets">
             MATRIX
           </button>
         </div>
-
-        <div class="liveRow liveRowBottom" aria-label="Target size">
-          <div class="liveTargetLine">
-            <span class="liveLineMiniLabel">Target:</span>
-            <span id="liveTarget" class="liveLineMiniValue">23×35</span>
-          </div>
-        </div>
-
       </div>
 
       <!-- MATRIX DRAWER (ALL ADJUSTMENTS LIVE HERE) -->
@@ -143,7 +136,8 @@
         <div class="matrixGroup">
           <div class="matrixLabel">Quick Presets</div>
 
-         <div class="chipRow" id="presetChipRow">
+          <!-- NOTE: id used for 2-row grid -->
+          <div class="chipRow" id="presetChipRow">
             <button class="chip" type="button" data-unit="MOA" data-click="0.25">0.25 MOA</button>
             <button class="chip" type="button" data-unit="MOA" data-click="0.50">0.50 MOA</button>
             <button class="chip" type="button" data-unit="MOA" data-click="0.125">0.125 MOA</button>
@@ -163,9 +157,13 @@
         Add a target photo to begin.
       </div>
 
-      <div id="targetWrap" class="targetWrap" aria-label="Target photo area">
+      <div id="targetWrap" class="targetWrap" aria-label="Target photo area" data-stage="noimg">
         <img id="targetImg" alt="Target preview" />
         <div id="dotsLayer" class="dotsLayer" aria-hidden="true"></div>
+
+        <!-- ✅ MIRRORED CORNER PROMPTS (DIAGONAL AUTHORITY) -->
+        <div id="cornerAim" class="cornerPrompt cornerTL" aria-hidden="true">TAP AIM POINT</div>
+        <div id="cornerHoles" class="cornerPrompt cornerBR" aria-hidden="true">TAP BULLET HOLES</div>
       </div>
 
       <div class="row rowTight">
@@ -176,7 +174,7 @@
         <button id="clearTapsBtn" class="btnSecondary" type="button">Clear</button>
       </div>
 
-      <!-- Instruction line -->
+      <!-- Instruction line (larger / mirrored authority) -->
       <p id="instructionLine" class="hint instructionLine"></p>
     </section>
 
@@ -190,6 +188,6 @@
 
   </main>
 
-  <script defer src="./index.js?v=TP-Aplus-0210B"></script>
+  <script defer src="./index.js?v=TP-Aplus-0214A"></script>
 </body>
 </html>
