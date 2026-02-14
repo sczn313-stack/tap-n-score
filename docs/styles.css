@@ -1,4 +1,8 @@
-/* docs/styles.css (FULL REPLACEMENT) — LIVE TOP + MATRIX + TARGET SIZE HIGHLIGHT */
+/* docs/styles.css (FULL REPLACEMENT) — LIVE TOP + MATRIX + TARGET SIZE HIGHLIGHT
+   FINESSE:
+   - statusLine becomes UL instruction when aiming (left aligned, larger)
+   - instructionLine becomes LR instruction for bullet holes (right aligned, larger)
+*/
 
 :root{
   --bg:#06070a;
@@ -13,13 +17,11 @@
 
   --aim:#67f3a4;
   --hit:#b7ff3c;
-
-  --tipBg: rgba(0,0,0,.55);
-  --tipStroke: rgba(255,255,255,.14);
 }
 
 *{ box-sizing:border-box; }
 html,body{ height:100%; }
+
 body{
   margin:0;
   font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial;
@@ -308,6 +310,7 @@ body{
 }
 
 .matrixGroup{ margin-bottom: 12px; }
+
 .matrixLabel{
   font-size: 12px;
   font-weight: 900;
@@ -547,13 +550,52 @@ body{
 }
 .btnSecondary:active{ transform: translateY(1px); }
 
-.hint{
+/* ============================================================
+   FINESSE: UL statusLine + LR instructionLine
+============================================================ */
+
+/* statusLine default */
+#statusLine{
   margin: 0;
   padding: 0 14px 14px;
   color: var(--muted);
   font-size: 13px;
   line-height: 1.35;
 }
+
+/* statusLine becomes the UL AIM instruction */
+#statusLine.statusAim{
+  padding: 10px 14px 8px !important;
+  text-align: left;
+  font-size: 16px;
+  font-weight: 1000;
+  letter-spacing: .10em;
+  text-transform: uppercase;
+}
+
+/* neutral */
+#statusLine.statusNeutral{
+  text-align: left;
+}
+
+/* instructionLine baseline */
+#instructionLine{
+  margin: 0;
+  padding: 2px 14px 16px;
+  color: var(--muted);
+  font-size: 18px;
+  font-weight: 1000;
+  letter-spacing: .10em;
+  text-transform: uppercase;
+  line-height: 1.2;
+}
+
+/* bullet holes prompt goes bottom-right */
+#instructionLine.instHoles{ text-align: right; }
+
+/* optional */
+#instructionLine.instAim{ text-align: left; }
+#instructionLine.instNeutral{ text-align: center; }
 
 /* Footer */
 .footer{
