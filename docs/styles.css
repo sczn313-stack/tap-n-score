@@ -1,737 +1,115 @@
-/* docs/styles.css (FULL REPLACEMENT) — LIVE TOP + MATRIX + TARGET SIZE HIGHLIGHT
-   FINESSE:
-   - statusLine becomes UL instruction when aiming (left aligned, larger)
-   - instructionLine becomes LR instruction for bullet holes (right aligned, larger)
-*/
-
-:root{
-  --bg:#06070a;
-  --card: rgba(255,255,255,.06);
-  --stroke: rgba(255,255,255,.12);
-  --text:#eef2f7;
-  --muted: rgba(238,242,247,.65);
-
-  --red:#d64040;
-  --white:#eef2f7;
-  --blue:#2f66ff;
-
-  --aim:#67f3a4;
-  --hit:#b7ff3c;
-}
-
-*{ box-sizing:border-box; }
-html,body{ height:100%; }
-
-body{
-  margin:0;
-  font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial;
-  color: var(--text);
-  background:
-    radial-gradient(900px 600px at 15% 10%, rgba(47,102,255,.14), transparent 60%),
-    radial-gradient(800px 500px at 85% 0%, rgba(214,64,64,.10), transparent 60%),
-    linear-gradient(180deg, #04050a, var(--bg));
-}
-
-.page{
-  max-width: 920px;
-  margin: 0 auto;
-  padding: 16px 12px 90px;
-}
-
-/* ===== HERO ===== */
-.hero{
-  position: relative;
-  background: radial-gradient(1200px 600px at 25% 15%, rgba(47,102,255,.20), transparent 60%),
-              radial-gradient(900px 600px at 80% 30%, rgba(214,64,64,.18), transparent 55%),
-              linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02));
-  border: 1px solid rgba(255,255,255,.10);
-  border-radius: 22px;
-  padding: 18px 16px 22px;
-  box-shadow: 0 20px 60px rgba(0,0,0,.45);
-  overflow: hidden;
-}
-
-.brandRow{ display:flex; flex-direction:column; gap:6px; padding: 4px 2px 10px; }
-
-.brandTitle{
-  font-weight: 1000;
-  letter-spacing: .06em;
-  font-size: clamp(28px, 5.4vw, 46px);
-  line-height: 1.02;
-  text-transform: uppercase;
-  user-select:none;
-  -webkit-user-select:none;
-}
-.brandTitle .r{ color: var(--red); }
-.brandTitle .w{ color: var(--white); }
-.brandTitle .b{ color: var(--blue); }
-
-.brandSub{
-  font-size: clamp(16px, 2.6vw, 22px);
-  font-weight: 900;
-  color: rgba(238,242,247,.80);
-  letter-spacing: .02em;
-}
-
-.heroMid{
-  margin-top: 14px;
-  display:flex;
-  flex-direction:column;
-  gap: 14px;
-  align-items:center;
-  text-align:center;
-}
-
-.heroBtn{
-  width: 100%;
-  max-width: 720px;
-  height: 74px;
-  border-radius: 999px;
-  border: 1px solid rgba(255,255,255,.14);
-  background: rgba(214,64,64,.88);
-  color: #eef2f7;
-  font-weight: 1000;
-  font-size: clamp(18px, 3.2vw, 26px);
-  letter-spacing: .02em;
-  cursor:pointer;
-  user-select:none;
-  -webkit-tap-highlight-color: transparent;
-  transform: translateZ(0);
-  -webkit-font-smoothing: antialiased;
-  text-rendering: geometricPrecision;
-}
-.heroBtn:active{ transform: translateZ(0) translateY(1px); }
-
-.heroTip{
-  font-weight: 900;
-  font-size: clamp(18px, 3.2vw, 30px);
-  line-height: 1.14;
-  color: rgba(238,242,247,.92);
-  max-width: 820px;
-}
-
-/* Vendor center row */
-.vendorCenterRow{
-  margin-top: 10px;
-  display:flex;
-  flex-direction:column;
-  align-items:center;
-  gap: 8px;
-  width: 100%;
-}
-
-.vendorBox{
-  padding: 12px 16px;
-  border-radius: 999px;
-  border: 1px solid rgba(255,255,255,.14);
-  background: rgba(0,0,0,.24);
-  box-shadow: 0 16px 44px rgba(0,0,0,.35);
-  text-decoration:none;
-  color: rgba(238,242,247,.92);
-  display: inline-flex;
-  align-items:center;
-  justify-content:center;
-  gap: 10px;
-  -webkit-tap-highlight-color: transparent;
-  user-select:none;
-  -webkit-user-select:none;
-}
-
-.vendorBoxFlow{
-  width: min(520px, 92%);
-  max-width: 720px;
-}
-
-.vendorBoxFlow, .vendorBoxFlow *{ pointer-events:auto; }
-
-.vendorPillText{
-  font-weight: 1000;
-  letter-spacing: .12em;
-  font-size: 13px;
-  text-transform: uppercase;
-  color: rgba(238,242,247,.90);
-  line-height: 1.1;
-  white-space: nowrap;
-}
-
-.vendorWireFlow{
-  width: min(520px, 92%);
-  height: 36px;
-  opacity: .55;
-  pointer-events:none;
-  filter: drop-shadow(0 10px 20px rgba(0,0,0,.55));
-}
-
-/* iOS: do NOT display:none file input */
-.fileHidden{
-  position:absolute;
-  left:-9999px;
-  width:1px; height:1px;
-  opacity:0;
-}
-
-/* ===== shared cards ===== */
-.card{
-  border: 1px solid var(--stroke);
-  background: var(--card);
-  border-radius: 18px;
-  overflow:hidden;
-  margin-top: 12px;
-  box-shadow: 0 18px 50px rgba(0,0,0,.45);
-}
-
-.cardTitle{
-  padding: 12px 14px;
-  border-bottom: 1px solid rgba(255,255,255,.08);
-  background: rgba(255,255,255,.03);
-  letter-spacing:.14em;
-  text-transform: uppercase;
-  font-size: 12px;
-  font-weight: 850;
-  color: rgba(238,242,247,.75);
-}
-
-/* header row: SHOOTER EXPERIENCE CARD + SEC */
-.cardTitleSEC{
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap: 10px;
-}
-
-.secTitle{
-  display:flex;
-  align-items:baseline;
-  gap: 10px;
-  font-weight: 1000;
-  letter-spacing: .10em;
-  text-transform: uppercase;
-  font-size: 12px;
-}
-.secTitle .r{ color: var(--red); }
-.secTitle .w{ color: var(--white); }
-.secTitle .b{ color: var(--blue); }
-
-.secTag{
-  font-weight: 1100;
-  letter-spacing: .22em;
-  text-transform: uppercase;
-  font-size: 12px;
-  white-space: nowrap;
-}
-.secTag .r{ color: var(--red); }
-.secTag .w{ color: var(--white); }
-.secTag .b{ color: var(--blue); }
-
-.scoreHidden{ display:none !important; }
-.mt12{ margin-top:12px; }
-
 /* ============================================================
-   LIVE BAR (TOP)
-============================================================ */
-.liveBar{
-  padding: 12px 14px;
-  border-bottom: 1px solid rgba(255,255,255,.08);
-  background: rgba(0,0,0,.10);
-  display:flex;
-  flex-direction:column;
-  gap: 8px;
-}
-
-.liveRow{
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap: 12px;
-}
-
-.liveValue{
-  font-size: 22px;
-  font-weight: 1000;
-  letter-spacing: .02em;
-}
-
-.liveValueSub{
-  font-size: 18px;
-  font-weight: 950;
-  color: rgba(238,242,247,.88);
-  letter-spacing: .02em;
-}
-
-.liveValueMini{
-  font-size: 13px;
-  font-weight: 850;
-  color: rgba(238,242,247,.62);
-  letter-spacing: .06em;
-  text-transform: uppercase;
-}
-
-/* Matrix button (tight) */
-.matrixBtn{
-  height: 38px;
-  padding: 0 12px;
-  border-radius: 14px;
-  border: 1px solid rgba(47,102,255,.35);
-  background: rgba(47,102,255,.12);
-  color: rgba(238,242,247,.92);
-  font-weight: 1000;
-  letter-spacing: .14em;
-  cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
-  flex: 0 0 auto;
-}
-.matrixBtnTight{
-  height: 34px;
-  padding: 0 12px;
-  border-radius: 999px;
-  letter-spacing: .16em;
-}
-
-/* ============================================================
-   MATRIX PANEL
-============================================================ */
-.matrixPanel{
-  margin: 10px 14px 12px;
-  border-radius: 16px;
-  border: 1px solid rgba(255,255,255,.12);
-  background: rgba(0,0,0,.22);
-  box-shadow: 0 18px 50px rgba(0,0,0,.45);
-  padding: 12px;
-}
-.matrixHidden{ display:none; }
-
-.matrixTitle{
-  font-weight: 1000;
-  letter-spacing: .10em;
-  text-transform: uppercase;
-  font-size: 12px;
-  color: rgba(238,242,247,.85);
-  margin-bottom: 10px;
-}
-
-.matrixGroup{ margin-bottom: 12px; }
-
-.matrixLabel{
-  font-size: 12px;
-  font-weight: 900;
-  color: rgba(238,242,247,.65);
-  margin-bottom: 8px;
-}
-
-.matrixRow{
-  display:flex;
-  align-items:center;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-
-.matrixMicro{
-  margin-top: 8px;
-  font-size: 12px;
-  color: rgba(238,242,247,.52);
-  line-height: 1.2;
-}
-
-/* chips */
-.chipRow{
-  display:flex;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-.chipRowTight{ gap: 8px; }
-
-.chip{
-  height: 40px;
-  padding: 0 14px;
-  border-radius: 999px;
-  border: 1px solid rgba(255,255,255,.14);
-  background: rgba(255,255,255,.06);
-  color: rgba(238,242,247,.92);
-  font-weight: 1000;
-  letter-spacing: .06em;
-  cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
-}
-.chip:active{ transform: translateY(1px); }
-
-/* SELECTED TARGET SIZE HIGHLIGHT */
-.chipOn{
-  border-color: rgba(103,243,164,.38) !important;
-  background: rgba(103,243,164,.12) !important;
-  color: rgba(238,242,247,.98) !important;
-}
-
-.matrixFoot{
-  display:flex;
-  justify-content:flex-end;
-  padding-top: 4px;
-}
-
-.matrixCloseBtn{
-  height: 40px;
-  padding: 0 14px;
-  border-radius: 14px;
-  border: 1px solid rgba(103,243,164,.28);
-  background: rgba(103,243,164,.10);
-  color: rgba(238,242,247,.92);
-  font-weight: 1000;
-  letter-spacing: .08em;
-  cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
-}
-
-/* controls */
-.miniBtn{
-  width: 44px;
-  height: 44px;
-  border-radius: 14px;
-  border: 1px solid rgba(255,255,255,.14);
-  background: rgba(255,255,255,.07);
-  color: #eef2f7;
-  font-size: 20px;
-  font-weight: 1000;
-  cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
-  flex: 0 0 auto;
-}
-.miniBtn:active{ transform: translateY(1px); }
-.miniBtnTight{
-  width: 30px;
-  height: 38px;
-  border-radius: 12px;
-  font-size: 20px;
-}
-
-.miniInput{
-  width: 92px;
-  max-width: 92px;
-  height: 44px;
-  border-radius: 14px;
-  border: 1px solid rgba(255,255,255,.14);
-  background: rgba(0,0,0,.18);
-  color: #eef2f7;
-  font-weight: 1000;
-  font-size: 18px;
-  text-align:center;
-  outline:none;
-  flex: 0 0 auto;
-}
-.miniInputTight{
-  width: 72px;
-  max-width: 72px;
-  height: 38px;
-  font-size: 18px;
-  border-radius: 12px;
-}
-
-.miniInputWide{
-  width: 120px;
-  max-width: 120px;
-  height: 44px;
-  border-radius: 14px;
-  border: 1px solid rgba(255,255,255,.14);
-  background: rgba(0,0,0,.18);
-  color: #eef2f7;
-  font-weight: 1000;
-  font-size: 18px;
-  text-align:center;
-  outline:none;
-  flex: 0 0 auto;
-}
-.miniInputWideTight{
-  width: 86px;
-  max-width: 86px;
-  height: 38px;
-  font-size: 18px;
-  border-radius: 12px;
-}
-
-.miniUnit{
-  font-size: 14px;
-  font-weight: 950;
-  letter-spacing: .02em;
-  color: rgba(238,242,247,.82);
-  padding: 0 2px;
-  flex: 0 0 auto;
-  white-space: nowrap;
-}
-
-.segBtn{
-  height: 38px;
-  padding: 0 12px;
-  border-radius: 12px;
-  border: 1px solid rgba(255,255,255,.14);
-  background: rgba(255,255,255,.06);
-  color: rgba(238,242,247,.92);
-  font-weight: 1000;
-  letter-spacing: .06em;
-  cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
-  flex: 0 0 auto;
-}
-.segBtn.segOn{
-  border-color: rgba(103,243,164,.35);
-  background: rgba(103,243,164,.10);
-}
-.segBtnTiny{
-  height: 28px;
-  padding: 0 10px;
-  border-radius: 999px;
-  font-size: 12px;
-  letter-spacing: .10em;
-}
-.unitToggle{ display:flex; gap: 6px; align-items:center; }
-
-/* ============================================================
-   Target wrap + dots
-============================================================ */
-.targetWrap{
-  width: calc(100% - 28px);
-  margin: 0 14px 12px;
-  border-radius: 16px;
-  overflow:hidden;
-  background: rgba(0,0,0,.22);
-  border: 1px solid rgba(255,255,255,.10);
-  position: relative;
-  scroll-margin-top: 14px;
-}
-
-#targetImg{
-  width: 100%;
-  height: auto;
-  display:block;
-  user-select:none;
-  -webkit-user-drag:none;
-}
-
-.dotsLayer{
-  position:absolute;
-  left:0; top:0; right:0; bottom:0;
-  pointer-events:none;
-}
-
-.tapDot{
-  position:absolute;
-  width: 10px;
-  height: 10px;
-  border-radius: 999px;
-  transform: translate(-50%, -50%);
-}
-
-/* Row + buttons */
-.row{
-  display:flex;
-  gap:10px;
-  align-items:center;
-  flex-wrap:wrap;
-  padding: 0 14px 14px;
-}
-.rowTight{ padding-top: 0; }
-
-.pill{
-  border: 1px solid rgba(255,255,255,.14);
-  background: rgba(255,255,255,.05);
-  border-radius: 999px;
-  padding: 9px 12px;
-  font-size: 13px;
-  color: rgba(238,242,247,.80);
-}
-
-.btnSecondary{
-  border-radius: 14px;
-  padding: 12px 14px;
-  font-size: 14px;
-  font-weight: 850;
-  cursor:pointer;
-  border: 1px solid rgba(214,64,64,.45);
-  background: rgba(214,64,64,.12);
-  color: var(--text);
-  -webkit-tap-highlight-color: transparent;
-}
-.btnSecondary:active{ transform: translateY(1px); }
-
-/* ============================================================
-   FINESSE: UL statusLine + LR instructionLine
-============================================================ */
-
-/* statusLine default */
-#statusLine{
-  margin: 0;
-  padding: 0 14px 14px;
-  color: var(--muted);
-  font-size: 13px;
-  line-height: 1.35;
-}
-
-/* statusLine becomes the UL AIM instruction */
-#statusLine.statusAim{
-  padding: 10px 14px 8px !important;
-  text-align: left;
-  font-size: 16px;
-  font-weight: 1000;
-  letter-spacing: .10em;
-  text-transform: uppercase;
-}
-
-/* neutral */
-#statusLine.statusNeutral{
-  text-align: left;
-}
-
-/* instructionLine baseline */
-#instructionLine{
-  margin: 0;
-  padding: 2px 14px 16px;
-  color: var(--muted);
-  font-size: 18px;
-  font-weight: 1000;
-  letter-spacing: .10em;
-  text-transform: uppercase;
-  line-height: 1.2;
-}
-
-/* bullet holes prompt goes bottom-right */
-#instructionLine.instHoles{ text-align: right; }
-
-/* optional */
-#instructionLine.instAim{ text-align: left; }
-#instructionLine.instNeutral{ text-align: center; }
-
-/* Footer */
-.footer{
-  margin-top: 14px;
-  text-align:center;
-  color: rgba(238,242,247,.30);
-  font-weight: 900;
-  letter-spacing:.22em;
-  text-transform: uppercase;
-  font-size: 12px;
-  padding: 10px 0 0;
-}
-.footerMark{ opacity:.9; }
-
-/* Sticky Results Bar */
-.stickyBar{
-  position: fixed;
-  left: 0; right: 0; bottom: 0;
-  padding: 12px 12px 18px;
-  background: linear-gradient(180deg, rgba(6,7,10,0), rgba(6,7,10,.85) 30%, rgba(6,7,10,.95));
-  display:flex;
-  justify-content:center;
-  z-index: 9999;
-}
-.stickyHidden{ display:none; }
-
-.stickyBtn{
-  width: min(560px, 100%);
-  border-radius: 18px;
-  padding: 16px 14px;
-  font-size: 16px;
-  font-weight: 950;
-  border: 1px solid rgba(103,243,164,.35);
-  background: rgba(103,243,164,.12);
-  color: var(--text);
-  cursor:pointer;
-  box-shadow: 0 18px 45px rgba(0,0,0,.55);
-  -webkit-tap-highlight-color: transparent;
-}
-.stickyBtn:active{ transform: translateY(1px); }
-
-
-/* ============================================================
-   MATRIX — BOLD / OBVIOUS / "BAM" READABILITY PASS
+   MATRIX — RWB AUTHORITY MODE (BOLDER + SECTION HIGHLIGHTS)
    Paste at BOTTOM of docs/styles.css
 ============================================================ */
 
-/* Make the MATRIX panel feel like the control center */
+/* Make the whole Matrix feel more "panel / control" */
 .matrixPanel{
-  border-color: rgba(255,255,255,.16);
-  background: rgba(0,0,0,.30);
+  border-color: rgba(255,255,255,.18);
+  background: rgba(0,0,0,.34);
 }
 
-/* MATRIX title: bigger + heavier */
+/* Title "Adjust" — heavier + brighter */
 .matrixTitle{
-  font-size: 14px;
-  font-weight: 1100;
-  letter-spacing: .14em;
-  color: rgba(238,242,247,.92);
+  font-size: 15px;
+  font-weight: 1200;
+  letter-spacing: .16em;
+  color: rgba(238,242,247,.95);
   text-transform: uppercase;
 }
 
-/* Section labels: bigger + heavier */
+/* Each section block gets more separation */
+.matrixGroup{
+  padding: 10px 10px 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,.10);
+  background: rgba(255,255,255,.03);
+}
+
+/* SECTION TITLES: Target Size / Distance / Dial / Quick Presets
+   -> RWB band + bold + "BAM" */
 .matrixLabel{
-  font-size: 13px;
-  font-weight: 1100;
-  letter-spacing: .10em;
-  color: rgba(238,242,247,.86);
+  position: relative;
+  margin: -2px -2px 10px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 1200;
+  letter-spacing: .14em;
   text-transform: uppercase;
+  color: rgba(238,242,247,.98);
+
+  /* subtle dark base */
+  background: rgba(0,0,0,.26);
+  border: 1px solid rgba(255,255,255,.14);
+
+  /* the RWB authority stripe */
+  box-shadow:
+    inset 0 4px 0 rgba(214,64,64,.75),     /* red */
+    inset 0 8px 0 rgba(238,242,247,.70),   /* white */
+    inset 0 12px 0 rgba(47,102,255,.70),   /* blue */
+    0 14px 40px rgba(0,0,0,.45);
 }
 
-/* Micro helper text: still readable but secondary */
+/* Micro copy stays readable but clearly secondary */
 .matrixMicro{
   font-size: 12px;
-  font-weight: 900;
+  font-weight: 950;
   color: rgba(238,242,247,.58);
 }
 
-/* Inputs: bolder + more "editable" */
+/* Inputs: bolder + more “touch me” */
 .miniInput,
 .miniInputWide{
-  font-weight: 1100;
-  border-color: rgba(255,255,255,.18);
-  background: rgba(0,0,0,.24);
+  font-weight: 1200;
+  border-color: rgba(255,255,255,.20);
+  background: rgba(0,0,0,.26);
 }
 
-/* Units / small labels: bold so you SEE what you're changing */
+/* Units (yds/m, MOA/click) must read loud */
 .miniUnit{
-  font-weight: 1100;
-  color: rgba(238,242,247,.92);
+  font-weight: 1200;
+  color: rgba(238,242,247,.95);
+  letter-spacing: .06em;
 }
 
 /* Segment buttons: bold by default */
 .segBtn{
-  font-weight: 1100;
-  letter-spacing: .10em;
-  border-color: rgba(255,255,255,.18);
+  font-weight: 1200;
+  letter-spacing: .12em;
+  border-color: rgba(255,255,255,.20);
   background: rgba(255,255,255,.07);
 }
 
-/* Active segment: unmistakable */
+/* Active selection: UNMISSABLE (green confirmation) */
 .segBtn.segOn{
-  border-color: rgba(103,243,164,.60);
-  background: rgba(103,243,164,.16);
+  border-color: rgba(103,243,164,.70);
+  background: rgba(103,243,164,.18);
+  color: rgba(238,242,247,.99);
   box-shadow:
     0 0 0 1px rgba(103,243,164,.18),
-    0 0 18px rgba(103,243,164,.14);
-  color: rgba(238,242,247,.98);
+    0 0 22px rgba(103,243,164,.16);
 }
 
-/* Distance unit toggle (YDS/M) — make ON pop */
-.segBtnTiny{
-  font-weight: 1100;
-  letter-spacing: .14em;
-}
-
-/* Chips: bold + active chip pops harder */
+/* Chips: heavier, and the selected chip pops */
 .chip{
-  font-weight: 1100;
+  font-weight: 1200;
   letter-spacing: .10em;
-  border-color: rgba(255,255,255,.18);
+  border-color: rgba(255,255,255,.20);
 }
 
 .chipOn{
-  border-color: rgba(103,243,164,.70) !important;
-  background: rgba(103,243,164,.18) !important;
+  border-color: rgba(103,243,164,.75) !important;
+  background: rgba(103,243,164,.20) !important;
   box-shadow:
     0 0 0 1px rgba(103,243,164,.18),
-    0 0 18px rgba(103,243,164,.14);
+    0 0 22px rgba(103,243,164,.16);
 }
 
-/* Done button: stronger “commit” feel */
+/* Done button: stronger commit feel */
 .matrixCloseBtn{
-  font-weight: 1100;
-  letter-spacing: .12em;
-  border-color: rgba(103,243,164,.48);
-  background: rgba(103,243,164,.16);
+  font-weight: 1200;
+  letter-spacing: .14em;
+  border-color: rgba(103,243,164,.55);
+  background: rgba(103,243,164,.18);
 }
-
