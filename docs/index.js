@@ -6,6 +6,9 @@
    - Allows 2-finger pinch zoom
    + FIX: SEC EXPORT BULLET HOLES
    - Includes ALL hit taps in payload.debug.hits
+   FINESSE:
+   - Instruction language becomes larger/headline style (no periods)
+   - Removes duplicate top instruction line once photo is loaded
 ============================================================ */
 
 (() => {
@@ -175,11 +178,13 @@
     }, 650);
   }
 
-  // Instruction line state coloring
+  // Instruction line state coloring + headline copy (FINESSE)
   function setInstruction(text, kind) {
     if (!elInstruction) return;
+
     elInstruction.textContent = text || "";
 
+    // keep your established color scheme (no class refactor)
     elInstruction.style.color = "rgba(238,242,247,.65)";
     if (kind === "aim")  elInstruction.style.color = "rgba(103,243,164,.95)";
     if (kind === "hits") elInstruction.style.color = "rgba(183,255,60,.95)";
@@ -188,9 +193,18 @@
 
   function syncInstruction() {
     if (!elImg?.src) { setInstruction("", ""); return; }
-    if (!aim) { setInstruction("Tap Aim Point.", "aim"); return; }
-    if (hits.length < 1) { setInstruction("Tap Hits.", "hits"); return; }
-    setInstruction("Tap more hits, or pause — results will appear.", "go");
+
+    if (!aim) {
+      setInstruction("TAP AIM POINT", "aim");
+      return;
+    }
+
+    if (hits.length < 1) {
+      setInstruction("TAP HITS", "hits");
+      return;
+    }
+
+    setInstruction("TAP MORE HITS — OR PAUSE FOR RESULTS", "go");
   }
 
   function resetAll() {
@@ -201,7 +215,10 @@
     setTapCount();
     hideSticky();
     syncInstruction();
-    setText(elStatus, elImg?.src ? "Tap Aim Point." : "Add a target photo to begin.");
+
+    // Before photo: we want the top helper line visible.
+    setText(elStatus, elImg?.src ? "" : "Add a target photo to begin.");
+
     closeMatrix();
   }
 
@@ -640,14 +657,15 @@
     await storeTargetPhotoForSEC(f, objectUrl);
 
     elImg.onload = () => {
-      setText(elStatus, "Tap Aim Point.");
+      // FINESSE: remove duplicate top line once photo is loaded
+      setText(elStatus, "");
       syncInstruction();
       revealScoringUI();
     };
 
     elImg.onerror = () => {
       setText(elStatus, "Photo failed to load.");
-      setInstruction("Try again.", "");
+      setInstruction("TRY AGAIN", "");
       revealScoringUI();
     };
 
@@ -666,7 +684,8 @@
     if (!aim) {
       aim = { x01, y01 };
       addDot(x01, y01, "aim");
-      setText(elStatus, "Tap Hits.");
+      // FINESSE: keep top status line blank while photo is active
+      setText(elStatus, "");
       hideSticky();
       syncInstruction();
       return;
@@ -676,6 +695,7 @@
     addDot(x01, y01, "hit");
     setTapCount();
 
+    setText(elStatus, "");
     hideSticky();
     syncInstruction();
     scheduleStickyMagic();
@@ -720,7 +740,7 @@
   // ------------------------------------------------------------
   elClear?.addEventListener("click", () => {
     resetAll();
-    if (elImg?.src) setText(elStatus, "Tap Aim Point.");
+    if (elImg?.src) setText(elStatus, "");
   });
 
   [elStickyBtn, $("showResultsBtn")].filter(Boolean).forEach((b) => {
