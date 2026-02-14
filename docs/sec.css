@@ -614,3 +614,43 @@ body{
   -webkit-tap-highlight-color: transparent;
 }
 .stickyBtn:active{ transform: translateY(1px); }
+
+
+/* ============================================================
+   FINESSE ADD-ONS (PASTE AT BOTTOM)
+   - Aim dot bigger than bullet holes
+   - Sticky "Show results" subtle green glow + pulse
+============================================================ */
+
+/* Base dot */
+.tapDot{
+  width: 9px;
+  height: 9px;
+}
+
+/* Aim dot slightly larger */
+.tapDotAim{
+  width: 13px;
+  height: 13px;
+}
+
+/* Bullet holes slightly smaller */
+.tapDotHit{
+  width: 9px;
+  height: 9px;
+}
+
+/* Sticky button glow when visible */
+.stickyBar:not(.stickyHidden) .stickyBtn{
+  box-shadow:
+    0 18px 45px rgba(0,0,0,.55),
+    0 0 0 1px rgba(103,243,164,.22),
+    0 0 22px rgba(103,243,164,.18);
+  animation: tnsPulseGlow 1.2s ease-in-out 2;
+}
+
+@keyframes tnsPulseGlow{
+  0%   { transform: translateY(0); filter: none; }
+  50%  { transform: translateY(-1px); filter: drop-shadow(0 0 14px rgba(103,243,164,.35)); }
+  100% { transform: translateY(0); filter: none; }
+}
