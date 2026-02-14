@@ -6,9 +6,11 @@
    - Allows 2-finger pinch zoom
    + FIX: SEC EXPORT BULLET HOLES
    - Includes ALL hit taps in payload.debug.hits
-   FINESSE:
-   - Instruction language becomes larger/headline style (no periods)
-   - Removes duplicate top instruction line once photo is loaded
+
+   FINESSE (REQUEST):
+   - Upper-left instruction via statusLine: TAP AIM POINT
+   - Lower-right instruction via instructionLine: TAP BULLET HOLES
+   - Remove "tap more hits..." copy
 ============================================================ */
 
 (() => {
@@ -96,15 +98,12 @@
   let rangeUnit = "YDS"; // "YDS" | "M"
   let rangeYds = 100;    // internal yards
 
-  // target size (inches) — still used for UI/meta, NOT rectangle movement math
+  // target size (inches)
   let targetSizeKey = "23x35";
   let targetWIn = 23;
   let targetHIn = 35;
 
-  const DEFAULTS = {
-    MOA: 0.25,
-    MRAD: 0.10
-  };
+  const DEFAULTS = { MOA: 0.25, MRAD: 0.10 };
 
   // ------------------------------------------------------------
   // HARD LANDING LOCK
@@ -178,33 +177,55 @@
     }, 650);
   }
 
-  // Instruction line state coloring + headline copy (FINESSE)
+  // ------------------------------------------------------------
+  // FINESSE: Instruction system (UL aim, LR bullet holes)
+  // ------------------------------------------------------------
+  function setStatus(text, kind) {
+    if (!elStatus) return;
+
+    elStatus.textContent = text || "";
+
+    elStatus.classList.remove("statusAim", "statusNeutral");
+    elStatus.classList.add(kind === "aim" ? "statusAim" : "statusNeutral");
+
+    elStatus.style.color = "rgba(238,242,247,.65)";
+    if (kind === "aim") elStatus.style.color = "rgba(103,243,164,.95)";
+  }
+
   function setInstruction(text, kind) {
     if (!elInstruction) return;
 
     elInstruction.textContent = text || "";
 
-    // keep your established color scheme (no class refactor)
+    elInstruction.classList.remove("instAim", "instHoles", "instNeutral");
+    if (kind === "hits") elInstruction.classList.add("instHoles");
+    else if (kind === "aim") elInstruction.classList.add("instAim");
+    else elInstruction.classList.add("instNeutral");
+
     elInstruction.style.color = "rgba(238,242,247,.65)";
-    if (kind === "aim")  elInstruction.style.color = "rgba(103,243,164,.95)";
     if (kind === "hits") elInstruction.style.color = "rgba(183,255,60,.95)";
+    if (kind === "aim")  elInstruction.style.color = "rgba(103,243,164,.95)";
     if (kind === "go")   elInstruction.style.color = "rgba(47,102,255,.92)";
   }
 
   function syncInstruction() {
-    if (!elImg?.src) { setInstruction("", ""); return; }
+    if (!elImg?.src) {
+      setStatus("Add a target photo to begin.", "neutral");
+      setInstruction("", "neutral");
+      return;
+    }
 
     if (!aim) {
-      setInstruction("TAP AIM POINT", "aim");
+      // Upper-left instruction
+      setStatus("TAP AIM POINT", "aim");
+      // Lower-right blank until aim is set
+      setInstruction("", "neutral");
       return;
     }
 
-    if (hits.length < 1) {
-      setInstruction("TAP HITS", "hits");
-      return;
-    }
-
-    setInstruction("TAP MORE HITS — OR PAUSE FOR RESULTS", "go");
+    // Once aim is set: keep the lower-right instruction only
+    setStatus("", "neutral");
+    setInstruction("TAP BULLET HOLES", "hits");
   }
 
   function resetAll() {
@@ -214,12 +235,8 @@
     if (elDots) elDots.innerHTML = "";
     setTapCount();
     hideSticky();
-    syncInstruction();
-
-    // Before photo: we want the top helper line visible.
-    setText(elStatus, elImg?.src ? "" : "Add a target photo to begin.");
-
     closeMatrix();
+    syncInstruction();
   }
 
   // ------------------------------------------------------------
@@ -575,7 +592,6 @@
 
     const dist = getDistanceYds();
 
-    // inches per unit at distance
     const inchesPerUnit = (dialUnit === "MOA")
       ? (dist / 100) * 1.047
       : (dist / 100) * 3.6; // approx for mrad (pilot)
@@ -626,10 +642,10 @@
       surveyUrl: "",
       target: { key: targetSizeKey, wIn: Number(targetWIn), hIn: Number(targetHIn) },
 
-      // ✅ IMPORTANT: include ALL hit taps so SEC export draws bullet holes
+      // ✅ include ALL bullet holes so SEC export draws them
       debug: {
         aim,
-        hits, // ✅ added
+        hits,
         avgPoi: out.avgPoi,
         distanceYds: getDistanceYds(),
         inches: out.inches,
@@ -657,15 +673,13 @@
     await storeTargetPhotoForSEC(f, objectUrl);
 
     elImg.onload = () => {
-      // FINESSE: remove duplicate top line once photo is loaded
-      setText(elStatus, "");
       syncInstruction();
       revealScoringUI();
     };
 
     elImg.onerror = () => {
-      setText(elStatus, "Photo failed to load.");
-      setInstruction("TRY AGAIN", "");
+      setStatus("Photo failed to load.", "neutral");
+      setInstruction("", "neutral");
       revealScoringUI();
     };
 
@@ -684,8 +698,6 @@
     if (!aim) {
       aim = { x01, y01 };
       addDot(x01, y01, "aim");
-      // FINESSE: keep top status line blank while photo is active
-      setText(elStatus, "");
       hideSticky();
       syncInstruction();
       return;
@@ -695,7 +707,6 @@
     addDot(x01, y01, "hit");
     setTapCount();
 
-    setText(elStatus, "");
     hideSticky();
     syncInstruction();
     scheduleStickyMagic();
@@ -709,7 +720,6 @@
     }, { passive: false });
 
     elWrap.addEventListener("touchstart", (e) => {
-      // Only track tap-start for single-finger touches
       if (!e.touches || e.touches.length !== 1) { touchStart = null; return; }
       const t = e.touches[0];
       touchStart = { x: t.clientX, y: t.clientY, t: Date.now() };
@@ -721,7 +731,7 @@
 
       const dx = Math.abs(t.clientX - touchStart.x);
       const dy = Math.abs(t.clientY - touchStart.y);
-      if (dx > 10 || dy > 10) { touchStart = null; return; } // gesture => ignore
+      if (dx > 10 || dy > 10) { touchStart = null; return; }
 
       lastTouchTapAt = Date.now();
       acceptTap(t.clientX, t.clientY);
@@ -736,12 +746,9 @@
   }
 
   // ------------------------------------------------------------
-  // Buttons (results ALWAYS works)
+  // Buttons
   // ------------------------------------------------------------
-  elClear?.addEventListener("click", () => {
-    resetAll();
-    if (elImg?.src) setText(elStatus, "");
-  });
+  elClear?.addEventListener("click", () => resetAll());
 
   [elStickyBtn, $("showResultsBtn")].filter(Boolean).forEach((b) => {
     b.addEventListener("click", (e) => {
@@ -776,7 +783,6 @@
   setUnit("MOA");
   closeMatrix();
   hideSticky();
-  resetAll();
 
   hydrateVendorBox();
   hydrateRange();
@@ -788,6 +794,7 @@
   highlightSizeChip();
   syncLiveTop();
 
+  resetAll();
   hardHideScoringUI();
   forceTop();
 })();
