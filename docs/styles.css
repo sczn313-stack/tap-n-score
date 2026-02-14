@@ -636,3 +636,102 @@ body{
   -webkit-tap-highlight-color: transparent;
 }
 .stickyBtn:active{ transform: translateY(1px); }
+
+
+/* ============================================================
+   MATRIX — BOLD / OBVIOUS / "BAM" READABILITY PASS
+   Paste at BOTTOM of docs/styles.css
+============================================================ */
+
+/* Make the MATRIX panel feel like the control center */
+.matrixPanel{
+  border-color: rgba(255,255,255,.16);
+  background: rgba(0,0,0,.30);
+}
+
+/* MATRIX title: bigger + heavier */
+.matrixTitle{
+  font-size: 14px;
+  font-weight: 1100;
+  letter-spacing: .14em;
+  color: rgba(238,242,247,.92);
+  text-transform: uppercase;
+}
+
+/* Section labels: bigger + heavier */
+.matrixLabel{
+  font-size: 13px;
+  font-weight: 1100;
+  letter-spacing: .10em;
+  color: rgba(238,242,247,.86);
+  text-transform: uppercase;
+}
+
+/* Micro helper text: still readable but secondary */
+.matrixMicro{
+  font-size: 12px;
+  font-weight: 900;
+  color: rgba(238,242,247,.58);
+}
+
+/* Inputs: bolder + more "editable" */
+.miniInput,
+.miniInputWide{
+  font-weight: 1100;
+  border-color: rgba(255,255,255,.18);
+  background: rgba(0,0,0,.24);
+}
+
+/* Units / small labels: bold so you SEE what you're changing */
+.miniUnit{
+  font-weight: 1100;
+  color: rgba(238,242,247,.92);
+}
+
+/* Segment buttons: bold by default */
+.segBtn{
+  font-weight: 1100;
+  letter-spacing: .10em;
+  border-color: rgba(255,255,255,.18);
+  background: rgba(255,255,255,.07);
+}
+
+/* Active segment: unmistakable */
+.segBtn.segOn{
+  border-color: rgba(103,243,164,.60);
+  background: rgba(103,243,164,.16);
+  box-shadow:
+    0 0 0 1px rgba(103,243,164,.18),
+    0 0 18px rgba(103,243,164,.14);
+  color: rgba(238,242,247,.98);
+}
+
+/* Distance unit toggle (YDS/M) — make ON pop */
+.segBtnTiny{
+  font-weight: 1100;
+  letter-spacing: .14em;
+}
+
+/* Chips: bold + active chip pops harder */
+.chip{
+  font-weight: 1100;
+  letter-spacing: .10em;
+  border-color: rgba(255,255,255,.18);
+}
+
+.chipOn{
+  border-color: rgba(103,243,164,.70) !important;
+  background: rgba(103,243,164,.18) !important;
+  box-shadow:
+    0 0 0 1px rgba(103,243,164,.18),
+    0 0 18px rgba(103,243,164,.14);
+}
+
+/* Done button: stronger “commit” feel */
+.matrixCloseBtn{
+  font-weight: 1100;
+  letter-spacing: .12em;
+  border-color: rgba(103,243,164,.48);
+  background: rgba(103,243,164,.16);
+}
+
