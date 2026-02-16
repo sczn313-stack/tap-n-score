@@ -1,11 +1,9 @@
 /* ============================================================
    docs/index.js (FULL REPLACEMENT)
-   - MATRIX drawer
-   - Phones: MATRIX never covers target size (CSS)
-   - NO corner prompts on target
-   - Mirrored instruction: statusLine + instructionLine
-   - Pop/Fade animation on instruction changes
-   - Target sizes: 6 presets + Custom + Swap
+   - Adds Target Type: GRID vs SILHOUETTE
+   - SILHOUETTE mode uses 5-inch anchor (two taps) to scale inches
+   - No instruction overlays on target (instructions mirrored in lines only)
+   - Uses image natural pixels so pinch/zoom doesn't break scale
 ============================================================ */
 
 (() => {
@@ -59,6 +57,10 @@
   const elSizeChipRow = $("sizeChipRow");
   const elSwapSizeBtn = $("swapSizeBtn");
 
+  // Target type chips
+  const elTypeChipRow = $("typeChipRow");
+  const elTypeMicro = $("typeMicro");
+
   // Storage keys
   const KEY_PAYLOAD = "SCZN3_SEC_PAYLOAD_V1";
   const KEY_TARGET_IMG_DATA = "SCZN3_TARGET_IMG_DATAURL_V1";
@@ -72,11 +74,17 @@
   const KEY_TARGET_W = "SCZN3_TARGET_W_IN_V1";
   const KEY_TARGET_H = "SCZN3_TARGET_H_IN_V1";
 
+  // Target type persistence
+  const KEY_TARGET_TYPE = "SCZN3_TARGET_TYPE_V1"; // "grid" | "silhouette"
+  const KEY_ANCHOR_IN = "SCZN3_SIL_ANCHOR_IN_V1"; // numeric inches (default 5)
+
   let objectUrl = null;
 
-  // taps
-  let aim = null;
-  let hits = [];
+  // taps/state
+  let aim = null;         // {x01,y01,xPx,yPx}
+  let hits = [];          // [{x01,y01,xPx,yPx}, ...]
+  let anchorA = null;     // silhouette only
+  let anchorB = null;     // silhouette only
 
   // touch anti-double-fire
   let lastTouchTapAt = 0;
@@ -98,6 +106,10 @@
   let targetSizeKey = "23x35";
   let targetWIn = 23;
   let targetHIn = 35;
+
+  // target type
+  let targetType = "grid"; // "grid" | "silhouette"
+  let anchorIn = 5;        // inches
 
   const DEFAULTS = { MOA: 0.25, MRAD: 0.10 };
 
@@ -173,11 +185,11 @@
     }, 650);
   }
 
-  // pop/fade animation trigger
+  // pop/fade animation trigger (needs .tnsPulse in livebar_fix.css)
   function pulse(el){
     if (!el) return;
     el.classList.remove("tnsPulse");
-    void el.offsetWidth; // restart animation
+    void el.offsetWidth;
     el.classList.add("tnsPulse");
   }
 
@@ -202,31 +214,51 @@
       elStatus.style.color = t ? color : "rgba(238,242,247,.65)";
     }
 
-    // animate both when instruction changes
     if (t) {
       pulse(elStatus);
       pulse(elInstruction);
     }
   }
 
+  function setStage(stage) {
+    if (elWrap) elWrap.setAttribute("data-stage", stage);
+  }
+
   function syncInstruction() {
     if (!elImg?.src) {
       setInstruction("Add a target photo to begin.", "");
-      if (elWrap) elWrap.setAttribute("data-stage", "noimg");
+      setStage("noimg");
       return;
     }
+
+    if (targetType === "silhouette") {
+      if (!anchorA) {
+        setInstruction(`Tap 5-inch anchor (start).`, "aim");
+        setStage("anchorA");
+        return;
+      }
+      if (!anchorB) {
+        setInstruction(`Tap 5-inch anchor (end).`, "aim");
+        setStage("anchorB");
+        return;
+      }
+    }
+
     if (!aim) {
       setInstruction("Tap Aim Point.", "aim");
-      if (elWrap) elWrap.setAttribute("data-stage", "aim");
+      setStage("aim");
       return;
     }
+
     setInstruction("Tap Bullet Holes.", "holes");
-    if (elWrap) elWrap.setAttribute("data-stage", "holes");
+    setStage("holes");
   }
 
   function resetAll() {
     aim = null;
     hits = [];
+    anchorA = null;
+    anchorB = null;
     touchStart = null;
 
     if (elDots) elDots.innerHTML = "";
@@ -234,7 +266,7 @@
     hideSticky();
     closeMatrix();
 
-    syncInstruction(); // single source of truth (mirrored lines)
+    syncInstruction();
   }
 
   // ------------------------------------------------------------
@@ -304,20 +336,36 @@
   function addDot(x01, y01, kind) {
     if (!elDots) return;
     const d = document.createElement("div");
-    d.className = "tapDot " + (kind === "aim" ? "tapDotAim" : "tapDotHit");
+
+    const isAim = kind === "aim";
+    const isHit = kind === "hit";
+    const isAnchor = kind === "anchor";
+
+    d.className = "tapDot " + (isAim ? "tapDotAim" : (isHit ? "tapDotHit" : "tapDotHit"));
     d.style.left = (x01 * 100) + "%";
     d.style.top = (y01 * 100) + "%";
-    d.style.background = (kind === "aim") ? "#67f3a4" : "#b7ff3c";
+
+    // colors:
+    // aim = green, hit = lime, anchor = blue
+    const c = isAim ? "#67f3a4" : (isAnchor ? "#2f66ff" : "#b7ff3c");
+    d.style.background = c;
     d.style.border = "2px solid rgba(0,0,0,.55)";
     d.style.boxShadow = "0 10px 28px rgba(0,0,0,.55)";
     elDots.appendChild(d);
   }
 
-  function getRelative01(clientX, clientY) {
+  function getTapPoint(clientX, clientY) {
     const r = elImg.getBoundingClientRect();
-    const x = (clientX - r.left) / r.width;
-    const y = (clientY - r.top) / r.height;
-    return { x01: clamp01(x), y01: clamp01(y) };
+    const x01 = clamp01((clientX - r.left) / r.width);
+    const y01 = clamp01((clientY - r.top) / r.height);
+
+    // map to natural pixels (stable against zoom/pinch)
+    const nw = elImg.naturalWidth || 1;
+    const nh = elImg.naturalHeight || 1;
+    const xPx = x01 * nw;
+    const yPx = y01 * nh;
+
+    return { x01, y01, xPx, yPx };
   }
 
   // ------------------------------------------------------------
@@ -424,12 +472,6 @@
     return Math.max(1, Math.min(200, n));
   }
 
-  function formatSizeKey(w, h) {
-    const wf = (Math.round(w * 100) / 100).toString();
-    const hf = (Math.round(h * 100) / 100).toString();
-    return `${wf}x${hf}`;
-  }
-
   function highlightSizeChip() {
     if (!elSizeChipRow) return;
     const chips = Array.from(elSizeChipRow.querySelectorAll("[data-size]"));
@@ -460,7 +502,6 @@
       return;
     }
 
-    // custom (stored w/h)
     const w = clampInches(localStorage.getItem(KEY_TARGET_W) || "23", 23);
     const h = clampInches(localStorage.getItem(KEY_TARGET_H) || "35", 35);
     setTargetSize("custom", w, h);
@@ -474,7 +515,6 @@
       btn.addEventListener("click", () => {
         const key = btn.getAttribute("data-size") || "23x35";
 
-        // Swap is handled by its own button id
         if (key === "custom") {
           const curW = Number(targetWIn);
           const curH = Number(targetHIn);
@@ -504,11 +544,9 @@
       const w = Number(targetWIn);
       const h = Number(targetHIn);
 
-      // swap dims
       const nw = h;
       const nh = w;
 
-      // if it matches a preset after swap, snap to that preset key
       const presetKey = Object.keys(PRESET_SIZES).find(k => {
         const p = PRESET_SIZES[k];
         return Math.abs(p.w - nw) < 0.0001 && Math.abs(p.h - nh) < 0.0001;
@@ -518,6 +556,54 @@
       else setTargetSize("custom", nw, nh);
 
       closeMatrix();
+    });
+  }
+
+  // ------------------------------------------------------------
+  // Target type (GRID vs SILHOUETTE)
+  // ------------------------------------------------------------
+  function highlightTypeChips() {
+    if (!elTypeChipRow) return;
+    const chips = Array.from(elTypeChipRow.querySelectorAll("[data-type]"));
+    chips.forEach((c) => {
+      const k = c.getAttribute("data-type") || "grid";
+      c.classList.toggle("chipOn", k === targetType);
+    });
+  }
+
+  function setTargetType(t) {
+    targetType = (t === "silhouette") ? "silhouette" : "grid";
+    try { localStorage.setItem(KEY_TARGET_TYPE, targetType); } catch {}
+
+    if (elTypeMicro) {
+      elTypeMicro.textContent =
+        targetType === "silhouette"
+          ? `Silhouette targets use a 5-inch anchor (2 taps) for true inches.`
+          : `Grid targets use your selected size for inches math.`;
+    }
+
+    highlightTypeChips();
+
+    // changing type resets tap flow (so users don't mix modes mid-stream)
+    if (elImg?.src) resetAll();
+    else syncInstruction();
+  }
+
+  function hydrateTargetType() {
+    targetType = (localStorage.getItem(KEY_TARGET_TYPE) === "silhouette") ? "silhouette" : "grid";
+    anchorIn = clampInches(localStorage.getItem(KEY_ANCHOR_IN) || "5", 5);
+    setTargetType(targetType);
+  }
+
+  function wireTargetTypeChips() {
+    if (!elTypeChipRow) return;
+    const chips = Array.from(elTypeChipRow.querySelectorAll("[data-type]"));
+    chips.forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const t = btn.getAttribute("data-type") || "grid";
+        setTargetType(t);
+        closeMatrix();
+      });
     });
   }
 
@@ -612,18 +698,40 @@
   function computeCorrectionAndScore() {
     if (!aim || hits.length < 1) return null;
 
-    const avg = hits.reduce((acc, p) => ({ x: acc.x + p.x01, y: acc.y + p.y01 }), { x: 0, y: 0 });
+    const avg = hits.reduce((acc, p) => ({ x: acc.x + p.xPx, y: acc.y + p.yPx }), { x: 0, y: 0 });
     avg.x /= hits.length;
     avg.y /= hits.length;
 
-    // correction vector = aim - avgPoi (bull - POIB)
-    const dx = aim.x01 - avg.x; // + means move RIGHT
-    const dy = aim.y01 - avg.y; // + means move DOWN (screen y)
+    // dx,dy in pixels: correction vector = aim - avgPoi
+    const dxPx = aim.xPx - avg.x; // + means move RIGHT
+    const dyPx = aim.yPx - avg.y; // + means move DOWN (screen y)
 
-    // square scoring plane
-    const squareIn = Math.min(targetWIn, targetHIn);
-    const inchesX = dx * squareIn;
-    const inchesY = dy * squareIn;
+    let inchesX = 0;
+    let inchesY = 0;
+
+    if (targetType === "silhouette") {
+      if (!anchorA || !anchorB) return null;
+      const adx = anchorB.xPx - anchorA.xPx;
+      const ady = anchorB.yPx - anchorA.yPx;
+      const distPx = Math.sqrt(adx*adx + ady*ady);
+
+      if (!Number.isFinite(distPx) || distPx <= 1) return null;
+
+      const inchesPerPx = anchorIn / distPx;
+      inchesX = dxPx * inchesPerPx;
+      inchesY = dyPx * inchesPerPx;
+    } else {
+      // GRID mode: use square plane = min(w,h)
+      const squareIn = Math.min(targetWIn, targetHIn);
+      // Convert px delta to normalized delta using natural dims, then to inches
+      const nw = elImg.naturalWidth || 1;
+      const nh = elImg.naturalHeight || 1;
+      const dx01 = dxPx / nw;
+      const dy01 = dyPx / nh;
+      inchesX = dx01 * squareIn;
+      inchesY = dy01 * squareIn;
+    }
+
     const rIn = Math.sqrt(inchesX * inchesX + inchesY * inchesY);
 
     const dist = getDistanceYds();
@@ -639,13 +747,12 @@
     const clicksY = unitY / clickVal;
 
     return {
-      avgPoi: { x01: avg.x, y01: avg.y },
+      avgPoiPx: { xPx: avg.x, yPx: avg.y },
       inches: { x: inchesX, y: inchesY, r: rIn },
       score: scoreFromRadiusInches(rIn),
       windage: { dir: clicksX >= 0 ? "RIGHT" : "LEFT", clicks: Math.abs(clicksX) },
       elevation: { dir: clicksY >= 0 ? "DOWN" : "UP", clicks: Math.abs(clicksY) },
       dial: { unit: dialUnit, clickValue: clickVal },
-      squareIn
     };
   }
 
@@ -662,7 +769,14 @@
 
   function onShowResults() {
     const out = computeCorrectionAndScore();
-    if (!out) { alert("Tap Aim Point first, then tap at least one bullet hole."); return; }
+    if (!out) {
+      if (targetType === "silhouette" && (!anchorA || !anchorB)) {
+        alert("Silhouette mode: tap the 5-inch anchor (two taps), then aim point, then bullet holes.");
+        return;
+      }
+      alert("Tap Aim Point first, then tap at least one bullet hole.");
+      return;
+    }
 
     const vendorUrl = localStorage.getItem(KEY_VENDOR_URL) || "";
 
@@ -675,8 +789,19 @@
       dial: { unit: out.dial.unit, clickValue: Number(out.dial.clickValue.toFixed(2)) },
       vendorUrl,
       surveyUrl: "",
-      target: { key: targetSizeKey, wIn: Number(targetWIn), hIn: Number(targetHIn) },
-      debug: { aim, hits, avgPoi: out.avgPoi, distanceYds: getDistanceYds(), inches: out.inches, squareIn: out.squareIn }
+      target: { key: targetSizeKey, wIn: Number(targetWIn), hIn: Number(targetHIn), type: targetType, anchorIn },
+
+      debug: {
+        type: targetType,
+        anchorIn,
+        anchorA,
+        anchorB,
+        aim,
+        hits,
+        distanceYds: getDistanceYds(),
+        inches: out.inches,
+        avgPoiPx: out.avgPoiPx
+      }
     };
 
     goToSEC(payload);
@@ -718,18 +843,37 @@
   function acceptTap(clientX, clientY) {
     if (!elImg?.src) return;
 
-    const { x01, y01 } = getRelative01(clientX, clientY);
+    const pt = getTapPoint(clientX, clientY);
 
+    // silhouette: collect anchor first
+    if (targetType === "silhouette") {
+      if (!anchorA) {
+        anchorA = pt;
+        addDot(pt.x01, pt.y01, "anchor");
+        hideSticky();
+        syncInstruction();
+        return;
+      }
+      if (!anchorB) {
+        anchorB = pt;
+        addDot(pt.x01, pt.y01, "anchor");
+        hideSticky();
+        syncInstruction();
+        return;
+      }
+    }
+
+    // aim first (both modes)
     if (!aim) {
-      aim = { x01, y01 };
-      addDot(x01, y01, "aim");
+      aim = pt;
+      addDot(pt.x01, pt.y01, "aim");
       hideSticky();
       syncInstruction();
       return;
     }
 
-    hits.push({ x01, y01 });
-    addDot(x01, y01, "hit");
+    hits.push(pt);
+    addDot(pt.x01, pt.y01, "hit");
     setTapCount();
 
     hideSticky();
@@ -764,8 +908,13 @@
     elWrap.addEventListener("click", (e) => {
       const now = Date.now();
       if (now - lastTouchTapAt < 800) return;
-      acceptTap(e.clientX, e.clientY);
+      acceptTap(e.clientX, tClientYSafe(e));
     }, { passive: true });
+  }
+
+  function tClientYSafe(e){
+    // guard for odd click event shapes
+    return typeof e.clientY === "number" ? e.clientY : 0;
   }
 
   // ------------------------------------------------------------
@@ -814,11 +963,14 @@
   hydrateVendorBox();
   hydrateRange();
   hydrateTargetSize();
+  hydrateTargetType();
 
   wireMatrixPresets();
   wireTargetSizeChips();
+  wireTargetTypeChips();
 
   highlightSizeChip();
+  highlightTypeChips();
   syncLiveTop();
 
   hardHideScoringUI();
