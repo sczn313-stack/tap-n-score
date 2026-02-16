@@ -1,1 +1,43 @@
+/* docs/sizechips.css (FULL REPLACEMENT) — Target Size Chip Row
+   6 presets + Custom + Swap (matrix drawer)
+*/
 
+/* Make the size chips wrap cleanly and stay readable */
+#sizeChipRow{
+  display:flex;
+  flex-wrap:wrap;
+  gap:10px;
+  align-items:center;
+}
+
+/* Slightly tighter chips for the matrix drawer */
+#sizeChipRow .chipSize{
+  padding:10px 12px;
+  border-radius:999px;
+  font-size:14px;
+  letter-spacing:.2px;
+  line-height:1;
+  white-space:nowrap;
+}
+
+/* Selected state (uses your existing .chipOn hook) */
+#sizeChipRow .chipOn{
+  border-color:rgba(255,255,255,.32);
+  box-shadow:0 10px 28px rgba(0,0,0,.45);
+}
+
+/* Make Custom + Swap visually “utility” without looking disabled */
+#sizeChipRow .chipSize[data-size="custom"],
+#swapSizeBtn{
+  opacity:.92;
+  border-style:dashed;
+  border-color:rgba(255,255,255,.20);
+}
+
+/* Keep the row from feeling cramped on small screens */
+@media (max-width: 420px){
+  #sizeChipRow .chipSize{
+    padding:9px 10px;
+    font-size:13px;
+  }
+}
