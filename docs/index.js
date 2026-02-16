@@ -1,6 +1,7 @@
 /* ============================================================
    docs/index.js (FULL REPLACEMENT) — MATRIX + SQUARE PLANE
    + RESTORE MIRRORED CORNER PROMPTS (TL aim / BR bullet holes)
+   + 6 TARGET SIZE PRESETS + CUSTOM + SWAP + AUTO-ORIENT
 ============================================================ */
 
 (() => {
@@ -66,7 +67,7 @@
   const KEY_DIST_YDS = "SCZN3_RANGE_YDS_V1";   // numeric (yards)
 
   // Target size persistence
-  const KEY_TARGET_SIZE = "SCZN3_TARGET_SIZE_KEY_V1"; // e.g., "23x35"
+  const KEY_TARGET_SIZE = "SCZN3_TARGET_SIZE_KEY_V1"; // e.g., "23x35" | "custom"
   const KEY_TARGET_W = "SCZN3_TARGET_W_IN_V1";
   const KEY_TARGET_H = "SCZN3_TARGET_H_IN_V1";
 
@@ -98,6 +99,16 @@
   let targetHIn = 35;
 
   const DEFAULTS = { MOA: 0.25, MRAD: 0.10 };
+
+  // 6 presets (deterministic; no pixel guessing)
+  const PRESET_MAP = {
+    "8.5x11": { w: 8.5, h: 11 },
+    "11x17":  { w: 11,  h: 17 },
+    "12x18":  { w: 12,  h: 18 },
+    "18x24":  { w: 18,  h: 24 },
+    "23x35":  { w: 23,  h: 35 },
+    "24x36":  { w: 24,  h: 36 }
+  };
 
   // ------------------------------------------------------------
   // HARD LANDING LOCK
@@ -175,7 +186,6 @@
   function setStage(stage) {
     if (elWrap) elWrap.setAttribute("data-stage", stage);
 
-    // hide both by default
     if (elCornerAim) elCornerAim.setAttribute("aria-hidden", "true");
     if (elCornerHoles) elCornerHoles.setAttribute("aria-hidden", "true");
 
@@ -209,7 +219,6 @@
       setStage("aim");
       return;
     }
-    // after aim
     setInstruction("Tap Bullet Holes.", "holes");
     setStage("holes");
   }
@@ -408,13 +417,13 @@
     if (!elSizeChipRow) return;
     const chips = Array.from(elSizeChipRow.querySelectorAll("[data-size]"));
     chips.forEach((c) => {
-      const key = c.getAttribute("data-size") || "";
-      c.classList.toggle("chipOn", key === targetSizeKey);
+      const key = (c.getAttribute("data-size") || "").toLowerCase();
+      c.classList.toggle("chipOn", key === (String(targetSizeKey || "").toLowerCase()));
     });
   }
 
   function setTargetSize(key, wIn, hIn) {
-    targetSizeKey = String(key || "23x35");
+    targetSizeKey = String(key || "23x35").toLowerCase();
     targetWIn = clampInches(wIn, 23);
     targetHIn = clampInches(hIn, 35);
 
@@ -427,29 +436,61 @@
   }
 
   function hydrateTargetSize() {
-    const key = localStorage.getItem(KEY_TARGET_SIZE) || "23x35";
-    const presetMap = {
-      "8.5x11": { w: 8.5, h: 11 },
-      "17x35": { w: 17, h: 35 },
-      "23x35": { w: 23, h: 35 },
-      "23x23": { w: 23, h: 23 }
-    };
-    const p = presetMap[key] || { w: clampInches(localStorage.getItem(KEY_TARGET_W) || "23", 23),
-                                  h: clampInches(localStorage.getItem(KEY_TARGET_H) || "35", 35) };
-    setTargetSize(key in presetMap ? key : "23x35", p.w, p.h);
+    const savedKey = String(localStorage.getItem(KEY_TARGET_SIZE) || "23x35").toLowerCase();
+
+    if (PRESET_MAP[savedKey]) {
+      const p = PRESET_MAP[savedKey];
+      setTargetSize(savedKey, p.w, p.h);
+      return;
+    }
+
+    // Custom fallback
+    const w = clampInches(localStorage.getItem(KEY_TARGET_W) || "23", 23);
+    const h = clampInches(localStorage.getItem(KEY_TARGET_H) || "35", 35);
+    setTargetSize("custom", w, h);
   }
 
   function wireTargetSizeChips() {
     if (!elSizeChipRow) return;
-    const chips = Array.from(elSizeChipRow.querySelectorAll("[data-size][data-w][data-h]"));
+
+    const chips = Array.from(elSizeChipRow.querySelectorAll("[data-size]"));
     chips.forEach((btn) => {
       btn.addEventListener("click", () => {
-        const key = btn.getAttribute("data-size") || "23x35";
-        const w = Number(btn.getAttribute("data-w") || "23");
-        const h = Number(btn.getAttribute("data-h") || "35");
-        setTargetSize(key, w, h);
+        const key = String(btn.getAttribute("data-size") || "23x35").toLowerCase();
+
+        // Custom does NOT change inches; it just marks state as Custom
+        if (key === "custom") {
+          setTargetSize("custom", targetWIn, targetHIn);
+          return;
+        }
+
+        const wAttr = btn.getAttribute("data-w");
+        const hAttr = btn.getAttribute("data-h");
+        if (wAttr && hAttr) {
+          setTargetSize(key, Number(wAttr), Number(hAttr));
+        }
       });
     });
+
+    // Swap button
+    const swapBtn = $("swapSizeBtn");
+    swapBtn?.addEventListener("click", () => {
+      setTargetSize(targetSizeKey || "custom", targetHIn, targetWIn);
+    });
+  }
+
+  // Auto-orient by image orientation ONLY (safe; no size guessing)
+  function autoOrientTargetSizeFromImage() {
+    if (!elImg) return;
+    if (!elImg.naturalWidth || !elImg.naturalHeight) return;
+
+    const imageIsLandscape = elImg.naturalWidth > elImg.naturalHeight;
+    const currentIsLandscape = targetWIn > targetHIn;
+
+    // Only swap if it's clearly sideways
+    if (imageIsLandscape !== currentIsLandscape) {
+      setTargetSize(targetSizeKey || "custom", targetHIn, targetWIn);
+    }
   }
 
   // ------------------------------------------------------------
@@ -464,7 +505,12 @@
 
     if (elLiveDial) elLiveDial.textContent = `${getClickValue().toFixed(2)} ${dialUnit}`;
 
-    if (elLiveTarget) elLiveTarget.textContent = (targetSizeKey || "").replace("x", "×");
+    if (elLiveTarget) {
+      const isCustom = (String(targetSizeKey || "").toLowerCase() === "custom");
+      elLiveTarget.textContent = isCustom
+        ? `${targetWIn}×${targetHIn}`
+        : (targetSizeKey || "").replace("x", "×");
+    }
   }
 
   // ------------------------------------------------------------
@@ -626,6 +672,9 @@
     await storeTargetPhotoForSEC(f, objectUrl);
 
     elImg.onload = () => {
+      // SAFE auto-orient (no size guessing)
+      autoOrientTargetSizeFromImage();
+
       setText(elStatus, "Tap Aim Point.");
       syncInstruction();
       revealScoringUI();
