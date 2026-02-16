@@ -13,7 +13,7 @@
 
   <title>SEC — Shooter Experience Card</title>
 
-  <link rel="stylesheet" href="./sec.css?v=SEC-FINAL-0212A" />
+  <link rel="stylesheet" href="./sec.css?v=SEC-FINAL-0216A" />
 </head>
 
 <body>
@@ -39,7 +39,7 @@
         </div>
       </header>
 
-      <!-- Top: SCORE + VENDOR (dominant partnership band) -->
+      <!-- Top: SCORE + VENDOR -->
       <section class="secTopBand">
         <div class="scoreCard" aria-label="Score">
           <div class="scoreTop">
@@ -57,8 +57,6 @@
 
         <div class="vendorCard" aria-label="Vendor">
           <div class="vendorK">TARGET PRINTER</div>
-
-          <!-- You can swap this to an <img> later when you want real logos -->
           <div id="vendorName" class="vendorName">—</div>
 
           <div class="vendorRow">
@@ -69,7 +67,7 @@
         </div>
       </section>
 
-      <!-- Compact stats (not dominant) -->
+      <!-- Compact stats -->
       <section class="secStats" aria-label="Stats">
         <div class="stat">
           <div class="statK">HITS</div>
@@ -98,15 +96,19 @@
 
       <div id="errLine" class="secErr" style="display:none;"></div>
 
-      <!-- Footer faint marks -->
+      <!-- Footer -->
       <footer class="secFoot">
         <div class="secFootCenter">SCZN3</div>
+
+        <!-- NEW: tiny pilot line under footer -->
+        <div id="pilotMini" class="pilotMini" aria-label="Pilot stats"></div>
+
         <div id="sessionGhost" class="secFootRight">—</div>
       </footer>
 
     </section>
   </main>
 
-  <script defer src="./sec.js?v=SEC-FINAL-0212A"></script>
+  <script defer src="./sec.js?v=SEC-FINAL-0216A"></script>
 </body>
 </html>
