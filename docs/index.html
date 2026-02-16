@@ -1,4 +1,4 @@
-<!-- docs/index.html (FULL REPLACEMENT) — MATRIX DOES NOT COVER TARGET SIZE + NO CORNER “TAP AIM POINT” PROMPTS -->
+<!-- docs/index.html (FULL REPLACEMENT) — ADD SILHOUETTE BRANCH (5" ANCHOR) -->
 <!doctype html>
 <html lang="en">
 <head>
@@ -15,7 +15,6 @@
 
   <link rel="stylesheet" href="./styles.css?v=TP-Aplus-0214B" />
   <link rel="stylesheet" href="./sizechips.css?v=TP-Aplus-0214B" />
-  <!-- NEW: live bar layout fix so MATRIX never covers target size -->
   <link rel="stylesheet" href="./livebar_fix.css?v=TP-Aplus-0214B" />
 </head>
 
@@ -74,7 +73,7 @@
       <!-- LIVE DISPLAY -->
       <div class="liveBar" aria-label="Live data display">
         <div class="liveRow liveRowOneLine">
-          <div class="liveLine" aria-label="Distance, dial, and target size">
+          <div class="liveLine" aria-label="Distance, dial, target size">
             <span id="liveDistance" class="liveLinePrimary">100 yds</span>
             <span class="liveSep" aria-hidden="true">|</span>
             <span id="liveDial" class="liveLinePrimary">0.25 MOA</span>
@@ -111,6 +110,20 @@
           </div>
 
           <div class="matrixMicro">This sets inches math so clicks come out right.</div>
+        </div>
+
+        <!-- Target Type -->
+        <div class="matrixGroup">
+          <div class="matrixLabel">Target Type</div>
+
+          <div class="chipRow chipRowTight" id="typeChipRow">
+            <button class="chip chipType" type="button" data-type="grid">GRID</button>
+            <button class="chip chipType" type="button" data-type="silhouette">SILHOUETTE</button>
+          </div>
+
+          <div id="typeMicro" class="matrixMicro">
+            Grid targets use your selected size for inches math.
+          </div>
         </div>
 
         <!-- Distance + Units -->
@@ -170,7 +183,7 @@
       <div id="targetWrap" class="targetWrap" aria-label="Target photo area" data-stage="noimg">
         <img id="targetImg" alt="Target preview" />
         <div id="dotsLayer" class="dotsLayer" aria-hidden="true"></div>
-        <!-- REMOVED: corner prompts (cleaner visuals) -->
+        <!-- No text overlays on target -->
       </div>
 
       <div class="row rowTight">
@@ -195,6 +208,6 @@
 
   </main>
 
-  <script defer src="./index.js?v=TP-Aplus-0214B"></script>
+  <script defer src="./index.js?v=TP-Aplus-0214C-SIL" ></script>
 </body>
 </html>
