@@ -1,4 +1,4 @@
-<!-- docs/index.html (FULL REPLACEMENT) — LIVE TOP ONE-LINE + MATRIX DRAWER + MIRRORED CORNER PROMPTS -->
+<!-- docs/index.html (FULL REPLACEMENT) — MATRIX DOES NOT COVER TARGET SIZE + NO CORNER “TAP AIM POINT” PROMPTS -->
 <!doctype html>
 <html lang="en">
 <head>
@@ -13,9 +13,10 @@
 
   <title>Tap-n-Score™</title>
 
-  <link rel="stylesheet" href="./styles.css?v=TP-Aplus-0214A" />
-  <!-- NEW: target size chip wrapping + utility styling -->
-  <link rel="stylesheet" href="./sizechips.css?v=TP-Aplus-0214A" />
+  <link rel="stylesheet" href="./styles.css?v=TP-Aplus-0214B" />
+  <link rel="stylesheet" href="./sizechips.css?v=TP-Aplus-0214B" />
+  <!-- NEW: live bar layout fix so MATRIX never covers target size -->
+  <link rel="stylesheet" href="./livebar_fix.css?v=TP-Aplus-0214B" />
 </head>
 
 <body>
@@ -70,7 +71,7 @@
         </div>
       </div>
 
-      <!-- LIVE DISPLAY (ONE LINE: YARDS | DIAL | TARGET) -->
+      <!-- LIVE DISPLAY -->
       <div class="liveBar" aria-label="Live data display">
         <div class="liveRow liveRowOneLine">
           <div class="liveLine" aria-label="Distance, dial, and target size">
@@ -169,10 +170,7 @@
       <div id="targetWrap" class="targetWrap" aria-label="Target photo area" data-stage="noimg">
         <img id="targetImg" alt="Target preview" />
         <div id="dotsLayer" class="dotsLayer" aria-hidden="true"></div>
-
-        <!-- ✅ MIRRORED CORNER PROMPTS (DIAGONAL AUTHORITY) -->
-        <div id="cornerAim" class="cornerPrompt cornerTL" aria-hidden="true">TAP AIM POINT</div>
-        <div id="cornerHoles" class="cornerPrompt cornerBR" aria-hidden="true">TAP BULLET HOLES</div>
+        <!-- REMOVED: corner prompts (cleaner visuals) -->
       </div>
 
       <div class="row rowTight">
@@ -183,6 +181,7 @@
         <button id="clearTapsBtn" class="btnSecondary" type="button">Clear</button>
       </div>
 
+      <!-- Single source of instruction truth -->
       <p id="instructionLine" class="hint instructionLine"></p>
     </section>
 
@@ -196,6 +195,6 @@
 
   </main>
 
-  <script defer src="./index.js?v=TP-Aplus-0214A"></script>
+  <script defer src="./index.js?v=TP-Aplus-0214B"></script>
 </body>
 </html>
