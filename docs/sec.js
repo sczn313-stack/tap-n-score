@@ -1,9 +1,7 @@
 /* ============================================================
-   docs/sec.js (FULL REPLACEMENT) — FINAL SEC + LIGHT CERTIFICATE EXPORT
-   - Screen view stays DARK (this page)
-   - Download builds a LIGHT "certificate" PNG w/ border + bullet holes
-   - Uses payload from ?payload= (base64 JSON) OR localStorage
-   - Uses target image from localStorage (SCZN3_TARGET_IMG_DATAURL_V1)
+   docs/sec.js (FULL REPLACEMENT)
+   - Final SEC + Light certificate export
+   - Pilot counters + tiny under-footer stats line
 ============================================================ */
 
 (() => {
@@ -31,12 +29,14 @@
 
   const elErr = $("errLine");
   const elSessionGhost = $("sessionGhost");
+  const elPilotMini = $("pilotMini");
 
-  // Storage keys (must match your index.js)
+  // Storage keys (must match index.js)
   const KEY_PAYLOAD = "SCZN3_SEC_PAYLOAD_V1";
   const KEY_TARGET_IMG_DATA = "SCZN3_TARGET_IMG_DATAURL_V1";
+  const KEY_PILOT = "SCZN3_PILOT_STATS_V1"; // { total:{}, days:{YYYY-MM-DD:{}} }
 
-  // Soft scoring memory (for "Avg: —")
+  // Soft scoring memory
   const KEY_SCORES_DAY = "SCZN3_SCORES_BY_DAY_V1"; // { "YYYY-MM-DD": [numbers...] }
 
   function showErr(msg) {
@@ -51,25 +51,6 @@
     return Number.isFinite(x) ? x : fallback;
   }
 
-  function decodePayloadFromQuery() {
-    try {
-      const qs = new URLSearchParams(window.location.search);
-      const b64 = qs.get("payload");
-      if (!b64) return null;
-
-      // base64 -> json string
-      const json = decodeURIComponent(escape(atob(b64)));
-      const obj = JSON.parse(json);
-      return obj && typeof obj === "object" ? obj : null;
-    } catch {
-      return null;
-    }
-  }
-
-  function getPayload() {
-    return decodePayloadFromQuery() || safeJSON(localStorage.getItem(KEY_PAYLOAD)) || null;
-  }
-
   function safeJSON(s) {
     try { return JSON.parse(String(s || "")); } catch { return null; }
   }
@@ -82,12 +63,76 @@
     return `${y}-${m}-${da}`;
   }
 
+  // ------------------------------------------------------------
+  // Pilot counters (same schema as index.js)
+  // ------------------------------------------------------------
+  function readPilot() {
+    const box = safeJSON(localStorage.getItem(KEY_PILOT));
+    if (box && typeof box === "object") return box;
+    return { total: {}, days: {} };
+  }
+
+  function writePilot(box) {
+    try { localStorage.setItem(KEY_PILOT, JSON.stringify(box)); } catch {}
+  }
+
+  function incPilot(name, by = 1) {
+    const key = String(name || "").trim();
+    if (!key) return;
+
+    const n = Number(by);
+    const add = Number.isFinite(n) ? n : 1;
+
+    const box = readPilot();
+    const day = todayKey();
+
+    box.total = box.total && typeof box.total === "object" ? box.total : {};
+    box.days = box.days && typeof box.days === "object" ? box.days : {};
+    box.days[day] = box.days[day] && typeof box.days[day] === "object" ? box.days[day] : {};
+
+    box.total[key] = (Number(box.total[key]) || 0) + add;
+    box.days[day][key] = (Number(box.days[day][key]) || 0) + add;
+
+    writePilot(box);
+  }
+
+  function pilotCountsToday() {
+    const box = readPilot();
+    const day = todayKey();
+    const d = (box.days && box.days[day]) ? box.days[day] : {};
+    const t = (box.total) ? box.total : {};
+    return { day: d, total: t };
+  }
+
+  // ------------------------------------------------------------
+  // Payload
+  // ------------------------------------------------------------
+  function decodePayloadFromQuery() {
+    try {
+      const qs = new URLSearchParams(window.location.search);
+      const b64 = qs.get("payload");
+      if (!b64) return null;
+      const json = decodeURIComponent(escape(atob(b64)));
+      const obj = JSON.parse(json);
+      return obj && typeof obj === "object" ? obj : null;
+    } catch {
+      return null;
+    }
+  }
+
+  function getPayload() {
+    return decodePayloadFromQuery() || safeJSON(localStorage.getItem(KEY_PAYLOAD)) || null;
+  }
+
+  // ------------------------------------------------------------
+  // Score average
+  // ------------------------------------------------------------
   function recordScoreForAvg(score) {
     const day = todayKey();
     const box = safeJSON(localStorage.getItem(KEY_SCORES_DAY)) || {};
     const arr = Array.isArray(box[day]) ? box[day] : [];
     arr.push(score);
-    box[day] = arr.slice(-200); // cap
+    box[day] = arr.slice(-200);
     try { localStorage.setItem(KEY_SCORES_DAY, JSON.stringify(box)); } catch {}
     const avg = arr.reduce((a,b)=>a+b,0) / arr.length;
     return { avg, n: arr.length };
@@ -110,19 +155,44 @@
   }
 
   function vendorNameFromUrl(url) {
-    // Pilot default: if we can't infer, show "Baker Printing" when vendor URL exists.
     if (typeof url === "string" && url.startsWith("http")) return "Baker Printing";
     return "—";
   }
 
   function formatClicks(n) {
-    // two decimals always
     return clampNum(n, 0).toFixed(2);
   }
 
+  // ------------------------------------------------------------
+  // Tiny Pilot line under footer
+  // ------------------------------------------------------------
+  function renderPilotMini() {
+    if (!elPilotMini) return;
+    const { day } = pilotCountsToday();
+
+    const opens = Number(day.open) || 0;
+    const sessions = Number(day.session_start) || 0;
+    const photos = Number(day.photo_loaded) || 0;
+    const results = Number(day.show_results) || 0;
+    const hits = Number(day.hit_added) || 0;
+
+    const conv = photos > 0 ? Math.round((results / photos) * 100) : 0;
+    const avgHits = sessions > 0 ? (hits / sessions) : 0;
+
+    // Keep it tiny + factual
+    elPilotMini.textContent =
+      `Pilot today: sessions ${sessions} • photos ${photos} • results ${results} (${conv}%) • avg taps ${avgHits.toFixed(1)} • opens ${opens}`;
+  }
+
+  // ------------------------------------------------------------
+  // UI wiring
+  // ------------------------------------------------------------
   function wireUI(p) {
     hideErr();
     if (!p) { showErr("Missing SEC payload."); return; }
+
+    // pilot: sec view
+    incPilot("sec_view", 1);
 
     const score = Math.round(clampNum(p.score, 0));
     const shots = clampNum(p.shots, 0);
@@ -144,11 +214,10 @@
     if (elShots) elShots.textContent = String(shots);
     if (elWind) elWind.textContent = formatClicks(wClicks);
     if (elElev) elElev.textContent = formatClicks(eClicks);
-
     if (elWindDir) elWindDir.textContent = wDir;
     if (elElevDir) elElevDir.textContent = eDir;
 
-    // Vendor panel (dominant)
+    // Vendor panel
     const vUrl = String(p.vendorUrl || "");
     const hasVendor = vUrl.startsWith("http");
 
@@ -166,12 +235,10 @@
       }
     }
 
-    // Micro line (quiet, not salesy)
     const tgt = p.target?.key ? `Target: ${(p.target.key || "").replace("x","×")}` : "Target: —";
     const dial = p.dial?.unit ? `${(p.dial.clickValue ?? 0).toFixed(2)} ${String(p.dial.unit)}` : "—";
     if (elVendorMicro) elVendorMicro.textContent = `${tgt} • Dial: ${dial}`;
 
-    // Session ghost (bottom-right)
     if (elSessionGhost) elSessionGhost.textContent = `Session ${String(p.sessionId || "—")}`;
 
     // Buttons
@@ -194,10 +261,11 @@
         elDownload.textContent = "Download SEC Picture";
       }
     });
+
+    renderPilotMini();
   }
 
   function goHome(reset = false) {
-    // reset just means start a fresh run (still safe)
     const url = `./index.html?fresh=${Date.now()}${reset ? "&again=1" : ""}`;
     window.location.href = url;
   }
@@ -213,54 +281,43 @@
 
     const img = await loadImage(dataUrl);
 
-    // Canvas size (portrait card-ish)
     const W = 1400;
     const H = 1800;
     const c = document.createElement("canvas");
     c.width = W; c.height = H;
     const g = c.getContext("2d");
 
-    // Colors (light certificate)
-    const bg = "#f3f4f6";         // soft light gray
-    const ink = "#111827";        // charcoal
+    const bg = "#f3f4f6";
+    const ink = "#111827";
     const soft = "rgba(17,24,39,.55)";
     const border = "rgba(17,24,39,.28)";
 
-    // Background
     g.fillStyle = bg;
     g.fillRect(0,0,W,H);
 
-    // Outer border
     g.strokeStyle = border;
     g.lineWidth = 3;
     g.strokeRect(34,34,W-68,H-68);
 
-    // Inner border
     g.strokeStyle = "rgba(17,24,39,.14)";
     g.lineWidth = 2;
     g.strokeRect(52,52,W-104,H-104);
 
-    // Header: SHOOTER EXPERIENCE CARD (small, official)
     g.fillStyle = ink;
     g.font = "900 34px system-ui, -apple-system, Segoe UI, Roboto, Arial";
     g.fillText("SHOOTER EXPERIENCE CARD", 92, 128);
 
-    // Small SEC tag (RW&B hint)
     drawSECMark(g, W - 240, 92);
 
-    // Layout boxes: Score (L) + Target thumb (R)
     const pad = 92;
     const gap = 24;
     const topY = 170;
     const panelH = 520;
     const panelW = (W - pad*2 - gap) / 2;
 
-    // Score box
     drawRoundRect(g, pad, topY, panelW, panelH, 22, "rgba(255,255,255,.75)", "rgba(17,24,39,.14)");
-    // Target box
     drawRoundRect(g, pad + panelW + gap, topY, panelW, panelH, 22, "rgba(255,255,255,.75)", "rgba(17,24,39,.14)");
 
-    // Score content
     const score = Math.round(clampNum(p.score, 0));
     g.fillStyle = soft;
     g.font = "900 18px system-ui, -apple-system, Segoe UI, Roboto, Arial";
@@ -278,10 +335,8 @@
     g.font = "800 22px system-ui, -apple-system, Segoe UI, Roboto, Arial";
     g.fillText("Measured results from confirmed hits", pad + 28, topY + 334);
 
-    // Stats row (below top band)
     const statsY = topY + panelH + 26;
     const statsH = 170;
-
     const statW = (W - pad*2 - gap*2) / 3;
 
     const shots = clampNum(p.shots, 0);
@@ -294,38 +349,27 @@
     drawStatBox(g, pad + (statW + gap)*1, statsY, statW, statsH, "WINDAGE", formatClicks(wClicks), wDir, ink, soft);
     drawStatBox(g, pad + (statW + gap)*2, statsY, statW, statsH, "ELEVATION", formatClicks(eClicks), eDir, ink, soft);
 
-    // Target thumbnail with holes (right panel)
     const thumbX = pad + panelW + gap + 22;
     const thumbY = topY + 70;
     const thumbW = panelW - 44;
     const thumbH = panelH - 120;
 
-    // label
     g.fillStyle = soft;
     g.font = "900 18px system-ui, -apple-system, Segoe UI, Roboto, Arial";
     g.fillText("TARGET (with hits)", pad + panelW + gap + 28, topY + 56);
 
-    // Fit image
     const fit = contain(img.width, img.height, thumbW, thumbH);
     const ix = thumbX + (thumbW - fit.w)/2;
     const iy = thumbY + (thumbH - fit.h)/2;
 
-    // image frame
     drawRoundRect(g, thumbX, thumbY, thumbW, thumbH, 18, "rgba(17,24,39,.04)", "rgba(17,24,39,.12)");
-    // draw image clipped to rounded rect
     clipRoundRect(g, thumbX, thumbY, thumbW, thumbH, 18, () => {
       g.drawImage(img, ix, iy, fit.w, fit.h);
     });
 
-    // draw aim + hit markers using debug coords (x01/y01)
     const aim = p?.debug?.aim;
     const hits = Array.isArray(p?.debug?.hits) ? p.debug.hits : null;
 
-    // Your current index.js stores hits only in-page; payload debug currently includes aim + avgPoi + inches
-    // We still can render:
-    // - aim marker from debug.aim (if exists)
-    // - hits markers if we can infer from payload.debug.hits (future)
-    // For now: we draw aim, and if hits list isn't present, we draw avg POI as the “group center” marker.
     const scaleX = fit.w;
     const scaleY = fit.h;
 
@@ -336,32 +380,27 @@
       drawMarker(g, px, py, style);
     }
 
-    // Aim (green)
     drawPoint01(aim, "aim");
 
     if (hits && hits.length) {
       hits.forEach(h => drawPoint01(h, "hit"));
     } else {
-      // Fallback: draw avg POI center as a "group center" marker (yellow) so export still has “holes-like” evidence
       const avgPoi = p?.debug?.avgPoi;
       if (avgPoi) drawPoint01(avgPoi, "hit");
     }
 
-    // Printer line (quiet)
     const vendorUrl = String(p.vendorUrl || "");
     const vendorName = vendorNameFromUrl(vendorUrl);
     g.fillStyle = soft;
     g.font = "900 20px system-ui, -apple-system, Segoe UI, Roboto, Arial";
     g.fillText(`Printer: ${vendorName}`, pad + panelW + gap + 28, topY + panelH - 28);
 
-    // Session ID bottom-right (faint)
     g.fillStyle = "rgba(17,24,39,.28)";
     g.font = "900 18px system-ui, -apple-system, Segoe UI, Roboto, Arial";
     const sid = `Session ${String(p.sessionId || "—")}`;
     const sidW = g.measureText(sid).width;
     g.fillText(sid, W - pad - sidW, H - 92);
 
-    // SCZN3 watermark bottom center (very faint)
     g.save();
     g.globalAlpha = 0.10;
     g.fillStyle = ink;
@@ -371,7 +410,6 @@
     g.fillText(wm, (W - wmW)/2, H - 92);
     g.restore();
 
-    // Export
     const outUrl = c.toDataURL("image/png");
     downloadDataUrl(outUrl, `SEC_${String(score).padStart(3,"0")}_${Date.now()}.png`);
   }
@@ -380,7 +418,6 @@
   // Drawing helpers
   // ============================================================
   function drawSECMark(g, x, y) {
-    // simple RW&B SEC tag (small)
     g.save();
     g.font = "1100 34px system-ui, -apple-system, Segoe UI, Roboto, Arial";
     g.fillStyle = "#d64040";
@@ -424,7 +461,6 @@
   }
 
   function drawMarker(g, x, y, kind) {
-    // Bullet holes / aim marker (clean, printable)
     const isAim = kind === "aim";
     const outer = isAim ? "rgba(16,185,129,.85)" : "rgba(245,158,11,.85)";
     const inner = isAim ? "rgba(16,185,129,.35)" : "rgba(245,158,11,.35)";
