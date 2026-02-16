@@ -1,9 +1,11 @@
 /* ============================================================
-   docs/index.js (FULL REPLACEMENT) — CLEAN TARGET VIEW
-   - MATRIX never covers live target size (CSS handles layout)
-   - REMOVED corner "TAP AIM POINT / TAP BULLET HOLES" prompts
-   - Instruction truth only in statusLine + instructionLine
-   - 6 size presets + Custom + Swap truth rules + auto-orient
+   docs/index.js (FULL REPLACEMENT)
+   - MATRIX drawer
+   - Phones: MATRIX never covers target size (CSS)
+   - NO corner prompts on target
+   - Mirrored instruction: statusLine + instructionLine
+   - Pop/Fade animation on instruction changes
+   - Target sizes: 6 presets + Custom + Swap
 ============================================================ */
 
 (() => {
@@ -55,6 +57,7 @@
 
   // Target size chip row
   const elSizeChipRow = $("sizeChipRow");
+  const elSwapSizeBtn = $("swapSizeBtn");
 
   // Storage keys
   const KEY_PAYLOAD = "SCZN3_SEC_PAYLOAD_V1";
@@ -65,7 +68,7 @@
   const KEY_DIST_YDS = "SCZN3_RANGE_YDS_V1";   // numeric (yards)
 
   // Target size persistence
-  const KEY_TARGET_SIZE = "SCZN3_TARGET_SIZE_KEY_V1"; // preset key or "custom"
+  const KEY_TARGET_SIZE = "SCZN3_TARGET_SIZE_KEY_V1"; // e.g., "23x35" or "custom"
   const KEY_TARGET_W = "SCZN3_TARGET_W_IN_V1";
   const KEY_TARGET_H = "SCZN3_TARGET_H_IN_V1";
 
@@ -97,16 +100,6 @@
   let targetHIn = 35;
 
   const DEFAULTS = { MOA: 0.25, MRAD: 0.10 };
-
-  // 6 presets (deterministic; no guessing)
-  const PRESET_MAP = {
-    "8.5x11": { w: 8.5, h: 11 },
-    "11x17":  { w: 11,  h: 17 },
-    "12x18":  { w: 12,  h: 18 },
-    "18x24":  { w: 18,  h: 24 },
-    "23x35":  { w: 23,  h: 35 },
-    "24x36":  { w: 24,  h: 36 }
-  };
 
   // ------------------------------------------------------------
   // HARD LANDING LOCK
@@ -180,39 +173,68 @@
     }, 650);
   }
 
-  // Instruction line state coloring
-  function setInstruction(text, kind) {
-    if (!elInstruction) return;
-    elInstruction.textContent = text || "";
+  // pop/fade animation trigger
+  function pulse(el){
+    if (!el) return;
+    el.classList.remove("tnsPulse");
+    void el.offsetWidth; // restart animation
+    el.classList.add("tnsPulse");
+  }
 
-    elInstruction.style.color = "rgba(238,242,247,.65)";
-    if (kind === "aim")   elInstruction.style.color = "rgba(103,243,164,.95)";
-    if (kind === "holes") elInstruction.style.color = "rgba(183,255,60,.95)";
-    if (kind === "go")    elInstruction.style.color = "rgba(47,102,255,.92)";
+  // ------------------------------------------------------------
+  // Mirrored instruction line (statusLine + instructionLine)
+  // ------------------------------------------------------------
+  function setInstruction(text, kind) {
+    const t = text || "";
+
+    let color = "rgba(238,242,247,.65)";
+    if (kind === "aim")   color = "rgba(103,243,164,.95)"; // green
+    if (kind === "holes") color = "rgba(183,255,60,.95)";  // lime
+    if (kind === "go")    color = "rgba(47,102,255,.92)";  // blue
+
+    if (elInstruction) {
+      elInstruction.textContent = t;
+      elInstruction.style.color = color;
+    }
+
+    if (elStatus) {
+      elStatus.textContent = t || (elImg?.src ? "" : "Add a target photo to begin.");
+      elStatus.style.color = t ? color : "rgba(238,242,247,.65)";
+    }
+
+    // animate both when instruction changes
+    if (t) {
+      pulse(elStatus);
+      pulse(elInstruction);
+    }
   }
 
   function syncInstruction() {
     if (!elImg?.src) {
-      setInstruction("", "");
+      setInstruction("Add a target photo to begin.", "");
+      if (elWrap) elWrap.setAttribute("data-stage", "noimg");
       return;
     }
     if (!aim) {
       setInstruction("Tap Aim Point.", "aim");
+      if (elWrap) elWrap.setAttribute("data-stage", "aim");
       return;
     }
     setInstruction("Tap Bullet Holes.", "holes");
+    if (elWrap) elWrap.setAttribute("data-stage", "holes");
   }
 
   function resetAll() {
     aim = null;
     hits = [];
     touchStart = null;
+
     if (elDots) elDots.innerHTML = "";
     setTapCount();
     hideSticky();
-    syncInstruction();
-    setText(elStatus, elImg?.src ? "Tap Aim Point." : "Add a target photo to begin.");
     closeMatrix();
+
+    syncInstruction(); // single source of truth (mirrored lines)
   }
 
   // ------------------------------------------------------------
@@ -385,14 +407,16 @@
   }
 
   // ------------------------------------------------------------
-  // Target size — Custom + Swap truth rules
+  // Target size: 6 presets + Custom + Swap
   // ------------------------------------------------------------
-  function keyForWH(w, h) {
-    for (const [k, p] of Object.entries(PRESET_MAP)) {
-      if (Number(p.w) === Number(w) && Number(p.h) === Number(h)) return k;
-    }
-    return "custom";
-  }
+  const PRESET_SIZES = {
+    "8.5x11": { w: 8.5, h: 11 },
+    "11x17":  { w: 11,  h: 17 },
+    "12x18":  { w: 12,  h: 18 },
+    "18x24":  { w: 18,  h: 24 },
+    "23x35":  { w: 23,  h: 35 },
+    "24x36":  { w: 24,  h: 36 },
+  };
 
   function clampInches(v, fallback) {
     let n = Number(v);
@@ -400,32 +424,25 @@
     return Math.max(1, Math.min(200, n));
   }
 
+  function formatSizeKey(w, h) {
+    const wf = (Math.round(w * 100) / 100).toString();
+    const hf = (Math.round(h * 100) / 100).toString();
+    return `${wf}x${hf}`;
+  }
+
   function highlightSizeChip() {
     if (!elSizeChipRow) return;
     const chips = Array.from(elSizeChipRow.querySelectorAll("[data-size]"));
     chips.forEach((c) => {
-      const key = (c.getAttribute("data-size") || "").toLowerCase();
-      c.classList.toggle("chipOn", key === (String(targetSizeKey || "").toLowerCase()));
+      const key = c.getAttribute("data-size") || "";
+      c.classList.toggle("chipOn", key === targetSizeKey);
     });
   }
 
   function setTargetSize(key, wIn, hIn) {
-    const w = clampInches(wIn, 23);
-    const h = clampInches(hIn, 35);
-
-    const k = String(key || "custom").toLowerCase();
-    let finalKey = k;
-
-    if (PRESET_MAP[k]) {
-      const p = PRESET_MAP[k];
-      finalKey = (Number(p.w) === Number(w) && Number(p.h) === Number(h)) ? k : "custom";
-    } else {
-      finalKey = keyForWH(w, h);
-    }
-
-    targetSizeKey = finalKey;
-    targetWIn = w;
-    targetHIn = h;
+    targetSizeKey = String(key || "23x35");
+    targetWIn = clampInches(wIn, 23);
+    targetHIn = clampInches(hIn, 35);
 
     try { localStorage.setItem(KEY_TARGET_SIZE, targetSizeKey); } catch {}
     try { localStorage.setItem(KEY_TARGET_W, String(targetWIn)); } catch {}
@@ -436,12 +453,14 @@
   }
 
   function hydrateTargetSize() {
-    const savedKey = String(localStorage.getItem(KEY_TARGET_SIZE) || "23x35").toLowerCase();
-    if (PRESET_MAP[savedKey]) {
-      const p = PRESET_MAP[savedKey];
-      setTargetSize(savedKey, p.w, p.h);
+    const key = localStorage.getItem(KEY_TARGET_SIZE) || "23x35";
+
+    if (PRESET_SIZES[key]) {
+      setTargetSize(key, PRESET_SIZES[key].w, PRESET_SIZES[key].h);
       return;
     }
+
+    // custom (stored w/h)
     const w = clampInches(localStorage.getItem(KEY_TARGET_W) || "23", 23);
     const h = clampInches(localStorage.getItem(KEY_TARGET_H) || "35", 35);
     setTargetSize("custom", w, h);
@@ -449,40 +468,57 @@
 
   function wireTargetSizeChips() {
     if (!elSizeChipRow) return;
-
     const chips = Array.from(elSizeChipRow.querySelectorAll("[data-size]"));
+
     chips.forEach((btn) => {
       btn.addEventListener("click", () => {
-        const key = String(btn.getAttribute("data-size") || "custom").toLowerCase();
+        const key = btn.getAttribute("data-size") || "23x35";
 
-        // Custom is state only (keeps W/H)
+        // Swap is handled by its own button id
         if (key === "custom") {
-          setTargetSize("custom", targetWIn, targetHIn);
+          const curW = Number(targetWIn);
+          const curH = Number(targetHIn);
+
+          const wStr = prompt("Custom width (inches):", String(curW));
+          if (wStr === null) return;
+
+          const hStr = prompt("Custom height (inches):", String(curH));
+          if (hStr === null) return;
+
+          const w = clampInches(wStr, curW);
+          const h = clampInches(hStr, curH);
+
+          setTargetSize("custom", w, h);
+          closeMatrix();
           return;
         }
 
-        const wAttr = btn.getAttribute("data-w");
-        const hAttr = btn.getAttribute("data-h");
-        if (wAttr && hAttr) {
-          setTargetSize(key, Number(wAttr), Number(hAttr));
+        if (PRESET_SIZES[key]) {
+          setTargetSize(key, PRESET_SIZES[key].w, PRESET_SIZES[key].h);
+          closeMatrix();
         }
       });
     });
 
-    const swapBtn = $("swapSizeBtn");
-    swapBtn?.addEventListener("click", () => {
-      // swap always becomes custom unless it matches a preset
-      setTargetSize("custom", targetHIn, targetWIn);
-    });
-  }
+    elSwapSizeBtn?.addEventListener("click", () => {
+      const w = Number(targetWIn);
+      const h = Number(targetHIn);
 
-  function autoOrientTargetSizeFromImage() {
-    if (!elImg?.naturalWidth || !elImg?.naturalHeight) return;
-    const imageIsLandscape = elImg.naturalWidth > elImg.naturalHeight;
-    const currentIsLandscape = targetWIn > targetHIn;
-    if (imageIsLandscape !== currentIsLandscape) {
-      setTargetSize("custom", targetHIn, targetWIn);
-    }
+      // swap dims
+      const nw = h;
+      const nh = w;
+
+      // if it matches a preset after swap, snap to that preset key
+      const presetKey = Object.keys(PRESET_SIZES).find(k => {
+        const p = PRESET_SIZES[k];
+        return Math.abs(p.w - nw) < 0.0001 && Math.abs(p.h - nh) < 0.0001;
+      });
+
+      if (presetKey) setTargetSize(presetKey, nw, nh);
+      else setTargetSize("custom", nw, nh);
+
+      closeMatrix();
+    });
   }
 
   // ------------------------------------------------------------
@@ -498,10 +534,11 @@
     if (elLiveDial) elLiveDial.textContent = `${getClickValue().toFixed(2)} ${dialUnit}`;
 
     if (elLiveTarget) {
-      const isCustom = (String(targetSizeKey || "").toLowerCase() === "custom");
-      elLiveTarget.textContent = isCustom
-        ? `${targetWIn}×${targetHIn}`
-        : (targetSizeKey || "").replace("x", "×");
+      if (targetSizeKey === "custom") {
+        elLiveTarget.textContent = `${Number(targetWIn).toFixed(2)}×${Number(targetHIn).toFixed(2)}`;
+      } else {
+        elLiveTarget.textContent = (targetSizeKey || "").replace("x", "×");
+      }
     }
   }
 
@@ -579,7 +616,7 @@
     avg.x /= hits.length;
     avg.y /= hits.length;
 
-    // correction vector = aim - avgPoi (bull - poib)
+    // correction vector = aim - avgPoi (bull - POIB)
     const dx = aim.x01 - avg.x; // + means move RIGHT
     const dy = aim.y01 - avg.y; // + means move DOWN (screen y)
 
@@ -662,14 +699,11 @@
     await storeTargetPhotoForSEC(f, objectUrl);
 
     elImg.onload = () => {
-      autoOrientTargetSizeFromImage();
-      setText(elStatus, "Tap Aim Point.");
       syncInstruction();
       revealScoringUI();
     };
 
     elImg.onerror = () => {
-      setText(elStatus, "Photo failed to load.");
       setInstruction("Try again.", "");
       revealScoringUI();
     };
@@ -689,7 +723,6 @@
     if (!aim) {
       aim = { x01, y01 };
       addDot(x01, y01, "aim");
-      setText(elStatus, "Tap Bullet Holes.");
       hideSticky();
       syncInstruction();
       return;
@@ -740,7 +773,7 @@
   // ------------------------------------------------------------
   elClear?.addEventListener("click", () => {
     resetAll();
-    if (elImg?.src) setText(elStatus, "Tap Aim Point.");
+    if (elImg?.src) syncInstruction();
   });
 
   [elStickyBtn, $("showResultsBtn")].filter(Boolean).forEach((b) => {
@@ -767,7 +800,7 @@
   elClickValue?.addEventListener("blur", () => { getClickValue(); syncLiveTop(); });
   elClickValue?.addEventListener("change", () => { getClickValue(); syncLiveTop(); });
 
-  elMatrixBtn?.addEventListener("click", () => (isMatrixOpen() ? closeMatrix() : openMatrix()));
+  elMatrixBtn?.addEventListener("click", toggleMatrix);
   elMatrixClose?.addEventListener("click", closeMatrix);
 
   // ------------------------------------------------------------
