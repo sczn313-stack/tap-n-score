@@ -14,6 +14,8 @@
   <title>Tap-n-Score™</title>
 
   <link rel="stylesheet" href="./styles.css?v=TP-Aplus-0214A" />
+  <!-- NEW: target size chip wrapping + utility styling -->
+  <link rel="stylesheet" href="./sizechips.css?v=TP-Aplus-0214A" />
 </head>
 
 <body>
@@ -93,12 +95,20 @@
         <!-- Target Size -->
         <div class="matrixGroup">
           <div class="matrixLabel">Target Size</div>
+
           <div class="chipRow chipRowTight" id="sizeChipRow">
             <button class="chip chipSize" type="button" data-size="8.5x11" data-w="8.5" data-h="11">8.5×11</button>
-            <button class="chip chipSize" type="button" data-size="17x35" data-w="17" data-h="35">17×35</button>
+            <button class="chip chipSize" type="button" data-size="11x17" data-w="11" data-h="17">11×17</button>
+            <button class="chip chipSize" type="button" data-size="12x18" data-w="12" data-h="18">12×18</button>
+
+            <button class="chip chipSize" type="button" data-size="18x24" data-w="18" data-h="24">18×24</button>
             <button class="chip chipSize" type="button" data-size="23x35" data-w="23" data-h="35">23×35</button>
-            <button class="chip chipSize" type="button" data-size="23x23" data-w="23" data-h="23">23×23</button>
+            <button class="chip chipSize" type="button" data-size="24x36" data-w="24" data-h="36">24×36</button>
+
+            <button class="chip chipSize" type="button" data-size="custom">Custom</button>
+            <button id="swapSizeBtn" class="chip chipSize" type="button" aria-label="Swap width and height">Swap</button>
           </div>
+
           <div class="matrixMicro">This sets inches math so clicks come out right.</div>
         </div>
 
@@ -136,7 +146,6 @@
         <div class="matrixGroup">
           <div class="matrixLabel">Quick Presets</div>
 
-          <!-- NOTE: id used for 2-row grid -->
           <div class="chipRow" id="presetChipRow">
             <button class="chip" type="button" data-unit="MOA" data-click="0.25">0.25 MOA</button>
             <button class="chip" type="button" data-unit="MOA" data-click="0.50">0.50 MOA</button>
@@ -174,7 +183,6 @@
         <button id="clearTapsBtn" class="btnSecondary" type="button">Clear</button>
       </div>
 
-      <!-- Instruction line (larger / mirrored authority) -->
       <p id="instructionLine" class="hint instructionLine"></p>
     </section>
 
