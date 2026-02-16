@@ -1,7 +1,9 @@
 /* ============================================================
-   docs/index.js (FULL REPLACEMENT) — MATRIX + SQUARE PLANE
-   + RESTORE MIRRORED CORNER PROMPTS (TL aim / BR bullet holes)
-   + 6 TARGET SIZE PRESETS + CUSTOM + SWAP + AUTO-ORIENT
+   docs/index.js (FULL REPLACEMENT) — CLEAN TARGET VIEW
+   - MATRIX never covers live target size (CSS handles layout)
+   - REMOVED corner "TAP AIM POINT / TAP BULLET HOLES" prompts
+   - Instruction truth only in statusLine + instructionLine
+   - 6 size presets + Custom + Swap truth rules + auto-orient
 ============================================================ */
 
 (() => {
@@ -22,10 +24,6 @@
   const elClear = $("clearTapsBtn");
   const elInstruction = $("instructionLine");
   const elStatus = $("statusLine");
-
-  // ✅ Corner prompts
-  const elCornerAim = $("cornerAim");
-  const elCornerHoles = $("cornerHoles");
 
   // Sticky
   const elStickyBar = $("stickyBar");
@@ -67,7 +65,7 @@
   const KEY_DIST_YDS = "SCZN3_RANGE_YDS_V1";   // numeric (yards)
 
   // Target size persistence
-  const KEY_TARGET_SIZE = "SCZN3_TARGET_SIZE_KEY_V1"; // e.g., "23x35" | "custom"
+  const KEY_TARGET_SIZE = "SCZN3_TARGET_SIZE_KEY_V1"; // preset key or "custom"
   const KEY_TARGET_W = "SCZN3_TARGET_W_IN_V1";
   const KEY_TARGET_H = "SCZN3_TARGET_H_IN_V1";
 
@@ -100,7 +98,7 @@
 
   const DEFAULTS = { MOA: 0.25, MRAD: 0.10 };
 
-  // 6 presets (deterministic; no pixel guessing)
+  // 6 presets (deterministic; no guessing)
   const PRESET_MAP = {
     "8.5x11": { w: 8.5, h: 11 },
     "11x17":  { w: 11,  h: 17 },
@@ -182,45 +180,27 @@
     }, 650);
   }
 
-  // ✅ Corner stage controller
-  function setStage(stage) {
-    if (elWrap) elWrap.setAttribute("data-stage", stage);
-
-    if (elCornerAim) elCornerAim.setAttribute("aria-hidden", "true");
-    if (elCornerHoles) elCornerHoles.setAttribute("aria-hidden", "true");
-
-    if (stage === "aim") {
-      if (elCornerAim) elCornerAim.setAttribute("aria-hidden", "false");
-    }
-    if (stage === "holes") {
-      if (elCornerHoles) elCornerHoles.setAttribute("aria-hidden", "false");
-    }
-  }
-
   // Instruction line state coloring
   function setInstruction(text, kind) {
     if (!elInstruction) return;
     elInstruction.textContent = text || "";
 
     elInstruction.style.color = "rgba(238,242,247,.65)";
-    if (kind === "aim")  elInstruction.style.color = "rgba(103,243,164,.95)";
+    if (kind === "aim")   elInstruction.style.color = "rgba(103,243,164,.95)";
     if (kind === "holes") elInstruction.style.color = "rgba(183,255,60,.95)";
-    if (kind === "go")   elInstruction.style.color = "rgba(47,102,255,.92)";
+    if (kind === "go")    elInstruction.style.color = "rgba(47,102,255,.92)";
   }
 
   function syncInstruction() {
     if (!elImg?.src) {
       setInstruction("", "");
-      setStage("noimg");
       return;
     }
     if (!aim) {
       setInstruction("Tap Aim Point.", "aim");
-      setStage("aim");
       return;
     }
     setInstruction("Tap Bullet Holes.", "holes");
-    setStage("holes");
   }
 
   function resetAll() {
@@ -405,8 +385,15 @@
   }
 
   // ------------------------------------------------------------
-  // Target size
+  // Target size — Custom + Swap truth rules
   // ------------------------------------------------------------
+  function keyForWH(w, h) {
+    for (const [k, p] of Object.entries(PRESET_MAP)) {
+      if (Number(p.w) === Number(w) && Number(p.h) === Number(h)) return k;
+    }
+    return "custom";
+  }
+
   function clampInches(v, fallback) {
     let n = Number(v);
     if (!Number.isFinite(n) || n <= 0) n = fallback;
@@ -423,9 +410,22 @@
   }
 
   function setTargetSize(key, wIn, hIn) {
-    targetSizeKey = String(key || "23x35").toLowerCase();
-    targetWIn = clampInches(wIn, 23);
-    targetHIn = clampInches(hIn, 35);
+    const w = clampInches(wIn, 23);
+    const h = clampInches(hIn, 35);
+
+    const k = String(key || "custom").toLowerCase();
+    let finalKey = k;
+
+    if (PRESET_MAP[k]) {
+      const p = PRESET_MAP[k];
+      finalKey = (Number(p.w) === Number(w) && Number(p.h) === Number(h)) ? k : "custom";
+    } else {
+      finalKey = keyForWH(w, h);
+    }
+
+    targetSizeKey = finalKey;
+    targetWIn = w;
+    targetHIn = h;
 
     try { localStorage.setItem(KEY_TARGET_SIZE, targetSizeKey); } catch {}
     try { localStorage.setItem(KEY_TARGET_W, String(targetWIn)); } catch {}
@@ -437,14 +437,11 @@
 
   function hydrateTargetSize() {
     const savedKey = String(localStorage.getItem(KEY_TARGET_SIZE) || "23x35").toLowerCase();
-
     if (PRESET_MAP[savedKey]) {
       const p = PRESET_MAP[savedKey];
       setTargetSize(savedKey, p.w, p.h);
       return;
     }
-
-    // Custom fallback
     const w = clampInches(localStorage.getItem(KEY_TARGET_W) || "23", 23);
     const h = clampInches(localStorage.getItem(KEY_TARGET_H) || "35", 35);
     setTargetSize("custom", w, h);
@@ -456,9 +453,9 @@
     const chips = Array.from(elSizeChipRow.querySelectorAll("[data-size]"));
     chips.forEach((btn) => {
       btn.addEventListener("click", () => {
-        const key = String(btn.getAttribute("data-size") || "23x35").toLowerCase();
+        const key = String(btn.getAttribute("data-size") || "custom").toLowerCase();
 
-        // Custom does NOT change inches; it just marks state as Custom
+        // Custom is state only (keeps W/H)
         if (key === "custom") {
           setTargetSize("custom", targetWIn, targetHIn);
           return;
@@ -472,24 +469,19 @@
       });
     });
 
-    // Swap button
     const swapBtn = $("swapSizeBtn");
     swapBtn?.addEventListener("click", () => {
-      setTargetSize(targetSizeKey || "custom", targetHIn, targetWIn);
+      // swap always becomes custom unless it matches a preset
+      setTargetSize("custom", targetHIn, targetWIn);
     });
   }
 
-  // Auto-orient by image orientation ONLY (safe; no size guessing)
   function autoOrientTargetSizeFromImage() {
-    if (!elImg) return;
-    if (!elImg.naturalWidth || !elImg.naturalHeight) return;
-
+    if (!elImg?.naturalWidth || !elImg?.naturalHeight) return;
     const imageIsLandscape = elImg.naturalWidth > elImg.naturalHeight;
     const currentIsLandscape = targetWIn > targetHIn;
-
-    // Only swap if it's clearly sideways
     if (imageIsLandscape !== currentIsLandscape) {
-      setTargetSize(targetSizeKey || "custom", targetHIn, targetWIn);
+      setTargetSize("custom", targetHIn, targetWIn);
     }
   }
 
@@ -647,8 +639,6 @@
       vendorUrl,
       surveyUrl: "",
       target: { key: targetSizeKey, wIn: Number(targetWIn), hIn: Number(targetHIn) },
-
-      // include ALL taps for export holes
       debug: { aim, hits, avgPoi: out.avgPoi, distanceYds: getDistanceYds(), inches: out.inches, squareIn: out.squareIn }
     };
 
@@ -672,9 +662,7 @@
     await storeTargetPhotoForSEC(f, objectUrl);
 
     elImg.onload = () => {
-      // SAFE auto-orient (no size guessing)
       autoOrientTargetSizeFromImage();
-
       setText(elStatus, "Tap Aim Point.");
       syncInstruction();
       revealScoringUI();
@@ -779,7 +767,7 @@
   elClickValue?.addEventListener("blur", () => { getClickValue(); syncLiveTop(); });
   elClickValue?.addEventListener("change", () => { getClickValue(); syncLiveTop(); });
 
-  elMatrixBtn?.addEventListener("click", toggleMatrix);
+  elMatrixBtn?.addEventListener("click", () => (isMatrixOpen() ? closeMatrix() : openMatrix()));
   elMatrixClose?.addEventListener("click", closeMatrix);
 
   // ------------------------------------------------------------
