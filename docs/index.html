@@ -1,4 +1,4 @@
-<!-- docs/index.html (FULL REPLACEMENT) — SILHOUETTE PILL = “COMING SOON” MODAL (NO MATH CHANGES) -->
+<!-- docs/index.html (FULL REPLACEMENT) — HERO TIP REMOVED -->
 <!doctype html>
 <html lang="en">
 <head>
@@ -13,11 +13,9 @@
 
   <title>Tap-n-Score™</title>
 
-  <link rel="stylesheet" href="./styles.css?v=TP-Aplus-0216A" />
-  <link rel="stylesheet" href="./sizechips.css?v=TP-Aplus-0216A" />
-  <link rel="stylesheet" href="./livebar_fix.css?v=TP-Aplus-0216A" />
-  <!-- NEW: silhouette “coming soon” modal -->
-  <link rel="stylesheet" href="./mode_modal.css?v=TP-Aplus-0216A" />
+  <link rel="stylesheet" href="./styles.css?v=TP-Aplus-0214B" />
+  <link rel="stylesheet" href="./sizechips.css?v=TP-Aplus-0214B" />
+  <link rel="stylesheet" href="./livebar_fix.css?v=TP-Aplus-0214B" />
 </head>
 
 <body>
@@ -35,10 +33,7 @@
       <div class="heroMid">
         <button id="photoBtn" class="heroBtn" type="button">Add Target Picture</button>
 
-        <div class="heroTip">
-          Tip: Straight-on photos give the most accurate<br/>
-          results.
-        </div>
+        <!-- REMOVED: heroTip verbiage -->
 
         <div class="vendorCenterRow" aria-label="Vendor / Buy more targets">
           <a id="vendorBox" class="vendorBox vendorBoxFlow" href="#" aria-label="Vendor">
@@ -93,25 +88,6 @@
       <div id="matrixPanel" class="matrixPanel matrixHidden" aria-hidden="true">
 
         <div class="matrixTitle">Adjust</div>
-
-        <!-- NEW: Target Type (Grid vs Silhouette) -->
-        <div class="matrixGroup">
-          <div class="matrixLabel">Target Type</div>
-
-          <div class="chipRow chipRowTight" id="typeChipRow">
-            <button id="modeGridBtn" class="chip chipMode chipOn" type="button" aria-label="Grid targets">
-              Grid
-            </button>
-
-            <button id="modeSilBtn" class="chip chipMode" type="button" aria-label="Silhouette targets">
-              Silhouette
-            </button>
-          </div>
-
-          <div class="matrixMicro">
-            Grid is active for pilot. Silhouette support is next.
-          </div>
-        </div>
 
         <!-- Target Size -->
         <div class="matrixGroup">
@@ -190,7 +166,6 @@
       <div id="targetWrap" class="targetWrap" aria-label="Target photo area" data-stage="noimg">
         <img id="targetImg" alt="Target preview" />
         <div id="dotsLayer" class="dotsLayer" aria-hidden="true"></div>
-        <!-- no corner prompts -->
       </div>
 
       <div class="row rowTight">
@@ -213,41 +188,8 @@
       <button id="stickyResultsBtn" class="stickyBtn" type="button">Show results</button>
     </div>
 
-    <!-- NEW: Silhouette “Coming Soon” modal -->
-    <div id="modeModal" class="modeModal modeModalHidden" aria-hidden="true" role="dialog" aria-modal="true">
-      <div class="modeModalScrim" aria-hidden="true"></div>
-
-      <div class="modeModalCard" role="document" aria-label="Silhouette Mode Coming Soon">
-        <div class="modeModalTop">
-          <div class="modeModalTitle">Silhouette Mode</div>
-          <button id="modeModalCloseX" class="modeModalX" type="button" aria-label="Close">✕</button>
-        </div>
-
-        <div class="modeModalBody">
-          <div class="modeModalTag">Coming next</div>
-
-          <p class="modeModalP">
-            Silhouette targets don’t have inch grids, so this mode will use a simple
-            <strong>5-inch calibration mark</strong> printed on the target border to set true scale.
-          </p>
-
-          <p class="modeModalP modeModalP2">
-            Ask your printer about <strong>Smart Target™ silhouette-ready editions</strong>.
-          </p>
-
-          <div class="modeModalMini">
-            Pilot now: <span class="modeModalMiniStrong">Grid</span>
-          </div>
-        </div>
-
-        <div class="modeModalFoot">
-          <button id="modeModalDone" class="modeModalBtn" type="button">Done</button>
-        </div>
-      </div>
-    </div>
-
   </main>
 
-  <script defer src="./index.js?v=TP-Aplus-0216A"></script>
+  <script defer src="./index.js?v=TP-Aplus-0214B"></script>
 </body>
 </html>
