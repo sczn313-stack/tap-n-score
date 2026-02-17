@@ -1,8 +1,7 @@
 /* ============================================================
    docs/index.js (FULL REPLACEMENT)
-   - MATRIX + SQUARE PLANE
-   - Pilot counters (localStorage) for Baker pilot analytics
-   - No on-target polish prompts (instruction line only)
+   - Adds “Target Type” chips: Grid (active) / Silhouette (Coming Soon modal)
+   - Silhouette does NOT change math (pilot lock)
 ============================================================ */
 
 (() => {
@@ -38,6 +37,15 @@
   const elMatrixPanel = $("matrixPanel");
   const elMatrixClose = $("matrixCloseBtn");
 
+  // NEW: mode chips
+  const elModeGridBtn = $("modeGridBtn");
+  const elModeSilBtn = $("modeSilBtn");
+
+  // NEW: modal
+  const elModeModal = $("modeModal");
+  const elModeModalDone = $("modeModalDone");
+  const elModeModalCloseX = $("modeModalCloseX");
+
   // Distance controls
   const elDist = $("distanceYds");
   const elDistUp = $("distUp");
@@ -54,7 +62,6 @@
 
   // Target size chip row
   const elSizeChipRow = $("sizeChipRow");
-  const elSwapSizeBtn = $("swapSizeBtn"); // optional (exists in your newer html)
 
   // Storage keys
   const KEY_PAYLOAD = "SCZN3_SEC_PAYLOAD_V1";
@@ -69,8 +76,9 @@
   const KEY_TARGET_W = "SCZN3_TARGET_W_IN_V1";
   const KEY_TARGET_H = "SCZN3_TARGET_H_IN_V1";
 
-  // Pilot stats (local-only, no backend)
-  const KEY_PILOT = "SCZN3_PILOT_STATS_V1"; // { total:{}, days:{YYYY-MM-DD:{}} }
+  // Mode (pilot lock: always GRID for math)
+  const KEY_TARGET_MODE = "SCZN3_TARGET_MODE_V1"; // "GRID" | "SILHOUETTE"
+  let targetMode = "GRID";
 
   let objectUrl = null;
 
@@ -99,55 +107,7 @@
   let targetWIn = 23;
   let targetHIn = 35;
 
-  // pilot: session guard so we only count "session_start" once per photo
-  let sessionStarted = false;
-
   const DEFAULTS = { MOA: 0.25, MRAD: 0.10 };
-
-  // ------------------------------------------------------------
-  // Pilot counters (localStorage)
-  // ------------------------------------------------------------
-  function todayKey() {
-    const d = new Date();
-    const y = d.getFullYear();
-    const m = String(d.getMonth() + 1).padStart(2, "0");
-    const da = String(d.getDate()).padStart(2, "0");
-    return `${y}-${m}-${da}`;
-  }
-
-  function safeJSON(s) {
-    try { return JSON.parse(String(s || "")); } catch { return null; }
-  }
-
-  function readPilot() {
-    const box = safeJSON(localStorage.getItem(KEY_PILOT));
-    if (box && typeof box === "object") return box;
-    return { total: {}, days: {} };
-  }
-
-  function writePilot(box) {
-    try { localStorage.setItem(KEY_PILOT, JSON.stringify(box)); } catch {}
-  }
-
-  function incPilot(name, by = 1) {
-    const key = String(name || "").trim();
-    if (!key) return;
-
-    const n = Number(by);
-    const add = Number.isFinite(n) ? n : 1;
-
-    const box = readPilot();
-    const day = todayKey();
-
-    box.total = box.total && typeof box.total === "object" ? box.total : {};
-    box.days = box.days && typeof box.days === "object" ? box.days : {};
-    box.days[day] = box.days[day] && typeof box.days[day] === "object" ? box.days[day] : {};
-
-    box.total[key] = (Number(box.total[key]) || 0) + add;
-    box.days[day][key] = (Number(box.days[day][key]) || 0) + add;
-
-    writePilot(box);
-  }
 
   // ------------------------------------------------------------
   // HARD LANDING LOCK
@@ -161,11 +121,9 @@
     hardHideScoringUI();
     hideSticky();
     closeMatrix();
+    hideModeModal();
   });
   window.addEventListener("load", () => forceTop());
-
-  // Count page open
-  incPilot("open", 1);
 
   // ------------------------------------------------------------
   // GLOBAL: 3+ taps on ANY button => history.back()
@@ -224,18 +182,14 @@
     }, 650);
   }
 
-  // Instruction line state coloring
   function setInstruction(text, kind) {
     if (!elInstruction) return;
     elInstruction.textContent = text || "";
 
-    // default soft
-    elInstruction.style.color = "rgba(238,242,247,.70)";
-    // aim green
+    // base
+    elInstruction.style.color = "rgba(238,242,247,.65)";
     if (kind === "aim")  elInstruction.style.color = "rgba(103,243,164,.95)";
-    // holes yellow-green
     if (kind === "holes") elInstruction.style.color = "rgba(183,255,60,.95)";
-    // go blue
     if (kind === "go")   elInstruction.style.color = "rgba(47,102,255,.92)";
   }
 
@@ -255,14 +209,92 @@
     aim = null;
     hits = [];
     touchStart = null;
-    sessionStarted = false;
-
     if (elDots) elDots.innerHTML = "";
     setTapCount();
     hideSticky();
     syncInstruction();
     setText(elStatus, elImg?.src ? "Tap Aim Point." : "Add a target photo to begin.");
     closeMatrix();
+    hideModeModal();
+  }
+
+  // ------------------------------------------------------------
+  // Mode chips + Coming-soon modal
+  // ------------------------------------------------------------
+  function setMode(mode) {
+    targetMode = (mode === "SILHOUETTE") ? "SILHOUETTE" : "GRID";
+    try { localStorage.setItem(KEY_TARGET_MODE, targetMode); } catch {}
+    syncModeUI();
+  }
+
+  function syncModeUI() {
+    if (elModeGridBtn) elModeGridBtn.classList.toggle("chipOn", targetMode === "GRID");
+    if (elModeSilBtn) elModeSilBtn.classList.toggle("chipOn", targetMode === "SILHOUETTE");
+  }
+
+  function showModeModal() {
+    if (!elModeModal) return;
+    elModeModal.classList.remove("modeModalHidden");
+    elModeModal.setAttribute("aria-hidden", "false");
+  }
+
+  function hideModeModal() {
+    if (!elModeModal) return;
+    elModeModal.classList.add("modeModalHidden");
+    elModeModal.setAttribute("aria-hidden", "true");
+  }
+
+  function hydrateMode() {
+    const saved = localStorage.getItem(KEY_TARGET_MODE) || "GRID";
+    // UI remembers last selection, but math stays pilot-safe (GRID).
+    // We still allow the “SILHOUETTE” highlight for messaging if user taps it.
+    setMode(saved === "SILHOUETTE" ? "SILHOUETTE" : "GRID");
+  }
+
+  function wireMode() {
+    elModeGridBtn?.addEventListener("click", () => {
+      // Grid = active pilot mode
+      hideModeModal();
+      setMode("GRID");
+    });
+
+    elModeSilBtn?.addEventListener("click", () => {
+      // Silhouette is “coming soon” — show modal and keep pilot math in GRID.
+      setMode("SILHOUETTE");
+      showModeModal();
+
+      // IMPORTANT: do NOT change workflow/maths.
+      // Optional: visually return to GRID once modal is dismissed (we do that on close).
+    });
+
+    // Close actions
+    elModeModalDone?.addEventListener("click", () => {
+      hideModeModal();
+      // return to GRID after acknowledging (pilot lock)
+      setMode("GRID");
+    });
+
+    elModeModalCloseX?.addEventListener("click", () => {
+      hideModeModal();
+      setMode("GRID");
+    });
+
+    // click outside card closes
+    elModeModal?.addEventListener("click", (e) => {
+      const card = e.target?.closest?.(".modeModalCard");
+      if (!card) {
+        hideModeModal();
+        setMode("GRID");
+      }
+    });
+
+    // Esc closes
+    window.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") {
+        hideModeModal();
+        setMode("GRID");
+      }
+    });
   }
 
   // ------------------------------------------------------------
@@ -463,7 +495,6 @@
 
     highlightSizeChip();
     syncLiveTop();
-    incPilot("target_size_change", 1);
   }
 
   function hydrateTargetSize() {
@@ -476,41 +507,25 @@
       "23x35": { w: 23, h: 35 },
       "24x36": { w: 24, h: 36 }
     };
-
     const p = presetMap[key] || {
       w: clampInches(localStorage.getItem(KEY_TARGET_W) || "23", 23),
       h: clampInches(localStorage.getItem(KEY_TARGET_H) || "35", 35)
     };
-
     setTargetSize(key in presetMap ? key : "23x35", p.w, p.h);
   }
 
   function wireTargetSizeChips() {
     if (!elSizeChipRow) return;
-    const chips = Array.from(elSizeChipRow.querySelectorAll("[data-size]"));
+    const chips = Array.from(elSizeChipRow.querySelectorAll("[data-size][data-w][data-h]"));
     chips.forEach((btn) => {
       btn.addEventListener("click", () => {
         const key = btn.getAttribute("data-size") || "23x35";
-        if (key === "custom") {
-          // Pilot-safe: keep your current saved W/H, just highlight custom
-          setTargetSize("custom", targetWIn, targetHIn);
-          incPilot("target_custom", 1);
-          return;
-        }
         const w = Number(btn.getAttribute("data-w") || "23");
         const h = Number(btn.getAttribute("data-h") || "35");
         setTargetSize(key, w, h);
       });
     });
   }
-
-  // Swap (if button exists)
-  elSwapSizeBtn?.addEventListener("click", () => {
-    const w = targetWIn;
-    const h = targetHIn;
-    setTargetSize(targetSizeKey, h, w);
-    incPilot("target_swap", 1);
-  });
 
   // ------------------------------------------------------------
   // LIVE TOP
@@ -534,7 +549,6 @@
     if (!elMatrixPanel) return;
     elMatrixPanel.classList.remove("matrixHidden");
     elMatrixPanel.setAttribute("aria-hidden", "false");
-    incPilot("matrix_open", 1);
   }
 
   function closeMatrix() {
@@ -555,7 +569,6 @@
     getClickValue();
     closeMatrix();
     syncLiveTop();
-    incPilot("dial_preset", 1);
   }
 
   function wireMatrixPresets() {
@@ -570,7 +583,13 @@
     });
   }
 
-  window.addEventListener("keydown", (e) => { if (e.key === "Escape") closeMatrix(); });
+  window.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") {
+      closeMatrix();
+      hideModeModal();
+      setMode("GRID");
+    }
+  });
 
   document.addEventListener("click", (e) => {
     if (!isMatrixOpen()) return;
@@ -616,7 +635,7 @@
     const dist = getDistanceYds();
     const inchesPerUnit = (dialUnit === "MOA")
       ? (dist / 100) * 1.047
-      : (dist / 100) * 3.6; // pilot MRAD
+      : (dist / 100) * 3.6; // pilot
 
     const unitX = inchesX / inchesPerUnit;
     const unitY = inchesY / inchesPerUnit;
@@ -648,11 +667,9 @@
   }
 
   function onShowResults() {
+    // pilot lock: ALWAYS compute using GRID logic
     const out = computeCorrectionAndScore();
     if (!out) { alert("Tap Aim Point first, then tap at least one bullet hole."); return; }
-
-    // pilot: conversion event
-    incPilot("show_results", 1);
 
     const vendorUrl = localStorage.getItem(KEY_VENDOR_URL) || "";
 
@@ -667,7 +684,9 @@
       surveyUrl: "",
       target: { key: targetSizeKey, wIn: Number(targetWIn), hIn: Number(targetHIn) },
 
-      // taps for export overlay markers
+      // keep the UI selection visible for later analytics (but math stays pilot-safe)
+      mode: targetMode,
+
       debug: { aim, hits, avgPoi: out.avgPoi, distanceYds: getDistanceYds(), inches: out.inches, squareIn: out.squareIn }
     };
 
@@ -689,13 +708,6 @@
     objectUrl = URL.createObjectURL(f);
 
     await storeTargetPhotoForSEC(f, objectUrl);
-
-    // pilot
-    incPilot("photo_loaded", 1);
-    if (!sessionStarted) {
-      incPilot("session_start", 1);
-      sessionStarted = true;
-    }
 
     elImg.onload = () => {
       setText(elStatus, "Tap Aim Point.");
@@ -727,16 +739,12 @@
       setText(elStatus, "Tap Bullet Holes.");
       hideSticky();
       syncInstruction();
-
-      incPilot("aim_set", 1);
       return;
     }
 
     hits.push({ x01, y01 });
     addDot(x01, y01, "hit");
     setTapCount();
-
-    incPilot("hit_added", 1);
 
     hideSticky();
     syncInstruction();
@@ -778,7 +786,6 @@
   // Buttons
   // ------------------------------------------------------------
   elClear?.addEventListener("click", () => {
-    incPilot("clear", 1);
     resetAll();
     if (elImg?.src) setText(elStatus, "Tap Aim Point.");
   });
@@ -792,23 +799,23 @@
   });
 
   // Distance +/- (internal yards)
-  elDistUp?.addEventListener("click", () => { bumpRange(5); incPilot("distance_bump", 1); });
-  elDistDown?.addEventListener("click", () => { bumpRange(-5); incPilot("distance_bump", 1); });
+  elDistUp?.addEventListener("click", () => bumpRange(5));
+  elDistDown?.addEventListener("click", () => bumpRange(-5));
 
-  elDist?.addEventListener("change", () => { syncInternalFromRangeInput(); incPilot("distance_change", 1); });
-  elDist?.addEventListener("blur", () => { syncInternalFromRangeInput(); });
+  elDist?.addEventListener("change", syncInternalFromRangeInput);
+  elDist?.addEventListener("blur", syncInternalFromRangeInput);
 
-  elDistUnitYd?.addEventListener("click", () => { setRangeUnit("YDS"); incPilot("distance_unit_yds", 1); });
-  elDistUnitM?.addEventListener("click", () => { setRangeUnit("M"); incPilot("distance_unit_m", 1); });
+  elDistUnitYd?.addEventListener("click", () => setRangeUnit("YDS"));
+  elDistUnitM?.addEventListener("click", () => setRangeUnit("M"));
 
-  elUnitMoa?.addEventListener("click", () => { setUnit("MOA"); incPilot("dial_unit_moa", 1); });
-  elUnitMrad?.addEventListener("click", () => { setUnit("MRAD"); incPilot("dial_unit_mrad", 1); });
+  elUnitMoa?.addEventListener("click", () => setUnit("MOA"));
+  elUnitMrad?.addEventListener("click", () => setUnit("MRAD"));
 
-  elClickValue?.addEventListener("blur", () => { getClickValue(); syncLiveTop(); incPilot("dial_click_change", 1); });
-  elClickValue?.addEventListener("change", () => { getClickValue(); syncLiveTop(); incPilot("dial_click_change", 1); });
+  elClickValue?.addEventListener("blur", () => { getClickValue(); syncLiveTop(); });
+  elClickValue?.addEventListener("change", () => { getClickValue(); syncLiveTop(); });
 
   elMatrixBtn?.addEventListener("click", toggleMatrix);
-  elMatrixClose?.addEventListener("click", closeMatrix);
+  elMatrixClose?.addEventListener("click", () => { closeMatrix(); hideModeModal(); setMode("GRID"); });
 
   // ------------------------------------------------------------
   // Boot
@@ -821,6 +828,10 @@
   hydrateVendorBox();
   hydrateRange();
   hydrateTargetSize();
+
+  hydrateMode();
+  syncModeUI();
+  wireMode();
 
   wireMatrixPresets();
   wireTargetSizeChips();
