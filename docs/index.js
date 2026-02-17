@@ -1,7 +1,7 @@
 /* ============================================================
-   docs/index.js (FULL REPLACEMENT)
-   - Adds “Target Type” chips: Grid (active) / Silhouette (Coming Soon modal)
-   - Silhouette does NOT change math (pilot lock)
+   docs/index.js (FULL REPLACEMENT) — MATRIX + SQUARE PLANE
+   + TARGET TYPE (GRID/SILHOUETTE) PILLS RESTORED
+   + SILHOUETTE MODE IS "VISIBLE / NOT ACTIVE" (pilot-safe)
 ============================================================ */
 
 (() => {
@@ -37,14 +37,9 @@
   const elMatrixPanel = $("matrixPanel");
   const elMatrixClose = $("matrixCloseBtn");
 
-  // NEW: mode chips
-  const elModeGridBtn = $("modeGridBtn");
-  const elModeSilBtn = $("modeSilBtn");
-
-  // NEW: modal
-  const elModeModal = $("modeModal");
-  const elModeModalDone = $("modeModalDone");
-  const elModeModalCloseX = $("modeModalCloseX");
+  // Target Type
+  const elTypeChipRow = $("typeChipRow");
+  const elTypeMicro = $("typeMicro");
 
   // Distance controls
   const elDist = $("distanceYds");
@@ -62,23 +57,22 @@
 
   // Target size chip row
   const elSizeChipRow = $("sizeChipRow");
+  const elSwapSizeBtn = $("swapSizeBtn");
 
   // Storage keys
   const KEY_PAYLOAD = "SCZN3_SEC_PAYLOAD_V1";
   const KEY_TARGET_IMG_DATA = "SCZN3_TARGET_IMG_DATAURL_V1";
   const KEY_TARGET_IMG_BLOB = "SCZN3_TARGET_IMG_BLOBURL_V1";
   const KEY_VENDOR_URL = "SCZN3_VENDOR_URL_V1";
+
   const KEY_DIST_UNIT = "SCZN3_RANGE_UNIT_V1"; // "YDS" | "M"
   const KEY_DIST_YDS = "SCZN3_RANGE_YDS_V1";   // numeric (yards)
 
-  // Target size persistence
   const KEY_TARGET_SIZE = "SCZN3_TARGET_SIZE_KEY_V1"; // e.g., "23x35"
   const KEY_TARGET_W = "SCZN3_TARGET_W_IN_V1";
   const KEY_TARGET_H = "SCZN3_TARGET_H_IN_V1";
 
-  // Mode (pilot lock: always GRID for math)
-  const KEY_TARGET_MODE = "SCZN3_TARGET_MODE_V1"; // "GRID" | "SILHOUETTE"
-  let targetMode = "GRID";
+  const KEY_TARGET_TYPE = "SCZN3_TARGET_TYPE_V1"; // "GRID" | "SIL"
 
   let objectUrl = null;
 
@@ -107,6 +101,9 @@
   let targetWIn = 23;
   let targetHIn = 35;
 
+  // target type (pilot-safe)
+  let targetType = "GRID"; // "GRID" | "SIL"
+
   const DEFAULTS = { MOA: 0.25, MRAD: 0.10 };
 
   // ------------------------------------------------------------
@@ -121,7 +118,6 @@
     hardHideScoringUI();
     hideSticky();
     closeMatrix();
-    hideModeModal();
   });
   window.addEventListener("load", () => forceTop());
 
@@ -182,15 +178,25 @@
     }, 650);
   }
 
+  // ------------------------------------------------------------
+  // Instruction line (fade + color)
+  // ------------------------------------------------------------
   function setInstruction(text, kind) {
     if (!elInstruction) return;
-    elInstruction.textContent = text || "";
 
-    // base
-    elInstruction.style.color = "rgba(238,242,247,.65)";
-    if (kind === "aim")  elInstruction.style.color = "rgba(103,243,164,.95)";
-    if (kind === "holes") elInstruction.style.color = "rgba(183,255,60,.95)";
-    if (kind === "go")   elInstruction.style.color = "rgba(47,102,255,.92)";
+    elInstruction.style.opacity = "0";
+
+    setTimeout(() => {
+      elInstruction.textContent = text || "";
+
+      let color = "rgba(238,242,247,.65)";
+      if (kind === "aim") color = "rgba(22,163,74,.95)";      // green
+      if (kind === "holes") color = "rgba(234,179,8,.95)";    // yellow
+      if (kind === "go") color = "rgba(47,102,255,.92)";      // blue
+
+      elInstruction.style.color = color;
+      elInstruction.style.opacity = "1";
+    }, 120);
   }
 
   function syncInstruction() {
@@ -215,86 +221,6 @@
     syncInstruction();
     setText(elStatus, elImg?.src ? "Tap Aim Point." : "Add a target photo to begin.");
     closeMatrix();
-    hideModeModal();
-  }
-
-  // ------------------------------------------------------------
-  // Mode chips + Coming-soon modal
-  // ------------------------------------------------------------
-  function setMode(mode) {
-    targetMode = (mode === "SILHOUETTE") ? "SILHOUETTE" : "GRID";
-    try { localStorage.setItem(KEY_TARGET_MODE, targetMode); } catch {}
-    syncModeUI();
-  }
-
-  function syncModeUI() {
-    if (elModeGridBtn) elModeGridBtn.classList.toggle("chipOn", targetMode === "GRID");
-    if (elModeSilBtn) elModeSilBtn.classList.toggle("chipOn", targetMode === "SILHOUETTE");
-  }
-
-  function showModeModal() {
-    if (!elModeModal) return;
-    elModeModal.classList.remove("modeModalHidden");
-    elModeModal.setAttribute("aria-hidden", "false");
-  }
-
-  function hideModeModal() {
-    if (!elModeModal) return;
-    elModeModal.classList.add("modeModalHidden");
-    elModeModal.setAttribute("aria-hidden", "true");
-  }
-
-  function hydrateMode() {
-    const saved = localStorage.getItem(KEY_TARGET_MODE) || "GRID";
-    // UI remembers last selection, but math stays pilot-safe (GRID).
-    // We still allow the “SILHOUETTE” highlight for messaging if user taps it.
-    setMode(saved === "SILHOUETTE" ? "SILHOUETTE" : "GRID");
-  }
-
-  function wireMode() {
-    elModeGridBtn?.addEventListener("click", () => {
-      // Grid = active pilot mode
-      hideModeModal();
-      setMode("GRID");
-    });
-
-    elModeSilBtn?.addEventListener("click", () => {
-      // Silhouette is “coming soon” — show modal and keep pilot math in GRID.
-      setMode("SILHOUETTE");
-      showModeModal();
-
-      // IMPORTANT: do NOT change workflow/maths.
-      // Optional: visually return to GRID once modal is dismissed (we do that on close).
-    });
-
-    // Close actions
-    elModeModalDone?.addEventListener("click", () => {
-      hideModeModal();
-      // return to GRID after acknowledging (pilot lock)
-      setMode("GRID");
-    });
-
-    elModeModalCloseX?.addEventListener("click", () => {
-      hideModeModal();
-      setMode("GRID");
-    });
-
-    // click outside card closes
-    elModeModal?.addEventListener("click", (e) => {
-      const card = e.target?.closest?.(".modeModalCard");
-      if (!card) {
-        hideModeModal();
-        setMode("GRID");
-      }
-    });
-
-    // Esc closes
-    window.addEventListener("keydown", (e) => {
-      if (e.key === "Escape") {
-        hideModeModal();
-        setMode("GRID");
-      }
-    });
   }
 
   // ------------------------------------------------------------
@@ -467,6 +393,54 @@
   }
 
   // ------------------------------------------------------------
+  // Target type (GRID/SIL)
+  // ------------------------------------------------------------
+  function highlightTypeChips() {
+    if (!elTypeChipRow) return;
+    const chips = Array.from(elTypeChipRow.querySelectorAll("[data-type]"));
+    chips.forEach((c) => {
+      const k = c.getAttribute("data-type") || "GRID";
+      c.classList.toggle("chipOn", k === targetType);
+    });
+  }
+
+  function setTypeMicro() {
+    if (!elTypeMicro) return;
+
+    if (targetType === "GRID") {
+      // ✅ “good explanation” — printer-friendly, shooter-friendly, zero pressure
+      elTypeMicro.textContent = "Grid targets are active now. Silhouette anchor mode is next.";
+      return;
+    }
+
+    // Silhouette selected
+    elTypeMicro.textContent = "Silhouette anchor mode is next. Use Grid targets for the pilot.";
+  }
+
+  function setTargetType(t) {
+    targetType = (t === "SIL") ? "SIL" : "GRID";
+    try { localStorage.setItem(KEY_TARGET_TYPE, targetType); } catch {}
+    highlightTypeChips();
+    setTypeMicro();
+  }
+
+  function hydrateTargetType() {
+    const saved = localStorage.getItem(KEY_TARGET_TYPE) || "GRID";
+    setTargetType(saved === "SIL" ? "SIL" : "GRID");
+  }
+
+  function wireTargetTypeChips() {
+    if (!elTypeChipRow) return;
+    const chips = Array.from(elTypeChipRow.querySelectorAll("[data-type]"));
+    chips.forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const t = btn.getAttribute("data-type") || "GRID";
+        setTargetType(t);
+      });
+    });
+  }
+
+  // ------------------------------------------------------------
   // Target size
   // ------------------------------------------------------------
   function clampInches(v, fallback) {
@@ -505,25 +479,42 @@
       "12x18": { w: 12, h: 18 },
       "18x24": { w: 18, h: 24 },
       "23x35": { w: 23, h: 35 },
-      "24x36": { w: 24, h: 36 }
+      "24x36": { w: 24, h: 36 },
     };
+
     const p = presetMap[key] || {
       w: clampInches(localStorage.getItem(KEY_TARGET_W) || "23", 23),
       h: clampInches(localStorage.getItem(KEY_TARGET_H) || "35", 35)
     };
+
     setTargetSize(key in presetMap ? key : "23x35", p.w, p.h);
   }
 
   function wireTargetSizeChips() {
     if (!elSizeChipRow) return;
-    const chips = Array.from(elSizeChipRow.querySelectorAll("[data-size][data-w][data-h]"));
+    const chips = Array.from(elSizeChipRow.querySelectorAll("[data-size]"));
     chips.forEach((btn) => {
       btn.addEventListener("click", () => {
         const key = btn.getAttribute("data-size") || "23x35";
+
+        if (key === "custom") {
+          // pilot-safe: visible, not implemented
+          alert("Custom size is coming next. For the pilot, choose a preset size.");
+          return;
+        }
+
         const w = Number(btn.getAttribute("data-w") || "23");
         const h = Number(btn.getAttribute("data-h") || "35");
         setTargetSize(key, w, h);
       });
+    });
+
+    elSwapSizeBtn?.addEventListener("click", () => {
+      // swap only affects the inches math (pilot-safe)
+      const w = targetWIn;
+      const h = targetHIn;
+      setTargetSize("custom", h, w);
+      alert(`Swapped to ${h}×${w}. (Pilot note: Custom is coming next.)`);
     });
   }
 
@@ -583,13 +574,7 @@
     });
   }
 
-  window.addEventListener("keydown", (e) => {
-    if (e.key === "Escape") {
-      closeMatrix();
-      hideModeModal();
-      setMode("GRID");
-    }
-  });
+  window.addEventListener("keydown", (e) => { if (e.key === "Escape") closeMatrix(); });
 
   document.addEventListener("click", (e) => {
     if (!isMatrixOpen()) return;
@@ -667,7 +652,6 @@
   }
 
   function onShowResults() {
-    // pilot lock: ALWAYS compute using GRID logic
     const out = computeCorrectionAndScore();
     if (!out) { alert("Tap Aim Point first, then tap at least one bullet hole."); return; }
 
@@ -683,9 +667,7 @@
       vendorUrl,
       surveyUrl: "",
       target: { key: targetSizeKey, wIn: Number(targetWIn), hIn: Number(targetHIn) },
-
-      // keep the UI selection visible for later analytics (but math stays pilot-safe)
-      mode: targetMode,
+      targetType, // ✅ exposed for future analytics
 
       debug: { aim, hits, avgPoi: out.avgPoi, distanceYds: getDistanceYds(), inches: out.inches, squareIn: out.squareIn }
     };
@@ -815,7 +797,7 @@
   elClickValue?.addEventListener("change", () => { getClickValue(); syncLiveTop(); });
 
   elMatrixBtn?.addEventListener("click", toggleMatrix);
-  elMatrixClose?.addEventListener("click", () => { closeMatrix(); hideModeModal(); setMode("GRID"); });
+  elMatrixClose?.addEventListener("click", closeMatrix);
 
   // ------------------------------------------------------------
   // Boot
@@ -828,15 +810,15 @@
   hydrateVendorBox();
   hydrateRange();
   hydrateTargetSize();
-
-  hydrateMode();
-  syncModeUI();
-  wireMode();
+  hydrateTargetType();
 
   wireMatrixPresets();
   wireTargetSizeChips();
+  wireTargetTypeChips();
 
   highlightSizeChip();
+  highlightTypeChips();
+  setTypeMicro();
   syncLiveTop();
 
   hardHideScoringUI();
