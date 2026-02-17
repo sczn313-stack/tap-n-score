@@ -1,1 +1,120 @@
+/* docs/mode_modal.css — Silhouette “Coming Soon” modal (lightweight, pilot-safe) */
 
+.modeModal {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: grid;
+  place-items: center;
+}
+
+.modeModalHidden {
+  display: none;
+}
+
+.modeModalScrim {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, .62);
+  backdrop-filter: blur(8px);
+}
+
+.modeModalCard {
+  position: relative;
+  width: min(560px, calc(100vw - 28px));
+  border-radius: 18px;
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,.14);
+  background: rgba(14, 16, 22, .92);
+  box-shadow: 0 28px 90px rgba(0,0,0,.65);
+}
+
+.modeModalTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 14px 10px 16px;
+  border-bottom: 1px solid rgba(255,255,255,.10);
+}
+
+.modeModalTitle {
+  font-weight: 900;
+  letter-spacing: .02em;
+  color: rgba(238,242,247,.92);
+  font-size: 18px;
+}
+
+.modeModalX {
+  appearance: none;
+  border: 1px solid rgba(255,255,255,.18);
+  background: rgba(255,255,255,.08);
+  color: rgba(238,242,247,.88);
+  border-radius: 12px;
+  padding: 8px 10px;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.modeModalBody {
+  padding: 14px 16px 10px 16px;
+}
+
+.modeModalTag {
+  display: inline-block;
+  font-weight: 900;
+  font-size: 12px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: rgba(47,102,255,.92);
+  background: rgba(47,102,255,.14);
+  border: 1px solid rgba(47,102,255,.26);
+  padding: 7px 10px;
+  border-radius: 999px;
+  margin-bottom: 10px;
+}
+
+.modeModalP {
+  margin: 8px 0 0 0;
+  color: rgba(238,242,247,.82);
+  line-height: 1.35;
+  font-size: 15px;
+}
+
+.modeModalP strong {
+  color: rgba(238,242,247,.95);
+  font-weight: 900;
+}
+
+.modeModalP2 {
+  margin-top: 10px;
+  color: rgba(238,242,247,.74);
+}
+
+.modeModalMini {
+  margin-top: 12px;
+  color: rgba(238,242,247,.62);
+  font-size: 13px;
+}
+
+.modeModalMiniStrong {
+  color: rgba(103,243,164,.92);
+  font-weight: 900;
+}
+
+.modeModalFoot {
+  padding: 12px 16px 16px 16px;
+  display: flex;
+  justify-content: flex-end;
+  border-top: 1px solid rgba(255,255,255,.10);
+}
+
+.modeModalBtn {
+  appearance: none;
+  border: 1px solid rgba(255,255,255,.18);
+  background: rgba(255,255,255,.10);
+  color: rgba(238,242,247,.92);
+  font-weight: 900;
+  border-radius: 14px;
+  padding: 12px 16px;
+}
