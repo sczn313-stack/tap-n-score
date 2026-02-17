@@ -1,1 +1,86 @@
+<!-- docs/trophy.html (FULL REPLACEMENT) — Trophy log + top scores + back to SEC -->
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="color-scheme" content="dark" />
+  <meta name="theme-color" content="#06070a" />
 
+  <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
+
+  <title>Trophy — Tap-n-Score™</title>
+
+  <link rel="stylesheet" href="./trophy.css?v=TROPHY-0216A" />
+</head>
+
+<body>
+  <main class="tPage">
+    <section class="tShell">
+
+      <header class="tHdr">
+        <div class="tHdrLeft">
+          <div class="tTitle">
+            <span class="b">TROPHY</span>
+            <span class="mini">Your score history</span>
+          </div>
+          <div class="tSub">Tap-n-Score™ • After-Shot Intelligence</div>
+        </div>
+
+        <div class="tHdrRight">
+          <button id="backSecBtn" class="tBtn tBtnPrimary" type="button">Back to SEC</button>
+          <button id="backTargetBtn" class="tBtn" type="button">Back to Target</button>
+        </div>
+      </header>
+
+      <section class="tStats">
+        <div class="tStat">
+          <div class="k">SESSIONS</div>
+          <div class="v" id="countSessions">0</div>
+        </div>
+        <div class="tStat">
+          <div class="k">BEST</div>
+          <div class="v" id="bestScore">—</div>
+        </div>
+        <div class="tStat">
+          <div class="k">AVG</div>
+          <div class="v" id="avgScore">—</div>
+        </div>
+      </section>
+
+      <section class="tGrid">
+        <div class="panel">
+          <div class="panelHdr">
+            <div class="h">Top Scores</div>
+            <div class="m">Best 10 (all time)</div>
+          </div>
+          <div id="topList" class="list"></div>
+        </div>
+
+        <div class="panel">
+          <div class="panelHdr">
+            <div class="h">Recent Sessions</div>
+            <div class="m">Latest 20</div>
+          </div>
+          <div id="recentList" class="list"></div>
+        </div>
+      </section>
+
+      <div id="emptyState" class="empty" style="display:none;">
+        No sessions yet. Score one target and come back.
+      </div>
+
+      <footer class="tFoot">
+        <div class="tiny" id="tinyBuild">v—</div>
+        <div class="center">SCZN3</div>
+        <button id="clearLogBtn" class="linkBtn" type="button">Clear log</button>
+      </footer>
+
+    </section>
+  </main>
+
+  <script defer src="./trophy.js?v=TROPHY-0216A"></script>
+</body>
+</html>
