@@ -1,4 +1,4 @@
-<!-- docs/index.html (FULL REPLACEMENT) — HERO TIP REMOVED -->
+<!-- docs/index.html (FULL REPLACEMENT) — HERO TIP REMOVED + GRID/SILHOUETTE PILLS RESTORED IN MATRIX -->
 <!doctype html>
 <html lang="en">
 <head>
@@ -13,9 +13,9 @@
 
   <title>Tap-n-Score™</title>
 
-  <link rel="stylesheet" href="./styles.css?v=TP-Aplus-0214B" />
-  <link rel="stylesheet" href="./sizechips.css?v=TP-Aplus-0214B" />
-  <link rel="stylesheet" href="./livebar_fix.css?v=TP-Aplus-0214B" />
+  <link rel="stylesheet" href="./styles.css?v=TP-Aplus-0214C" />
+  <link rel="stylesheet" href="./sizechips.css?v=TP-Aplus-0214C" />
+  <link rel="stylesheet" href="./livebar_fix.css?v=TP-Aplus-0214C" />
 </head>
 
 <body>
@@ -32,8 +32,6 @@
 
       <div class="heroMid">
         <button id="photoBtn" class="heroBtn" type="button">Add Target Picture</button>
-
-        <!-- REMOVED: heroTip verbiage -->
 
         <div class="vendorCenterRow" aria-label="Vendor / Buy more targets">
           <a id="vendorBox" class="vendorBox vendorBoxFlow" href="#" aria-label="Vendor">
@@ -88,6 +86,21 @@
       <div id="matrixPanel" class="matrixPanel matrixHidden" aria-hidden="true">
 
         <div class="matrixTitle">Adjust</div>
+
+        <!-- ✅ Target Type (RESTORED) -->
+        <div class="matrixGroup">
+          <div class="matrixLabel">Target Type</div>
+
+          <div class="chipRow chipRowTight" id="typeChipRow">
+            <button class="chip chipType" type="button" data-type="GRID">Grid</button>
+            <button class="chip chipType" type="button" data-type="SIL">Silhouette</button>
+          </div>
+
+          <!-- ✅ The “good explanation” lives here (and JS can tune it if needed) -->
+          <div id="typeMicro" class="matrixMicro">
+            Grid is active now. Silhouette anchor mode is next.
+          </div>
+        </div>
 
         <!-- Target Size -->
         <div class="matrixGroup">
@@ -176,7 +189,6 @@
         <button id="clearTapsBtn" class="btnSecondary" type="button">Clear</button>
       </div>
 
-      <!-- Single source of instruction truth -->
       <p id="instructionLine" class="hint instructionLine"></p>
     </section>
 
@@ -190,6 +202,6 @@
 
   </main>
 
-  <script defer src="./index.js?v=TP-Aplus-0214B"></script>
+  <script defer src="./index.js?v=TP-Aplus-0214C"></script>
 </body>
 </html>
