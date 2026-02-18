@@ -1,10 +1,6 @@
 /* ============================================================
-   docs/sec.js (FULL REPLACEMENT)
-   - Score band colors: GREEN 90–100, YELLOW 60–89, RED 0–59
-   - Trophy button -> trophy.html
-   - Trophy exits back to SEC; SEC Done -> Target
-   - Logs sessions (last 200) for trophy
-   - Download still exports LIGHT certificate PNG with markers
+   docs/sec.js (FULL REPLACEMENT) — FINAL SEC + LIGHT CERTIFICATE EXPORT
+   + Survey button routes to survey.html (payload carried)
 ============================================================ */
 
 (() => {
@@ -26,22 +22,19 @@
   const elVendorMicro = $("vendorMicro");
 
   const elDone = $("doneBtn");
-  const elTrophy = $("trophyBtn");
   const elDownload = $("downloadBtn");
   const elScoreAnother = $("scoreAnotherBtn");
   const elSurvey = $("surveyBtn");
 
   const elErr = $("errLine");
   const elSessionGhost = $("sessionGhost");
-  const elTinyFoot = $("tinyFoot");
 
   // Storage keys (must match index.js)
   const KEY_PAYLOAD = "SCZN3_SEC_PAYLOAD_V1";
   const KEY_TARGET_IMG_DATA = "SCZN3_TARGET_IMG_DATAURL_V1";
-  const KEY_SCORES_DAY = "SCZN3_SCORES_BY_DAY_V1"; // { "YYYY-MM-DD": [numbers...] }
-  const KEY_SESSIONS = "SCZN3_SESSIONS_V1"; // array log for trophy
 
-  const BUILD = "SEC-FINAL-0216A";
+  // Soft scoring memory (for "Avg: —")
+  const KEY_SCORES_DAY = "SCZN3_SCORES_BY_DAY_V1"; // { "YYYY-MM-DD": [numbers...] }
 
   function showErr(msg) {
     if (!elErr) return;
@@ -55,21 +48,22 @@
     return Number.isFinite(x) ? x : fallback;
   }
 
-  function safeJSON(s) {
-    try { return JSON.parse(String(s || "")); } catch { return null; }
-  }
-
   function decodePayloadFromQuery() {
     try {
       const qs = new URLSearchParams(window.location.search);
       const b64 = qs.get("payload");
       if (!b64) return null;
+
       const json = decodeURIComponent(escape(atob(b64)));
       const obj = JSON.parse(json);
       return obj && typeof obj === "object" ? obj : null;
     } catch {
       return null;
     }
+  }
+
+  function safeJSON(s) {
+    try { return JSON.parse(String(s || "")); } catch { return null; }
   }
 
   function getPayload() {
@@ -95,20 +89,13 @@
     return { avg, n: arr.length };
   }
 
-  // ✅ bands per your rule
-  function bandForScore(s) {
-    if (s >= 90) return "green";
-    if (s >= 60) return "yellow";
-    return "red";
-  }
-
   function labelForScore(s) {
-    // keep it simple / shooter-friendly
     if (s >= 98) return "Elite";
     if (s >= 95) return "Excellent";
     if (s >= 90) return "Strong";
-    if (s >= 80) return "Solid";
-    if (s >= 60) return "Improving";
+    if (s >= 85) return "Solid";
+    if (s >= 80) return "Improving";
+    if (s >= 70) return "Getting there";
     return "Keep going";
   }
 
@@ -119,7 +106,6 @@
   }
 
   function vendorNameFromUrl(url) {
-    // Pilot default inference (can be upgraded later)
     if (typeof url === "string" && url.startsWith("http")) return "Baker Printing";
     return "—";
   }
@@ -128,36 +114,13 @@
     return clampNum(n, 0).toFixed(2);
   }
 
-  function setBandClass(score) {
-    document.body.classList.remove("band-green","band-yellow","band-red");
-    const b = bandForScore(score);
-    document.body.classList.add(`band-${b}`);
-  }
-
-  function logSession(p, score, shots, wClicks, eClicks, wDir, eDir, vendorName) {
-    const list = safeJSON(localStorage.getItem(KEY_SESSIONS));
-    const arr = Array.isArray(list) ? list : [];
-    arr.push({
-      ts: Date.now(),
-      sessionId: String(p.sessionId || ""),
-      score,
-      label: labelForScore(score),
-      band: bandForScore(score),
-      shots,
-      wind: { clicks: Number(wClicks.toFixed(2)), dir: wDir },
-      elev: { clicks: Number(eClicks.toFixed(2)), dir: eDir },
-      vendorName: vendorName || "—",
-      targetKey: String(p.target?.key || "—").replace("x","×"),
-      dial: `${Number(p.dial?.clickValue ?? 0).toFixed(2)} ${String(p.dial?.unit || "")}`.trim(),
-    });
-    const trimmed = arr.slice(-200);
-    try { localStorage.setItem(KEY_SESSIONS, JSON.stringify(trimmed)); } catch {}
+  function b64FromObj(obj) {
+    const json = JSON.stringify(obj);
+    return btoa(unescape(encodeURIComponent(json)));
   }
 
   function wireUI(p) {
     hideErr();
-    if (elTinyFoot) elTinyFoot.textContent = `v${BUILD}`;
-
     if (!p) { showErr("Missing SEC payload."); return; }
 
     const score = Math.round(clampNum(p.score, 0));
@@ -167,8 +130,6 @@
     const eClicks = clampNum(p.elevation?.clicks, 0);
     const wDir = normalizeDirWord(p.windage?.dir);
     const eDir = normalizeDirWord(p.elevation?.dir);
-
-    setBandClass(score);
 
     // Score
     if (elScore) elScore.textContent = String(score);
@@ -189,9 +150,8 @@
     // Vendor panel
     const vUrl = String(p.vendorUrl || "");
     const hasVendor = vUrl.startsWith("http");
-    const vName = vendorNameFromUrl(vUrl);
 
-    if (elVendorName) elVendorName.textContent = vName;
+    if (elVendorName) elVendorName.textContent = vendorNameFromUrl(vUrl);
 
     if (elVendorLink) {
       if (hasVendor) {
@@ -206,24 +166,19 @@
     }
 
     const tgt = p.target?.key ? `Target: ${(p.target.key || "").replace("x","×")}` : "Target: —";
-    const dial = p.dial?.unit ? `${Number(p.dial.clickValue ?? 0).toFixed(2)} ${String(p.dial.unit)}` : "—";
+    const dial = p.dial?.unit ? `${(p.dial.clickValue ?? 0).toFixed(2)} ${String(p.dial.unit)}` : "—";
     if (elVendorMicro) elVendorMicro.textContent = `${tgt} • Dial: ${dial}`;
 
-    // Session ghost
     if (elSessionGhost) elSessionGhost.textContent = `Session ${String(p.sessionId || "—")}`;
 
-    // ✅ log for trophy
-    logSession(p, score, shots, wClicks, eClicks, wDir, eDir, vName);
-
     // Buttons
-    elDone?.addEventListener("click", () => goHome(false));
+    elDone?.addEventListener("click", () => goHome());
     elScoreAnother?.addEventListener("click", () => goHome(true));
-    elTrophy?.addEventListener("click", () => {
-      window.location.href = `./trophy.html?fresh=${Date.now()}`;
-    });
 
+    // Survey routes to /survey.html with same payload
     elSurvey?.addEventListener("click", () => {
-      alert("Survey (pilot): coming next. For now, just close and keep shooting.");
+      const b64 = b64FromObj(p);
+      window.location.href = `./survey.html?payload=${encodeURIComponent(b64)}&fresh=${Date.now()}`;
     });
 
     elDownload?.addEventListener("click", async () => {
@@ -268,11 +223,9 @@
     const soft = "rgba(17,24,39,.55)";
     const border = "rgba(17,24,39,.28)";
 
-    // Background
     g.fillStyle = bg;
     g.fillRect(0,0,W,H);
 
-    // Borders
     g.strokeStyle = border;
     g.lineWidth = 3;
     g.strokeRect(34,34,W-68,H-68);
@@ -281,13 +234,12 @@
     g.lineWidth = 2;
     g.strokeRect(52,52,W-104,H-104);
 
-    // Header
     g.fillStyle = ink;
     g.font = "900 34px system-ui, -apple-system, Segoe UI, Roboto, Arial";
     g.fillText("SHOOTER EXPERIENCE CARD", 92, 128);
+
     drawSECMark(g, W - 240, 92);
 
-    // Panels
     const pad = 92;
     const gap = 24;
     const topY = 170;
@@ -297,15 +249,12 @@
     drawRoundRect(g, pad, topY, panelW, panelH, 22, "rgba(255,255,255,.75)", "rgba(17,24,39,.14)");
     drawRoundRect(g, pad + panelW + gap, topY, panelW, panelH, 22, "rgba(255,255,255,.75)", "rgba(17,24,39,.14)");
 
-    // Score content
     const score = Math.round(clampNum(p.score, 0));
     g.fillStyle = soft;
     g.font = "900 18px system-ui, -apple-system, Segoe UI, Roboto, Arial";
     g.fillText("SCORE", pad + 28, topY + 56);
 
-    // big score in band color
-    const band = bandForScore(score);
-    g.fillStyle = (band === "green") ? "#16a34a" : (band === "yellow") ? "#eab308" : "#ef4444";
+    g.fillStyle = ink;
     g.font = "1000 170px system-ui, -apple-system, Segoe UI, Roboto, Arial";
     g.fillText(String(score), pad + 28, topY + 220);
 
@@ -317,7 +266,6 @@
     g.font = "800 22px system-ui, -apple-system, Segoe UI, Roboto, Arial";
     g.fillText("Measured results from confirmed hits", pad + 28, topY + 334);
 
-    // Stats row
     const statsY = topY + panelH + 26;
     const statsH = 170;
     const statW = (W - pad*2 - gap*2) / 3;
@@ -332,7 +280,6 @@
     drawStatBox(g, pad + (statW + gap)*1, statsY, statW, statsH, "WINDAGE", formatClicks(wClicks), wDir, ink, soft);
     drawStatBox(g, pad + (statW + gap)*2, statsY, statW, statsH, "ELEVATION", formatClicks(eClicks), eDir, ink, soft);
 
-    // Target thumbnail with markers
     const thumbX = pad + panelW + gap + 22;
     const thumbY = topY + 70;
     const thumbW = panelW - 44;
@@ -351,14 +298,18 @@
       g.drawImage(img, ix, iy, fit.w, fit.h);
     });
 
+    // Markers
     const aim = p?.debug?.aim;
     const hits = Array.isArray(p?.debug?.hits) ? p.debug.hits : null;
-    const avgPoi = p?.debug?.avgPoi;
+    const avgPoi = p?.debug?.avgPoi || null;
+
+    const scaleX = fit.w;
+    const scaleY = fit.h;
 
     function drawPoint01(pt01, style) {
       if (!pt01 || typeof pt01.x01 !== "number" || typeof pt01.y01 !== "number") return;
-      const px = ix + pt01.x01 * fit.w;
-      const py = iy + pt01.y01 * fit.h;
+      const px = ix + pt01.x01 * scaleX;
+      const py = iy + pt01.y01 * scaleY;
       drawMarker(g, px, py, style);
     }
 
@@ -366,21 +317,18 @@
     if (hits && hits.length) hits.forEach(h => drawPoint01(h, "hit"));
     else if (avgPoi) drawPoint01(avgPoi, "hit");
 
-    // Printer line
     const vendorUrl = String(p.vendorUrl || "");
     const vendorName = vendorNameFromUrl(vendorUrl);
     g.fillStyle = soft;
     g.font = "900 20px system-ui, -apple-system, Segoe UI, Roboto, Arial";
     g.fillText(`Printer: ${vendorName}`, pad + panelW + gap + 28, topY + panelH - 28);
 
-    // Session bottom-right
     g.fillStyle = "rgba(17,24,39,.28)";
     g.font = "900 18px system-ui, -apple-system, Segoe UI, Roboto, Arial";
     const sid = `Session ${String(p.sessionId || "—")}`;
     const sidW = g.measureText(sid).width;
     g.fillText(sid, W - pad - sidW, H - 92);
 
-    // watermark
     g.save();
     g.globalAlpha = 0.10;
     g.fillStyle = ink;
@@ -452,7 +400,6 @@
     g.lineWidth = 2;
     g.strokeStyle = "rgba(0,0,0,.45)";
     g.stroke();
-
     g.restore();
   }
 
@@ -497,5 +444,6 @@
   }
 
   // Boot
-  wireUI(getPayload());
+  const payload = getPayload();
+  wireUI(payload);
 })();
