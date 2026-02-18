@@ -1,7 +1,8 @@
 /* ============================================================
    docs/index.js (FULL REPLACEMENT) — MATRIX + SQUARE PLANE
-   + TARGET TYPE (GRID/SILHOUETTE) PILLS RESTORED
-   + SILHOUETTE MODE IS "VISIBLE / NOT ACTIVE" (pilot-safe)
+   + Instruction mirroring (Aim ↔ Holes) in the info line (fade)
+   + Matrix + target size chips
+   + iOS-safe photo input (not display:none)
 ============================================================ */
 
 (() => {
@@ -37,10 +38,6 @@
   const elMatrixPanel = $("matrixPanel");
   const elMatrixClose = $("matrixCloseBtn");
 
-  // Target Type
-  const elTypeChipRow = $("typeChipRow");
-  const elTypeMicro = $("typeMicro");
-
   // Distance controls
   const elDist = $("distanceYds");
   const elDistUp = $("distUp");
@@ -64,15 +61,13 @@
   const KEY_TARGET_IMG_DATA = "SCZN3_TARGET_IMG_DATAURL_V1";
   const KEY_TARGET_IMG_BLOB = "SCZN3_TARGET_IMG_BLOBURL_V1";
   const KEY_VENDOR_URL = "SCZN3_VENDOR_URL_V1";
-
   const KEY_DIST_UNIT = "SCZN3_RANGE_UNIT_V1"; // "YDS" | "M"
   const KEY_DIST_YDS = "SCZN3_RANGE_YDS_V1";   // numeric (yards)
 
+  // Target size persistence
   const KEY_TARGET_SIZE = "SCZN3_TARGET_SIZE_KEY_V1"; // e.g., "23x35"
   const KEY_TARGET_W = "SCZN3_TARGET_W_IN_V1";
   const KEY_TARGET_H = "SCZN3_TARGET_H_IN_V1";
-
-  const KEY_TARGET_TYPE = "SCZN3_TARGET_TYPE_V1"; // "GRID" | "SIL"
 
   let objectUrl = null;
 
@@ -100,9 +95,6 @@
   let targetSizeKey = "23x35";
   let targetWIn = 23;
   let targetHIn = 35;
-
-  // target type (pilot-safe)
-  let targetType = "GRID"; // "GRID" | "SIL"
 
   const DEFAULTS = { MOA: 0.25, MRAD: 0.10 };
 
@@ -179,24 +171,31 @@
   }
 
   // ------------------------------------------------------------
-  // Instruction line (fade + color)
+  // Instruction line (mirrored + fade)
   // ------------------------------------------------------------
+  // FULL REPLACEMENT: setInstruction(...)  ✅
   function setInstruction(text, kind) {
     if (!elInstruction) return;
 
+    // kind: "aim" | "holes" | "go" | ""
+    const color =
+      kind === "aim"   ? "rgba(103,243,164,.95)" :   // green
+      kind === "holes" ? "rgba(183,255,60,.95)"  :   // yellow-lime
+      kind === "go"    ? "rgba(47,102,255,.92)"  :   // blue
+                         "rgba(238,242,247,.70)";    // neutral
+
+    // Fade-in effect (works on iPhone + iPad)
+    elInstruction.style.transition = "opacity 180ms ease, transform 180ms ease, color 120ms ease";
     elInstruction.style.opacity = "0";
+    elInstruction.style.transform = "translateY(2px)";
+    elInstruction.style.color = color;
 
-    setTimeout(() => {
-      elInstruction.textContent = text || "";
+    // Force reflow so the transition always triggers (important on iOS Safari)
+    void elInstruction.offsetHeight;
 
-      let color = "rgba(238,242,247,.65)";
-      if (kind === "aim") color = "rgba(22,163,74,.95)";      // green
-      if (kind === "holes") color = "rgba(234,179,8,.95)";    // yellow
-      if (kind === "go") color = "rgba(47,102,255,.92)";      // blue
-
-      elInstruction.style.color = color;
-      elInstruction.style.opacity = "1";
-    }, 120);
+    elInstruction.textContent = text || "";
+    elInstruction.style.opacity = "1";
+    elInstruction.style.transform = "translateY(0px)";
   }
 
   function syncInstruction() {
@@ -393,54 +392,6 @@
   }
 
   // ------------------------------------------------------------
-  // Target type (GRID/SIL)
-  // ------------------------------------------------------------
-  function highlightTypeChips() {
-    if (!elTypeChipRow) return;
-    const chips = Array.from(elTypeChipRow.querySelectorAll("[data-type]"));
-    chips.forEach((c) => {
-      const k = c.getAttribute("data-type") || "GRID";
-      c.classList.toggle("chipOn", k === targetType);
-    });
-  }
-
-  function setTypeMicro() {
-    if (!elTypeMicro) return;
-
-    if (targetType === "GRID") {
-      // ✅ “good explanation” — printer-friendly, shooter-friendly, zero pressure
-      elTypeMicro.textContent = "Grid targets are active now. Silhouette anchor mode is next.";
-      return;
-    }
-
-    // Silhouette selected
-    elTypeMicro.textContent = "Silhouette anchor mode is next. Use Grid targets for the pilot.";
-  }
-
-  function setTargetType(t) {
-    targetType = (t === "SIL") ? "SIL" : "GRID";
-    try { localStorage.setItem(KEY_TARGET_TYPE, targetType); } catch {}
-    highlightTypeChips();
-    setTypeMicro();
-  }
-
-  function hydrateTargetType() {
-    const saved = localStorage.getItem(KEY_TARGET_TYPE) || "GRID";
-    setTargetType(saved === "SIL" ? "SIL" : "GRID");
-  }
-
-  function wireTargetTypeChips() {
-    if (!elTypeChipRow) return;
-    const chips = Array.from(elTypeChipRow.querySelectorAll("[data-type]"));
-    chips.forEach((btn) => {
-      btn.addEventListener("click", () => {
-        const t = btn.getAttribute("data-type") || "GRID";
-        setTargetType(t);
-      });
-    });
-  }
-
-  // ------------------------------------------------------------
   // Target size
   // ------------------------------------------------------------
   function clampInches(v, fallback) {
@@ -475,11 +426,11 @@
     const key = localStorage.getItem(KEY_TARGET_SIZE) || "23x35";
     const presetMap = {
       "8.5x11": { w: 8.5, h: 11 },
-      "11x17": { w: 11, h: 17 },
-      "12x18": { w: 12, h: 18 },
-      "18x24": { w: 18, h: 24 },
-      "23x35": { w: 23, h: 35 },
-      "24x36": { w: 24, h: 36 },
+      "11x17":  { w: 11,  h: 17 },
+      "12x18":  { w: 12,  h: 18 },
+      "18x24":  { w: 18,  h: 24 },
+      "23x35":  { w: 23,  h: 35 },
+      "24x36":  { w: 24,  h: 36 }
     };
 
     const p = presetMap[key] || {
@@ -487,34 +438,39 @@
       h: clampInches(localStorage.getItem(KEY_TARGET_H) || "35", 35)
     };
 
-    setTargetSize(key in presetMap ? key : "23x35", p.w, p.h);
+    // If saved key isn't in presetMap, keep it as "custom" but still load w/h
+    const finalKey = (key in presetMap) ? key : (key === "custom" ? "custom" : "23x35");
+    setTargetSize(finalKey, p.w, p.h);
   }
 
   function wireTargetSizeChips() {
     if (!elSizeChipRow) return;
+
     const chips = Array.from(elSizeChipRow.querySelectorAll("[data-size]"));
     chips.forEach((btn) => {
       btn.addEventListener("click", () => {
         const key = btn.getAttribute("data-size") || "23x35";
 
+        // Custom chip: just select custom and keep current w/h
         if (key === "custom") {
-          // pilot-safe: visible, not implemented
-          alert("Custom size is coming next. For the pilot, choose a preset size.");
+          setTargetSize("custom", targetWIn, targetHIn);
           return;
         }
 
-        const w = Number(btn.getAttribute("data-w") || "23");
-        const h = Number(btn.getAttribute("data-h") || "35");
+        const w = Number(btn.getAttribute("data-w") || targetWIn);
+        const h = Number(btn.getAttribute("data-h") || targetHIn);
         setTargetSize(key, w, h);
       });
     });
+  }
 
-    elSwapSizeBtn?.addEventListener("click", () => {
-      // swap only affects the inches math (pilot-safe)
-      const w = targetWIn;
-      const h = targetHIn;
-      setTargetSize("custom", h, w);
-      alert(`Swapped to ${h}×${w}. (Pilot note: Custom is coming next.)`);
+  function wireSwapSize() {
+    if (!elSwapSizeBtn) return;
+    elSwapSizeBtn.addEventListener("click", () => {
+      const newW = targetHIn;
+      const newH = targetWIn;
+      // keep the same key, but this effectively swaps dimensions
+      setTargetSize(targetSizeKey || "custom", newW, newH);
     });
   }
 
@@ -530,7 +486,10 @@
 
     if (elLiveDial) elLiveDial.textContent = `${getClickValue().toFixed(2)} ${dialUnit}`;
 
-    if (elLiveTarget) elLiveTarget.textContent = (targetSizeKey || "").replace("x", "×");
+    if (elLiveTarget) {
+      const label = (targetSizeKey || "").replace("x", "×");
+      elLiveTarget.textContent = label || "—";
+    }
   }
 
   // ------------------------------------------------------------
@@ -653,7 +612,10 @@
 
   function onShowResults() {
     const out = computeCorrectionAndScore();
-    if (!out) { alert("Tap Aim Point first, then tap at least one bullet hole."); return; }
+    if (!out) {
+      alert("Tap Aim Point first, then tap at least one bullet hole.");
+      return;
+    }
 
     const vendorUrl = localStorage.getItem(KEY_VENDOR_URL) || "";
 
@@ -667,8 +629,8 @@
       vendorUrl,
       surveyUrl: "",
       target: { key: targetSizeKey, wIn: Number(targetWIn), hIn: Number(targetHIn) },
-      targetType, // ✅ exposed for future analytics
 
+      // include taps for export markers
       debug: { aim, hits, avgPoi: out.avgPoi, distanceYds: getDistanceYds(), inches: out.inches, squareIn: out.squareIn }
     };
 
@@ -810,15 +772,12 @@
   hydrateVendorBox();
   hydrateRange();
   hydrateTargetSize();
-  hydrateTargetType();
 
   wireMatrixPresets();
   wireTargetSizeChips();
-  wireTargetTypeChips();
+  wireSwapSize();
 
   highlightSizeChip();
-  highlightTypeChips();
-  setTypeMicro();
   syncLiveTop();
 
   hardHideScoringUI();
