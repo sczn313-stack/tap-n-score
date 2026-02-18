@@ -1,27 +1,23 @@
-/* docs/sec.js (FULL REPLACEMENT) — SEC + SURVEY + YARDAGE + TOP SCORES (ROLLING 20 / TOP 10) */
+/* ============================================================
+   docs/sec.js (FULL REPLACEMENT) — FINAL SEC + LIGHT CERTIFICATE EXPORT
+   ✅ Score color calibration:
+      GREEN = 90–100
+      YELLOW = 60–89
+      RED = 0–59
+   ✅ Yardage on SEC page + Yardage on exported PNG
+============================================================ */
+
 (() => {
   const $ = (id) => document.getElementById(id);
 
-  // ==============================
-  // OUTPUT MODES (google sheets HOLD)
-  // ==============================
-  const SURVEY_MODE = {
-    localStorage: true,
-    email: false,
-    googleSheet: false,
-    jsonExport: true
-  };
-
-  // ==============================
   // UI
-  // ==============================
-  const elScoreCard = $("scoreCard");
   const elScore = $("scoreValue");
   const elScoreLabel = $("scoreLabel");
   const elAvgSoft = $("avgSoft");
+  const elDistLine = $("distLine");
+  const elScoreCard = $("scoreCard");
 
   const elShots = $("shotsVal");
-  const elRange = $("rangeVal");
   const elWind = $("windVal");
   const elElev = $("elevVal");
   const elWindDir = $("windDir");
@@ -34,35 +30,18 @@
   const elDone = $("doneBtn");
   const elDownload = $("downloadBtn");
   const elScoreAnother = $("scoreAnotherBtn");
+  const elSurvey = $("surveyBtn");
 
   const elErr = $("errLine");
   const elSessionGhost = $("sessionGhost");
 
-  // Trophy
-  const elTopScoresRow = $("topScoresRow");
-  const elTrophyMeta = $("trophyMeta");
-
-  // Survey
-  const elSurveyPanel = $("surveyPanel");
-  const elSurveyForm = $("surveyForm");
-  const elSurveySubmit = $("surveySubmitBtn");
-  const elSurveyThanks = $("surveyThanks");
-
-  // ==============================
-  // Storage keys
-  // ==============================
+  // Storage keys (must match your index.js)
   const KEY_PAYLOAD = "SCZN3_SEC_PAYLOAD_V1";
   const KEY_TARGET_IMG_DATA = "SCZN3_TARGET_IMG_DATAURL_V1";
 
-  const KEY_SCORES_DAY = "SCZN3_SCORES_BY_DAY_V1"; // avg by day
-  const KEY_TOP_SCORES = "SCZN3_TOP_SCORES_V1";    // rolling 20 sessions (objects)
+  // Soft scoring memory (for "Avg: —")
+  const KEY_SCORES_DAY = "SCZN3_SCORES_BY_DAY_V1"; // { "YYYY-MM-DD": [numbers...] }
 
-  const KEY_SURVEY_LOG = "SCZN3_SURVEY_LOG_V1";
-  const KEY_SURVEY_JSON_EXPORT = "SCZN3_SURVEY_JSON_V1";
-
-  // ==============================
-  // Helpers
-  // ==============================
   function showErr(msg) {
     if (!elErr) return;
     elErr.style.display = "block";
@@ -74,20 +53,25 @@
     const x = Number(n);
     return Number.isFinite(x) ? x : fallback;
   }
-  function safeJSON(s) {
-    try { return JSON.parse(String(s || "")); } catch { return null; }
-  }
 
   function decodePayloadFromQuery() {
     try {
       const qs = new URLSearchParams(window.location.search);
       const b64 = qs.get("payload");
       if (!b64) return null;
+
       const json = decodeURIComponent(escape(atob(b64)));
       const obj = JSON.parse(json);
       return obj && typeof obj === "object" ? obj : null;
-    } catch { return null; }
+    } catch {
+      return null;
+    }
   }
+
+  function safeJSON(s) {
+    try { return JSON.parse(String(s || "")); } catch { return null; }
+  }
+
   function getPayload() {
     return decodePayloadFromQuery() || safeJSON(localStorage.getItem(KEY_PAYLOAD)) || null;
   }
@@ -111,26 +95,21 @@
     return { avg, n: arr.length };
   }
 
-  // ===== LOCKED score bands
-  // GREEN = 90–100
-  // YELLOW = 60–89
-  // RED = 0–59
+  // ✅ NEW: color tier per your calibration
+  function tierForScore(s) {
+    if (s >= 90) return "GREEN";
+    if (s >= 60) return "YELLOW";
+    return "RED";
+  }
+
+  // ✅ Keep label text (not the tier)
   function labelForScore(s) {
-    if (s >= 90) return "Strong / Excellent / Elite";
-    if (s >= 60) return "Improving / Solid";
-    return "Needs work";
-  }
-  function bandForScore(s) {
-    if (s >= 90) return "green";
-    if (s >= 60) return "yellow";
-    return "red";
-  }
-  function applyScoreBandClass(band) {
-    if (!elScoreCard) return;
-    elScoreCard.classList.remove("scoreBandGreen","scoreBandYellow","scoreBandRed");
-    if (band === "green") elScoreCard.classList.add("scoreBandGreen");
-    if (band === "yellow") elScoreCard.classList.add("scoreBandYellow");
-    if (band === "red") elScoreCard.classList.add("scoreBandRed");
+    if (s >= 98) return "Elite";
+    if (s >= 95) return "Excellent";
+    if (s >= 90) return "Strong";
+    if (s >= 80) return "Improving";
+    if (s >= 70) return "Solid";
+    return "Keep going";
   }
 
   function normalizeDirWord(w) {
@@ -144,161 +123,234 @@
     return "—";
   }
 
-  function formatClicks(n) { return clampNum(n, 0).toFixed(2); }
+  function formatClicks(n) {
+    return clampNum(n, 0).toFixed(2);
+  }
+
+  // ✅ NEW: read distance from payload (index.js puts it here)
+  function distanceYdsFromPayload(p) {
+    const d = p?.debug?.distanceYds ?? p?.distanceYds ?? p?.rangeYds;
+    const n = clampNum(d, 0);
+    if (n <= 0) return null;
+    return Math.round(n);
+  }
+
+  // ✅ NEW: apply score colors to the SEC page
+  function applyScoreColors(score) {
+    const tier = tierForScore(score);
+
+    // Chosen to be readable on dark background
+    const color =
+      tier === "GREEN"  ? "rgba(103,243,164,.98)" :
+      tier === "YELLOW" ? "rgba(183,255,60,.98)" :
+                          "rgba(255,80,80,.98)";
+
+    const glow =
+      tier === "GREEN"  ? "0 0 0 1px rgba(103,243,164,.18), 0 20px 60px rgba(103,243,164,.06)" :
+      tier === "YELLOW" ? "0 0 0 1px rgba(183,255,60,.16), 0 20px 60px rgba(183,255,60,.05)" :
+                          "0 0 0 1px rgba(255,80,80,.14), 0 20px 60px rgba(255,80,80,.05)";
+
+    if (elScore) elScore.style.color = color;
+
+    // Subtle “this matters” ring on score card
+    if (elScoreCard) {
+      elScoreCard.style.boxShadow = glow;
+      elScoreCard.style.borderColor =
+        tier === "GREEN"  ? "rgba(103,243,164,.22)" :
+        tier === "YELLOW" ? "rgba(183,255,60,.20)" :
+                            "rgba(255,80,80,.18)";
+    }
+  }
+
+  function wireUI(p) {
+    hideErr();
+    if (!p) { showErr("Missing SEC payload."); return; }
+
+    const score = Math.round(clampNum(p.score, 0));
+    const shots = clampNum(p.shots, 0);
+
+    const wClicks = clampNum(p.windage?.clicks, 0);
+    const eClicks = clampNum(p.elevation?.clicks, 0);
+    const wDir = normalizeDirWord(p.windage?.dir);
+    const eDir = normalizeDirWord(p.elevation?.dir);
+
+    // Score
+    if (elScore) elScore.textContent = String(score);
+    if (elScoreLabel) elScoreLabel.textContent = labelForScore(score);
+
+    // ✅ Apply the color calibration
+    applyScoreColors(score);
+
+    // Soft avg (today)
+    const { avg, n } = recordScoreForAvg(score);
+    if (elAvgSoft) elAvgSoft.textContent = `Avg: ${avg.toFixed(0)} (${n})`;
+
+    // ✅ Yardage on SEC page
+    const dYds = distanceYdsFromPayload(p);
+    if (elDistLine) elDistLine.textContent = `Distance: ${dYds ? `${dYds} yds` : "—"}`;
+
+    // Stats
+    if (elShots) elShots.textContent = String(shots);
+    if (elWind) elWind.textContent = formatClicks(wClicks);
+    if (elElev) elElev.textContent = formatClicks(eClicks);
+
+    if (elWindDir) elWindDir.textContent = wDir;
+    if (elElevDir) elElevDir.textContent = eDir;
+
+    // Vendor panel
+    const vUrl = String(p.vendorUrl || "");
+    const hasVendor = vUrl.startsWith("http");
+
+    if (elVendorName) elVendorName.textContent = vendorNameFromUrl(vUrl);
+
+    if (elVendorLink) {
+      if (hasVendor) {
+        elVendorLink.href = vUrl;
+        elVendorLink.style.pointerEvents = "auto";
+        elVendorLink.style.opacity = "1";
+      } else {
+        elVendorLink.removeAttribute("href");
+        elVendorLink.style.pointerEvents = "none";
+        elVendorLink.style.opacity = ".55";
+      }
+    }
+
+    // Micro line: target + dial + distance (quiet, factual)
+    const tgt = p.target?.key ? `Target: ${(p.target.key || "").replace("x","×")}` : "Target: —";
+    const dial = p.dial?.unit ? `Dial: ${(p.dial.clickValue ?? 0).toFixed(2)} ${String(p.dial.unit)}` : "Dial: —";
+    const dist = dYds ? `Distance: ${dYds} yds` : "Distance: —";
+    if (elVendorMicro) elVendorMicro.textContent = `${tgt} • ${dial} • ${dist}`;
+
+    // Session ghost (bottom-right)
+    if (elSessionGhost) elSessionGhost.textContent = `Session ${String(p.sessionId || "—")}`;
+
+    // Buttons
+    elDone?.addEventListener("click", () => goHome());
+    elScoreAnother?.addEventListener("click", () => goHome(true));
+    elSurvey?.addEventListener("click", () => {
+      alert("Survey (pilot): coming next. For now, just close and keep shooting.");
+    });
+
+    elDownload?.addEventListener("click", async () => {
+      try {
+        elDownload.disabled = true;
+        elDownload.textContent = "Preparing…";
+        await exportCertificatePNG(p);
+      } catch (e) {
+        showErr("Download failed. Try again.");
+        console.error(e);
+      } finally {
+        elDownload.disabled = false;
+        elDownload.textContent = "Download SEC Picture";
+      }
+    });
+  }
 
   function goHome(reset = false) {
     const url = `./index.html?fresh=${Date.now()}${reset ? "&again=1" : ""}`;
     window.location.href = url;
   }
 
-  // ==============================
-  // Trophy (rolling 20 / top 10)
-  // ==============================
-  function readTopScores() {
-    const arr = safeJSON(localStorage.getItem(KEY_TOP_SCORES));
-    return Array.isArray(arr) ? arr : [];
-  }
-  function writeTopScores(arr) {
-    try { localStorage.setItem(KEY_TOP_SCORES, JSON.stringify(arr.slice(-20))); } catch {}
-  }
-  function pushTopScore(entry) {
-    const arr = readTopScores();
-    arr.push(entry);
-    writeTopScores(arr);
-    return arr;
-  }
-  function renderTopScores(arr) {
-    if (!elTopScoresRow) return;
-
-    const sorted = [...arr].sort((a,b) => (b.score||0) - (a.score||0));
-    const top10 = sorted.slice(0,10);
-
-    elTopScoresRow.innerHTML = "";
-    top10.forEach((e, idx) => {
-      const chip = document.createElement("div");
-      chip.className = "scoreChip";
-
-      const rank = document.createElement("span");
-      rank.className = "chipRank";
-      rank.textContent = `#${idx+1}`;
-
-      const score = document.createElement("span");
-      score.className = "chipScore";
-      score.textContent = String(e.score ?? "—");
-
-      const dim = document.createElement("span");
-      dim.className = "chipDim";
-      dim.textContent = `${e.rangeYds ?? "—"}y`;
-
-      chip.appendChild(rank);
-      chip.appendChild(score);
-      chip.appendChild(dim);
-      elTopScoresRow.appendChild(chip);
-    });
-
-    if (elTrophyMeta) elTrophyMeta.textContent = `Top 10 (rolling ${Math.min(arr.length,20)})`;
-  }
-
-  // ==============================
-  // Survey logging
-  // ==============================
-  function readFormValues(form) {
-    const fd = new FormData(form);
-    const obj = {};
-    for (const [k, v] of fd.entries()) obj[k] = String(v || "");
-    return obj;
-  }
-
-  function getSurveyLog(key) {
-    const arr = safeJSON(localStorage.getItem(key));
-    return Array.isArray(arr) ? arr : [];
-  }
-
-  function pushSurveyRow(row) {
-    if (SURVEY_MODE.localStorage) {
-      const log = getSurveyLog(KEY_SURVEY_LOG);
-      log.push(row);
-      try { localStorage.setItem(KEY_SURVEY_LOG, JSON.stringify(log.slice(-5000))); } catch {}
-    }
-    if (SURVEY_MODE.jsonExport) {
-      const log = getSurveyLog(KEY_SURVEY_JSON_EXPORT);
-      log.push(row);
-      try { localStorage.setItem(KEY_SURVEY_JSON_EXPORT, JSON.stringify(log.slice(-5000))); } catch {}
-    }
-  }
-
-  function lockSurveyUI() {
-    if (elSurveyPanel) elSurveyPanel.classList.add("surveyLocked");
-    if (elSurveySubmit) elSurveySubmit.disabled = true;
-  }
-  function showSurveyThanks() {
-    if (!elSurveyThanks) return;
-    elSurveyThanks.style.display = "block";
-  }
-
-  // ==============================
-  // Export certificate PNG (adds yardage)
-  // ==============================
+  // ============================================================
+  // EXPORT: Light certificate PNG with border + target thumbnail + holes
+  // + ✅ score color tier
+  // + ✅ yardage line
+  // ============================================================
   async function exportCertificatePNG(p) {
     const dataUrl = localStorage.getItem(KEY_TARGET_IMG_DATA) || "";
-    if (!dataUrl.startsWith("data:image/")) throw new Error("Missing target image.");
+    if (!dataUrl.startsWith("data:image/")) {
+      throw new Error("Missing target image dataurl for export.");
+    }
 
     const img = await loadImage(dataUrl);
 
-    const W = 1400, H = 1800;
+    const W = 1400;
+    const H = 1800;
     const c = document.createElement("canvas");
     c.width = W; c.height = H;
     const g = c.getContext("2d");
 
+    // Light certificate palette
     const bg = "#f3f4f6";
     const ink = "#111827";
     const soft = "rgba(17,24,39,.55)";
     const border = "rgba(17,24,39,.28)";
 
-    g.fillStyle = bg; g.fillRect(0,0,W,H);
-    g.strokeStyle = border; g.lineWidth = 3; g.strokeRect(34,34,W-68,H-68);
-    g.strokeStyle = "rgba(17,24,39,.14)"; g.lineWidth = 2; g.strokeRect(52,52,W-104,H-104);
+    g.fillStyle = bg;
+    g.fillRect(0,0,W,H);
 
+    g.strokeStyle = border;
+    g.lineWidth = 3;
+    g.strokeRect(34,34,W-68,H-68);
+
+    g.strokeStyle = "rgba(17,24,39,.14)";
+    g.lineWidth = 2;
+    g.strokeRect(52,52,W-104,H-104);
+
+    // Header
     g.fillStyle = ink;
     g.font = "900 34px system-ui, -apple-system, Segoe UI, Roboto, Arial";
     g.fillText("SHOOTER EXPERIENCE CARD", 92, 128);
+
     drawSECMark(g, W - 240, 92);
 
-    const pad = 92, gap = 24, topY = 170, panelH = 520;
+    const pad = 92;
+    const gap = 24;
+    const topY = 170;
+    const panelH = 520;
     const panelW = (W - pad*2 - gap) / 2;
 
+    // Panels
     drawRoundRect(g, pad, topY, panelW, panelH, 22, "rgba(255,255,255,.75)", "rgba(17,24,39,.14)");
     drawRoundRect(g, pad + panelW + gap, topY, panelW, panelH, 22, "rgba(255,255,255,.75)", "rgba(17,24,39,.14)");
 
-    const scoreN = Math.round(clampNum(p.score, 0));
-    g.fillStyle = soft; g.font = "900 18px system-ui, -apple-system, Segoe UI, Roboto, Arial";
+    // Score tier color (export)
+    const score = Math.round(clampNum(p.score, 0));
+    const tier = tierForScore(score);
+    const scoreInk =
+      tier === "GREEN"  ? "rgba(16,185,129,.98)" :
+      tier === "YELLOW" ? "rgba(245,158,11,.98)" :
+                          "rgba(239,68,68,.98)";
+
+    // Score box content
+    g.fillStyle = soft;
+    g.font = "900 18px system-ui, -apple-system, Segoe UI, Roboto, Arial";
     g.fillText("SCORE", pad + 28, topY + 56);
 
-    g.fillStyle = ink; g.font = "1000 170px system-ui, -apple-system, Segoe UI, Roboto, Arial";
-    g.fillText(String(scoreN), pad + 28, topY + 220);
+    g.fillStyle = scoreInk;
+    g.font = "1000 170px system-ui, -apple-system, Segoe UI, Roboto, Arial";
+    g.fillText(String(score), pad + 28, topY + 220);
 
-    g.fillStyle = ink; g.font = "900 34px system-ui, -apple-system, Segoe UI, Roboto, Arial";
-    g.fillText(labelForScore(scoreN), pad + 28, topY + 280);
+    g.fillStyle = ink;
+    g.font = "900 34px system-ui, -apple-system, Segoe UI, Roboto, Arial";
+    g.fillText(labelForScore(score), pad + 28, topY + 280);
 
-    g.fillStyle = soft; g.font = "800 22px system-ui, -apple-system, Segoe UI, Roboto, Arial";
-    g.fillText("Measured results from confirmed hits", pad + 28, topY + 334);
+    // ✅ Yardage line on export
+    const dYds = distanceYdsFromPayload(p);
+    g.fillStyle = soft;
+    g.font = "900 22px system-ui, -apple-system, Segoe UI, Roboto, Arial";
+    g.fillText(`Distance: ${dYds ? `${dYds} yds` : "—"}`, pad + 28, topY + 330);
 
-    // Stats row (includes RANGE)
-    const statsY = topY + panelH + 26, statsH = 170;
+    g.fillStyle = soft;
+    g.font = "800 20px system-ui, -apple-system, Segoe UI, Roboto, Arial";
+    g.fillText("Measured results from confirmed hits", pad + 28, topY + 368);
+
+    // Stats row
+    const statsY = topY + panelH + 26;
+    const statsH = 170;
     const statW = (W - pad*2 - gap*2) / 3;
 
     const shots = clampNum(p.shots, 0);
-    const distYds = clampNum(p?.debug?.distanceYds, clampNum(p?.distanceYds, 0));
     const wClicks = clampNum(p.windage?.clicks, 0);
     const eClicks = clampNum(p.elevation?.clicks, 0);
     const wDir = normalizeDirWord(p.windage?.dir);
     const eDir = normalizeDirWord(p.elevation?.dir);
 
     drawStatBox(g, pad + (statW + gap)*0, statsY, statW, statsH, "HITS", String(shots), "", ink, soft);
-    drawStatBox(g, pad + (statW + gap)*1, statsY, statW, statsH, "RANGE", String(distYds || "—"), "YDS", ink, soft);
-    drawStatBox(g, pad + (statW + gap)*2, statsY, statW, statsH, "W/E", `${formatClicks(wClicks)} / ${formatClicks(eClicks)}`, `${wDir} / ${eDir}`, ink, soft);
+    drawStatBox(g, pad + (statW + gap)*1, statsY, statW, statsH, "WINDAGE", formatClicks(wClicks), wDir, ink, soft);
+    drawStatBox(g, pad + (statW + gap)*2, statsY, statW, statsH, "ELEVATION", formatClicks(eClicks), eDir, ink, soft);
 
-    // Target thumbnail (same as before)
+    // Target thumbnail with markers
     const thumbX = pad + panelW + gap + 22;
     const thumbY = topY + 70;
     const thumbW = panelW - 44;
@@ -321,13 +373,15 @@
     const hits = Array.isArray(p?.debug?.hits) ? p.debug.hits : null;
     const avgPoi = p?.debug?.avgPoi;
 
-    const scaleX = fit.w, scaleY = fit.h;
-    const drawPoint01 = (pt01, style) => {
+    const scaleX = fit.w;
+    const scaleY = fit.h;
+
+    function drawPoint01(pt01, style) {
       if (!pt01 || typeof pt01.x01 !== "number" || typeof pt01.y01 !== "number") return;
       const px = ix + pt01.x01 * scaleX;
       const py = iy + pt01.y01 * scaleY;
       drawMarker(g, px, py, style);
-    };
+    }
 
     drawPoint01(aim, "aim");
     if (hits && hits.length) hits.forEach(h => drawPoint01(h, "hit"));
@@ -336,17 +390,18 @@
     // Printer line
     const vendorUrl = String(p.vendorUrl || "");
     const vendorName = vendorNameFromUrl(vendorUrl);
-    g.fillStyle = soft; g.font = "900 20px system-ui, -apple-system, Segoe UI, Roboto, Arial";
-    g.fillText(`Printed by: ${vendorName}`, pad + panelW + gap + 28, topY + panelH - 28);
+    g.fillStyle = soft;
+    g.font = "900 20px system-ui, -apple-system, Segoe UI, Roboto, Arial";
+    g.fillText(`Printer: ${vendorName}`, pad + panelW + gap + 28, topY + panelH - 28);
 
-    // Session ghost
+    // Session ID bottom-right
     g.fillStyle = "rgba(17,24,39,.28)";
     g.font = "900 18px system-ui, -apple-system, Segoe UI, Roboto, Arial";
     const sid = `Session ${String(p.sessionId || "—")}`;
     const sidW = g.measureText(sid).width;
     g.fillText(sid, W - pad - sidW, H - 92);
 
-    // watermark
+    // SCZN3 mark bottom center
     g.save();
     g.globalAlpha = 0.10;
     g.fillStyle = ink;
@@ -357,18 +412,21 @@
     g.restore();
 
     const outUrl = c.toDataURL("image/png");
-    downloadDataUrl(outUrl, `SEC_${String(scoreN).padStart(3,"0")}_${Date.now()}.png`);
+    downloadDataUrl(outUrl, `SEC_${String(score).padStart(3,"0")}_${Date.now()}.png`);
   }
 
-  // ==============================
+  // ============================================================
   // Drawing helpers
-  // ==============================
+  // ============================================================
   function drawSECMark(g, x, y) {
     g.save();
     g.font = "1100 34px system-ui, -apple-system, Segoe UI, Roboto, Arial";
-    g.fillStyle = "#d64040"; g.fillText("S", x, y+30);
-    g.fillStyle = "#111827"; g.fillText("E", x+28, y+30);
-    g.fillStyle = "#2f66ff"; g.fillText("C", x+55, y+30);
+    g.fillStyle = "#d64040";
+    g.fillText("S", x, y+30);
+    g.fillStyle = "#111827";
+    g.fillText("E", x+28, y+30);
+    g.fillStyle = "#2f66ff";
+    g.fillText("C", x+55, y+30);
     g.restore();
   }
 
@@ -382,6 +440,7 @@
     g.arcTo(x, y+h, x, y, rr);
     g.arcTo(x, y, x+w, y, rr);
     g.closePath();
+
     if (fill) { g.fillStyle = fill; g.fill(); }
     if (stroke) { g.strokeStyle = stroke; g.lineWidth = 2; g.stroke(); }
     g.restore();
@@ -407,20 +466,35 @@
     const outer = isAim ? "rgba(16,185,129,.85)" : "rgba(245,158,11,.85)";
     const inner = isAim ? "rgba(16,185,129,.35)" : "rgba(245,158,11,.35)";
     g.save();
-    g.beginPath(); g.fillStyle = outer; g.arc(x, y, 10, 0, Math.PI*2); g.fill();
-    g.beginPath(); g.fillStyle = inner; g.arc(x, y, 5, 0, Math.PI*2); g.fill();
-    g.lineWidth = 2; g.strokeStyle = "rgba(0,0,0,.45)"; g.stroke();
+    g.beginPath();
+    g.fillStyle = outer;
+    g.arc(x, y, 10, 0, Math.PI*2);
+    g.fill();
+
+    g.beginPath();
+    g.fillStyle = inner;
+    g.arc(x, y, 5, 0, Math.PI*2);
+    g.fill();
+
+    g.lineWidth = 2;
+    g.strokeStyle = "rgba(0,0,0,.45)";
+    g.stroke();
     g.restore();
   }
 
   function drawStatBox(g, x, y, w, h, k, v, dir, ink, soft) {
     drawRoundRect(g, x, y, w, h, 18, "rgba(255,255,255,.78)", "rgba(17,24,39,.14)");
-    g.fillStyle = soft; g.font = "1000 16px system-ui, -apple-system, Segoe UI, Roboto, Arial";
+    g.fillStyle = soft;
+    g.font = "1000 16px system-ui, -apple-system, Segoe UI, Roboto, Arial";
     g.fillText(k, x+20, y+42);
-    g.fillStyle = ink; g.font = "1100 44px system-ui, -apple-system, Segoe UI, Roboto, Arial";
+
+    g.fillStyle = ink;
+    g.font = "1100 44px system-ui, -apple-system, Segoe UI, Roboto, Arial";
     g.fillText(String(v), x+20, y+102);
+
     if (dir) {
-      g.fillStyle = soft; g.font = "1000 18px system-ui, -apple-system, Segoe UI, Roboto, Arial";
+      g.fillStyle = soft;
+      g.font = "1000 18px system-ui, -apple-system, Segoe UI, Roboto, Arial";
       g.fillText(String(dir), x+20, y+140);
     }
   }
@@ -448,120 +522,7 @@
     a.remove();
   }
 
-  // ==============================
-  // Boot + wire UI
-  // ==============================
-  function wireUI(p) {
-    hideErr();
-    if (!p) { showErr("Missing SEC payload."); return; }
-
-    const scoreN = Math.round(clampNum(p.score, 0));
-    const band = bandForScore(scoreN);
-    applyScoreBandClass(band);
-
-    if (elScore) elScore.textContent = String(scoreN);
-    if (elScoreLabel) elScoreLabel.textContent = labelForScore(scoreN);
-
-    const { avg, n } = recordScoreForAvg(scoreN);
-    if (elAvgSoft) elAvgSoft.textContent = `Avg: ${avg.toFixed(0)} (${n})`;
-
-    const shots = clampNum(p.shots, 0);
-    if (elShots) elShots.textContent = String(shots);
-
-    const distYds = clampNum(p?.debug?.distanceYds, clampNum(p?.distanceYds, 0));
-    if (elRange) elRange.textContent = String(distYds || "—");
-
-    const wClicks = clampNum(p.windage?.clicks, 0);
-    const eClicks = clampNum(p.elevation?.clicks, 0);
-    const wDir = normalizeDirWord(p.windage?.dir);
-    const eDir = normalizeDirWord(p.elevation?.dir);
-
-    if (elWind) elWind.textContent = formatClicks(wClicks);
-    if (elElev) elElev.textContent = formatClicks(eClicks);
-    if (elWindDir) elWindDir.textContent = wDir;
-    if (elElevDir) elElevDir.textContent = eDir;
-
-    const vUrl = String(p.vendorUrl || "");
-    const hasVendor = vUrl.startsWith("http");
-    const printerName = vendorNameFromUrl(vUrl);
-
-    if (elVendorName) elVendorName.textContent = printerName;
-
-    if (elVendorLink) {
-      if (hasVendor) {
-        elVendorLink.href = vUrl;
-        elVendorLink.style.pointerEvents = "auto";
-        elVendorLink.style.opacity = "1";
-      } else {
-        elVendorLink.removeAttribute("href");
-        elVendorLink.style.pointerEvents = "none";
-        elVendorLink.style.opacity = ".55";
-      }
-    }
-
-    const tgt = p.target?.key ? `Target: ${(p.target.key || "").replace("x","×")}` : "Target: —";
-    const dial = p.dial?.unit ? `${(p.dial.clickValue ?? 0).toFixed(2)} ${String(p.dial.unit)}` : "—";
-    if (elVendorMicro) elVendorMicro.textContent = `For After-Shot Intelligence • ${tgt} • ${distYds || "—"} yds • Dial: ${dial}`;
-
-    if (elSessionGhost) elSessionGhost.textContent = `Session ${String(p.sessionId || "—")}`;
-
-    // Trophy logging
-    const entry = {
-      ts: Date.now(),
-      sessionId: String(p.sessionId || ""),
-      score: scoreN,
-      rangeYds: distYds || 0
-    };
-    const scores = pushTopScore(entry);
-    renderTopScores(scores);
-
-    // Buttons
-    elDone?.addEventListener("click", () => goHome());
-    elScoreAnother?.addEventListener("click", () => goHome(true));
-
-    elDownload?.addEventListener("click", async () => {
-      try {
-        elDownload.disabled = true;
-        elDownload.textContent = "Preparing…";
-        await exportCertificatePNG(p);
-      } catch (e) {
-        showErr("Download failed. Try again.");
-        console.error(e);
-      } finally {
-        elDownload.disabled = false;
-        elDownload.textContent = "Download SEC Picture";
-      }
-    });
-
-    // Survey submit
-    elSurveyForm?.addEventListener("submit", (e) => {
-      e.preventDefault();
-      hideErr();
-
-      const answers = readFormValues(elSurveyForm);
-      const row = {
-        type: "pilot_feedback",
-        ts: new Date().toISOString(),
-        sessionId: String(p.sessionId || ""),
-        printer: printerName,
-        vendorUrl: vUrl || "",
-        score: scoreN,
-        shots,
-        distanceYds: distYds || 0,
-        dialUnit: String(p?.dial?.unit || ""),
-        dialClick: clampNum(p?.dial?.clickValue, 0),
-        windDir: wDir, windClicks: wClicks,
-        elevDir: eDir, elevClicks: eClicks,
-        targetKey: String(p?.target?.key || ""),
-        answers
-      };
-
-      pushSurveyRow(row);
-      lockSurveyUI();
-      showSurveyThanks();
-    });
-  }
-
+  // Boot
   const payload = getPayload();
   wireUI(payload);
 })();
