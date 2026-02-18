@@ -1,1 +1,111 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="color-scheme" content="dark" />
+  <meta name="theme-color" content="#06070a" />
 
+  <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
+
+  <title>Survey — Tap-n-Score™</title>
+
+  <link rel="stylesheet" href="./survey.css?v=SURVEY-0217A" />
+</head>
+
+<body>
+  <main class="page">
+    <section class="card">
+      <header class="hdr">
+        <div class="brand">
+          <div class="title">
+            <span class="r">TAP</span><span class="w">-N-</span><span class="b">SCORE</span><span class="w">™</span>
+          </div>
+          <div class="sub">Quick Survey (Pilot)</div>
+        </div>
+
+        <button id="closeBtn" class="btnGhost" type="button" aria-label="Close survey">Done</button>
+      </header>
+
+      <div class="divider"></div>
+
+      <div class="meta">
+        <div class="metaRow">
+          <div class="metaK">Session</div>
+          <div id="metaSession" class="metaV">—</div>
+        </div>
+        <div class="metaRow">
+          <div class="metaK">Printer</div>
+          <div id="metaPrinter" class="metaV">—</div>
+        </div>
+      </div>
+
+      <div class="divider"></div>
+
+      <form id="surveyForm" class="form" autocomplete="off">
+
+        <!-- Q1 -->
+        <div class="q">
+          <div class="qTitle">1) Was this helpful?</div>
+          <div class="chips" role="group" aria-label="Helpful">
+            <button class="chip" type="button" data-q="helpful" data-v="Yes">Yes</button>
+            <button class="chip" type="button" data-q="helpful" data-v="Somewhat">Somewhat</button>
+            <button class="chip" type="button" data-q="helpful" data-v="No">No</button>
+          </div>
+        </div>
+
+        <!-- Q2 -->
+        <div class="q">
+          <div class="qTitle">2) How easy was it?</div>
+          <div class="chips" role="group" aria-label="Ease">
+            <button class="chip" type="button" data-q="ease" data-v="Easy">Easy</button>
+            <button class="chip" type="button" data-q="ease" data-v="OK">OK</button>
+            <button class="chip" type="button" data-q="ease" data-v="Hard">Hard</button>
+          </div>
+        </div>
+
+        <!-- Q3 -->
+        <div class="q">
+          <div class="qTitle">3) What did you use this for?</div>
+          <div class="chips" role="group" aria-label="Use case">
+            <button class="chip" type="button" data-q="use" data-v="Zero / Adjust">Zero / Adjust</button>
+            <button class="chip" type="button" data-q="use" data-v="Practice / Feedback">Practice / Feedback</button>
+            <button class="chip" type="button" data-q="use" data-v="Just trying it">Just trying it</button>
+          </div>
+        </div>
+
+        <!-- Q4 -->
+        <div class="q">
+          <div class="qTitle">4) Would you use this again?</div>
+          <div class="chips" role="group" aria-label="Use again">
+            <button class="chip" type="button" data-q="again" data-v="Yes">Yes</button>
+            <button class="chip" type="button" data-q="again" data-v="Maybe">Maybe</button>
+            <button class="chip" type="button" data-q="again" data-v="No">No</button>
+          </div>
+        </div>
+
+        <!-- Optional note -->
+        <div class="q">
+          <div class="qTitle">Optional: Anything confusing?</div>
+          <textarea id="note" class="note" rows="3" placeholder="One sentence is perfect."></textarea>
+        </div>
+
+        <div class="actions">
+          <button id="saveBtn" class="btnPrimary" type="submit">Submit</button>
+          <button id="copyBtn" class="btn" type="button">Copy Survey Code</button>
+        </div>
+
+        <div id="status" class="status" aria-live="polite"></div>
+
+        <div class="tiny">
+          Pilot surveys save locally on this device for now.
+        </div>
+      </form>
+    </section>
+  </main>
+
+  <script defer src="./survey.js?v=SURVEY-0217A"></script>
+</body>
+</html>
