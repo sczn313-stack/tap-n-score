@@ -1,10 +1,12 @@
 /* ============================================================
-   docs/sec.js (FULL REPLACEMENT) — FINAL SEC + LIGHT CERTIFICATE EXPORT
-   ✅ Score color calibration:
+   docs/sec.js (FULL REPLACEMENT) — SEC + TROPHY PILL
+   ✅ Trophy = Top 10 of last 20 sessions (rolling)
+   ✅ No extra pages (all SEC)
+   ✅ Keeps your score color tiers:
       GREEN = 90–100
       YELLOW = 60–89
       RED = 0–59
-   ✅ Yardage on SEC page + Yardage on exported PNG
+   ✅ Yardage shown + exported (already in here)
 ============================================================ */
 
 (() => {
@@ -35,12 +37,21 @@
   const elErr = $("errLine");
   const elSessionGhost = $("sessionGhost");
 
-  // Storage keys (must match your index.js)
+  // Trophy
+  const elTrophyBtn = $("trophyBtn");
+  const elTrophyPanel = $("trophyPanel");
+  const elTrophyList = $("trophyList");
+  const elTrophyMicro = $("trophyMicro");
+
+  // Storage keys (must match index.js)
   const KEY_PAYLOAD = "SCZN3_SEC_PAYLOAD_V1";
   const KEY_TARGET_IMG_DATA = "SCZN3_TARGET_IMG_DATAURL_V1";
 
-  // Soft scoring memory (for "Avg: —")
+  // Soft scoring memory (for "Avg")
   const KEY_SCORES_DAY = "SCZN3_SCORES_BY_DAY_V1"; // { "YYYY-MM-DD": [numbers...] }
+
+  // ✅ Rolling trophy storage (last 20)
+  const KEY_TROPHY_ROLLING = "SCZN3_TROPHY_ROLLING_V1"; // [{sessionId, ts, score, shots, distYds}...]
 
   function showErr(msg) {
     if (!elErr) return;
@@ -54,22 +65,21 @@
     return Number.isFinite(x) ? x : fallback;
   }
 
+  function safeJSON(s) {
+    try { return JSON.parse(String(s || "")); } catch { return null; }
+  }
+
   function decodePayloadFromQuery() {
     try {
       const qs = new URLSearchParams(window.location.search);
       const b64 = qs.get("payload");
       if (!b64) return null;
-
       const json = decodeURIComponent(escape(atob(b64)));
       const obj = JSON.parse(json);
       return obj && typeof obj === "object" ? obj : null;
     } catch {
       return null;
     }
-  }
-
-  function safeJSON(s) {
-    try { return JSON.parse(String(s || "")); } catch { return null; }
   }
 
   function getPayload() {
@@ -95,14 +105,12 @@
     return { avg, n: arr.length };
   }
 
-  // ✅ NEW: color tier per your calibration
   function tierForScore(s) {
     if (s >= 90) return "GREEN";
     if (s >= 60) return "YELLOW";
     return "RED";
   }
 
-  // ✅ Keep label text (not the tier)
   function labelForScore(s) {
     if (s >= 98) return "Elite";
     if (s >= 95) return "Excellent";
@@ -127,7 +135,6 @@
     return clampNum(n, 0).toFixed(2);
   }
 
-  // ✅ NEW: read distance from payload (index.js puts it here)
   function distanceYdsFromPayload(p) {
     const d = p?.debug?.distanceYds ?? p?.distanceYds ?? p?.rangeYds;
     const n = clampNum(d, 0);
@@ -135,11 +142,8 @@
     return Math.round(n);
   }
 
-  // ✅ NEW: apply score colors to the SEC page
   function applyScoreColors(score) {
     const tier = tierForScore(score);
-
-    // Chosen to be readable on dark background
     const color =
       tier === "GREEN"  ? "rgba(103,243,164,.98)" :
       tier === "YELLOW" ? "rgba(183,255,60,.98)" :
@@ -152,7 +156,6 @@
 
     if (elScore) elScore.style.color = color;
 
-    // Subtle “this matters” ring on score card
     if (elScoreCard) {
       elScoreCard.style.boxShadow = glow;
       elScoreCard.style.borderColor =
@@ -162,99 +165,111 @@
     }
   }
 
-  function wireUI(p) {
-    hideErr();
-    if (!p) { showErr("Missing SEC payload."); return; }
+  // ============================================================
+  // ✅ Trophy logic (rolling last 20, display top 10)
+  // ============================================================
+  function loadRolling() {
+    const arr = safeJSON(localStorage.getItem(KEY_TROPHY_ROLLING));
+    return Array.isArray(arr) ? arr : [];
+  }
+
+  function saveRolling(arr) {
+    try { localStorage.setItem(KEY_TROPHY_ROLLING, JSON.stringify(arr)); } catch {}
+  }
+
+  function upsertCurrentIntoRolling(p) {
+    const sessionId = String(p?.sessionId || "");
+    if (!sessionId) return;
 
     const score = Math.round(clampNum(p.score, 0));
     const shots = clampNum(p.shots, 0);
+    const distYds = distanceYdsFromPayload(p);
 
-    const wClicks = clampNum(p.windage?.clicks, 0);
-    const eClicks = clampNum(p.elevation?.clicks, 0);
-    const wDir = normalizeDirWord(p.windage?.dir);
-    const eDir = normalizeDirWord(p.elevation?.dir);
+    let roll = loadRolling();
 
-    // Score
-    if (elScore) elScore.textContent = String(score);
-    if (elScoreLabel) elScoreLabel.textContent = labelForScore(score);
+    // prevent duplicates by sessionId
+    roll = roll.filter(x => String(x?.sessionId || "") !== sessionId);
 
-    // ✅ Apply the color calibration
-    applyScoreColors(score);
-
-    // Soft avg (today)
-    const { avg, n } = recordScoreForAvg(score);
-    if (elAvgSoft) elAvgSoft.textContent = `Avg: ${avg.toFixed(0)} (${n})`;
-
-    // ✅ Yardage on SEC page
-    const dYds = distanceYdsFromPayload(p);
-    if (elDistLine) elDistLine.textContent = `Distance: ${dYds ? `${dYds} yds` : "—"}`;
-
-    // Stats
-    if (elShots) elShots.textContent = String(shots);
-    if (elWind) elWind.textContent = formatClicks(wClicks);
-    if (elElev) elElev.textContent = formatClicks(eClicks);
-
-    if (elWindDir) elWindDir.textContent = wDir;
-    if (elElevDir) elElevDir.textContent = eDir;
-
-    // Vendor panel
-    const vUrl = String(p.vendorUrl || "");
-    const hasVendor = vUrl.startsWith("http");
-
-    if (elVendorName) elVendorName.textContent = vendorNameFromUrl(vUrl);
-
-    if (elVendorLink) {
-      if (hasVendor) {
-        elVendorLink.href = vUrl;
-        elVendorLink.style.pointerEvents = "auto";
-        elVendorLink.style.opacity = "1";
-      } else {
-        elVendorLink.removeAttribute("href");
-        elVendorLink.style.pointerEvents = "none";
-        elVendorLink.style.opacity = ".55";
-      }
-    }
-
-    // Micro line: target + dial + distance (quiet, factual)
-    const tgt = p.target?.key ? `Target: ${(p.target.key || "").replace("x","×")}` : "Target: —";
-    const dial = p.dial?.unit ? `Dial: ${(p.dial.clickValue ?? 0).toFixed(2)} ${String(p.dial.unit)}` : "Dial: —";
-    const dist = dYds ? `Distance: ${dYds} yds` : "Distance: —";
-    if (elVendorMicro) elVendorMicro.textContent = `${tgt} • ${dial} • ${dist}`;
-
-    // Session ghost (bottom-right)
-    if (elSessionGhost) elSessionGhost.textContent = `Session ${String(p.sessionId || "—")}`;
-
-    // Buttons
-    elDone?.addEventListener("click", () => goHome());
-    elScoreAnother?.addEventListener("click", () => goHome(true));
-    elSurvey?.addEventListener("click", () => {
-      alert("Survey (pilot): coming next. For now, just close and keep shooting.");
+    roll.unshift({
+      sessionId,
+      ts: Date.now(),
+      score,
+      shots,
+      distYds: distYds ?? null
     });
 
-    elDownload?.addEventListener("click", async () => {
-      try {
-        elDownload.disabled = true;
-        elDownload.textContent = "Preparing…";
-        await exportCertificatePNG(p);
-      } catch (e) {
-        showErr("Download failed. Try again.");
-        console.error(e);
-      } finally {
-        elDownload.disabled = false;
-        elDownload.textContent = "Download SEC Picture";
-      }
+    // cap last 20
+    roll = roll.slice(0, 20);
+    saveRolling(roll);
+  }
+
+  function renderTrophy() {
+    if (!elTrophyList) return;
+
+    const roll = loadRolling();
+
+    // top 10 by score desc, tie-break newest
+    const top = [...roll]
+      .sort((a,b) => (b.score - a.score) || (b.ts - a.ts))
+      .slice(0, 10);
+
+    // micro line
+    if (elTrophyMicro) {
+      const total = roll.length;
+      elTrophyMicro.textContent = `${Math.min(10, top.length)} shown • ${total} stored`;
+    }
+
+    elTrophyList.innerHTML = "";
+
+    if (!top.length) {
+      const li = document.createElement("li");
+      li.className = "trophyRow";
+      li.innerHTML = `
+        <div class="trophyLeft">
+          <div class="trophyScore">No history yet</div>
+          <div class="trophyMeta">Score a few targets — your Top 10 will appear here.</div>
+        </div>
+        <div class="trophyRank">—</div>
+      `;
+      elTrophyList.appendChild(li);
+      return;
+    }
+
+    top.forEach((x, i) => {
+      const li = document.createElement("li");
+      li.className = "trophyRow";
+
+      const dist = (x.distYds && Number.isFinite(x.distYds)) ? `${x.distYds} yds` : "—";
+      li.innerHTML = `
+        <div class="trophyLeft">
+          <div class="trophyScore">${String(x.score).padStart(2,"0")} <span style="opacity:.55;font-weight:900;font-size:13px;">(${tierForScore(x.score)})</span></div>
+          <div class="trophyMeta">Hits: ${x.shots} • Distance: ${dist}</div>
+        </div>
+        <div class="trophyRank">#${i+1}</div>
+      `;
+      elTrophyList.appendChild(li);
     });
   }
 
-  function goHome(reset = false) {
-    const url = `./index.html?fresh=${Date.now()}${reset ? "&again=1" : ""}`;
-    window.location.href = url;
+  function toggleTrophy(openForce) {
+    if (!elTrophyPanel || !elTrophyBtn) return;
+
+    const isHidden = elTrophyPanel.classList.contains("trophyHidden");
+    const open = (typeof openForce === "boolean") ? openForce : isHidden;
+
+    elTrophyPanel.classList.toggle("trophyHidden", !open);
+    elTrophyPanel.setAttribute("aria-hidden", open ? "false" : "true");
+    elTrophyBtn.setAttribute("aria-expanded", open ? "true" : "false");
+
+    // update chevron
+    const chev = elTrophyBtn.querySelector(".trophyChevron");
+    if (chev) chev.textContent = open ? "▴" : "▾";
+
+    if (open) renderTrophy();
   }
 
   // ============================================================
-  // EXPORT: Light certificate PNG with border + target thumbnail + holes
-  // + ✅ score color tier
-  // + ✅ yardage line
+  // Export PNG (unchanged except it already includes score+yardage)
   // ============================================================
   async function exportCertificatePNG(p) {
     const dataUrl = localStorage.getItem(KEY_TARGET_IMG_DATA) || "";
@@ -270,7 +285,6 @@
     c.width = W; c.height = H;
     const g = c.getContext("2d");
 
-    // Light certificate palette
     const bg = "#f3f4f6";
     const ink = "#111827";
     const soft = "rgba(17,24,39,.55)";
@@ -287,7 +301,6 @@
     g.lineWidth = 2;
     g.strokeRect(52,52,W-104,H-104);
 
-    // Header
     g.fillStyle = ink;
     g.font = "900 34px system-ui, -apple-system, Segoe UI, Roboto, Arial";
     g.fillText("SHOOTER EXPERIENCE CARD", 92, 128);
@@ -300,11 +313,9 @@
     const panelH = 520;
     const panelW = (W - pad*2 - gap) / 2;
 
-    // Panels
     drawRoundRect(g, pad, topY, panelW, panelH, 22, "rgba(255,255,255,.75)", "rgba(17,24,39,.14)");
     drawRoundRect(g, pad + panelW + gap, topY, panelW, panelH, 22, "rgba(255,255,255,.75)", "rgba(17,24,39,.14)");
 
-    // Score tier color (export)
     const score = Math.round(clampNum(p.score, 0));
     const tier = tierForScore(score);
     const scoreInk =
@@ -312,7 +323,6 @@
       tier === "YELLOW" ? "rgba(245,158,11,.98)" :
                           "rgba(239,68,68,.98)";
 
-    // Score box content
     g.fillStyle = soft;
     g.font = "900 18px system-ui, -apple-system, Segoe UI, Roboto, Arial";
     g.fillText("SCORE", pad + 28, topY + 56);
@@ -325,7 +335,6 @@
     g.font = "900 34px system-ui, -apple-system, Segoe UI, Roboto, Arial";
     g.fillText(labelForScore(score), pad + 28, topY + 280);
 
-    // ✅ Yardage line on export
     const dYds = distanceYdsFromPayload(p);
     g.fillStyle = soft;
     g.font = "900 22px system-ui, -apple-system, Segoe UI, Roboto, Arial";
@@ -335,7 +344,6 @@
     g.font = "800 20px system-ui, -apple-system, Segoe UI, Roboto, Arial";
     g.fillText("Measured results from confirmed hits", pad + 28, topY + 368);
 
-    // Stats row
     const statsY = topY + panelH + 26;
     const statsH = 170;
     const statW = (W - pad*2 - gap*2) / 3;
@@ -350,7 +358,6 @@
     drawStatBox(g, pad + (statW + gap)*1, statsY, statW, statsH, "WINDAGE", formatClicks(wClicks), wDir, ink, soft);
     drawStatBox(g, pad + (statW + gap)*2, statsY, statW, statsH, "ELEVATION", formatClicks(eClicks), eDir, ink, soft);
 
-    // Target thumbnail with markers
     const thumbX = pad + panelW + gap + 22;
     const thumbY = topY + 70;
     const thumbW = panelW - 44;
@@ -370,7 +377,7 @@
     });
 
     const aim = p?.debug?.aim;
-    const hits = Array.isArray(p?.debug?.hits) ? p.debug.hits : null;
+    const hitsArr = Array.isArray(p?.debug?.hits) ? p.debug.hits : null;
     const avgPoi = p?.debug?.avgPoi;
 
     const scaleX = fit.w;
@@ -384,24 +391,21 @@
     }
 
     drawPoint01(aim, "aim");
-    if (hits && hits.length) hits.forEach(h => drawPoint01(h, "hit"));
+    if (hitsArr && hitsArr.length) hitsArr.forEach(h => drawPoint01(h, "hit"));
     else if (avgPoi) drawPoint01(avgPoi, "hit");
 
-    // Printer line
     const vendorUrl = String(p.vendorUrl || "");
     const vendorName = vendorNameFromUrl(vendorUrl);
     g.fillStyle = soft;
     g.font = "900 20px system-ui, -apple-system, Segoe UI, Roboto, Arial";
     g.fillText(`Printer: ${vendorName}`, pad + panelW + gap + 28, topY + panelH - 28);
 
-    // Session ID bottom-right
     g.fillStyle = "rgba(17,24,39,.28)";
     g.font = "900 18px system-ui, -apple-system, Segoe UI, Roboto, Arial";
     const sid = `Session ${String(p.sessionId || "—")}`;
     const sidW = g.measureText(sid).width;
     g.fillText(sid, W - pad - sidW, H - 92);
 
-    // SCZN3 mark bottom center
     g.save();
     g.globalAlpha = 0.10;
     g.fillStyle = ink;
@@ -413,6 +417,96 @@
 
     const outUrl = c.toDataURL("image/png");
     downloadDataUrl(outUrl, `SEC_${String(score).padStart(3,"0")}_${Date.now()}.png`);
+  }
+
+  // ============================================================
+  // UI wiring
+  // ============================================================
+  function wireUI(p) {
+    hideErr();
+    if (!p) { showErr("Missing SEC payload."); return; }
+
+    // ✅ Add this session to trophy history first
+    upsertCurrentIntoRolling(p);
+
+    const score = Math.round(clampNum(p.score, 0));
+    const shots = clampNum(p.shots, 0);
+
+    const wClicks = clampNum(p.windage?.clicks, 0);
+    const eClicks = clampNum(p.elevation?.clicks, 0);
+    const wDir = normalizeDirWord(p.windage?.dir);
+    const eDir = normalizeDirWord(p.elevation?.dir);
+
+    if (elScore) elScore.textContent = String(score);
+    if (elScoreLabel) elScoreLabel.textContent = labelForScore(score);
+    applyScoreColors(score);
+
+    const { avg, n } = recordScoreForAvg(score);
+    if (elAvgSoft) elAvgSoft.textContent = `Avg: ${avg.toFixed(0)} (${n})`;
+
+    const dYds = distanceYdsFromPayload(p);
+    if (elDistLine) elDistLine.textContent = `Distance: ${dYds ? `${dYds} yds` : "—"}`;
+
+    if (elShots) elShots.textContent = String(shots);
+    if (elWind) elWind.textContent = formatClicks(wClicks);
+    if (elElev) elElev.textContent = formatClicks(eClicks);
+
+    if (elWindDir) elWindDir.textContent = wDir;
+    if (elElevDir) elElevDir.textContent = eDir;
+
+    const vUrl = String(p.vendorUrl || "");
+    const hasVendor = vUrl.startsWith("http");
+
+    if (elVendorName) elVendorName.textContent = vendorNameFromUrl(vUrl);
+
+    if (elVendorLink) {
+      if (hasVendor) {
+        elVendorLink.href = vUrl;
+        elVendorLink.style.pointerEvents = "auto";
+        elVendorLink.style.opacity = "1";
+      } else {
+        elVendorLink.removeAttribute("href");
+        elVendorLink.style.pointerEvents = "none";
+        elVendorLink.style.opacity = ".55";
+      }
+    }
+
+    const tgt = p.target?.key ? `Target: ${(p.target.key || "").replace("x","×")}` : "Target: —";
+    const dial = p.dial?.unit ? `Dial: ${(p.dial.clickValue ?? 0).toFixed(2)} ${String(p.dial.unit)}` : "Dial: —";
+    const dist = dYds ? `Distance: ${dYds} yds` : "Distance: —";
+    if (elVendorMicro) elVendorMicro.textContent = `${tgt} • ${dial} • ${dist}`;
+
+    if (elSessionGhost) elSessionGhost.textContent = `Session ${String(p.sessionId || "—")}`;
+
+    elDone?.addEventListener("click", () => goHome());
+    elScoreAnother?.addEventListener("click", () => goHome(true));
+    elSurvey?.addEventListener("click", () => {
+      alert("Survey (pilot): coming next. For now, just close and keep shooting.");
+    });
+
+    elDownload?.addEventListener("click", async () => {
+      try {
+        elDownload.disabled = true;
+        elDownload.textContent = "Preparing…";
+        await exportCertificatePNG(p);
+      } catch (e) {
+        showErr("Download failed. Try again.");
+        console.error(e);
+      } finally {
+        elDownload.disabled = false;
+        elDownload.textContent = "Download SEC Picture";
+      }
+    });
+
+    // ✅ Trophy button
+    elTrophyBtn?.addEventListener("click", () => toggleTrophy());
+    // pre-render once so it’s ready
+    renderTrophy();
+  }
+
+  function goHome(reset = false) {
+    const url = `./index.html?fresh=${Date.now()}${reset ? "&again=1" : ""}`;
+    window.location.href = url;
   }
 
   // ============================================================
