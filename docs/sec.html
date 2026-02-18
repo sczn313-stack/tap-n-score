@@ -1,4 +1,4 @@
-<!-- docs/sec.html (FULL REPLACEMENT) — SEC + Trophy button -->
+<!-- docs/sec.html (FULL REPLACEMENT) — SEC ONLY + EMBEDDED PILOT FEEDBACK -->
 <!doctype html>
 <html lang="en">
 <head>
@@ -13,7 +13,7 @@
 
   <title>SEC — Shooter Experience Card</title>
 
-  <link rel="stylesheet" href="./sec.css?v=SEC-FINAL-0216A" />
+  <link rel="stylesheet" href="./sec.css?v=SEC-FINAL-0212A" />
 </head>
 
 <body>
@@ -35,7 +35,6 @@
         </div>
 
         <div class="secHdrRight">
-          <button id="trophyBtn" class="secBtn secBtnGhost" type="button">Trophy</button>
           <button id="doneBtn" class="secBtn secBtnGhost" type="button">Done</button>
         </div>
       </header>
@@ -57,19 +56,18 @@
         </div>
 
         <div class="vendorCard" aria-label="Vendor">
-          <div class="vendorK">TARGET PRINTER</div>
-
+          <div class="vendorK">PRINTED BY</div>
           <div id="vendorName" class="vendorName">—</div>
 
           <div class="vendorRow">
             <a id="vendorLink" class="vendorBtn" href="#" target="_blank" rel="noopener">Visit Printer</a>
           </div>
 
-          <div id="vendorMicro" class="vendorMicro">—</div>
+          <div id="vendorMicro" class="vendorMicro">For After-Shot Intelligence • —</div>
         </div>
       </section>
 
-      <!-- Compact stats -->
+      <!-- Stats -->
       <section class="secStats" aria-label="Stats">
         <div class="stat">
           <div class="statK">HITS</div>
@@ -93,14 +91,67 @@
       <section class="secActions" aria-label="Actions">
         <button id="downloadBtn" class="secBtn secBtnPrimary" type="button">Download SEC Picture</button>
         <button id="scoreAnotherBtn" class="secBtn" type="button">Score another</button>
-        <button id="surveyBtn" class="secBtn" type="button">Survey</button>
+      </section>
+
+      <!-- PILOT FEEDBACK (Optional) -->
+      <section id="surveyPanel" class="secSurvey" aria-label="Pilot Feedback">
+        <div class="secSurveyHdr">
+          <div class="secSurveyTitle">Pilot Feedback <span class="secSurveyOpt">(Optional)</span></div>
+          <div class="secSurveySub">No personal info. This helps improve the process.</div>
+        </div>
+
+        <form id="surveyForm" class="secSurveyForm">
+          <div class="qBlock">
+            <div class="qK">1) Was this process easy to use?</div>
+            <label class="qRow"><input type="radio" name="q1_ease" value="very_easy" required> Very easy</label>
+            <label class="qRow"><input type="radio" name="q1_ease" value="somewhat_easy"> Somewhat easy</label>
+            <label class="qRow"><input type="radio" name="q1_ease" value="difficult"> Difficult</label>
+          </div>
+
+          <div class="qBlock">
+            <div class="qK">2) Did the SEC give you useful insight?</div>
+            <label class="qRow"><input type="radio" name="q2_insight" value="yes" required> Yes</label>
+            <label class="qRow"><input type="radio" name="q2_insight" value="somewhat"> Somewhat</label>
+            <label class="qRow"><input type="radio" name="q2_insight" value="not_really"> Not really</label>
+          </div>
+
+          <div class="qBlock">
+            <div class="qK">3) Would you use this again?</div>
+            <label class="qRow"><input type="radio" name="q3_again" value="definitely" required> Definitely</label>
+            <label class="qRow"><input type="radio" name="q3_again" value="maybe"> Maybe</label>
+            <label class="qRow"><input type="radio" name="q3_again" value="no"> No</label>
+          </div>
+
+          <div class="qBlock">
+            <div class="qK">4) Did the correction feel accurate?</div>
+            <label class="qRow"><input type="radio" name="q4_accuracy" value="yes" required> Yes</label>
+            <label class="qRow"><input type="radio" name="q4_accuracy" value="mostly"> Mostly</label>
+            <label class="qRow"><input type="radio" name="q4_accuracy" value="not_sure"> Not sure</label>
+          </div>
+
+          <div class="qBlock">
+            <div class="qK">5) Would you recommend this feature on targets?</div>
+            <label class="qRow"><input type="radio" name="q5_recommend" value="yes" required> Yes</label>
+            <label class="qRow"><input type="radio" name="q5_recommend" value="maybe"> Maybe</label>
+            <label class="qRow"><input type="radio" name="q5_recommend" value="no"> No</label>
+          </div>
+
+          <div class="qBlock">
+            <div class="qK">Optional comment (one sentence)</div>
+            <textarea id="qNote" name="q_note" class="qNote" rows="3" placeholder="What did you like most?"></textarea>
+          </div>
+
+          <div class="qActions">
+            <button id="surveySubmitBtn" class="secBtn secBtnGhost" type="submit">Submit Feedback</button>
+            <div id="surveyThanks" class="surveyThanks" aria-live="polite" style="display:none;">✓ Feedback recorded. Thank you for contributing.</div>
+          </div>
+        </form>
       </section>
 
       <div id="errLine" class="secErr" style="display:none;"></div>
 
       <!-- Footer -->
       <footer class="secFoot">
-        <div class="secFootLeft" id="tinyFoot">v—</div>
         <div class="secFootCenter">SCZN3</div>
         <div id="sessionGhost" class="secFootRight">—</div>
       </footer>
@@ -108,6 +159,25 @@
     </section>
   </main>
 
-  <script defer src="./sec.js?v=SEC-FINAL-0216A"></script>
+  <script defer src="./sec.js?v=SEC-FINAL-0212A-SURVEY" ></script>
+
+  <!-- Tiny CSS for survey (inline so we don't create new files) -->
+  <style>
+    .secSurvey{margin-top:14px;border:1px solid rgba(255,255,255,.10);background:rgba(255,255,255,.04);border-radius:16px;padding:14px 14px 10px;}
+    .secSurveyHdr{margin-bottom:10px}
+    .secSurveyTitle{font-weight:900;letter-spacing:.3px}
+    .secSurveyOpt{opacity:.65;font-weight:800;font-size:.95em}
+    .secSurveySub{opacity:.70;font-size:.92em;margin-top:4px}
+    .secSurveyForm{display:block}
+    .qBlock{padding:10px 8px;border-top:1px solid rgba(255,255,255,.08)}
+    .qBlock:first-child{border-top:0}
+    .qK{font-weight:800;opacity:.92;margin-bottom:8px}
+    .qRow{display:flex;gap:10px;align-items:center;margin:7px 0;opacity:.92}
+    .qRow input{transform:scale(1.1)}
+    .qNote{width:100%;border-radius:12px;border:1px solid rgba(255,255,255,.14);background:rgba(0,0,0,.20);color:#eef2f7;padding:10px 12px;outline:none}
+    .qActions{display:flex;flex-direction:column;gap:10px;padding:12px 8px 6px}
+    .surveyThanks{opacity:.85}
+    .surveyLocked{opacity:.75;pointer-events:none}
+  </style>
 </body>
-</html>b
+</html>
