@@ -1,31 +1,27 @@
-/* docs/sec.js (FULL REPLACEMENT) — SEC + 4-MODE PILOT SURVEY (EFFICIENCY VERSION) */
+/* docs/sec.js (FULL REPLACEMENT) — SEC + SURVEY + YARDAGE + TOP SCORES (ROLLING 20 / TOP 10) */
 (() => {
   const $ = (id) => document.getElementById(id);
 
   // ==============================
-  // SURVEY OUTPUT MODES (toggle)
+  // OUTPUT MODES (google sheets HOLD)
   // ==============================
   const SURVEY_MODE = {
-    localStorage: true,   // A: always on
-    email: false,         // B: optional (mailto)
-    googleSheet: false,   // C: optional (Apps Script endpoint)
-    jsonExport: true      // D: portal-ready JSON log
+    localStorage: true,
+    email: false,
+    googleSheet: false,
+    jsonExport: true
   };
-
-  // If you enable googleSheet, paste your Apps Script URL here:
-  const GOOGLE_SHEET_ENDPOINT = ""; // e.g. "https://script.google.com/macros/s/XXXX/exec"
-
-  // If you enable email mode, paste your email here:
-  const EMAIL_TO = ""; // e.g. "ron@yourdomain.com"
 
   // ==============================
   // UI
   // ==============================
+  const elScoreCard = $("scoreCard");
   const elScore = $("scoreValue");
   const elScoreLabel = $("scoreLabel");
   const elAvgSoft = $("avgSoft");
 
   const elShots = $("shotsVal");
+  const elRange = $("rangeVal");
   const elWind = $("windVal");
   const elElev = $("elevVal");
   const elWindDir = $("windDir");
@@ -42,6 +38,10 @@
   const elErr = $("errLine");
   const elSessionGhost = $("sessionGhost");
 
+  // Trophy
+  const elTopScoresRow = $("topScoresRow");
+  const elTrophyMeta = $("trophyMeta");
+
   // Survey
   const elSurveyPanel = $("surveyPanel");
   const elSurveyForm = $("surveyForm");
@@ -49,18 +49,20 @@
   const elSurveyThanks = $("surveyThanks");
 
   // ==============================
-  // Storage keys (must match index.js)
+  // Storage keys
   // ==============================
   const KEY_PAYLOAD = "SCZN3_SEC_PAYLOAD_V1";
   const KEY_TARGET_IMG_DATA = "SCZN3_TARGET_IMG_DATAURL_V1";
 
-  // Soft scoring memory (Avg)
-  const KEY_SCORES_DAY = "SCZN3_SCORES_BY_DAY_V1"; // { "YYYY-MM-DD": [numbers...] }
+  const KEY_SCORES_DAY = "SCZN3_SCORES_BY_DAY_V1"; // avg by day
+  const KEY_TOP_SCORES = "SCZN3_TOP_SCORES_V1";    // rolling 20 sessions (objects)
 
-  // Survey logs
-  const KEY_SURVEY_LOG = "SCZN3_SURVEY_LOG_V1";       // array rows
-  const KEY_SURVEY_JSON_EXPORT = "SCZN3_SURVEY_JSON_V1"; // array rows (same, kept separate if you want)
+  const KEY_SURVEY_LOG = "SCZN3_SURVEY_LOG_V1";
+  const KEY_SURVEY_JSON_EXPORT = "SCZN3_SURVEY_JSON_V1";
 
+  // ==============================
+  // Helpers
+  // ==============================
   function showErr(msg) {
     if (!elErr) return;
     elErr.style.display = "block";
@@ -72,7 +74,6 @@
     const x = Number(n);
     return Number.isFinite(x) ? x : fallback;
   }
-
   function safeJSON(s) {
     try { return JSON.parse(String(s || "")); } catch { return null; }
   }
@@ -85,11 +86,8 @@
       const json = decodeURIComponent(escape(atob(b64)));
       const obj = JSON.parse(json);
       return obj && typeof obj === "object" ? obj : null;
-    } catch {
-      return null;
-    }
+    } catch { return null; }
   }
-
   function getPayload() {
     return decodePayloadFromQuery() || safeJSON(localStorage.getItem(KEY_PAYLOAD)) || null;
   }
@@ -113,7 +111,7 @@
     return { avg, n: arr.length };
   }
 
-  // ===== Score labeling + color bands (YOUR LOCK)
+  // ===== LOCKED score bands
   // GREEN = 90–100
   // YELLOW = 60–89
   // RED = 0–59
@@ -127,6 +125,13 @@
     if (s >= 60) return "yellow";
     return "red";
   }
+  function applyScoreBandClass(band) {
+    if (!elScoreCard) return;
+    elScoreCard.classList.remove("scoreBandGreen","scoreBandYellow","scoreBandRed");
+    if (band === "green") elScoreCard.classList.add("scoreBandGreen");
+    if (band === "yellow") elScoreCard.classList.add("scoreBandYellow");
+    if (band === "red") elScoreCard.classList.add("scoreBandRed");
+  }
 
   function normalizeDirWord(w) {
     const x = String(w || "").toUpperCase();
@@ -135,7 +140,6 @@
   }
 
   function vendorNameFromUrl(url) {
-    // Pilot default
     if (typeof url === "string" && url.startsWith("http")) return "Baker Printing";
     return "—";
   }
@@ -148,7 +152,92 @@
   }
 
   // ==============================
-  // CERTIFICATE EXPORT (existing)
+  // Trophy (rolling 20 / top 10)
+  // ==============================
+  function readTopScores() {
+    const arr = safeJSON(localStorage.getItem(KEY_TOP_SCORES));
+    return Array.isArray(arr) ? arr : [];
+  }
+  function writeTopScores(arr) {
+    try { localStorage.setItem(KEY_TOP_SCORES, JSON.stringify(arr.slice(-20))); } catch {}
+  }
+  function pushTopScore(entry) {
+    const arr = readTopScores();
+    arr.push(entry);
+    writeTopScores(arr);
+    return arr;
+  }
+  function renderTopScores(arr) {
+    if (!elTopScoresRow) return;
+
+    const sorted = [...arr].sort((a,b) => (b.score||0) - (a.score||0));
+    const top10 = sorted.slice(0,10);
+
+    elTopScoresRow.innerHTML = "";
+    top10.forEach((e, idx) => {
+      const chip = document.createElement("div");
+      chip.className = "scoreChip";
+
+      const rank = document.createElement("span");
+      rank.className = "chipRank";
+      rank.textContent = `#${idx+1}`;
+
+      const score = document.createElement("span");
+      score.className = "chipScore";
+      score.textContent = String(e.score ?? "—");
+
+      const dim = document.createElement("span");
+      dim.className = "chipDim";
+      dim.textContent = `${e.rangeYds ?? "—"}y`;
+
+      chip.appendChild(rank);
+      chip.appendChild(score);
+      chip.appendChild(dim);
+      elTopScoresRow.appendChild(chip);
+    });
+
+    if (elTrophyMeta) elTrophyMeta.textContent = `Top 10 (rolling ${Math.min(arr.length,20)})`;
+  }
+
+  // ==============================
+  // Survey logging
+  // ==============================
+  function readFormValues(form) {
+    const fd = new FormData(form);
+    const obj = {};
+    for (const [k, v] of fd.entries()) obj[k] = String(v || "");
+    return obj;
+  }
+
+  function getSurveyLog(key) {
+    const arr = safeJSON(localStorage.getItem(key));
+    return Array.isArray(arr) ? arr : [];
+  }
+
+  function pushSurveyRow(row) {
+    if (SURVEY_MODE.localStorage) {
+      const log = getSurveyLog(KEY_SURVEY_LOG);
+      log.push(row);
+      try { localStorage.setItem(KEY_SURVEY_LOG, JSON.stringify(log.slice(-5000))); } catch {}
+    }
+    if (SURVEY_MODE.jsonExport) {
+      const log = getSurveyLog(KEY_SURVEY_JSON_EXPORT);
+      log.push(row);
+      try { localStorage.setItem(KEY_SURVEY_JSON_EXPORT, JSON.stringify(log.slice(-5000))); } catch {}
+    }
+  }
+
+  function lockSurveyUI() {
+    if (elSurveyPanel) elSurveyPanel.classList.add("surveyLocked");
+    if (elSurveySubmit) elSurveySubmit.disabled = true;
+  }
+  function showSurveyThanks() {
+    if (!elSurveyThanks) return;
+    elSurveyThanks.style.display = "block";
+  }
+
+  // ==============================
+  // Export certificate PNG (adds yardage)
   // ==============================
   async function exportCertificatePNG(p) {
     const dataUrl = localStorage.getItem(KEY_TARGET_IMG_DATA) || "";
@@ -167,14 +256,12 @@
     const border = "rgba(17,24,39,.28)";
 
     g.fillStyle = bg; g.fillRect(0,0,W,H);
-
     g.strokeStyle = border; g.lineWidth = 3; g.strokeRect(34,34,W-68,H-68);
     g.strokeStyle = "rgba(17,24,39,.14)"; g.lineWidth = 2; g.strokeRect(52,52,W-104,H-104);
 
     g.fillStyle = ink;
     g.font = "900 34px system-ui, -apple-system, Segoe UI, Roboto, Arial";
     g.fillText("SHOOTER EXPERIENCE CARD", 92, 128);
-
     drawSECMark(g, W - 240, 92);
 
     const pad = 92, gap = 24, topY = 170, panelH = 520;
@@ -183,32 +270,35 @@
     drawRoundRect(g, pad, topY, panelW, panelH, 22, "rgba(255,255,255,.75)", "rgba(17,24,39,.14)");
     drawRoundRect(g, pad + panelW + gap, topY, panelW, panelH, 22, "rgba(255,255,255,.75)", "rgba(17,24,39,.14)");
 
-    const score = Math.round(clampNum(p.score, 0));
+    const scoreN = Math.round(clampNum(p.score, 0));
     g.fillStyle = soft; g.font = "900 18px system-ui, -apple-system, Segoe UI, Roboto, Arial";
     g.fillText("SCORE", pad + 28, topY + 56);
 
     g.fillStyle = ink; g.font = "1000 170px system-ui, -apple-system, Segoe UI, Roboto, Arial";
-    g.fillText(String(score), pad + 28, topY + 220);
+    g.fillText(String(scoreN), pad + 28, topY + 220);
 
     g.fillStyle = ink; g.font = "900 34px system-ui, -apple-system, Segoe UI, Roboto, Arial";
-    g.fillText(labelForScore(score), pad + 28, topY + 280);
+    g.fillText(labelForScore(scoreN), pad + 28, topY + 280);
 
     g.fillStyle = soft; g.font = "800 22px system-ui, -apple-system, Segoe UI, Roboto, Arial";
     g.fillText("Measured results from confirmed hits", pad + 28, topY + 334);
 
+    // Stats row (includes RANGE)
     const statsY = topY + panelH + 26, statsH = 170;
     const statW = (W - pad*2 - gap*2) / 3;
 
     const shots = clampNum(p.shots, 0);
+    const distYds = clampNum(p?.debug?.distanceYds, clampNum(p?.distanceYds, 0));
     const wClicks = clampNum(p.windage?.clicks, 0);
     const eClicks = clampNum(p.elevation?.clicks, 0);
     const wDir = normalizeDirWord(p.windage?.dir);
     const eDir = normalizeDirWord(p.elevation?.dir);
 
     drawStatBox(g, pad + (statW + gap)*0, statsY, statW, statsH, "HITS", String(shots), "", ink, soft);
-    drawStatBox(g, pad + (statW + gap)*1, statsY, statW, statsH, "WINDAGE", formatClicks(wClicks), wDir, ink, soft);
-    drawStatBox(g, pad + (statW + gap)*2, statsY, statW, statsH, "ELEVATION", formatClicks(eClicks), eDir, ink, soft);
+    drawStatBox(g, pad + (statW + gap)*1, statsY, statW, statsH, "RANGE", String(distYds || "—"), "YDS", ink, soft);
+    drawStatBox(g, pad + (statW + gap)*2, statsY, statW, statsH, "W/E", `${formatClicks(wClicks)} / ${formatClicks(eClicks)}`, `${wDir} / ${eDir}`, ink, soft);
 
+    // Target thumbnail (same as before)
     const thumbX = pad + panelW + gap + 22;
     const thumbY = topY + 70;
     const thumbW = panelW - 44;
@@ -243,17 +333,20 @@
     if (hits && hits.length) hits.forEach(h => drawPoint01(h, "hit"));
     else if (avgPoi) drawPoint01(avgPoi, "hit");
 
+    // Printer line
     const vendorUrl = String(p.vendorUrl || "");
     const vendorName = vendorNameFromUrl(vendorUrl);
     g.fillStyle = soft; g.font = "900 20px system-ui, -apple-system, Segoe UI, Roboto, Arial";
-    g.fillText(`Printer: ${vendorName}`, pad + panelW + gap + 28, topY + panelH - 28);
+    g.fillText(`Printed by: ${vendorName}`, pad + panelW + gap + 28, topY + panelH - 28);
 
+    // Session ghost
     g.fillStyle = "rgba(17,24,39,.28)";
     g.font = "900 18px system-ui, -apple-system, Segoe UI, Roboto, Arial";
     const sid = `Session ${String(p.sessionId || "—")}`;
     const sidW = g.measureText(sid).width;
     g.fillText(sid, W - pad - sidW, H - 92);
 
+    // watermark
     g.save();
     g.globalAlpha = 0.10;
     g.fillStyle = ink;
@@ -264,190 +357,11 @@
     g.restore();
 
     const outUrl = c.toDataURL("image/png");
-    downloadDataUrl(outUrl, `SEC_${String(score).padStart(3,"0")}_${Date.now()}.png`);
+    downloadDataUrl(outUrl, `SEC_${String(scoreN).padStart(3,"0")}_${Date.now()}.png`);
   }
 
   // ==============================
-  // SURVEY LOGGING (4 modes)
-  // ==============================
-  function readFormValues(form) {
-    const fd = new FormData(form);
-    const obj = {};
-    for (const [k, v] of fd.entries()) obj[k] = String(v || "");
-    return obj;
-  }
-
-  function getSurveyLog(key) {
-    const arr = safeJSON(localStorage.getItem(key));
-    return Array.isArray(arr) ? arr : [];
-  }
-
-  function pushSurveyRow(row) {
-    if (SURVEY_MODE.localStorage) {
-      const log = getSurveyLog(KEY_SURVEY_LOG);
-      log.push(row);
-      try { localStorage.setItem(KEY_SURVEY_LOG, JSON.stringify(log.slice(-5000))); } catch {}
-    }
-    if (SURVEY_MODE.jsonExport) {
-      const log = getSurveyLog(KEY_SURVEY_JSON_EXPORT);
-      log.push(row);
-      try { localStorage.setItem(KEY_SURVEY_JSON_EXPORT, JSON.stringify(log.slice(-5000))); } catch {}
-    }
-  }
-
-  async function postToGoogleSheet(row) {
-    if (!SURVEY_MODE.googleSheet) return;
-    if (!GOOGLE_SHEET_ENDPOINT || !GOOGLE_SHEET_ENDPOINT.startsWith("http")) return;
-
-    // keep it resilient—no throw
-    try {
-      await fetch(GOOGLE_SHEET_ENDPOINT, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(row)
-      });
-    } catch {}
-  }
-
-  function emailRow(row) {
-    if (!SURVEY_MODE.email) return;
-    if (!EMAIL_TO || !EMAIL_TO.includes("@")) return;
-
-    try {
-      const subject = encodeURIComponent("Tap-n-Score Pilot Feedback");
-      const body = encodeURIComponent(JSON.stringify(row, null, 2));
-      window.location.href = `mailto:${encodeURIComponent(EMAIL_TO)}?subject=${subject}&body=${body}`;
-    } catch {}
-  }
-
-  function lockSurveyUI() {
-    if (elSurveyPanel) elSurveyPanel.classList.add("surveyLocked");
-    if (elSurveySubmit) elSurveySubmit.disabled = true;
-  }
-
-  function showSurveyThanks() {
-    if (!elSurveyThanks) return;
-    elSurveyThanks.style.display = "block";
-  }
-
-  // ==============================
-  // UI wiring
-  // ==============================
-  function wireUI(p) {
-    hideErr();
-    if (!p) { showErr("Missing SEC payload."); return; }
-
-    const score = Math.round(clampNum(p.score, 0));
-    const shots = clampNum(p.shots, 0);
-
-    const wClicks = clampNum(p.windage?.clicks, 0);
-    const eClicks = clampNum(p.elevation?.clicks, 0);
-    const wDir = normalizeDirWord(p.windage?.dir);
-    const eDir = normalizeDirWord(p.elevation?.dir);
-
-    // Score
-    if (elScore) elScore.textContent = String(score);
-    if (elScoreLabel) elScoreLabel.textContent = labelForScore(score);
-
-    // Optional: add a band class for CSS if you want later
-    const band = bandForScore(score);
-    document.body.dataset.scoreBand = band; // "green" | "yellow" | "red"
-
-    // Soft avg (today)
-    const { avg, n } = recordScoreForAvg(score);
-    if (elAvgSoft) elAvgSoft.textContent = `Avg: ${avg.toFixed(0)} (${n})`;
-
-    // Stats
-    if (elShots) elShots.textContent = String(shots);
-    if (elWind) elWind.textContent = formatClicks(wClicks);
-    if (elElev) elElev.textContent = formatClicks(eClicks);
-    if (elWindDir) elWindDir.textContent = wDir;
-    if (elElevDir) elElevDir.textContent = eDir;
-
-    // Vendor panel
-    const vUrl = String(p.vendorUrl || "");
-    const hasVendor = vUrl.startsWith("http");
-    if (elVendorName) elVendorName.textContent = vendorNameFromUrl(vUrl);
-
-    if (elVendorLink) {
-      if (hasVendor) {
-        elVendorLink.href = vUrl;
-        elVendorLink.style.pointerEvents = "auto";
-        elVendorLink.style.opacity = "1";
-      } else {
-        elVendorLink.removeAttribute("href");
-        elVendorLink.style.pointerEvents = "none";
-        elVendorLink.style.opacity = ".55";
-      }
-    }
-
-    const tgt = p.target?.key ? `Target: ${(p.target.key || "").replace("x","×")}` : "Target: —";
-    const dial = p.dial?.unit ? `${(p.dial.clickValue ?? 0).toFixed(2)} ${String(p.dial.unit)}` : "—";
-    if (elVendorMicro) elVendorMicro.textContent = `For After-Shot Intelligence • ${tgt} • Dial: ${dial}`;
-
-    if (elSessionGhost) elSessionGhost.textContent = `Session ${String(p.sessionId || "—")}`;
-
-    // Buttons
-    elDone?.addEventListener("click", () => goHome());
-    elScoreAnother?.addEventListener("click", () => goHome(true));
-
-    elDownload?.addEventListener("click", async () => {
-      try {
-        elDownload.disabled = true;
-        elDownload.textContent = "Preparing…";
-        await exportCertificatePNG(p);
-      } catch (e) {
-        showErr("Download failed. Try again.");
-        console.error(e);
-      } finally {
-        elDownload.disabled = false;
-        elDownload.textContent = "Download SEC Picture";
-      }
-    });
-
-    // Survey submit
-    elSurveyForm?.addEventListener("submit", async (e) => {
-      e.preventDefault();
-      hideErr();
-
-      const answers = readFormValues(elSurveyForm);
-
-      // Build one row of truth (portal-ready)
-      const row = {
-        type: "pilot_feedback",
-        ts: new Date().toISOString(),
-        sessionId: String(p.sessionId || ""),
-        printer: vendorNameFromUrl(vUrl),
-        vendorUrl: vUrl || "",
-        sku: String(p.sku || p.target?.key || ""), // safe fallback
-        score: score,
-        shots: shots,
-        distanceYds: clampNum(p?.debug?.distanceYds, 0),
-        dialUnit: String(p?.dial?.unit || ""),
-        dialClick: clampNum(p?.dial?.clickValue, 0),
-        windDir: wDir, windClicks: clampNum(wClicks, 0),
-        elevDir: eDir, elevClicks: clampNum(eClicks, 0),
-        targetKey: String(p?.target?.key || ""),
-        answers
-      };
-
-      // A + D
-      pushSurveyRow(row);
-
-      // C
-      await postToGoogleSheet(row);
-
-      // B
-      emailRow(row);
-
-      // Confirm + lock
-      lockSurveyUI();
-      showSurveyThanks();
-    });
-  }
-
-  // ==============================
-  // Drawing helpers (export)
+  // Drawing helpers
   // ==============================
   function drawSECMark(g, x, y) {
     g.save();
@@ -535,8 +449,119 @@
   }
 
   // ==============================
-  // Boot
+  // Boot + wire UI
   // ==============================
+  function wireUI(p) {
+    hideErr();
+    if (!p) { showErr("Missing SEC payload."); return; }
+
+    const scoreN = Math.round(clampNum(p.score, 0));
+    const band = bandForScore(scoreN);
+    applyScoreBandClass(band);
+
+    if (elScore) elScore.textContent = String(scoreN);
+    if (elScoreLabel) elScoreLabel.textContent = labelForScore(scoreN);
+
+    const { avg, n } = recordScoreForAvg(scoreN);
+    if (elAvgSoft) elAvgSoft.textContent = `Avg: ${avg.toFixed(0)} (${n})`;
+
+    const shots = clampNum(p.shots, 0);
+    if (elShots) elShots.textContent = String(shots);
+
+    const distYds = clampNum(p?.debug?.distanceYds, clampNum(p?.distanceYds, 0));
+    if (elRange) elRange.textContent = String(distYds || "—");
+
+    const wClicks = clampNum(p.windage?.clicks, 0);
+    const eClicks = clampNum(p.elevation?.clicks, 0);
+    const wDir = normalizeDirWord(p.windage?.dir);
+    const eDir = normalizeDirWord(p.elevation?.dir);
+
+    if (elWind) elWind.textContent = formatClicks(wClicks);
+    if (elElev) elElev.textContent = formatClicks(eClicks);
+    if (elWindDir) elWindDir.textContent = wDir;
+    if (elElevDir) elElevDir.textContent = eDir;
+
+    const vUrl = String(p.vendorUrl || "");
+    const hasVendor = vUrl.startsWith("http");
+    const printerName = vendorNameFromUrl(vUrl);
+
+    if (elVendorName) elVendorName.textContent = printerName;
+
+    if (elVendorLink) {
+      if (hasVendor) {
+        elVendorLink.href = vUrl;
+        elVendorLink.style.pointerEvents = "auto";
+        elVendorLink.style.opacity = "1";
+      } else {
+        elVendorLink.removeAttribute("href");
+        elVendorLink.style.pointerEvents = "none";
+        elVendorLink.style.opacity = ".55";
+      }
+    }
+
+    const tgt = p.target?.key ? `Target: ${(p.target.key || "").replace("x","×")}` : "Target: —";
+    const dial = p.dial?.unit ? `${(p.dial.clickValue ?? 0).toFixed(2)} ${String(p.dial.unit)}` : "—";
+    if (elVendorMicro) elVendorMicro.textContent = `For After-Shot Intelligence • ${tgt} • ${distYds || "—"} yds • Dial: ${dial}`;
+
+    if (elSessionGhost) elSessionGhost.textContent = `Session ${String(p.sessionId || "—")}`;
+
+    // Trophy logging
+    const entry = {
+      ts: Date.now(),
+      sessionId: String(p.sessionId || ""),
+      score: scoreN,
+      rangeYds: distYds || 0
+    };
+    const scores = pushTopScore(entry);
+    renderTopScores(scores);
+
+    // Buttons
+    elDone?.addEventListener("click", () => goHome());
+    elScoreAnother?.addEventListener("click", () => goHome(true));
+
+    elDownload?.addEventListener("click", async () => {
+      try {
+        elDownload.disabled = true;
+        elDownload.textContent = "Preparing…";
+        await exportCertificatePNG(p);
+      } catch (e) {
+        showErr("Download failed. Try again.");
+        console.error(e);
+      } finally {
+        elDownload.disabled = false;
+        elDownload.textContent = "Download SEC Picture";
+      }
+    });
+
+    // Survey submit
+    elSurveyForm?.addEventListener("submit", (e) => {
+      e.preventDefault();
+      hideErr();
+
+      const answers = readFormValues(elSurveyForm);
+      const row = {
+        type: "pilot_feedback",
+        ts: new Date().toISOString(),
+        sessionId: String(p.sessionId || ""),
+        printer: printerName,
+        vendorUrl: vUrl || "",
+        score: scoreN,
+        shots,
+        distanceYds: distYds || 0,
+        dialUnit: String(p?.dial?.unit || ""),
+        dialClick: clampNum(p?.dial?.clickValue, 0),
+        windDir: wDir, windClicks: wClicks,
+        elevDir: eDir, elevClicks: eClicks,
+        targetKey: String(p?.target?.key || ""),
+        answers
+      };
+
+      pushSurveyRow(row);
+      lockSurveyUI();
+      showSurveyThanks();
+    });
+  }
+
   const payload = getPayload();
   wireUI(payload);
 })();
