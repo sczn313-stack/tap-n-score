@@ -1,4 +1,6 @@
-<!-- docs/sec.html (FULL REPLACEMENT) — SEC + YARDAGE + TOP SCORES “TROPHY” BLOCK + SURVEY -->
+<!-- docs/sec.html (FULL REPLACEMENT) — FINAL SEC (SCREEN DARK / EXPORT LIGHT)
+     + Yardage line added (Distance)
+-->
 <!doctype html>
 <html lang="en">
 <head>
@@ -6,12 +8,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="color-scheme" content="dark" />
   <meta name="theme-color" content="#06070a" />
+
   <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
 
   <title>SEC — Shooter Experience Card</title>
-  <link rel="stylesheet" href="./sec.css?v=SEC-FINAL-0212A" />
+
+  <link rel="stylesheet" href="./sec.css?v=SEC-FINAL-0218A" />
 </head>
 
 <body>
@@ -37,7 +41,7 @@
         </div>
       </header>
 
-      <!-- Top: SCORE + VENDOR -->
+      <!-- Top: SCORE + VENDOR (dominant partnership band) -->
       <section class="secTopBand">
         <div id="scoreCard" class="scoreCard" aria-label="Score">
           <div class="scoreTop">
@@ -48,34 +52,35 @@
           <div id="scoreValue" class="scoreV">0</div>
           <div id="scoreLabel" class="scoreL">—</div>
 
-          <div class="scoreNote">
+          <!-- NEW: Distance line -->
+          <div id="distLine" class="scoreNote" style="margin-top:10px;">
+            Distance: —
+          </div>
+
+          <div class="scoreNote" style="margin-top:8px;">
             Tighter group + closer to aim point = higher score
           </div>
         </div>
 
         <div class="vendorCard" aria-label="Vendor">
-          <div class="vendorK">PRINTED BY</div>
+          <div class="vendorK">TARGET PRINTER</div>
+
+          <!-- You can swap this to an <img> later when you want real logos -->
           <div id="vendorName" class="vendorName">—</div>
 
           <div class="vendorRow">
             <a id="vendorLink" class="vendorBtn" href="#" target="_blank" rel="noopener">Visit Printer</a>
           </div>
 
-          <div id="vendorMicro" class="vendorMicro">For After-Shot Intelligence • —</div>
+          <div id="vendorMicro" class="vendorMicro">—</div>
         </div>
       </section>
 
-      <!-- Stats -->
+      <!-- Compact stats (not dominant) -->
       <section class="secStats" aria-label="Stats">
         <div class="stat">
           <div class="statK">HITS</div>
           <div class="statV"><span id="shotsVal">0</span></div>
-        </div>
-
-        <div class="stat">
-          <div class="statK">RANGE</div>
-          <div class="statV"><span id="rangeVal">—</span> <span class="unit">YDS</span></div>
-          <div class="statDir">—</div>
         </div>
 
         <div class="stat">
@@ -95,77 +100,12 @@
       <section class="secActions" aria-label="Actions">
         <button id="downloadBtn" class="secBtn secBtnPrimary" type="button">Download SEC Picture</button>
         <button id="scoreAnotherBtn" class="secBtn" type="button">Score another</button>
-      </section>
-
-      <!-- TOP SCORES (TROPHY PILL) -->
-      <section id="topScoresPanel" class="secTrophy" aria-label="Top Scores">
-        <div class="trophyHdr">
-          <div class="trophyPill">🏆 TOP SCORES</div>
-          <div id="trophyMeta" class="trophyMeta">Top 10 (rolling 20)</div>
-        </div>
-        <div id="topScoresRow" class="topScoresRow" aria-label="Top score chips"></div>
-      </section>
-
-      <!-- PILOT FEEDBACK (Optional) -->
-      <section id="surveyPanel" class="secSurvey" aria-label="Pilot Feedback">
-        <div class="secSurveyHdr">
-          <div class="secSurveyTitle">Pilot Feedback <span class="secSurveyOpt">(Optional)</span></div>
-          <div class="secSurveySub">No personal info. This helps improve the process.</div>
-        </div>
-
-        <form id="surveyForm" class="secSurveyForm">
-          <div class="qBlock">
-            <div class="qK">1) Was this process easy to use?</div>
-            <label class="qRow"><input type="radio" name="q1_ease" value="very_easy" required> Very easy</label>
-            <label class="qRow"><input type="radio" name="q1_ease" value="somewhat_easy"> Somewhat easy</label>
-            <label class="qRow"><input type="radio" name="q1_ease" value="difficult"> Difficult</label>
-          </div>
-
-          <div class="qBlock">
-            <div class="qK">2) Did the SEC give you useful insight?</div>
-            <label class="qRow"><input type="radio" name="q2_insight" value="yes" required> Yes</label>
-            <label class="qRow"><input type="radio" name="q2_insight" value="somewhat"> Somewhat</label>
-            <label class="qRow"><input type="radio" name="q2_insight" value="not_really"> Not really</label>
-          </div>
-
-          <div class="qBlock">
-            <div class="qK">3) Would you use this again?</div>
-            <label class="qRow"><input type="radio" name="q3_again" value="definitely" required> Definitely</label>
-            <label class="qRow"><input type="radio" name="q3_again" value="maybe"> Maybe</label>
-            <label class="qRow"><input type="radio" name="q3_again" value="no"> No</label>
-          </div>
-
-          <div class="qBlock">
-            <div class="qK">4) Did the correction feel accurate?</div>
-            <label class="qRow"><input type="radio" name="q4_accuracy" value="yes" required> Yes</label>
-            <label class="qRow"><input type="radio" name="q4_accuracy" value="mostly"> Mostly</label>
-            <label class="qRow"><input type="radio" name="q4_accuracy" value="not_sure"> Not sure</label>
-          </div>
-
-          <div class="qBlock">
-            <div class="qK">5) Would you recommend this feature on targets?</div>
-            <label class="qRow"><input type="radio" name="q5_recommend" value="yes" required> Yes</label>
-            <label class="qRow"><input type="radio" name="q5_recommend" value="maybe"> Maybe</label>
-            <label class="qRow"><input type="radio" name="q5_recommend" value="no"> No</label>
-          </div>
-
-          <div class="qBlock">
-            <div class="qK">Optional comment (one sentence)</div>
-            <textarea id="qNote" name="q_note" class="qNote" rows="3" placeholder="What did you like most?"></textarea>
-          </div>
-
-          <div class="qActions">
-            <button id="surveySubmitBtn" class="secBtn secBtnGhost" type="submit">Submit Feedback</button>
-            <div id="surveyThanks" class="surveyThanks" aria-live="polite" style="display:none;">
-              ✓ Feedback recorded. Thank you for contributing.
-            </div>
-          </div>
-        </form>
+        <button id="surveyBtn" class="secBtn" type="button">Survey</button>
       </section>
 
       <div id="errLine" class="secErr" style="display:none;"></div>
 
-      <!-- Footer -->
+      <!-- Footer faint marks -->
       <footer class="secFoot">
         <div class="secFootCenter">SCZN3</div>
         <div id="sessionGhost" class="secFootRight">—</div>
@@ -174,42 +114,6 @@
     </section>
   </main>
 
-  <script defer src="./sec.js?v=SEC-FINAL-0212A-SURVEY-TROPHY" ></script>
-
-  <!-- Tiny CSS: trophy + survey only (keeps it efficient) -->
-  <style>
-    /* Trophy block */
-    .secTrophy{margin-top:12px;border:1px solid rgba(255,255,255,.10);background:rgba(255,255,255,.04);border-radius:16px;padding:12px 12px 10px}
-    .trophyHdr{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}
-    .trophyPill{display:inline-flex;align-items:center;gap:8px;padding:6px 10px;border-radius:999px;border:1px solid rgba(255,255,255,.14);background:rgba(0,0,0,.22);font-weight:900;letter-spacing:.2px}
-    .trophyMeta{opacity:.70;font-weight:800;font-size:.92em}
-    .topScoresRow{display:flex;flex-wrap:wrap;gap:8px}
-    .scoreChip{display:inline-flex;gap:8px;align-items:center;padding:6px 10px;border-radius:999px;border:1px solid rgba(255,255,255,.12);background:rgba(0,0,0,.18);font-weight:900}
-    .chipRank{opacity:.65;font-weight:900}
-    .chipScore{font-weight:1000}
-    .chipDim{opacity:.70;font-weight:800;font-size:.92em}
-
-    /* Score color (force-correct) */
-    .scoreBandGreen #scoreValue{color: rgba(103,243,164,.98) !important;}
-    .scoreBandYellow #scoreValue{color: rgba(245,185,60,.98) !important;}
-    .scoreBandRed #scoreValue{color: rgba(255,88,88,.98) !important;}
-
-    /* Survey */
-    .secSurvey{margin-top:12px;border:1px solid rgba(255,255,255,.10);background:rgba(255,255,255,.04);border-radius:16px;padding:14px 14px 10px;}
-    .secSurveyHdr{margin-bottom:10px}
-    .secSurveyTitle{font-weight:900;letter-spacing:.3px}
-    .secSurveyOpt{opacity:.65;font-weight:800;font-size:.95em}
-    .secSurveySub{opacity:.70;font-size:.92em;margin-top:4px}
-    .secSurveyForm{display:block}
-    .qBlock{padding:10px 8px;border-top:1px solid rgba(255,255,255,.08)}
-    .qBlock:first-child{border-top:0}
-    .qK{font-weight:800;opacity:.92;margin-bottom:8px}
-    .qRow{display:flex;gap:10px;align-items:center;margin:7px 0;opacity:.92}
-    .qRow input{transform:scale(1.1)}
-    .qNote{width:100%;border-radius:12px;border:1px solid rgba(255,255,255,.14);background:rgba(0,0,0,.20);color:#eef2f7;padding:10px 12px;outline:none}
-    .qActions{display:flex;flex-direction:column;gap:10px;padding:12px 8px 6px}
-    .surveyThanks{opacity:.85}
-    .surveyLocked{opacity:.75;pointer-events:none}
-  </style>
+  <script defer src="./sec.js?v=SEC-FINAL-0218A"></script>
 </body>
 </html>
