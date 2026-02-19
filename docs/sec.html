@@ -1,14 +1,4 @@
-<!-- add this right after </header> -->
-<div class="secMid">
-
-  <!-- (leave all your existing sections exactly as-is) -->
-  <section class="secTopBand"> ... </section>
-  <section class="secStats secStats2"> ... </section>
-  <section class="secActions"> ... </section>
-  <div id="errLine" class="secErr" style="display:none;"></div>
-
-</div>
-<!-- end secMid --><!-- docs/sec.html (FULL REPLACEMENT) — SEC SCREEN (DARK) / DOWNLOAD BUILDS LIGHT CERTIFICATE PNG -->
+<!-- docs/sec.html (FULL REPLACEMENT) — SEC with INTERNAL SCROLL (iPad-safe) -->
 <!doctype html>
 <html lang="en">
 <head>
@@ -23,14 +13,14 @@
 
   <title>SEC — Shooter Experience Card</title>
 
-  <link rel="stylesheet" href="./sec.css?v=SEC-RELOCK-0218A" />
+  <link rel="stylesheet" href="./sec.css?v=SEC-FIT-0218A" />
 </head>
 
 <body>
   <main class="secPage">
     <section class="secShell">
 
-      <!-- Header -->
+      <!-- Header (fixed) -->
       <header class="secHdr">
         <div class="secHdrLeft">
           <div class="secBrand" aria-label="Shooter Experience Card SEC">
@@ -39,7 +29,10 @@
             <span class="w">E</span><span class="w">xperience</span>
             <span class="w"> </span>
             <span class="b">C</span><span class="w">ard</span>
-            <span class="secMiniTag"><span class="r">S</span><span class="w">E</span><span class="b">C</span></span>
+
+            <span class="secMiniTag">
+              <span class="r">S</span><span class="w">E</span><span class="b">C</span>
+            </span>
           </div>
           <div class="secSub">After-Shot Intelligence</div>
         </div>
@@ -49,63 +42,68 @@
         </div>
       </header>
 
-      <!-- Top: SCORE + PRINTER -->
-      <section class="secTopBand">
-        <div id="scoreCard" class="scoreCard" aria-label="Score">
-          <div class="scoreTop">
-            <div class="scoreK">SCORE</div>
-            <div id="avgSoft" class="avgSoft">Avg: —</div>
+      <!-- ✅ SCROLL AREA (this is what you’re missing) -->
+      <div class="secMid">
+
+        <!-- Top: SCORE + VENDOR -->
+        <section class="secTopBand" aria-label="Top band">
+          <div id="scoreCard" class="scoreCard" aria-label="Score">
+            <div class="scoreTop">
+              <div class="scoreK">SCORE</div>
+              <div id="avgSoft" class="avgSoft">Avg: —</div>
+            </div>
+
+            <div id="scoreValue" class="scoreV">0</div>
+            <div id="scoreLabel" class="scoreL">—</div>
+
+            <div id="scoreDistance" class="scoreDistance">Distance: —</div>
+
+            <div class="scoreNote">
+              Tighter group + closer to aim point = higher score
+            </div>
           </div>
 
-          <div id="scoreValue" class="scoreV">0</div>
-          <div id="scoreLabel" class="scoreL">—</div>
+          <div class="vendorCard" aria-label="Vendor">
+            <div class="vendorK">TARGET PRINTER</div>
 
-          <!-- ✅ Distance shown on current run -->
-          <div id="distanceLine" class="scoreDistance">Distance: —</div>
+            <div id="vendorName" class="vendorName">—</div>
 
-          <div class="scoreNote">
-            Tighter group + closer to aim point = higher score
+            <div class="vendorRow">
+              <a id="vendorLink" class="vendorBtn" href="#" target="_blank" rel="noopener">Visit Printer</a>
+            </div>
+
+            <div id="vendorMicro" class="vendorMicro">—</div>
           </div>
-        </div>
+        </section>
 
-        <div class="vendorCard" aria-label="Printer">
-          <div class="vendorK">TARGET PRINTER</div>
-
-          <div id="vendorName" class="vendorName">—</div>
-
-          <div class="vendorRow">
-            <a id="vendorLink" class="vendorBtn" href="#" target="_blank" rel="noopener">Visit Printer</a>
+        <!-- Stats (2 boxes only: Windage + Elevation) -->
+        <section class="secStats secStats2" aria-label="Stats">
+          <div class="stat">
+            <div class="statK">WINDAGE</div>
+            <div class="statV"><span id="windVal">—</span> <span class="unit">CLICKS</span></div>
+            <div id="windDir" class="statDir">—</div>
           </div>
 
-          <div id="vendorMicro" class="vendorMicro">—</div>
-        </div>
-      </section>
+          <div class="stat">
+            <div class="statK">ELEVATION</div>
+            <div class="statV"><span id="elevVal">—</span> <span class="unit">CLICKS</span></div>
+            <div id="elevDir" class="statDir">—</div>
+          </div>
+        </section>
 
-      <!-- ✅ Stats: ONLY windage + elevation (no Hits box on screen) -->
-      <section class="secStats secStats2" aria-label="Corrections">
-        <div class="stat">
-          <div class="statK">WINDAGE</div>
-          <div class="statV"><span id="windVal">—</span> <span class="unit">CLICKS</span></div>
-          <div id="windDir" class="statDir">—</div>
-        </div>
+        <!-- Actions -->
+        <section class="secActions" aria-label="Actions">
+          <button id="downloadBtn" class="secBtn secBtnPrimary" type="button">Download SEC Picture</button>
+          <button id="scoreAnotherBtn" class="secBtn" type="button">Score another</button>
+          <button id="surveyBtn" class="secBtn" type="button">Survey</button>
+        </section>
 
-        <div class="stat">
-          <div class="statK">ELEVATION</div>
-          <div class="statV"><span id="elevVal">—</span> <span class="unit">CLICKS</span></div>
-          <div id="elevDir" class="statDir">—</div>
-        </div>
-      </section>
+        <div id="errLine" class="secErr" style="display:none;"></div>
 
-      <!-- Actions -->
-      <section class="secActions" aria-label="Actions">
-        <button id="downloadBtn" class="secBtn secBtnPrimary" type="button">Download SEC Picture</button>
-        <button id="scoreAnotherBtn" class="secBtn" type="button">Score another</button>
-        <button id="surveyBtn" class="secBtn" type="button">Survey</button>
-      </section>
+      </div>
+      <!-- ✅ END SCROLL AREA -->
 
-      <div id="errLine" class="secErr" style="display:none;"></div>
-
-      <!-- Footer faint marks -->
+      <!-- Footer (fixed) -->
       <footer class="secFoot">
         <div class="secFootCenter">SCZN3</div>
         <div id="sessionGhost" class="secFootRight">—</div>
@@ -114,6 +112,6 @@
     </section>
   </main>
 
-  <script defer src="./sec.js?v=SEC-RELOCK-0218A"></script>
+  <script defer src="./sec.js?v=SEC-FIT-0218A"></script>
 </body>
 </html>
