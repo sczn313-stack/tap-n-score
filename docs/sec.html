@@ -1,4 +1,4 @@
-<!-- docs/sec.html (FULL REPLACEMENT) — SEC + TROPHY PILL (Top 10 of last 20) -->
+<!-- docs/sec.html (FULL REPLACEMENT) — SEC SCREEN (DARK) / DOWNLOAD BUILDS LIGHT CERTIFICATE PNG -->
 <!doctype html>
 <html lang="en">
 <head>
@@ -13,63 +13,7 @@
 
   <title>SEC — Shooter Experience Card</title>
 
-  <link rel="stylesheet" href="./sec.css?v=SEC-FINAL-0218B" />
-
-  <!-- Trophy pill styles (self-contained, minimal) -->
-  <style>
-    .trophyWrap{margin-top:10px;}
-    .trophyPill{
-      width:100%;
-      border-radius:999px;
-      border:1px solid rgba(255,255,255,.16);
-      background:rgba(255,255,255,.06);
-      color:#eef2f7;
-      padding:12px 14px;
-      font-weight:900;
-      letter-spacing:.06em;
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap:10px;
-    }
-    .trophyPill .left{display:flex;align-items:center;gap:10px;}
-    .trophyDot{
-      width:10px;height:10px;border-radius:99px;
-      background:rgba(245,158,11,.95);
-      box-shadow:0 0 0 3px rgba(245,158,11,.12);
-    }
-    .trophyChevron{opacity:.7;font-weight:900;}
-    .trophyPanel{
-      margin-top:10px;
-      border-radius:16px;
-      border:1px solid rgba(255,255,255,.12);
-      background:rgba(255,255,255,.04);
-      padding:12px;
-    }
-    .trophyHidden{display:none;}
-    .trophyHdr{
-      display:flex;align-items:baseline;justify-content:space-between;
-      gap:10px;margin-bottom:10px;
-    }
-    .trophyTitle{font-weight:900;letter-spacing:.04em;}
-    .trophyMicro{opacity:.65;font-weight:700;font-size:12px;}
-    .trophyList{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:8px;}
-    .trophyRow{
-      display:flex;align-items:center;justify-content:space-between;gap:10px;
-      padding:10px 10px;border-radius:12px;
-      background:rgba(0,0,0,.18);
-      border:1px solid rgba(255,255,255,.08);
-    }
-    .trophyLeft{display:flex;flex-direction:column;gap:2px;}
-    .trophyScore{
-      font-size:18px;font-weight:1000;letter-spacing:.02em;
-    }
-    .trophyMeta{opacity:.7;font-size:12px;font-weight:700;}
-    .trophyRank{
-      min-width:36px;text-align:center;
-      font-weight:1000;opacity:.7;
-    }
-  </style>
+  <link rel="stylesheet" href="./sec.css?v=SEC-RELOCK-0218A" />
 </head>
 
 <body>
@@ -95,7 +39,7 @@
         </div>
       </header>
 
-      <!-- Top: SCORE + VENDOR -->
+      <!-- Top: SCORE + PRINTER -->
       <section class="secTopBand">
         <div id="scoreCard" class="scoreCard" aria-label="Score">
           <div class="scoreTop">
@@ -106,17 +50,17 @@
           <div id="scoreValue" class="scoreV">0</div>
           <div id="scoreLabel" class="scoreL">—</div>
 
-          <div id="distLine" class="scoreNote" style="margin-top:10px;">
-            Distance: —
-          </div>
+          <!-- ✅ Distance shown on current run -->
+          <div id="distanceLine" class="scoreDistance">Distance: —</div>
 
-          <div class="scoreNote" style="margin-top:8px;">
+          <div class="scoreNote">
             Tighter group + closer to aim point = higher score
           </div>
         </div>
 
-        <div class="vendorCard" aria-label="Vendor">
+        <div class="vendorCard" aria-label="Printer">
           <div class="vendorK">TARGET PRINTER</div>
+
           <div id="vendorName" class="vendorName">—</div>
 
           <div class="vendorRow">
@@ -127,13 +71,8 @@
         </div>
       </section>
 
-      <!-- Stats -->
-      <section class="secStats" aria-label="Stats">
-        <div class="stat">
-          <div class="statK">HITS</div>
-          <div class="statV"><span id="shotsVal">0</span></div>
-        </div>
-
+      <!-- ✅ Stats: ONLY windage + elevation (no Hits box on screen) -->
+      <section class="secStats secStats2" aria-label="Corrections">
         <div class="stat">
           <div class="statK">WINDAGE</div>
           <div class="statV"><span id="windVal">—</span> <span class="unit">CLICKS</span></div>
@@ -150,32 +89,13 @@
       <!-- Actions -->
       <section class="secActions" aria-label="Actions">
         <button id="downloadBtn" class="secBtn secBtnPrimary" type="button">Download SEC Picture</button>
-
-        <!-- ✅ TROPHY PILL lives right under Download -->
-        <div class="trophyWrap">
-          <button id="trophyBtn" class="trophyPill" type="button" aria-expanded="false" aria-controls="trophyPanel">
-            <span class="left">
-              <span class="trophyDot" aria-hidden="true"></span>
-              <span>TROPHY</span>
-            </span>
-            <span class="trophyChevron" aria-hidden="true">▾</span>
-          </button>
-
-          <div id="trophyPanel" class="trophyPanel trophyHidden" aria-hidden="true">
-            <div class="trophyHdr">
-              <div class="trophyTitle">Top 10 (last 20)</div>
-              <div id="trophyMicro" class="trophyMicro">—</div>
-            </div>
-            <ol id="trophyList" class="trophyList"></ol>
-          </div>
-        </div>
-
         <button id="scoreAnotherBtn" class="secBtn" type="button">Score another</button>
         <button id="surveyBtn" class="secBtn" type="button">Survey</button>
       </section>
 
       <div id="errLine" class="secErr" style="display:none;"></div>
 
+      <!-- Footer faint marks -->
       <footer class="secFoot">
         <div class="secFootCenter">SCZN3</div>
         <div id="sessionGhost" class="secFootRight">—</div>
@@ -184,6 +104,6 @@
     </section>
   </main>
 
-  <script defer src="./sec.js?v=SEC-FINAL-0218B"></script>
+  <script defer src="./sec.js?v=SEC-RELOCK-0218A"></script>
 </body>
 </html>
