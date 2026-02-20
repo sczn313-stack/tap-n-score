@@ -3,10 +3,14 @@
    + Instruction mirroring (Aim ↔ Holes) in the info line (fade)
    + Matrix + target size chips
    + iOS-safe photo input (not display:none)
+   + ✅ Pilot Survey URL wired into SEC payload
 ============================================================ */
 
 (() => {
   const $ = (id) => document.getElementById(id);
+
+  // ✅ PILOT SURVEY (Google Form)
+  const PILOT_SURVEY_URL = "https://forms.gle/uCSDTk5BwT4euLYeA";
 
   // Landing / hero
   const elPhotoBtn = $("photoBtn");
@@ -173,7 +177,6 @@
   // ------------------------------------------------------------
   // Instruction line (mirrored + fade)
   // ------------------------------------------------------------
-  // FULL REPLACEMENT: setInstruction(...)  ✅
   function setInstruction(text, kind) {
     if (!elInstruction) return;
 
@@ -184,7 +187,6 @@
       kind === "go"    ? "rgba(47,102,255,.92)"  :   // blue
                          "rgba(238,242,247,.70)";    // neutral
 
-    // Fade-in effect (works on iPhone + iPad)
     elInstruction.style.transition = "opacity 180ms ease, transform 180ms ease, color 120ms ease";
     elInstruction.style.opacity = "0";
     elInstruction.style.transform = "translateY(2px)";
@@ -438,7 +440,6 @@
       h: clampInches(localStorage.getItem(KEY_TARGET_H) || "35", 35)
     };
 
-    // If saved key isn't in presetMap, keep it as "custom" but still load w/h
     const finalKey = (key in presetMap) ? key : (key === "custom" ? "custom" : "23x35");
     setTargetSize(finalKey, p.w, p.h);
   }
@@ -451,7 +452,6 @@
       btn.addEventListener("click", () => {
         const key = btn.getAttribute("data-size") || "23x35";
 
-        // Custom chip: just select custom and keep current w/h
         if (key === "custom") {
           setTargetSize("custom", targetWIn, targetHIn);
           return;
@@ -469,7 +469,6 @@
     elSwapSizeBtn.addEventListener("click", () => {
       const newW = targetHIn;
       const newH = targetWIn;
-      // keep the same key, but this effectively swaps dimensions
       setTargetSize(targetSizeKey || "custom", newW, newH);
     });
   }
@@ -568,7 +567,7 @@
 
     // correction vector = aim - avgPoi (bull - poib)
     const dx = aim.x01 - avg.x; // + means move RIGHT
-    const dy = aim.y01 - avg.y; // + means move DOWN (screen y)
+    const dy = aim.x01 * 0 + (aim.y01 - avg.y); // + means move DOWN (screen y)
 
     // square scoring plane
     const squareIn = Math.min(targetWIn, targetHIn);
@@ -627,7 +626,10 @@
       elevation: { dir: out.elevation.dir, clicks: Number(out.elevation.clicks.toFixed(2)) },
       dial: { unit: out.dial.unit, clickValue: Number(out.dial.clickValue.toFixed(2)) },
       vendorUrl,
-      surveyUrl: "",
+
+      // ✅ this is what SEC page uses to open Survey
+      surveyUrl: PILOT_SURVEY_URL,
+
       target: { key: targetSizeKey, wIn: Number(targetWIn), hIn: Number(targetHIn) },
 
       // include taps for export markers
