@@ -1,15 +1,22 @@
 /* ============================================================
-   docs/sec.css (FULL REPLACEMENT) — TWO-PAGE SEC
-   + Exit button styling (intelligent back)
-   NOTE: Score number color is controlled by classes from JS
+   docs/sec.css (FULL REPLACEMENT) — TWO-PAGE SEC (TIGHT + NO DUPLICATE HEADER)
+   Fixes:
+   ✅ Page 2: removes the “second SEC banner” (header hidden in Report view)
+   ✅ Page 2: tighter top spacing
+   ✅ No “yellow banner” feel introduced by CSS (keeps plates clean)
+   ✅ Page 1: score band + action pills share the same glow family
+   ✅ Supports score color-by-band on Page 1 via .scoreGood/.scoreMid/.scoreLow
 ============================================================ */
 
 :root{
   --bg:#06070a;
   --fg:rgba(238,242,247,.92);
   --muted:rgba(238,242,247,.70);
-  --line:rgba(255,255,255,.14);
-  --panel:rgba(255,255,255,.07);
+  --muted2:rgba(238,242,247,.62);
+  --panel:rgba(255,255,255,.04);
+  --panel2:rgba(255,255,255,.06);
+  --stroke:rgba(255,255,255,.10);
+  --stroke2:rgba(255,255,255,.16);
   --shadow:rgba(0,0,0,.45);
 
   --red:#ff4d4d;
@@ -29,25 +36,25 @@ body{
   font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
 }
 
+/* ---------- Layout ---------- */
 .secPage{
   min-height:100vh;
-  padding:14px 14px 18px;
+  padding:12px 12px 16px;
 }
 
 .view{ display:none; }
 .view.viewOn{ display:block; }
 
+/* ---------- Header (Page 1) ---------- */
 .secHeader{
-  padding:10px 6px 10px;
+  padding:8px 4px 10px;
 }
-
 .secHeaderTop{
   display:flex;
   align-items:flex-end;
   justify-content:space-between;
   gap:12px;
 }
-
 .secRWB{
   font-weight:1000;
   letter-spacing:.10em;
@@ -58,61 +65,60 @@ body{
 .secRWB .w{ color:var(--white); }
 .secRWB .b{ color:var(--blue); }
 
-.bigSEC{ font-size:56px; }
-
 .secSub{
-  font-weight:800;
+  font-weight:900;
   font-size:12px;
   letter-spacing:.12em;
-  color:rgba(238,242,247,.62);
+  color:var(--muted2);
   text-transform:uppercase;
   margin-bottom:6px;
 }
 
-/* ✅ NEW Exit row/button */
+/* Optional top-right exit row (if you add it) */
 .secExitRow{
   display:flex;
   justify-content:flex-end;
   margin-top:8px;
 }
-
 .exitBtn{
   border:0;
   border-radius:999px;
   padding:8px 14px;
-  font-weight:900;
+  font-weight:1000;
   font-size:12px;
   letter-spacing:.06em;
   background:rgba(255,255,255,.05);
-  border:1px solid rgba(255,255,255,.16);
-  color:rgba(238,242,247,.75);
+  border:1px solid var(--stroke2);
+  color:rgba(238,242,247,.78);
   box-shadow:
     0 0 0 1px rgba(255,255,255,.05) inset,
     0 8px 20px rgba(0,0,0,.35);
 }
 .exitBtn:active{ transform:translateY(1px); }
 
+/* ---------- Card Shell ---------- */
 .card{
   background:linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03));
-  border:1px solid rgba(255,255,255,.10);
+  border:1px solid var(--stroke);
   border-radius:22px;
-  padding:16px;
+  padding:14px;
   box-shadow:0 18px 40px var(--shadow);
 }
 
+/* ---------- Page 1: Score ---------- */
 .scoreWrap{
   text-align:center;
-  padding:10px 10px 14px;
+  padding:10px 10px 12px;
   border-radius:18px;
-  background:rgba(255,255,255,.04);
-  border:1px solid rgba(255,255,255,.10);
+  background:var(--panel);
+  border:1px solid var(--stroke);
 }
 
 .scoreLabel{
-  font-weight:900;
+  font-weight:1000;
   letter-spacing:.14em;
   font-size:13px;
-  color:rgba(238,242,247,.70);
+  color:var(--muted);
 }
 
 .scoreValue{
@@ -121,9 +127,32 @@ body{
   line-height:1;
   margin-top:6px;
   margin-bottom:10px;
-  /* JS will add scoreNumGreen/Yellow/Red */
+  /* default if JS doesn’t set a class */
+  color:rgba(238,242,247,.92);
+  text-shadow:0 10px 26px rgba(0,0,0,.35);
 }
 
+/* Score color-by-band (JS can toggle these on #scoreValue) */
+.scoreGood{
+  color:var(--green);
+  text-shadow:
+    0 0 14px rgba(72,255,139,.22),
+    0 10px 26px rgba(0,0,0,.35);
+}
+.scoreMid{
+  color:var(--yellow);
+  text-shadow:
+    0 0 14px rgba(255,232,90,.22),
+    0 10px 26px rgba(0,0,0,.35);
+}
+.scoreLow{
+  color:var(--red);
+  text-shadow:
+    0 0 14px rgba(255,77,77,.22),
+    0 10px 26px rgba(0,0,0,.35);
+}
+
+/* “Band pill” under score — same glow family as action pills */
 .scoreBand{
   display:inline-block;
   padding:10px 16px;
@@ -132,89 +161,108 @@ body{
   letter-spacing:.08em;
   font-size:12px;
   text-transform:uppercase;
-  border:1px solid rgba(255,255,255,.14);
-  background:rgba(255,255,255,.06);
-  color:rgba(238,242,247,.82);
-  box-shadow:0 10px 30px rgba(0,0,0,.35);
+  border:1px solid rgba(255,255,255,.18);
+  background:rgba(255,255,255,.05);
+  color:rgba(238,242,247,.86);
+  box-shadow:
+    0 0 0 1px rgba(255,255,255,.06) inset,
+    0 10px 28px rgba(0,0,0,.32);
 }
 
-/* LOCKED band colors */
-.scoreBandGreen{ background:rgba(72,255,139,.92); color:#031009; border-color:rgba(255,255,255,.12); }
-.scoreBandYellow{ background:rgba(255,232,90,.92); color:#191300; border-color:rgba(255,255,255,.12); }
-.scoreBandRed{ background:rgba(255,77,77,.92); color:#1b0000; border-color:rgba(255,255,255,.12); }
-.scoreBandNeutral{ background:rgba(255,255,255,.06); color:rgba(238,242,247,.78); }
+/* Keep your locked band colors */
+.scoreBandGreen{
+  background:rgba(72,255,139,.92);
+  color:#031009;
+  border-color:rgba(255,255,255,.12);
+}
+.scoreBandYellow{
+  background:rgba(255,232,90,.92);
+  color:#191300;
+  border-color:rgba(255,255,255,.12);
+}
+.scoreBandRed{
+  background:rgba(255,77,77,.92);
+  color:#1b0000;
+  border-color:rgba(255,255,255,.12);
+}
+.scoreBandNeutral{
+  background:rgba(255,255,255,.05);
+  color:rgba(238,242,247,.72);
+}
 
-/* ✅ Score number colors (Page 1) */
-.scoreNumGreen{ color:rgba(72,255,139,.98); text-shadow:0 12px 34px rgba(72,255,139,.20); }
-.scoreNumYellow{ color:rgba(255,232,90,.98); text-shadow:0 12px 34px rgba(255,232,90,.18); }
-.scoreNumRed{ color:rgba(255,77,77,.98); text-shadow:0 12px 34px rgba(255,77,77,.18); }
-.scoreNumNeutral{ color:rgba(238,242,247,.92); text-shadow:0 12px 34px rgba(0,0,0,.35); }
-
+/* Tip line */
 .scoreTip{
-  margin-top:12px;
-  font-weight:800;
+  margin-top:10px;
+  font-weight:900;
   font-size:13px;
-  color:rgba(238,242,247,.70);
+  letter-spacing:.02em;
+  color:rgba(238,242,247,.62);
 }
 
+/* ---------- Page 1: Big Clicks ---------- */
 .clicksBig{
   display:grid;
   grid-template-columns:1fr 1fr;
   gap:12px;
-  margin-top:14px;
+  margin-top:12px;
 }
 
 .clickBox{
   border-radius:18px;
-  padding:14px 12px;
-  background:rgba(255,255,255,.04);
-  border:1px solid rgba(255,255,255,.10);
+  background:var(--panel);
+  border:1px solid var(--stroke);
+  padding:12px 12px 14px;
   text-align:center;
 }
 
 .clickHdr{
   font-weight:1000;
-  letter-spacing:.12em;
+  letter-spacing:.14em;
   font-size:12px;
-  color:rgba(238,242,247,.70);
+  color:rgba(238,242,247,.64);
+  text-transform:uppercase;
 }
 
 .clickVal{
+  margin-top:6px;
   font-weight:1000;
-  font-size:56px;
-  line-height:1;
-  margin-top:8px;
+  font-size:52px;
+  letter-spacing:.02em;
   color:rgba(238,242,247,.92);
+  text-shadow:0 10px 26px rgba(0,0,0,.35);
 }
 
 .clickDir{
-  margin-top:8px;
+  margin-top:4px;
   font-weight:1000;
-  letter-spacing:.12em;
-  font-size:14px;
-  color:rgba(47,102,255,.95);
+  font-size:20px;
+  letter-spacing:.20em;
+  color:rgba(238,242,247,.78);
+  text-transform:uppercase;
 }
 
+/* Mini run pills */
 .miniLine{
   display:flex;
-  gap:10px;
   flex-wrap:wrap;
+  gap:8px;
   justify-content:center;
-  margin-top:14px;
+  margin-top:12px;
 }
-
 .miniPill{
   display:inline-block;
   padding:8px 12px;
   border-radius:999px;
-  border:1px solid rgba(255,255,255,.14);
-  background:rgba(255,255,255,.05);
-  color:rgba(238,242,247,.78);
-  font-weight:900;
+  font-weight:1000;
   font-size:12px;
   letter-spacing:.06em;
+  background:rgba(255,255,255,.05);
+  border:1px solid rgba(255,255,255,.14);
+  color:rgba(238,242,247,.74);
+  box-shadow:0 10px 22px rgba(0,0,0,.25);
 }
 
+/* Primary actions */
 .primaryActions{
   margin-top:14px;
   text-align:center;
@@ -223,120 +271,149 @@ body{
 .primaryBtn{
   width:100%;
   border:0;
-  border-radius:18px;
-  padding:16px 16px;
+  border-radius:16px;
+  padding:14px 14px;
   font-weight:1000;
-  font-size:15px;
+  font-size:16px;
   letter-spacing:.02em;
-  color:#07080c;
-  background:linear-gradient(90deg, rgba(255,77,77,.92), rgba(238,242,247,.92), rgba(47,102,255,.92));
-  box-shadow:0 18px 40px rgba(0,0,0,.40);
+  color:#0b0d12;
+  background:linear-gradient(90deg, rgba(72,255,139,.92), rgba(47,102,255,.92));
+  box-shadow:
+    0 0 0 1px rgba(255,255,255,.12) inset,
+    0 16px 38px rgba(0,0,0,.34);
 }
 .primaryBtn:active{ transform:translateY(1px); }
 
 .microNote{
-  margin-top:10px;
-  font-weight:800;
-  font-size:12px;
-  color:rgba(238,242,247,.62);
-}
-
-.secFooter{
-  text-align:center;
-  margin-top:12px;
-  color:rgba(238,242,247,.45);
+  margin-top:8px;
   font-weight:900;
-  letter-spacing:.12em;
   font-size:12px;
+  color:rgba(238,242,247,.56);
 }
 
+/* ---------- Footer ---------- */
+.secFooter{
+  padding:12px 4px 0;
+  text-align:center;
+}
 .footerMark{
   display:inline-block;
-  padding:6px 12px;
+  padding:6px 14px;
   border-radius:999px;
+  font-weight:1000;
+  letter-spacing:.16em;
+  font-size:11px;
+  color:rgba(238,242,247,.40);
   border:1px solid rgba(255,255,255,.10);
   background:rgba(255,255,255,.03);
 }
 
-/* Page 2 */
-.reportHeader{ padding-bottom:6px; }
+/* ============================================================
+   PAGE 2 (REPORT) — tighten + remove duplicated header
+============================================================ */
 
+/* Tighten page 2 overall */
+#viewReport.viewOn{
+  padding-top:0;
+}
+
+/* Remove Page 2 header entirely (this fixes “SEC banner duplicated”) */
+#viewReport .secHeader{
+  display:none !important;
+}
+
+/* Report card area */
 .reportCard{
-  margin-top:6px;
+  margin-top:0;
+  padding-top:12px;
 }
 
 .saveHint{
   text-align:center;
-  font-weight:900;
-  color:rgba(238,242,247,.72);
-  font-size:13px;
+  font-weight:1000;
+  letter-spacing:.04em;
+  font-size:12px;
+  color:rgba(238,242,247,.62);
   margin-bottom:10px;
 }
 
+/* Image shell: keep it clean (no “banner” overlay) */
 .cardImgShell{
-  width:100%;
   border-radius:18px;
   overflow:hidden;
-  border:1px solid rgba(255,255,255,.12);
-  background:rgba(255,255,255,.03);
-  box-shadow:0 16px 36px rgba(0,0,0,.40);
+  border:1px solid rgba(255,255,255,.10);
+  background:rgba(0,0,0,.18);
+  box-shadow:0 18px 40px rgba(0,0,0,.35);
 }
-
 .cardImgShell img{
+  display:block;
   width:100%;
   height:auto;
-  display:block;
-  -webkit-touch-callout:default;
   user-select:none;
+  -webkit-user-select:none;
+  -webkit-touch-callout:default;
 }
 
+/* Actions */
 .reportActions{
-  display:grid;
-  grid-template-columns:1fr;
+  display:flex;
+  flex-direction:column;
   gap:10px;
   margin-top:12px;
 }
 
 .btnSecondary{
   width:100%;
-  border-radius:16px;
+  border-radius:14px;
   padding:12px 14px;
+  background:rgba(255,255,255,.05);
+  border:1px solid rgba(255,255,255,.16);
+  color:rgba(238,242,247,.82);
   font-weight:1000;
   font-size:14px;
-  letter-spacing:.04em;
-  border:1px solid rgba(255,255,255,.16);
-  background:rgba(255,255,255,.05);
-  color:rgba(238,242,247,.82);
-  box-shadow:0 14px 30px rgba(0,0,0,.35);
+  letter-spacing:.02em;
+  box-shadow:0 12px 28px rgba(0,0,0,.28);
 }
 .btnSecondary:active{ transform:translateY(1px); }
 
-.vendorBtn, .surveyBtn{
+/* Vendor + Survey buttons (premium weight at bottom) */
+.vendorBtn,
+.surveyBtn{
+  width:100%;
   display:block;
   text-align:center;
   text-decoration:none;
-  border-radius:16px;
+  border-radius:14px;
   padding:12px 14px;
   font-weight:1000;
   font-size:14px;
-  letter-spacing:.04em;
-  border:1px solid rgba(255,255,255,.14);
-  color:#07080c;
-  box-shadow:0 16px 34px rgba(0,0,0,.36);
+  letter-spacing:.02em;
+  box-shadow:
+    0 0 0 1px rgba(255,255,255,.10) inset,
+    0 16px 34px rgba(0,0,0,.32);
 }
 
 .vendorBtn{
-  background:linear-gradient(90deg, rgba(238,242,247,.92), rgba(255,232,90,.92));
+  color:#0b0d12;
+  background:linear-gradient(90deg, rgba(180,180,180,.90), rgba(255,232,90,.90));
 }
 
 .surveyBtn{
-  background:linear-gradient(90deg, rgba(72,255,139,.92), rgba(47,102,255,.90));
+  color:#0b0d12;
+  background:linear-gradient(90deg, rgba(72,255,139,.92), rgba(47,102,255,.92));
 }
 
 .reportMicro{
+  margin-top:8px;
   text-align:center;
-  margin-top:10px;
-  font-weight:800;
-  font-size:12px;
-  color:rgba(238,242,247,.55);
+  font-weight:900;
+  font-size:11px;
+  color:rgba(238,242,247,.50);
+}
+
+/* Responsive tweaks */
+@media (min-width: 540px){
+  .secPage{ max-width:520px; margin:0 auto; }
+  .scoreValue{ font-size:92px; }
+  .clickVal{ font-size:56px; }
 }
