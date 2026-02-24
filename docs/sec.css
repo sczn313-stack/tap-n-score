@@ -1,323 +1,390 @@
 /* ============================================================
-   docs/sec.css (FULL REPLACEMENT) — TWO-PAGE SEC (Precision + Report Card)
-   - SEC centered on page 2
-   - Score bright, color-coded (90–100 green, 60–89 yellow, 0–59 red)
-   - Report card is an <img> so iOS can “tap & hold to save”
+   docs/sec.css (FULL REPLACEMENT) — TWO-PAGE SEC
+   Page 1: Precision (score + big clicks)
+   Page 2: Report Card (tap & hold to save) + Vendor + Survey
+   NOTE: Score BAND pill under the score uses the same “glow pill”
+         styling as the action buttons (no yellow band background).
 ============================================================ */
 
+/* -----------------------------
+   Base / Reset
+----------------------------- */
 :root{
   --bg:#06070a;
-  --panel:#0b0e14;
-  --panel2:#0f1420;
-  --line:rgba(255,255,255,.10);
+  --card:rgba(255,255,255,.06);
+  --cardBorder:rgba(255,255,255,.14);
   --text:rgba(238,242,247,.92);
   --muted:rgba(238,242,247,.70);
+  --muted2:rgba(238,242,247,.55);
 
-  --r:#ff4d4d;
-  --w:#eef2f7;
-  --b:#2f66ff;
+  --red:#ff4d4d;
+  --white:#eef2f7;
+  --blue:#2f66ff;
 
   --green:#48ff8b;
   --yellow:#ffe85a;
-  --red:#ff4d4d;
 
-  --shadow:0 18px 48px rgba(0,0,0,.55);
+  --shadow:0 12px 34px rgba(0,0,0,.55);
+  --shadowSoft:0 10px 28px rgba(0,0,0,.45);
+
+  --radius:22px;
+  --radiusPill:999px;
 }
 
 *{ box-sizing:border-box; }
-html,body{ height:100%; }
-body{
+html,body{
+  height:100%;
   margin:0;
-  background:radial-gradient(1200px 900px at 40% -10%, rgba(47,102,255,.10), transparent 60%),
-             radial-gradient(900px 700px at 90% 10%, rgba(255,77,77,.08), transparent 55%),
-             var(--bg);
+  padding:0;
+  background:var(--bg);
   color:var(--text);
-  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
 }
+a{ color:inherit; text-decoration:none; }
+button{ font-family:inherit; }
 
+/* -----------------------------
+   Page container
+----------------------------- */
 .secPage{
   min-height:100%;
-  display:flex;
-  align-items:stretch;
-  justify-content:center;
-  padding:12px 10px 18px;
+  padding:16px 14px 26px;
 }
 
+/* -----------------------------
+   View switching
+----------------------------- */
 .view{
-  width:min(820px, 100%);
   display:none;
-  flex-direction:column;
-  gap:10px;
 }
-.viewOn{ display:flex; }
+.view.viewOn{
+  display:block;
+}
 
+/* -----------------------------
+   Header
+----------------------------- */
 .secHeader{
-  padding:8px 2px 2px;
+  padding:12px 8px 10px;
 }
 .secHeaderTop{
   display:flex;
   flex-direction:column;
   align-items:center;
-  gap:4px;
+  justify-content:center;
+  gap:8px;
 }
 
 .secRWB{
-  font-weight:900;
-  letter-spacing:.12em;
-  display:flex;
-  gap:6px;
-  align-items:baseline;
-  font-size:36px;
+  font-weight:950;
+  letter-spacing:.08em;
+  font-size:52px;
   line-height:1;
-  text-shadow:0 10px 30px rgba(0,0,0,.55);
 }
-.secRWB .r{ color:var(--r); }
-.secRWB .w{ color:var(--w); }
-.secRWB .b{ color:var(--b); }
+.secRWB .r{ color:var(--red); }
+.secRWB .w{ color:var(--white); }
+.secRWB .b{ color:var(--blue); }
 
-.bigSEC{ font-size:44px; }
+.bigSEC{
+  font-size:64px;
+}
 
 .secSub{
-  font-size:12px;
-  letter-spacing:.14em;
-  color:rgba(238,242,247,.68);
-  text-transform:uppercase;
+  font-weight:800;
+  color:var(--muted);
+  letter-spacing:.02em;
+  font-size:14px;
 }
 
+/* -----------------------------
+   Card
+----------------------------- */
 .card{
-  background:linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02));
-  border:1px solid var(--line);
-  border-radius:16px;
+  width:min(720px, 100%);
+  margin:0 auto;
+  background:var(--card);
+  border:1px solid var(--cardBorder);
+  border-radius:var(--radius);
   box-shadow:var(--shadow);
-  padding:14px;
+  padding:18px 16px;
 }
 
+/* report card page card spacing */
+.reportCard{
+  padding:16px 14px 16px;
+}
+
+/* -----------------------------
+   Score block
+----------------------------- */
 .scoreWrap{
-  background:linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02));
-  border:1px solid rgba(255,255,255,.10);
-  border-radius:14px;
-  padding:14px 14px 12px;
   text-align:center;
+  padding:10px 10px 12px;
 }
 
 .scoreLabel{
-  font-size:12px;
-  letter-spacing:.14em;
-  color:rgba(238,242,247,.70);
-  text-transform:uppercase;
-}
-
-.scoreValue{
-  margin-top:4px;
-  font-size:52px;
   font-weight:900;
-  line-height:1;
+  letter-spacing:.10em;
+  color:var(--muted);
+  font-size:14px;
 }
 
+/* Score number (kept as-is; your JS can choose to color it) */
+.scoreValue{
+  margin-top:8px;
+  font-weight:950;
+  letter-spacing:.02em;
+  font-size:92px;
+  line-height:1;
+  color:var(--white);
+  text-shadow:0 12px 30px rgba(0,0,0,.55);
+}
+
+/* Score band pill (UNDER score) */
 .scoreBand{
-  margin:10px auto 8px;
-  width:min(520px, 100%);
-  padding:9px 10px;
-  border-radius:999px;
-  font-weight:800;
+  display:inline-block;
+  margin-top:10px;
+  padding:12px 18px;
+  border-radius:var(--radiusPill);
+  font-weight:950;
   letter-spacing:.06em;
   font-size:13px;
-  border:1px solid rgba(255,255,255,.12);
-  background:rgba(255,255,255,.04);
-}
-.scoreBandNeutral{ color:rgba(238,242,247,.72); }
-.scoreBandGreen{ color:#031009; background:rgba(72,255,139,.92); border-color:rgba(72,255,139,.55); }
-.scoreBandYellow{ color:#191300; background:rgba(255,232,90,.92); border-color:rgba(255,232,90,.55); }
-.scoreBandRed{ color:#1b0000; background:rgba(255,77,77,.92); border-color:rgba(255,77,77,.55); }
-
-.scoreTip{
-  margin-top:6px;
-  color:rgba(238,242,247,.70);
-  font-size:12px;
-}
-
-.clicksBig{
-  margin-top:12px;
-  display:grid;
-  grid-template-columns:1fr 1fr;
-  gap:10px;
-}
-.clickBox{
-  border:1px solid rgba(255,255,255,.10);
-  background:rgba(0,0,0,.18);
-  border-radius:14px;
-  padding:12px 12px 10px;
-  text-align:center;
-}
-.clickHdr{
-  font-size:12px;
-  letter-spacing:.14em;
-  color:rgba(238,242,247,.70);
   text-transform:uppercase;
-}
-.clickVal{
-  margin-top:6px;
-  font-size:40px;
-  font-weight:900;
-  letter-spacing:.02em;
-}
-.clickDir{
-  margin-top:2px;
-  font-size:13px;
-  font-weight:800;
-  letter-spacing:.10em;
-  color:rgba(238,242,247,.78);
+  user-select:none;
 }
 
-.miniLine{
+/* ✅ LOCKED: make ALL band variants look like the same glow pill
+   (matches the style you wanted for the other pills/buttons) */
+.scoreBand,
+.scoreBandNeutral,
+.scoreBandGreen,
+.scoreBandYellow,
+.scoreBandRed{
+  background: rgba(255,255,255,.06) !important;
+  border: 1px solid rgba(255,255,255,.16) !important;
+  box-shadow:
+    0 0 0 1px rgba(255,255,255,.06) inset,
+    var(--shadowSoft),
+    0 0 18px rgba(47,102,255,.20);
+  color: rgba(238,242,247,.92) !important;
+}
+
+/* Tip line */
+.scoreTip{
+  margin-top:12px;
+  color:var(--muted2);
+  font-weight:800;
+  font-size:13px;
+}
+
+/* -----------------------------
+   Big clicks section
+----------------------------- */
+.clicksBig{
+  display:flex;
+  gap:12px;
+  margin-top:14px;
+}
+
+.clickBox{
+  flex:1;
+  background:rgba(255,255,255,.05);
+  border:1px solid rgba(255,255,255,.14);
+  border-radius:18px;
+  padding:14px 12px 12px;
+  text-align:center;
+  box-shadow:0 10px 26px rgba(0,0,0,.40);
+}
+
+.clickHdr{
+  font-weight:950;
+  letter-spacing:.10em;
+  color:rgba(238,242,247,.70);
+  font-size:12px;
+}
+
+.clickVal{
   margin-top:10px;
+  font-weight:980;
+  font-size:54px;
+  line-height:1;
+  color:rgba(238,242,247,.96);
+  text-shadow:0 10px 26px rgba(0,0,0,.55);
+}
+
+.clickDir{
+  margin-top:8px;
+  font-weight:950;
+  letter-spacing:.08em;
+  font-size:14px;
+  color:rgba(238,242,247,.86);
+}
+
+/* -----------------------------
+   Mini run line
+----------------------------- */
+.miniLine{
   display:flex;
   flex-wrap:wrap;
-  gap:8px;
+  gap:10px;
   justify-content:center;
-}
-.miniPill{
-  border:1px solid rgba(255,255,255,.12);
-  background:rgba(255,255,255,.04);
-  padding:8px 10px;
-  border-radius:999px;
-  font-size:12px;
-  color:rgba(238,242,247,.78);
+  margin-top:14px;
 }
 
+.miniPill{
+  padding:10px 12px;
+  border-radius:var(--radiusPill);
+  background:rgba(255,255,255,.05);
+  border:1px solid rgba(255,255,255,.14);
+  color:rgba(238,242,247,.88);
+  font-weight:900;
+  font-size:12px;
+  letter-spacing:.03em;
+  box-shadow:0 10px 24px rgba(0,0,0,.38);
+}
+
+/* -----------------------------
+   Primary actions
+----------------------------- */
 .primaryActions{
-  margin-top:12px;
-  display:flex;
-  flex-direction:column;
-  gap:8px;
-  align-items:center;
+  margin-top:14px;
+  text-align:center;
 }
 
 .primaryBtn{
-  width:min(520px, 100%);
-  border:none;
-  border-radius:14px;
-  padding:14px 14px;
-  font-weight:900;
-  letter-spacing:.06em;
-  text-transform:uppercase;
-  color:#06101f;
-  background:linear-gradient(90deg, rgba(255,77,77,.92), rgba(255,232,90,.92), rgba(47,102,255,.92));
-  box-shadow:0 18px 42px rgba(0,0,0,.55);
+  width:100%;
+  border:0;
+  border-radius:18px;
+  padding:16px 14px;
+  font-weight:950;
+  letter-spacing:.02em;
+  font-size:16px;
+  color:rgba(238,242,247,.96);
+  background:rgba(47,102,255,.18);
+  border:1px solid rgba(47,102,255,.35);
+  box-shadow:
+    0 0 0 1px rgba(255,255,255,.06) inset,
+    0 12px 32px rgba(0,0,0,.55),
+    0 0 18px rgba(47,102,255,.22);
 }
-.primaryBtn:active{ transform:translateY(1px); }
+.primaryBtn:active{
+  transform:translateY(1px);
+}
 
 .microNote{
+  margin-top:10px;
+  color:var(--muted2);
+  font-weight:800;
   font-size:12px;
-  color:rgba(238,242,247,.70);
-  text-align:center;
 }
 
-.reportHeader{ padding-top:10px; }
-
-.reportCard{
-  padding-top:12px;
-}
-
+/* -----------------------------
+   Page 2: save hint + image shell
+----------------------------- */
 .saveHint{
   text-align:center;
-  font-size:12px;
-  letter-spacing:.06em;
   color:rgba(238,242,247,.78);
-  margin-bottom:10px;
+  font-weight:900;
+  font-size:13px;
+  margin:2px 0 12px;
 }
 
 .cardImgShell{
   width:100%;
-  display:flex;
-  justify-content:center;
+  border-radius:18px;
+  overflow:hidden;
+  border:1px solid rgba(255,255,255,.16);
+  background:rgba(0,0,0,.35);
+  box-shadow:0 12px 34px rgba(0,0,0,.55);
 }
 
 #secCardImg{
-  width:min(560px, 100%);
-  border-radius:14px;
-  border:1px solid rgba(255,255,255,.12);
-  background:rgba(0,0,0,.22);
-  box-shadow:0 18px 46px rgba(0,0,0,.60);
-  user-select:none;
-  -webkit-user-select:none;
-  -webkit-touch-callout: default; /* allow long-press save menu */
+  width:100%;
+  height:auto;
+  display:block;
 }
 
+/* -----------------------------
+   Page 2: actions row
+----------------------------- */
 .reportActions{
-  margin-top:12px;
-  display:grid;
-  grid-template-columns:1fr;
+  display:flex;
+  flex-wrap:wrap;
   gap:10px;
+  justify-content:center;
+  margin-top:12px;
 }
 
 .btnSecondary{
-  width:100%;
-  border:1px solid rgba(255,255,255,.12);
-  background:rgba(255,255,255,.04);
-  color:rgba(238,242,247,.88);
-  border-radius:14px;
-  padding:12px 12px;
-  font-weight:800;
-  letter-spacing:.06em;
-  text-transform:uppercase;
+  border:0;
+  border-radius:16px;
+  padding:12px 14px;
+  font-weight:950;
+  font-size:14px;
+  letter-spacing:.02em;
+  color:rgba(238,242,247,.92);
+  background:rgba(255,255,255,.06);
+  border:1px solid rgba(255,255,255,.16);
+  box-shadow:
+    0 0 0 1px rgba(255,255,255,.06) inset,
+    0 12px 30px rgba(0,0,0,.50),
+    0 0 18px rgba(47,102,255,.18);
 }
 .btnSecondary:active{ transform:translateY(1px); }
 
-.vendorBtn, .surveyBtn{
-  display:block;
-  width:100%;
-  text-align:center;
-  text-decoration:none;
-  border-radius:14px;
-  padding:14px 12px;
-  font-weight:900;
-  letter-spacing:.06em;
-  text-transform:uppercase;
-}
-
-/* Vendor = “Premium bold + sponsorship level” while still bottom-of-page */
-.vendorBtn{
-  color:#06101f;
-  background:linear-gradient(90deg, rgba(47,102,255,.94), rgba(255,232,90,.90));
-  box-shadow:0 18px 46px rgba(0,0,0,.60);
-  border:1px solid rgba(255,255,255,.12);
-}
-.vendorBtn:active{ transform:translateY(1px); }
-
+.vendorBtn,
 .surveyBtn{
-  color:rgba(238,242,247,.92);
-  background:rgba(255,255,255,.04);
-  border:1px solid rgba(255,255,255,.12);
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-width:180px;
+  border-radius:16px;
+  padding:12px 14px;
+  font-weight:950;
+  font-size:14px;
+  letter-spacing:.02em;
+  color:rgba(238,242,247,.94);
+  background:rgba(47,102,255,.16);
+  border:1px solid rgba(47,102,255,.35);
+  box-shadow:
+    0 0 0 1px rgba(255,255,255,.06) inset,
+    0 12px 30px rgba(0,0,0,.50),
+    0 0 18px rgba(47,102,255,.22);
 }
+.vendorBtn:active,
 .surveyBtn:active{ transform:translateY(1px); }
 
 .reportMicro{
   margin-top:10px;
   text-align:center;
+  color:rgba(238,242,247,.55);
+  font-weight:800;
   font-size:12px;
-  color:rgba(238,242,247,.62);
 }
 
+/* -----------------------------
+   Footer
+----------------------------- */
 .secFooter{
-  margin-top:auto;
-  padding-top:10px;
+  width:min(720px, 100%);
+  margin:10px auto 0;
   text-align:center;
-}
-.footerMark{
-  display:inline-block;
-  font-weight:900;
-  letter-spacing:.16em;
-  color:rgba(238,242,247,.22);
-  font-size:11px;
+  padding:10px 0 0;
 }
 
-/* Desktop tweaks */
-@media (min-width: 700px){
-  .reportActions{
-    grid-template-columns: 1fr 1fr;
-  }
-  .btnSecondary{ grid-column: 1 / span 2; }
-  .vendorBtn{ grid-column: 1 / span 2; }
-  .surveyBtn{ grid-column: 1 / span 2; }
+.footerMark{
+  font-weight:950;
+  letter-spacing:.12em;
+  color:rgba(238,242,247,.35);
+  font-size:12px;
+}
+
+/* -----------------------------
+   Responsive tweaks
+----------------------------- */
+@media (max-width:420px){
+  .scoreValue{ font-size:84px; }
+  .clickVal{ font-size:48px; }
+  .secRWB{ font-size:48px; }
+  .bigSEC{ font-size:58px; }
 }
