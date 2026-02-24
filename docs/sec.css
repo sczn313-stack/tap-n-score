@@ -1,21 +1,16 @@
 /* ============================================================
    docs/sec.css (FULL REPLACEMENT) — TWO-PAGE SEC
-   Page 1: Precision (score + big clicks)
-   Page 2: Report Card (tap & hold to save) + Vendor + Survey
-   NOTE: Score BAND pill under the score uses the same “glow pill”
-         styling as the action buttons (no yellow band background).
+   + Exit button styling (intelligent back)
+   NOTE: Score number color is controlled by classes from JS
 ============================================================ */
 
-/* -----------------------------
-   Base / Reset
------------------------------ */
 :root{
   --bg:#06070a;
-  --card:rgba(255,255,255,.06);
-  --cardBorder:rgba(255,255,255,.14);
-  --text:rgba(238,242,247,.92);
+  --fg:rgba(238,242,247,.92);
   --muted:rgba(238,242,247,.70);
-  --muted2:rgba(238,242,247,.55);
+  --line:rgba(255,255,255,.14);
+  --panel:rgba(255,255,255,.07);
+  --shadow:rgba(0,0,0,.45);
 
   --red:#ff4d4d;
   --white:#eef2f7;
@@ -23,229 +18,203 @@
 
   --green:#48ff8b;
   --yellow:#ffe85a;
-
-  --shadow:0 12px 34px rgba(0,0,0,.55);
-  --shadowSoft:0 10px 28px rgba(0,0,0,.45);
-
-  --radius:22px;
-  --radiusPill:999px;
 }
 
 *{ box-sizing:border-box; }
-html,body{
-  height:100%;
+html,body{ height:100%; }
+body{
   margin:0;
-  padding:0;
   background:var(--bg);
-  color:var(--text);
+  color:var(--fg);
   font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
 }
-a{ color:inherit; text-decoration:none; }
-button{ font-family:inherit; }
 
-/* -----------------------------
-   Page container
------------------------------ */
 .secPage{
-  min-height:100%;
-  padding:16px 14px 26px;
+  min-height:100vh;
+  padding:14px 14px 18px;
 }
 
-/* -----------------------------
-   View switching
------------------------------ */
-.view{
-  display:none;
-}
-.view.viewOn{
-  display:block;
-}
+.view{ display:none; }
+.view.viewOn{ display:block; }
 
-/* -----------------------------
-   Header
------------------------------ */
 .secHeader{
-  padding:12px 8px 10px;
+  padding:10px 6px 10px;
 }
+
 .secHeaderTop{
   display:flex;
-  flex-direction:column;
-  align-items:center;
-  justify-content:center;
-  gap:8px;
+  align-items:flex-end;
+  justify-content:space-between;
+  gap:12px;
 }
 
 .secRWB{
-  font-weight:950;
-  letter-spacing:.08em;
-  font-size:52px;
+  font-weight:1000;
+  letter-spacing:.10em;
+  font-size:44px;
   line-height:1;
 }
 .secRWB .r{ color:var(--red); }
 .secRWB .w{ color:var(--white); }
 .secRWB .b{ color:var(--blue); }
 
-.bigSEC{
-  font-size:64px;
-}
+.bigSEC{ font-size:56px; }
 
 .secSub{
   font-weight:800;
-  color:var(--muted);
-  letter-spacing:.02em;
-  font-size:14px;
+  font-size:12px;
+  letter-spacing:.12em;
+  color:rgba(238,242,247,.62);
+  text-transform:uppercase;
+  margin-bottom:6px;
 }
 
-/* -----------------------------
-   Card
------------------------------ */
+/* ✅ NEW Exit row/button */
+.secExitRow{
+  display:flex;
+  justify-content:flex-end;
+  margin-top:8px;
+}
+
+.exitBtn{
+  border:0;
+  border-radius:999px;
+  padding:8px 14px;
+  font-weight:900;
+  font-size:12px;
+  letter-spacing:.06em;
+  background:rgba(255,255,255,.05);
+  border:1px solid rgba(255,255,255,.16);
+  color:rgba(238,242,247,.75);
+  box-shadow:
+    0 0 0 1px rgba(255,255,255,.05) inset,
+    0 8px 20px rgba(0,0,0,.35);
+}
+.exitBtn:active{ transform:translateY(1px); }
+
 .card{
-  width:min(720px, 100%);
-  margin:0 auto;
-  background:var(--card);
-  border:1px solid var(--cardBorder);
-  border-radius:var(--radius);
-  box-shadow:var(--shadow);
-  padding:18px 16px;
+  background:linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03));
+  border:1px solid rgba(255,255,255,.10);
+  border-radius:22px;
+  padding:16px;
+  box-shadow:0 18px 40px var(--shadow);
 }
 
-/* report card page card spacing */
-.reportCard{
-  padding:16px 14px 16px;
-}
-
-/* -----------------------------
-   Score block
------------------------------ */
 .scoreWrap{
   text-align:center;
-  padding:10px 10px 12px;
+  padding:10px 10px 14px;
+  border-radius:18px;
+  background:rgba(255,255,255,.04);
+  border:1px solid rgba(255,255,255,.10);
 }
 
 .scoreLabel{
   font-weight:900;
-  letter-spacing:.10em;
-  color:var(--muted);
-  font-size:14px;
+  letter-spacing:.14em;
+  font-size:13px;
+  color:rgba(238,242,247,.70);
 }
 
-/* Score number (kept as-is; your JS can choose to color it) */
 .scoreValue{
-  margin-top:8px;
-  font-weight:950;
-  letter-spacing:.02em;
-  font-size:92px;
+  font-weight:1000;
+  font-size:86px;
   line-height:1;
-  color:var(--white);
-  text-shadow:0 12px 30px rgba(0,0,0,.55);
+  margin-top:6px;
+  margin-bottom:10px;
+  /* JS will add scoreNumGreen/Yellow/Red */
 }
 
-/* Score band pill (UNDER score) */
 .scoreBand{
   display:inline-block;
-  margin-top:10px;
-  padding:12px 18px;
-  border-radius:var(--radiusPill);
-  font-weight:950;
-  letter-spacing:.06em;
-  font-size:13px;
+  padding:10px 16px;
+  border-radius:999px;
+  font-weight:1000;
+  letter-spacing:.08em;
+  font-size:12px;
   text-transform:uppercase;
-  user-select:none;
+  border:1px solid rgba(255,255,255,.14);
+  background:rgba(255,255,255,.06);
+  color:rgba(238,242,247,.82);
+  box-shadow:0 10px 30px rgba(0,0,0,.35);
 }
 
-/* ✅ LOCKED: make ALL band variants look like the same glow pill
-   (matches the style you wanted for the other pills/buttons) */
-.scoreBand,
-.scoreBandNeutral,
-.scoreBandGreen,
-.scoreBandYellow,
-.scoreBandRed{
-  background: rgba(255,255,255,.06) !important;
-  border: 1px solid rgba(255,255,255,.16) !important;
-  box-shadow:
-    0 0 0 1px rgba(255,255,255,.06) inset,
-    var(--shadowSoft),
-    0 0 18px rgba(47,102,255,.20);
-  color: rgba(238,242,247,.92) !important;
-}
+/* LOCKED band colors */
+.scoreBandGreen{ background:rgba(72,255,139,.92); color:#031009; border-color:rgba(255,255,255,.12); }
+.scoreBandYellow{ background:rgba(255,232,90,.92); color:#191300; border-color:rgba(255,255,255,.12); }
+.scoreBandRed{ background:rgba(255,77,77,.92); color:#1b0000; border-color:rgba(255,255,255,.12); }
+.scoreBandNeutral{ background:rgba(255,255,255,.06); color:rgba(238,242,247,.78); }
 
-/* Tip line */
+/* ✅ Score number colors (Page 1) */
+.scoreNumGreen{ color:rgba(72,255,139,.98); text-shadow:0 12px 34px rgba(72,255,139,.20); }
+.scoreNumYellow{ color:rgba(255,232,90,.98); text-shadow:0 12px 34px rgba(255,232,90,.18); }
+.scoreNumRed{ color:rgba(255,77,77,.98); text-shadow:0 12px 34px rgba(255,77,77,.18); }
+.scoreNumNeutral{ color:rgba(238,242,247,.92); text-shadow:0 12px 34px rgba(0,0,0,.35); }
+
 .scoreTip{
   margin-top:12px;
-  color:var(--muted2);
   font-weight:800;
   font-size:13px;
+  color:rgba(238,242,247,.70);
 }
 
-/* -----------------------------
-   Big clicks section
------------------------------ */
 .clicksBig{
-  display:flex;
+  display:grid;
+  grid-template-columns:1fr 1fr;
   gap:12px;
   margin-top:14px;
 }
 
 .clickBox{
-  flex:1;
-  background:rgba(255,255,255,.05);
-  border:1px solid rgba(255,255,255,.14);
   border-radius:18px;
-  padding:14px 12px 12px;
+  padding:14px 12px;
+  background:rgba(255,255,255,.04);
+  border:1px solid rgba(255,255,255,.10);
   text-align:center;
-  box-shadow:0 10px 26px rgba(0,0,0,.40);
 }
 
 .clickHdr{
-  font-weight:950;
-  letter-spacing:.10em;
-  color:rgba(238,242,247,.70);
+  font-weight:1000;
+  letter-spacing:.12em;
   font-size:12px;
+  color:rgba(238,242,247,.70);
 }
 
 .clickVal{
-  margin-top:10px;
-  font-weight:980;
-  font-size:54px;
+  font-weight:1000;
+  font-size:56px;
   line-height:1;
-  color:rgba(238,242,247,.96);
-  text-shadow:0 10px 26px rgba(0,0,0,.55);
+  margin-top:8px;
+  color:rgba(238,242,247,.92);
 }
 
 .clickDir{
   margin-top:8px;
-  font-weight:950;
-  letter-spacing:.08em;
+  font-weight:1000;
+  letter-spacing:.12em;
   font-size:14px;
-  color:rgba(238,242,247,.86);
+  color:rgba(47,102,255,.95);
 }
 
-/* -----------------------------
-   Mini run line
------------------------------ */
 .miniLine{
   display:flex;
-  flex-wrap:wrap;
   gap:10px;
+  flex-wrap:wrap;
   justify-content:center;
   margin-top:14px;
 }
 
 .miniPill{
-  padding:10px 12px;
-  border-radius:var(--radiusPill);
-  background:rgba(255,255,255,.05);
+  display:inline-block;
+  padding:8px 12px;
+  border-radius:999px;
   border:1px solid rgba(255,255,255,.14);
-  color:rgba(238,242,247,.88);
+  background:rgba(255,255,255,.05);
+  color:rgba(238,242,247,.78);
   font-weight:900;
   font-size:12px;
-  letter-spacing:.03em;
-  box-shadow:0 10px 24px rgba(0,0,0,.38);
+  letter-spacing:.06em;
 }
 
-/* -----------------------------
-   Primary actions
------------------------------ */
 .primaryActions{
   margin-top:14px;
   text-align:center;
@@ -255,136 +224,119 @@ button{ font-family:inherit; }
   width:100%;
   border:0;
   border-radius:18px;
-  padding:16px 14px;
-  font-weight:950;
+  padding:16px 16px;
+  font-weight:1000;
+  font-size:15px;
   letter-spacing:.02em;
-  font-size:16px;
-  color:rgba(238,242,247,.96);
-  background:rgba(47,102,255,.18);
-  border:1px solid rgba(47,102,255,.35);
-  box-shadow:
-    0 0 0 1px rgba(255,255,255,.06) inset,
-    0 12px 32px rgba(0,0,0,.55),
-    0 0 18px rgba(47,102,255,.22);
+  color:#07080c;
+  background:linear-gradient(90deg, rgba(255,77,77,.92), rgba(238,242,247,.92), rgba(47,102,255,.92));
+  box-shadow:0 18px 40px rgba(0,0,0,.40);
 }
-.primaryBtn:active{
-  transform:translateY(1px);
-}
+.primaryBtn:active{ transform:translateY(1px); }
 
 .microNote{
   margin-top:10px;
-  color:var(--muted2);
   font-weight:800;
+  font-size:12px;
+  color:rgba(238,242,247,.62);
+}
+
+.secFooter{
+  text-align:center;
+  margin-top:12px;
+  color:rgba(238,242,247,.45);
+  font-weight:900;
+  letter-spacing:.12em;
   font-size:12px;
 }
 
-/* -----------------------------
-   Page 2: save hint + image shell
------------------------------ */
+.footerMark{
+  display:inline-block;
+  padding:6px 12px;
+  border-radius:999px;
+  border:1px solid rgba(255,255,255,.10);
+  background:rgba(255,255,255,.03);
+}
+
+/* Page 2 */
+.reportHeader{ padding-bottom:6px; }
+
+.reportCard{
+  margin-top:6px;
+}
+
 .saveHint{
   text-align:center;
-  color:rgba(238,242,247,.78);
   font-weight:900;
+  color:rgba(238,242,247,.72);
   font-size:13px;
-  margin:2px 0 12px;
+  margin-bottom:10px;
 }
 
 .cardImgShell{
   width:100%;
   border-radius:18px;
   overflow:hidden;
-  border:1px solid rgba(255,255,255,.16);
-  background:rgba(0,0,0,.35);
-  box-shadow:0 12px 34px rgba(0,0,0,.55);
+  border:1px solid rgba(255,255,255,.12);
+  background:rgba(255,255,255,.03);
+  box-shadow:0 16px 36px rgba(0,0,0,.40);
 }
 
-#secCardImg{
+.cardImgShell img{
   width:100%;
   height:auto;
   display:block;
+  -webkit-touch-callout:default;
+  user-select:none;
 }
 
-/* -----------------------------
-   Page 2: actions row
------------------------------ */
 .reportActions{
-  display:flex;
-  flex-wrap:wrap;
+  display:grid;
+  grid-template-columns:1fr;
   gap:10px;
-  justify-content:center;
   margin-top:12px;
 }
 
 .btnSecondary{
-  border:0;
+  width:100%;
   border-radius:16px;
   padding:12px 14px;
-  font-weight:950;
+  font-weight:1000;
   font-size:14px;
-  letter-spacing:.02em;
-  color:rgba(238,242,247,.92);
-  background:rgba(255,255,255,.06);
+  letter-spacing:.04em;
   border:1px solid rgba(255,255,255,.16);
-  box-shadow:
-    0 0 0 1px rgba(255,255,255,.06) inset,
-    0 12px 30px rgba(0,0,0,.50),
-    0 0 18px rgba(47,102,255,.18);
+  background:rgba(255,255,255,.05);
+  color:rgba(238,242,247,.82);
+  box-shadow:0 14px 30px rgba(0,0,0,.35);
 }
 .btnSecondary:active{ transform:translateY(1px); }
 
-.vendorBtn,
-.surveyBtn{
-  display:inline-flex;
-  align-items:center;
-  justify-content:center;
-  min-width:180px;
+.vendorBtn, .surveyBtn{
+  display:block;
+  text-align:center;
+  text-decoration:none;
   border-radius:16px;
   padding:12px 14px;
-  font-weight:950;
+  font-weight:1000;
   font-size:14px;
-  letter-spacing:.02em;
-  color:rgba(238,242,247,.94);
-  background:rgba(47,102,255,.16);
-  border:1px solid rgba(47,102,255,.35);
-  box-shadow:
-    0 0 0 1px rgba(255,255,255,.06) inset,
-    0 12px 30px rgba(0,0,0,.50),
-    0 0 18px rgba(47,102,255,.22);
+  letter-spacing:.04em;
+  border:1px solid rgba(255,255,255,.14);
+  color:#07080c;
+  box-shadow:0 16px 34px rgba(0,0,0,.36);
 }
-.vendorBtn:active,
-.surveyBtn:active{ transform:translateY(1px); }
+
+.vendorBtn{
+  background:linear-gradient(90deg, rgba(238,242,247,.92), rgba(255,232,90,.92));
+}
+
+.surveyBtn{
+  background:linear-gradient(90deg, rgba(72,255,139,.92), rgba(47,102,255,.90));
+}
 
 .reportMicro{
-  margin-top:10px;
   text-align:center;
-  color:rgba(238,242,247,.55);
+  margin-top:10px;
   font-weight:800;
   font-size:12px;
-}
-
-/* -----------------------------
-   Footer
------------------------------ */
-.secFooter{
-  width:min(720px, 100%);
-  margin:10px auto 0;
-  text-align:center;
-  padding:10px 0 0;
-}
-
-.footerMark{
-  font-weight:950;
-  letter-spacing:.12em;
-  color:rgba(238,242,247,.35);
-  font-size:12px;
-}
-
-/* -----------------------------
-   Responsive tweaks
------------------------------ */
-@media (max-width:420px){
-  .scoreValue{ font-size:84px; }
-  .clickVal{ font-size:48px; }
-  .secRWB{ font-size:48px; }
-  .bigSEC{ font-size:58px; }
+  color:rgba(238,242,247,.55);
 }
