@@ -1,4 +1,4 @@
-<!-- docs/sec.html (FULL REPLACEMENT) — SEC with INTERNAL SCROLL (iPad-safe) -->
+<!-- docs/sec.html (FULL REPLACEMENT) — TWO-PAGE SEC FLOW (NO “TROPHY”) -->
 <!doctype html>
 <html lang="en">
 <head>
@@ -11,107 +11,120 @@
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
 
-  <title>SEC — Shooter Experience Card</title>
+  <title>SEC — Tap-n-Score™</title>
 
-  <link rel="stylesheet" href="./sec.css?v=SEC-FIT-0218A" />
+  <link rel="stylesheet" href="./sec.css?v=SEC-2P-0301A" />
 </head>
 
 <body>
   <main class="secPage">
-    <section class="secShell">
 
-      <!-- Header (fixed) -->
-      <header class="secHdr">
-        <div class="secHdrLeft">
-          <div class="secBrand" aria-label="Shooter Experience Card SEC">
-            <span class="r">S</span><span class="w">hooter</span>
-            <span class="w"> </span>
-            <span class="w">E</span><span class="w">xperience</span>
-            <span class="w"> </span>
-            <span class="b">C</span><span class="w">ard</span>
-
-            <span class="secMiniTag">
-              <span class="r">S</span><span class="w">E</span><span class="b">C</span>
-            </span>
+    <!-- =========================
+         PAGE 1 — PRECISION (SEC)
+    ========================== -->
+    <section id="viewPrecision" class="view viewOn" aria-label="SEC Precision View">
+      <header class="secHeader">
+        <div class="secHeaderTop">
+          <div class="secRWB" aria-label="SEC">
+            <span class="r">S</span><span class="w">E</span><span class="b">C</span>
           </div>
-          <div class="secSub">After-Shot Intelligence</div>
-        </div>
-
-        <div class="secHdrRight">
-          <button id="doneBtn" class="secBtn secBtnGhost" type="button">Done</button>
+          <div class="secSub">Shooter Experience Card</div>
         </div>
       </header>
 
-      <!-- ✅ SCROLL AREA (this is what you’re missing) -->
-      <div class="secMid">
+      <section class="card">
+        <div class="scoreWrap">
+          <div class="scoreLabel">SCORE</div>
+          <div id="scoreValue" class="scoreValue">—</div>
+          <div id="scoreBand" class="scoreBand scoreBandNeutral">—</div>
 
-        <!-- Top: SCORE + VENDOR -->
-        <section class="secTopBand" aria-label="Top band">
-          <div id="scoreCard" class="scoreCard" aria-label="Score">
-            <div class="scoreTop">
-              <div class="scoreK">SCORE</div>
-              <div id="avgSoft" class="avgSoft">Avg: —</div>
-            </div>
+          <div id="scoreTip" class="scoreTip">
+            Tight cluster + closer to the aim point = higher score.
+          </div>
+        </div>
 
-            <div id="scoreValue" class="scoreV">0</div>
-            <div id="scoreLabel" class="scoreL">—</div>
-
-            <div id="scoreDistance" class="scoreDistance">Distance: —</div>
-
-            <div class="scoreNote">
-              Tighter group + closer to aim point = higher score
-            </div>
+        <div class="clicksBig">
+          <div class="clickBox">
+            <div class="clickHdr">WINDAGE</div>
+            <div id="windageBig" class="clickVal">—</div>
+            <div id="windageDir" class="clickDir">—</div>
           </div>
 
-          <div class="vendorCard" aria-label="Vendor">
-            <div class="vendorK">TARGET PRINTER</div>
-
-            <div id="vendorName" class="vendorName">—</div>
-
-            <div class="vendorRow">
-              <a id="vendorLink" class="vendorBtn" href="#" target="_blank" rel="noopener">Visit Printer</a>
-            </div>
-
-            <div id="vendorMicro" class="vendorMicro">—</div>
+          <div class="clickBox">
+            <div class="clickHdr">ELEVATION</div>
+            <div id="elevationBig" class="clickVal">—</div>
+            <div id="elevationDir" class="clickDir">—</div>
           </div>
-        </section>
+        </div>
 
-        <!-- Stats (2 boxes only: Windage + Elevation) -->
-        <section class="secStats secStats2" aria-label="Stats">
-          <div class="stat">
-            <div class="statK">WINDAGE</div>
-            <div class="statV"><span id="windVal">—</span> <span class="unit">CLICKS</span></div>
-            <div id="windDir" class="statDir">—</div>
+        <div class="miniLine" aria-label="Run details">
+          <span id="runDistance" class="miniPill">—</span>
+          <span id="runHits" class="miniPill">—</span>
+          <span id="runTime" class="miniPill">—</span>
+        </div>
+
+        <div class="primaryActions">
+          <button id="toReportBtn" class="primaryBtn" type="button">
+            Save SEC + Shooter History
+          </button>
+          <div class="microNote">
+            Next screen creates a “Report Card” image you can save to Photos.
           </div>
+        </div>
+      </section>
 
-          <div class="stat">
-            <div class="statK">ELEVATION</div>
-            <div class="statV"><span id="elevVal">—</span> <span class="unit">CLICKS</span></div>
-            <div id="elevDir" class="statDir">—</div>
-          </div>
-        </section>
-
-        <!-- Actions -->
-        <section class="secActions" aria-label="Actions">
-          <button id="downloadBtn" class="secBtn secBtnPrimary" type="button">Download SEC Picture</button>
-          <button id="scoreAnotherBtn" class="secBtn" type="button">Score another</button>
-          <button id="surveyBtn" class="secBtn" type="button">Survey</button>
-        </section>
-
-        <div id="errLine" class="secErr" style="display:none;"></div>
-
-      </div>
-      <!-- ✅ END SCROLL AREA -->
-
-      <!-- Footer (fixed) -->
-      <footer class="secFoot">
-        <div class="secFootCenter">SCZN3</div>
-        <div id="sessionGhost" class="secFootRight">—</div>
+      <footer class="secFooter">
+        <span class="footerMark">SCZN3</span>
       </footer>
-
     </section>
+
+    <!-- =========================
+         PAGE 2 — REPORT CARD (SAVE)
+    ========================== -->
+    <section id="viewReport" class="view" aria-label="SEC Report Card View">
+      <header class="secHeader reportHeader">
+        <div class="secHeaderTop">
+          <div class="secRWB bigSEC" aria-label="SEC">
+            <span class="r">S</span><span class="w">E</span><span class="b">C</span>
+          </div>
+          <div class="secSub">Shooter Experience Card</div>
+        </div>
+      </header>
+
+      <section class="card reportCard">
+        <div class="saveHint">
+          Tap &amp; hold the card to save to Photos.
+        </div>
+
+        <!-- The generated “Report Card” image (long-press friendly) -->
+        <div class="cardImgShell">
+          <img id="secCardImg" alt="SEC report card image" />
+        </div>
+
+        <div class="reportActions">
+          <button id="backBtn" class="btnSecondary" type="button">Back</button>
+
+          <a id="vendorBtn" class="vendorBtn" href="#" target="_blank" rel="noopener">
+            Visit Vendor
+          </a>
+
+          <a id="surveyBtn" class="surveyBtn" href="#" target="_blank" rel="noopener">
+            Quick Survey (30 seconds)
+          </a>
+        </div>
+
+        <div class="reportMicro">
+          Vendor link is only live here (after you complete the loop).
+        </div>
+      </section>
+
+      <footer class="secFooter">
+        <span class="footerMark">SCZN3</span>
+      </footer>
+    </section>
+
   </main>
 
-  <script defer src="./sec.js?v=SEC-FIT-0218A"></script>
+  <script defer src="./sec.js?v=SEC-2P-0301A"></script>
 </body>
 </html>
