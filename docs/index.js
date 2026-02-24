@@ -3,14 +3,11 @@
    + Instruction mirroring (Aim ↔ Holes) in the info line (fade)
    + Matrix + target size chips
    + iOS-safe photo input (not display:none)
-   + ✅ Pilot Survey URL wired into SEC payload
+   + NEW: SEC exit intelligence flag (?from=target)
 ============================================================ */
 
 (() => {
   const $ = (id) => document.getElementById(id);
-
-  // ✅ PILOT SURVEY (Google Form)
-  const PILOT_SURVEY_URL = "https://forms.gle/uCSDTk5BwT4euLYeA";
 
   // Landing / hero
   const elPhotoBtn = $("photoBtn");
@@ -187,6 +184,7 @@
       kind === "go"    ? "rgba(47,102,255,.92)"  :   // blue
                          "rgba(238,242,247,.70)";    // neutral
 
+    // Fade-in effect (works on iPhone + iPad)
     elInstruction.style.transition = "opacity 180ms ease, transform 180ms ease, color 120ms ease";
     elInstruction.style.opacity = "0";
     elInstruction.style.transform = "translateY(2px)";
@@ -567,7 +565,7 @@
 
     // correction vector = aim - avgPoi (bull - poib)
     const dx = aim.x01 - avg.x; // + means move RIGHT
-    const dy = aim.x01 * 0 + (aim.y01 - avg.y); // + means move DOWN (screen y)
+    const dy = aim.y01 - avg.y; // + means move DOWN (screen y)
 
     // square scoring plane
     const squareIn = Math.min(targetWIn, targetHIn);
@@ -606,7 +604,9 @@
   function goToSEC(payload) {
     try { localStorage.setItem(KEY_PAYLOAD, JSON.stringify(payload)); } catch {}
     const b64 = b64FromObj(payload);
-    window.location.href = `./sec.html?payload=${encodeURIComponent(b64)}&fresh=${Date.now()}`;
+
+    // ✅ NEW: mark that SEC came from the Target page (enables intelligent Exit)
+    window.location.href = `./sec.html?from=target&payload=${encodeURIComponent(b64)}&fresh=${Date.now()}`;
   }
 
   function onShowResults() {
@@ -626,10 +626,7 @@
       elevation: { dir: out.elevation.dir, clicks: Number(out.elevation.clicks.toFixed(2)) },
       dial: { unit: out.dial.unit, clickValue: Number(out.dial.clickValue.toFixed(2)) },
       vendorUrl,
-
-      // ✅ this is what SEC page uses to open Survey
-      surveyUrl: PILOT_SURVEY_URL,
-
+      surveyUrl: "",
       target: { key: targetSizeKey, wIn: Number(targetWIn), hIn: Number(targetHIn) },
 
       // include taps for export markers
