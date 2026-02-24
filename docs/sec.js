@@ -13,6 +13,9 @@
   const toReportBtn = $("toReportBtn");
   const backBtn = $("backBtn");
 
+  // NEW (Page 1) — back to landing
+  const goLandingBtn = $("goLandingBtn");
+
   // Page 1 elements
   const scoreValue = $("scoreValue");
   const scoreBand = $("scoreBand");
@@ -79,6 +82,14 @@
     if (s >= 90) return { cls: "scoreBandGreen", text: "STRONG / EXCELLENT" };
     if (s >= 60) return { cls: "scoreBandYellow", text: "IMPROVING / SOLID" };
     return { cls: "scoreBandRed", text: "NEEDS WORK" };
+  }
+
+  // NEW: score color matches band (NOT forced white)
+  function scoreColorForBandCls(cls) {
+    if (cls === "scoreBandGreen") return "#48ff8b";
+    if (cls === "scoreBandYellow") return "#ffe85a";
+    if (cls === "scoreBandRed") return "#ff4d4d";
+    return "rgba(238,242,247,.92)";
   }
 
   function fmt2(n) {
@@ -214,8 +225,6 @@
     ctx.textBaseline = "alphabetic";
 
     // RWB SEC
-    const secText = "S E C";
-    // draw each char colored
     const parts = ["S", "E", "C"];
     const colors = ["#ff4d4d", "#eef2f7", "#2f66ff"];
     const spacing = 90;
@@ -243,6 +252,7 @@
     ctx.textAlign = "center";
     ctx.fillText("SCORE", W/2, 285);
 
+    // (Report card image still uses white for readability; you didn't ask to change this.)
     ctx.font = "900 120px system-ui, -apple-system, Segoe UI, Roboto, Arial";
     ctx.fillStyle = "rgba(238,242,247,.94)";
     ctx.fillText(String(Math.round(score)), W/2, 405);
@@ -252,7 +262,6 @@
     const pillX = (W - pillW)/2;
     const pillY = 430;
     roundedRect(pillX, pillY, pillW, pillH, 999);
-    // fill based on band
     let pillFill = "rgba(255,255,255,.08)";
     let pillText = band.text;
     let pillTextColor = "rgba(238,242,247,.75)";
@@ -313,29 +322,25 @@
           im.src = imgUrl;
         });
 
-        // cover crop
         const r = Math.min(img.width / sq, img.height / sq);
         const sw = sq * r;
         const sh = sq * r;
         const sx = (img.width - sw) / 2;
         const sy = (img.height - sh) / 2;
 
-        // clip rounded
         ctx.save();
         roundedRect(start + 10, ySq + 10, sq - 20, sq - 20, 22);
         ctx.clip();
         ctx.drawImage(img, sx, sy, sw, sh, start + 10, ySq + 10, sq - 20, sq - 20);
         ctx.restore();
-      } catch {
-        // ignore
-      }
+      } catch {}
     } else {
       ctx.fillStyle = "rgba(238,242,247,.25)";
       ctx.font = "900 26px system-ui, -apple-system, Segoe UI, Roboto, Arial";
       ctx.fillText("No Image", start + sq/2, ySq + sq/2);
     }
 
-    // Vendor box (text-only logo placeholder, Baker special-case)
+    // Vendor box
     const vendorUrl = String(payload?.vendorUrl || "");
     const vendorHost = domainFromUrl(vendorUrl);
     const vendorName = isBaker(vendorUrl) ? "Baker Printing" : (vendorHost || "Vendor Partner");
@@ -394,7 +399,6 @@
       const h = top15[i];
       const rowY = startY + i * lineH;
 
-      // highlight current run (index 0)
       if (i === 0) {
         ctx.save();
         ctx.globalAlpha = 0.12;
@@ -424,14 +428,12 @@
   // Payload
   // -----------------------------
   function loadPayload() {
-    // Try query param first
     const qp = getQueryParam("payload");
     if (qp) {
       const obj = b64ToObj(qp);
       if (obj) return obj;
     }
 
-    // Then local storage
     const s = localStorage.getItem(KEY_PAYLOAD) || "";
     const j = safeJsonParse(s);
     if (j) return j;
@@ -463,6 +465,9 @@
 
     scoreValue.textContent = Number.isFinite(score) ? String(Math.round(score)) : "—";
 
+    // IMPORTANT: score number color follows score band (your request)
+    scoreValue.style.color = scoreColorForBandCls(band.cls);
+
     scoreBand.classList.remove("scoreBandNeutral", "scoreBandGreen", "scoreBandYellow", "scoreBandRed");
     scoreBand.classList.add(band.cls);
     scoreBand.textContent = band.text;
@@ -485,7 +490,6 @@
   // Render Page 2
   // -----------------------------
   async function renderReport(payload) {
-    // Vendor + survey links (LIVE ONLY HERE)
     const vendorUrl = String(payload?.vendorUrl || "");
     const surveyUrl = String(payload?.surveyUrl || "") || DEFAULT_SURVEY_URL;
 
@@ -511,8 +515,7 @@
       surveyBtn.style.pointerEvents = "none";
     }
 
-    // Build card image from current + history
-    const hist = loadHistory(); // already pushed current before calling renderReport
+    const hist = loadHistory();
     const dataUrl = await drawReportCardImage(payload, hist);
     secCardImg.src = dataUrl;
   }
@@ -528,7 +531,7 @@
   }
 
   // Push current run into history immediately
-  const hist = pushHistory(payload);
+  pushHistory(payload);
 
   // Render initial view
   renderPrecision(payload);
@@ -543,5 +546,14 @@
   backBtn.addEventListener("click", () => {
     showPrecision();
   });
+
+  // NEW: Go back to landing page (do NOT change anything else)
+  if (goLandingBtn) {
+    goLandingBtn.addEventListener("click", () => {
+      // safest default for GitHub Pages setups
+      window.location.href = "./index.html";
+      // If your landing page is root, swap to: window.location.href = "/";
+    });
+  }
 
 })();
