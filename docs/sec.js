@@ -1,13 +1,13 @@
 /* ============================================================
    docs/sec.js (FULL REPLACEMENT) — TWO-PAGE SEC
-   Page 1: Precision (score + big clicks) + Intelligent Exit
+   Page 1: Precision (score + big clicks)
    Page 2: Report Card image (tap & hold to save) + Vendor + Survey
 
    FIXES INCLUDED:
-   ✅ Page 1 numeric SCORE now color-shifts by score band
-   ✅ Exit button:
-      - If launched from target page: history.back() then fallback to ./index.html
-      - Otherwise: ./index.html
+   ✅ Removes “yellow swoosh” by clamping rounded-rect radius (canvas)
+   ✅ Score color on Page 1 changes by score band (green/yellow/red)
+   ✅ Adds "Zero another target / Score another" button on Page 1 -> landing
+   ✅ Removes duplicate top banner on Page 2 by hiding the HTML header (image already has SEC)
 ============================================================ */
 
 (() => {
@@ -18,9 +18,6 @@
   const viewReport = $("viewReport");
   const toReportBtn = $("toReportBtn");
   const backBtn = $("backBtn");
-
-  // NEW: Exit button (Page 1)
-  const exitBtn = $("exitBtn");
 
   // Page 1 elements
   const scoreValue = $("scoreValue");
@@ -33,10 +30,16 @@
   const elevationBig = $("elevationBig");
   const elevationDir = $("elevationDir");
 
+  // NEW Page 1 exit-to-landing button (must exist in sec.html)
+  const goHomeBtn = $("goHomeBtn");
+
   // Page 2 elements
   const secCardImg = $("secCardImg");
   const vendorBtn = $("vendorBtn");
   const surveyBtn = $("surveyBtn");
+
+  // Page 2 header (we hide it to avoid duplicate SEC banner on top)
+  const reportHeader = document.querySelector(".reportHeader");
 
   // Storage keys (must match index.js)
   const KEY_PAYLOAD = "SCZN3_SEC_PAYLOAD_V1";
@@ -46,12 +49,12 @@
   // History (Top 20 stored, render Top 15)
   const KEY_HISTORY = "SCZN3_SEC_HISTORY_V1";
 
-  // Survey default (your published form)
+  // Survey default (published form)
   const DEFAULT_SURVEY_URL = "https://forms.gle/uCSDTk5BwT4euLYeA";
 
-  // -----------------------------
+  // ------------------------------------------------------------
   // Helpers
-  // -----------------------------
+  // ------------------------------------------------------------
   function safeJsonParse(s) {
     try { return JSON.parse(s); } catch { return null; }
   }
@@ -82,12 +85,12 @@
 
   function scoreBandInfo(score) {
     const s = Number(score);
-    if (!Number.isFinite(s)) return { cls: "scoreBandNeutral", text: "—", numCls: "scoreNumNeutral" };
+    if (!Number.isFinite(s)) return { cls: "scoreBandNeutral", text: "—", scoreCls: "" };
 
     // LOCKED: GREEN 90–100, YELLOW 60–89, RED 0–59
-    if (s >= 90) return { cls: "scoreBandGreen", text: "STRONG / EXCELLENT", numCls: "scoreNumGreen" };
-    if (s >= 60) return { cls: "scoreBandYellow", text: "IMPROVING / SOLID", numCls: "scoreNumYellow" };
-    return { cls: "scoreBandRed", text: "NEEDS WORK", numCls: "scoreNumRed" };
+    if (s >= 90) return { cls: "scoreBandGreen", text: "STRONG / EXCELLENT", scoreCls: "scoreGood" };
+    if (s >= 60) return { cls: "scoreBandYellow", text: "IMPROVING / SOLID", scoreCls: "scoreMid" };
+    return { cls: "scoreBandRed", text: "NEEDS WORK", scoreCls: "scoreLow" };
   }
 
   function fmt2(n) {
@@ -116,9 +119,15 @@
     return "";
   }
 
-  // -----------------------------
+  function goToLanding() {
+    // Same-folder landing for GitHub Pages: /docs/index.html
+    // Keep it simple: go to index.html in the same directory
+    window.location.href = "./index.html";
+  }
+
+  // ------------------------------------------------------------
   // History
-  // -----------------------------
+  // ------------------------------------------------------------
   function loadHistory() {
     const arr = safeJsonParse(localStorage.getItem(KEY_HISTORY) || "[]");
     return Array.isArray(arr) ? arr : [];
@@ -143,6 +152,7 @@
     };
 
     hist.unshift(row);
+    // Keep last 20
     const trimmed = hist.slice(0, 20);
     saveHistory(trimmed);
     return trimmed;
@@ -171,9 +181,9 @@
     };
   }
 
-  // -----------------------------
+  // ------------------------------------------------------------
   // Report Card image (Canvas -> <img>)
-  // -----------------------------
+  // ------------------------------------------------------------
   async function drawReportCardImage(payload, hist) {
     const stats = computeStats(hist);
 
@@ -190,35 +200,40 @@
     ctx.fillStyle = "#06070a";
     ctx.fillRect(0, 0, W, H);
 
-    function roundedRect(x,y,w,h,r){
+    // Rounded rect that NEVER “swooshes” (radius clamped)
+    function roundedRect(x, y, w, h, r) {
+      const rr = Math.max(0, Math.min(Number(r || 0), w / 2, h / 2));
       ctx.beginPath();
-      ctx.moveTo(x+r, y);
-      ctx.arcTo(x+w, y, x+w, y+h, r);
-      ctx.arcTo(x+w, y+h, x, y+h, r);
-      ctx.arcTo(x, y+h, x, y, r);
-      ctx.arcTo(x, y, x+w, y, r);
+      ctx.moveTo(x + rr, y);
+      ctx.arcTo(x + w, y, x + w, y + h, rr);
+      ctx.arcTo(x + w, y + h, x, y + h, rr);
+      ctx.arcTo(x, y + h, x, y, rr);
+      ctx.arcTo(x, y, x + w, y, rr);
       ctx.closePath();
     }
-    function panel(x,y,w,h){
+
+    function panel(x, y, w, h) {
       ctx.save();
       ctx.globalAlpha = 0.18;
       ctx.fillStyle = "#ffffff";
-      roundedRect(x,y,w,h,28);
+      roundedRect(x, y, w, h, 28);
       ctx.fill();
+
       ctx.globalAlpha = 0.20;
       ctx.strokeStyle = "#ffffff";
       ctx.lineWidth = 2;
-      roundedRect(x,y,w,h,28);
+      roundedRect(x, y, w, h, 28);
       ctx.stroke();
       ctx.restore();
     }
 
-    // Title SEC centered
+    // SEC Title inside the IMAGE (this is the only SEC title on Page 2)
     const secY = 120;
     ctx.font = "900 92px system-ui, -apple-system, Segoe UI, Roboto, Arial";
     ctx.textAlign = "center";
     ctx.textBaseline = "alphabetic";
 
+    // RWB SEC
     const parts = ["S", "E", "C"];
     const colors = ["#ff4d4d", "#eef2f7", "#2f66ff"];
     const spacing = 90;
@@ -230,6 +245,7 @@
       ctx.fillText(parts[i], startX + spacing * i, secY);
     }
 
+    // Subtitle
     ctx.fillStyle = "rgba(238,242,247,.75)";
     ctx.font = "700 26px system-ui, -apple-system, Segoe UI, Roboto, Arial";
     ctx.fillText("Shooter Experience Card", W/2, secY + 42);
@@ -245,21 +261,15 @@
     ctx.textAlign = "center";
     ctx.fillText("SCORE", W/2, 285);
 
-    // Score number in band color on the card image too
-    let scoreColor = "rgba(238,242,247,.94)";
-    if (band.cls === "scoreBandGreen") scoreColor = "rgba(72,255,139,.98)";
-    if (band.cls === "scoreBandYellow") scoreColor = "rgba(255,232,90,.98)";
-    if (band.cls === "scoreBandRed") scoreColor = "rgba(255,77,77,.98)";
-
+    // Score value (kept bright for legibility inside the image)
     ctx.font = "900 120px system-ui, -apple-system, Segoe UI, Roboto, Arial";
-    ctx.fillStyle = scoreColor;
+    ctx.fillStyle = "rgba(238,242,247,.94)";
     ctx.fillText(String(Math.round(score)), W/2, 405);
 
     // band pill
     const pillW = 720, pillH = 64;
     const pillX = (W - pillW)/2;
     const pillY = 430;
-    roundedRect(pillX, pillY, pillW, pillH, 999);
 
     let pillFill = "rgba(255,255,255,.08)";
     let pillText = band.text;
@@ -268,6 +278,7 @@
     if (band.cls === "scoreBandYellow"){ pillFill = "rgba(255,232,90,.92)"; pillTextColor="#191300"; }
     if (band.cls === "scoreBandRed"){ pillFill = "rgba(255,77,77,.92)"; pillTextColor="#1b0000"; }
 
+    roundedRect(pillX, pillY, pillW, pillH, 999);
     ctx.fillStyle = pillFill;
     ctx.fill();
     ctx.strokeStyle = "rgba(255,255,255,.18)";
@@ -302,12 +313,14 @@
     panel(start, ySq, sq, sq);
     panel(start + sq + gap, ySq, sq, sq);
 
+    // Labels
     ctx.fillStyle = "rgba(238,242,247,.72)";
     ctx.font = "900 22px system-ui, -apple-system, Segoe UI, Roboto, Arial";
     ctx.textAlign = "center";
     ctx.fillText("TARGET USED", start + sq/2, ySq - 16);
     ctx.fillText("OFFICIAL TARGET PARTNER", start + sq + gap + sq/2, ySq - 16);
 
+    // Draw thumbnail (cover)
     const imgUrl = loadTargetImageUrl();
     if (imgUrl) {
       try {
@@ -337,6 +350,7 @@
       ctx.fillText("No Image", start + sq/2, ySq + sq/2);
     }
 
+    // Vendor box (text-only placeholder)
     const vendorUrl = String(payload?.vendorUrl || "");
     const vendorHost = domainFromUrl(vendorUrl);
     const vendorName = isBaker(vendorUrl) ? "Baker Printing" : (vendorHost || "Vendor Partner");
@@ -411,6 +425,7 @@
       ctx.fillText(`${String(i+1).padStart(2,"0")}.  ${s}   |   ${yd} yds   |   ${ht} hits`, colX, rowY);
     }
 
+    // footer time stamp
     ctx.textAlign = "center";
     ctx.fillStyle = "rgba(238,242,247,.45)";
     ctx.font = "800 20px system-ui, -apple-system, Segoe UI, Roboto, Arial";
@@ -419,9 +434,9 @@
     return c.toDataURL("image/png");
   }
 
-  // -----------------------------
+  // ------------------------------------------------------------
   // Payload
-  // -----------------------------
+  // ------------------------------------------------------------
   function loadPayload() {
     const qp = getQueryParam("payload");
     if (qp) {
@@ -436,87 +451,65 @@
     return null;
   }
 
-  // -----------------------------
+  // ------------------------------------------------------------
   // View switching
-  // -----------------------------
+  // ------------------------------------------------------------
   function showPrecision() {
+    // restore header for page 2 if user goes back
+    if (reportHeader) reportHeader.style.display = "";
     viewPrecision.classList.add("viewOn");
     viewReport.classList.remove("viewOn");
     try { window.scrollTo(0, 0); } catch {}
   }
 
   function showReport() {
+    // ✅ hide the HTML header on page 2 to avoid duplicate banner
+    if (reportHeader) reportHeader.style.display = "none";
     viewPrecision.classList.remove("viewOn");
     viewReport.classList.add("viewOn");
     try { window.scrollTo(0, 0); } catch {}
   }
 
-  // -----------------------------
-  // Intelligent Exit
-  // -----------------------------
-  function smartExit() {
-    const from = getQueryParam("from") || "";
-    const cameFromTarget = (from === "target");
-
-    if (cameFromTarget) {
-      const before = window.location.href;
-      try { window.history.back(); } catch {}
-
-      setTimeout(() => {
-        if (window.location.href === before) {
-          window.location.href = "./index.html";
-        }
-      }, 250);
-      return;
-    }
-
-    window.location.href = "./index.html";
-  }
-
-  // -----------------------------
+  // ------------------------------------------------------------
   // Render Page 1
-  // -----------------------------
+  // ------------------------------------------------------------
   function renderPrecision(payload) {
     const score = Number(payload?.score ?? 0);
     const band = scoreBandInfo(score);
 
-    // Score number
+    // score number
     scoreValue.textContent = Number.isFinite(score) ? String(Math.round(score)) : "—";
 
-    // ✅ Score number color by band
-    scoreValue.classList.remove("scoreNumNeutral", "scoreNumGreen", "scoreNumYellow", "scoreNumRed");
-    scoreValue.classList.add(band.numCls);
+    // ✅ score number color changes by band (NOT white)
+    scoreValue.classList.remove("scoreGood", "scoreMid", "scoreLow");
+    if (band.scoreCls) scoreValue.classList.add(band.scoreCls);
 
-    // Band pill
+    // band pill
     scoreBand.classList.remove("scoreBandNeutral", "scoreBandGreen", "scoreBandYellow", "scoreBandRed");
     scoreBand.classList.add(band.cls);
     scoreBand.textContent = band.text;
 
-    // Big clicks
+    // clicks
     windageBig.textContent = fmt2(payload?.windage?.clicks ?? 0);
     windageDir.textContent = String(payload?.windage?.dir || "—");
 
     elevationBig.textContent = fmt2(payload?.elevation?.clicks ?? 0);
     elevationDir.textContent = String(payload?.elevation?.dir || "—");
 
+    // run line
     const dist = Number(payload?.debug?.distanceYds ?? payload?.distanceYds ?? 100);
     const shots = Number(payload?.shots ?? 0);
 
     runDistance.textContent = `${Math.round(dist)} yds`;
     runHits.textContent = `${shots} hits`;
     runTime.textContent = nowStamp();
-
-    // Exit label
-    if (exitBtn) {
-      const from = getQueryParam("from") || "";
-      exitBtn.textContent = (from === "target") ? "Back to Target" : "Exit";
-    }
   }
 
-  // -----------------------------
+  // ------------------------------------------------------------
   // Render Page 2
-  // -----------------------------
+  // ------------------------------------------------------------
   async function renderReport(payload) {
+    // Vendor + survey links (LIVE ONLY HERE)
     const vendorUrl = String(payload?.vendorUrl || "");
     const surveyUrl = String(payload?.surveyUrl || "") || DEFAULT_SURVEY_URL;
 
@@ -542,14 +535,15 @@
       surveyBtn.style.pointerEvents = "none";
     }
 
-    const hist = loadHistory();
+    // Build card image from history
+    const hist = loadHistory(); // current run already pushed
     const dataUrl = await drawReportCardImage(payload, hist);
     secCardImg.src = dataUrl;
   }
 
-  // -----------------------------
+  // ------------------------------------------------------------
   // Boot
-  // -----------------------------
+  // ------------------------------------------------------------
   const payload = loadPayload();
   if (!payload) {
     alert("SEC data not found. Go back and run a target first.");
@@ -574,9 +568,10 @@
     showPrecision();
   });
 
-  // Wire exit
-  if (exitBtn) {
-    exitBtn.addEventListener("click", smartExit);
+  // ✅ New: Page 1 “Zero another target / Score another” -> landing
+  if (goHomeBtn) {
+    goHomeBtn.addEventListener("click", () => {
+      goToLanding();
+    });
   }
-
 })();
