@@ -64,9 +64,16 @@
         </div>
 
         <div class="primaryActions">
+
+          <!-- NEW: back to landing (same styling class used elsewhere; no other page changes) -->
+          <button id="goLandingBtn" class="btnSecondary" type="button">
+            Score another
+          </button>
+
           <button id="toReportBtn" class="primaryBtn" type="button">
             Save SEC + Shooter History
           </button>
+
           <div class="microNote">
             Next screen creates a “Report Card” image you can save to Photos.
           </div>
@@ -96,7 +103,6 @@
           Tap &amp; hold the card to save to Photos.
         </div>
 
-        <!-- The generated “Report Card” image (long-press friendly) -->
         <div class="cardImgShell">
           <img id="secCardImg" alt="SEC report card image" />
         </div>
