@@ -1,4 +1,6 @@
-<!-- docs/sec.html (FULL REPLACEMENT) — TWO-PAGE SEC FLOW (NO “TROPHY”) -->
+<!-- docs/sec.html (FULL REPLACEMENT) — TWO-PAGE SEC FLOW (NO “TROPHY”)
+     + NEW: Intelligent Exit button (Back to Target / Exit) on Page 1
+-->
 <!doctype html>
 <html lang="en">
 <head>
@@ -13,7 +15,7 @@
 
   <title>SEC — Tap-n-Score™</title>
 
-  <link rel="stylesheet" href="./sec.css?v=SEC-2P-0301A" />
+  <link rel="stylesheet" href="./sec.css?v=SEC-2P-0301B" />
 </head>
 
 <body>
@@ -29,6 +31,11 @@
             <span class="r">S</span><span class="w">E</span><span class="b">C</span>
           </div>
           <div class="secSub">Shooter Experience Card</div>
+        </div>
+
+        <!-- ✅ NEW: Intelligent Exit -->
+        <div class="secExitRow">
+          <button id="exitBtn" class="exitBtn" type="button">Exit</button>
         </div>
       </header>
 
@@ -64,16 +71,9 @@
         </div>
 
         <div class="primaryActions">
-
-          <!-- NEW: back to landing (same styling class used elsewhere; no other page changes) -->
-          <button id="goLandingBtn" class="btnSecondary" type="button">
-            Score another
-          </button>
-
           <button id="toReportBtn" class="primaryBtn" type="button">
             Save SEC + Shooter History
           </button>
-
           <div class="microNote">
             Next screen creates a “Report Card” image you can save to Photos.
           </div>
@@ -131,6 +131,6 @@
 
   </main>
 
-  <script defer src="./sec.js?v=SEC-2P-0301A"></script>
+  <script defer src="./sec.js?v=SEC-2P-0301B"></script>
 </body>
 </html>
