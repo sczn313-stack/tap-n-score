@@ -4,6 +4,11 @@
    + Matrix + target size chips
    + iOS-safe photo input (not display:none)
    + NEW: SEC exit intelligence flag (?from=target)
+
+   FIXES INCLUDED (YOUR NOTES):
+   ✅ Captures the *rendered* target preview (photo + aim + holes)
+      and stores it into KEY_TARGET_IMG_DATA so SEC Page 2 thumbnail
+      includes the aim point + bullet holes.
 ============================================================ */
 
 (() => {
@@ -184,13 +189,11 @@
       kind === "go"    ? "rgba(47,102,255,.92)"  :   // blue
                          "rgba(238,242,247,.70)";    // neutral
 
-    // Fade-in effect (works on iPhone + iPad)
     elInstruction.style.transition = "opacity 180ms ease, transform 180ms ease, color 120ms ease";
     elInstruction.style.opacity = "0";
     elInstruction.style.transform = "translateY(2px)";
     elInstruction.style.color = color;
 
-    // Force reflow so the transition always triggers (important on iOS Safari)
     void elInstruction.offsetHeight;
 
     elInstruction.textContent = text || "";
@@ -280,6 +283,88 @@
       if (dataUrl && dataUrl.startsWith("data:image/")) {
         localStorage.setItem(KEY_TARGET_IMG_DATA, dataUrl);
       }
+    } catch {}
+  }
+
+  // ------------------------------------------------------------
+  // ✅ Rendered preview capture (photo + aim + holes)
+  // Stores into KEY_TARGET_IMG_DATA so SEC Page 2 thumbnail includes taps.
+  // ------------------------------------------------------------
+  function saveRenderedTargetPreviewForSEC() {
+    try {
+      if (!elWrap || !elImg || !elImg.src) return;
+      const wrapRect = elWrap.getBoundingClientRect();
+      const imgRect = elImg.getBoundingClientRect();
+
+      const w = Math.max(1, Math.round(wrapRect.width));
+      const h = Math.max(1, Math.round(wrapRect.height));
+
+      const canvas = document.createElement("canvas");
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext("2d");
+
+      // Background (match your dark theme)
+      ctx.fillStyle = "#06070a";
+      ctx.fillRect(0, 0, w, h);
+
+      // Draw the displayed image exactly where it appears within the wrap
+      const offX = imgRect.left - wrapRect.left;
+      const offY = imgRect.top - wrapRect.top;
+      const dw = imgRect.width;
+      const dh = imgRect.height;
+
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      img.onload = () => {
+        try {
+          ctx.drawImage(img, offX, offY, dw, dh);
+
+          // Draw aim + hit dots from normalized coords (no DOM dependency)
+          function drawDot(x01, y01, fill) {
+            const x = offX + x01 * dw;
+            const y = offY + y01 * dh;
+
+            const r = 10; // tuned for visibility in thumbnail
+            ctx.save();
+            // shadow
+            ctx.shadowColor = "rgba(0,0,0,.55)";
+            ctx.shadowBlur = 16;
+            ctx.shadowOffsetY = 6;
+
+            // fill
+            ctx.beginPath();
+            ctx.arc(x, y, r, 0, Math.PI * 2);
+            ctx.closePath();
+            ctx.fillStyle = fill;
+            ctx.fill();
+
+            // border
+            ctx.shadowBlur = 0;
+            ctx.lineWidth = 2;
+            ctx.strokeStyle = "rgba(0,0,0,.55)";
+            ctx.stroke();
+
+            ctx.restore();
+          }
+
+          if (aim && Number.isFinite(aim.x01) && Number.isFinite(aim.y01)) {
+            drawDot(aim.x01, aim.y01, "#67f3a4"); // aim (green)
+          }
+          for (const p of (hits || [])) {
+            if (!p) continue;
+            if (!Number.isFinite(p.x01) || !Number.isFinite(p.y01)) continue;
+            drawDot(p.x01, p.y01, "#b7ff3c"); // holes (yellow-lime)
+          }
+
+          const dataUrl = canvas.toDataURL("image/png");
+          if (dataUrl && dataUrl.startsWith("data:image/")) {
+            localStorage.setItem(KEY_TARGET_IMG_DATA, dataUrl);
+          }
+        } catch {}
+      };
+      img.onerror = () => {};
+      img.src = elImg.src;
     } catch {}
   }
 
@@ -605,7 +690,7 @@
     try { localStorage.setItem(KEY_PAYLOAD, JSON.stringify(payload)); } catch {}
     const b64 = b64FromObj(payload);
 
-    // ✅ NEW: mark that SEC came from the Target page (enables intelligent Exit)
+    // ✅ mark that SEC came from the Target page (enables intelligent Exit)
     window.location.href = `./sec.html?from=target&payload=${encodeURIComponent(b64)}&fresh=${Date.now()}`;
   }
 
@@ -615,6 +700,10 @@
       alert("Tap Aim Point first, then tap at least one bullet hole.");
       return;
     }
+
+    // ✅ CRITICAL: capture rendered preview BEFORE leaving the page
+    // This is what makes Page 2 thumbnail show aim + holes.
+    saveRenderedTargetPreviewForSEC();
 
     const vendorUrl = localStorage.getItem(KEY_VENDOR_URL) || "";
 
@@ -629,7 +718,6 @@
       surveyUrl: "",
       target: { key: targetSizeKey, wIn: Number(targetWIn), hIn: Number(targetHIn) },
 
-      // include taps for export markers
       debug: { aim, hits, avgPoi: out.avgPoi, distanceYds: getDistanceYds(), inches: out.inches, squareIn: out.squareIn }
     };
 
