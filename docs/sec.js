@@ -1,7 +1,13 @@
 /* ============================================================
    docs/sec.js (FULL REPLACEMENT) — TWO-PAGE SEC
-   Page 1: Precision (score + big clicks)
+   Page 1: Precision (score + big clicks) + Intelligent Exit
    Page 2: Report Card image (tap & hold to save) + Vendor + Survey
+
+   FIXES INCLUDED:
+   ✅ Page 1 numeric SCORE now color-shifts by score band
+   ✅ Exit button:
+      - If launched from target page: history.back() then fallback to ./index.html
+      - Otherwise: ./index.html
 ============================================================ */
 
 (() => {
@@ -13,8 +19,8 @@
   const toReportBtn = $("toReportBtn");
   const backBtn = $("backBtn");
 
-  // NEW (Page 1) — back to landing
-  const goLandingBtn = $("goLandingBtn");
+  // NEW: Exit button (Page 1)
+  const exitBtn = $("exitBtn");
 
   // Page 1 elements
   const scoreValue = $("scoreValue");
@@ -76,20 +82,12 @@
 
   function scoreBandInfo(score) {
     const s = Number(score);
-    if (!Number.isFinite(s)) return { cls: "scoreBandNeutral", text: "—" };
+    if (!Number.isFinite(s)) return { cls: "scoreBandNeutral", text: "—", numCls: "scoreNumNeutral" };
 
     // LOCKED: GREEN 90–100, YELLOW 60–89, RED 0–59
-    if (s >= 90) return { cls: "scoreBandGreen", text: "STRONG / EXCELLENT" };
-    if (s >= 60) return { cls: "scoreBandYellow", text: "IMPROVING / SOLID" };
-    return { cls: "scoreBandRed", text: "NEEDS WORK" };
-  }
-
-  // NEW: score color matches band (NOT forced white)
-  function scoreColorForBandCls(cls) {
-    if (cls === "scoreBandGreen") return "#48ff8b";
-    if (cls === "scoreBandYellow") return "#ffe85a";
-    if (cls === "scoreBandRed") return "#ff4d4d";
-    return "rgba(238,242,247,.92)";
+    if (s >= 90) return { cls: "scoreBandGreen", text: "STRONG / EXCELLENT", numCls: "scoreNumGreen" };
+    if (s >= 60) return { cls: "scoreBandYellow", text: "IMPROVING / SOLID", numCls: "scoreNumYellow" };
+    return { cls: "scoreBandRed", text: "NEEDS WORK", numCls: "scoreNumRed" };
   }
 
   function fmt2(n) {
@@ -145,7 +143,6 @@
     };
 
     hist.unshift(row);
-    // Keep last 20
     const trimmed = hist.slice(0, 20);
     saveHistory(trimmed);
     return trimmed;
@@ -184,7 +181,6 @@
     const H = 1920;
     const pad = 60;
 
-    // Canvas
     const c = document.createElement("canvas");
     c.width = W;
     c.height = H;
@@ -194,7 +190,6 @@
     ctx.fillStyle = "#06070a";
     ctx.fillRect(0, 0, W, H);
 
-    // subtle panels
     function roundedRect(x,y,w,h,r){
       ctx.beginPath();
       ctx.moveTo(x+r, y);
@@ -224,7 +219,6 @@
     ctx.textAlign = "center";
     ctx.textBaseline = "alphabetic";
 
-    // RWB SEC
     const parts = ["S", "E", "C"];
     const colors = ["#ff4d4d", "#eef2f7", "#2f66ff"];
     const spacing = 90;
@@ -236,7 +230,6 @@
       ctx.fillText(parts[i], startX + spacing * i, secY);
     }
 
-    // Subtitle
     ctx.fillStyle = "rgba(238,242,247,.75)";
     ctx.font = "700 26px system-ui, -apple-system, Segoe UI, Roboto, Arial";
     ctx.fillText("Shooter Experience Card", W/2, secY + 42);
@@ -252,9 +245,14 @@
     ctx.textAlign = "center";
     ctx.fillText("SCORE", W/2, 285);
 
-    // (Report card image still uses white for readability; you didn't ask to change this.)
+    // Score number in band color on the card image too
+    let scoreColor = "rgba(238,242,247,.94)";
+    if (band.cls === "scoreBandGreen") scoreColor = "rgba(72,255,139,.98)";
+    if (band.cls === "scoreBandYellow") scoreColor = "rgba(255,232,90,.98)";
+    if (band.cls === "scoreBandRed") scoreColor = "rgba(255,77,77,.98)";
+
     ctx.font = "900 120px system-ui, -apple-system, Segoe UI, Roboto, Arial";
-    ctx.fillStyle = "rgba(238,242,247,.94)";
+    ctx.fillStyle = scoreColor;
     ctx.fillText(String(Math.round(score)), W/2, 405);
 
     // band pill
@@ -262,6 +260,7 @@
     const pillX = (W - pillW)/2;
     const pillY = 430;
     roundedRect(pillX, pillY, pillW, pillH, 999);
+
     let pillFill = "rgba(255,255,255,.08)";
     let pillText = band.text;
     let pillTextColor = "rgba(238,242,247,.75)";
@@ -303,14 +302,12 @@
     panel(start, ySq, sq, sq);
     panel(start + sq + gap, ySq, sq, sq);
 
-    // Labels
     ctx.fillStyle = "rgba(238,242,247,.72)";
     ctx.font = "900 22px system-ui, -apple-system, Segoe UI, Roboto, Arial";
     ctx.textAlign = "center";
     ctx.fillText("TARGET USED", start + sq/2, ySq - 16);
     ctx.fillText("OFFICIAL TARGET PARTNER", start + sq + gap + sq/2, ySq - 16);
 
-    // Draw thumbnail (cover)
     const imgUrl = loadTargetImageUrl();
     if (imgUrl) {
       try {
@@ -340,7 +337,6 @@
       ctx.fillText("No Image", start + sq/2, ySq + sq/2);
     }
 
-    // Vendor box
     const vendorUrl = String(payload?.vendorUrl || "");
     const vendorHost = domainFromUrl(vendorUrl);
     const vendorName = isBaker(vendorUrl) ? "Baker Printing" : (vendorHost || "Vendor Partner");
@@ -415,7 +411,6 @@
       ctx.fillText(`${String(i+1).padStart(2,"0")}.  ${s}   |   ${yd} yds   |   ${ht} hits`, colX, rowY);
     }
 
-    // footer time stamp
     ctx.textAlign = "center";
     ctx.fillStyle = "rgba(238,242,247,.45)";
     ctx.font = "800 20px system-ui, -apple-system, Segoe UI, Roboto, Arial";
@@ -457,21 +452,47 @@
   }
 
   // -----------------------------
+  // Intelligent Exit
+  // -----------------------------
+  function smartExit() {
+    const from = getQueryParam("from") || "";
+    const cameFromTarget = (from === "target");
+
+    if (cameFromTarget) {
+      const before = window.location.href;
+      try { window.history.back(); } catch {}
+
+      setTimeout(() => {
+        if (window.location.href === before) {
+          window.location.href = "./index.html";
+        }
+      }, 250);
+      return;
+    }
+
+    window.location.href = "./index.html";
+  }
+
+  // -----------------------------
   // Render Page 1
   // -----------------------------
   function renderPrecision(payload) {
     const score = Number(payload?.score ?? 0);
     const band = scoreBandInfo(score);
 
+    // Score number
     scoreValue.textContent = Number.isFinite(score) ? String(Math.round(score)) : "—";
 
-    // IMPORTANT: score number color follows score band (your request)
-    scoreValue.style.color = scoreColorForBandCls(band.cls);
+    // ✅ Score number color by band
+    scoreValue.classList.remove("scoreNumNeutral", "scoreNumGreen", "scoreNumYellow", "scoreNumRed");
+    scoreValue.classList.add(band.numCls);
 
+    // Band pill
     scoreBand.classList.remove("scoreBandNeutral", "scoreBandGreen", "scoreBandYellow", "scoreBandRed");
     scoreBand.classList.add(band.cls);
     scoreBand.textContent = band.text;
 
+    // Big clicks
     windageBig.textContent = fmt2(payload?.windage?.clicks ?? 0);
     windageDir.textContent = String(payload?.windage?.dir || "—");
 
@@ -484,6 +505,12 @@
     runDistance.textContent = `${Math.round(dist)} yds`;
     runHits.textContent = `${shots} hits`;
     runTime.textContent = nowStamp();
+
+    // Exit label
+    if (exitBtn) {
+      const from = getQueryParam("from") || "";
+      exitBtn.textContent = (from === "target") ? "Back to Target" : "Exit";
+    }
   }
 
   // -----------------------------
@@ -547,13 +574,9 @@
     showPrecision();
   });
 
-  // NEW: Go back to landing page (do NOT change anything else)
-  if (goLandingBtn) {
-    goLandingBtn.addEventListener("click", () => {
-      // safest default for GitHub Pages setups
-      window.location.href = "./index.html";
-      // If your landing page is root, swap to: window.location.href = "/";
-    });
+  // Wire exit
+  if (exitBtn) {
+    exitBtn.addEventListener("click", smartExit);
   }
 
 })();
