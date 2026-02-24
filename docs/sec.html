@@ -1,5 +1,7 @@
-<!-- docs/sec.html (FULL REPLACEMENT) — TWO-PAGE SEC FLOW (NO “TROPHY”)
-     + NEW: Intelligent Exit button (Back to Target / Exit) on Page 1
+<!-- docs/sec.html (FULL REPLACEMENT) — TWO-PAGE SEC (TIGHTER)
+     FIXES:
+     ✅ Removes duplicate SEC banner on Page 2 (no page-level SEC header there)
+     ✅ Page 2 is tighter (less wasted vertical space)
 -->
 <!doctype html>
 <html lang="en">
@@ -15,7 +17,7 @@
 
   <title>SEC — Tap-n-Score™</title>
 
-  <link rel="stylesheet" href="./sec.css?v=SEC-2P-0301B" />
+  <link rel="stylesheet" href="./sec.css?v=SEC-2P-TIGHT-0224A" />
 </head>
 
 <body>
@@ -33,7 +35,6 @@
           <div class="secSub">Shooter Experience Card</div>
         </div>
 
-        <!-- ✅ NEW: Intelligent Exit -->
         <div class="secExitRow">
           <button id="exitBtn" class="exitBtn" type="button">Exit</button>
         </div>
@@ -42,7 +43,7 @@
       <section class="card">
         <div class="scoreWrap">
           <div class="scoreLabel">SCORE</div>
-          <div id="scoreValue" class="scoreValue">—</div>
+          <div id="scoreValue" class="scoreValue scoreNumNeutral">—</div>
           <div id="scoreBand" class="scoreBand scoreBandNeutral">—</div>
 
           <div id="scoreTip" class="scoreTip">
@@ -87,16 +88,9 @@
 
     <!-- =========================
          PAGE 2 — REPORT CARD (SAVE)
+         (NO PAGE-LEVEL SEC HEADER — avoids duplication)
     ========================== -->
     <section id="viewReport" class="view" aria-label="SEC Report Card View">
-      <header class="secHeader reportHeader">
-        <div class="secHeaderTop">
-          <div class="secRWB bigSEC" aria-label="SEC">
-            <span class="r">S</span><span class="w">E</span><span class="b">C</span>
-          </div>
-          <div class="secSub">Shooter Experience Card</div>
-        </div>
-      </header>
 
       <section class="card reportCard">
         <div class="saveHint">
@@ -131,6 +125,6 @@
 
   </main>
 
-  <script defer src="./sec.js?v=SEC-2P-0301B"></script>
+  <script defer src="./sec.js?v=SEC-2P-TIGHT-0224A"></script>
 </body>
 </html>
