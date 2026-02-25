@@ -4,10 +4,12 @@
    Page 2: Report Card image (tap & hold to save) + Vendor + Survey
 
    FIXES INCLUDED:
-   ✅ Removes “yellow swoosh” by clamping rounded-rect radius (canvas)
-   ✅ Score color on Page 1 changes by score band (green/yellow/red)
-   ✅ Adds "Zero another target / Score another" button on Page 1 -> landing
-   ✅ Removes duplicate top banner on Page 2 by hiding the HTML header (image already has SEC)
+   ✅ Exit button works (goHomeBtn -> index.html)
+   ✅ Page 1 score color changes by score band (green/yellow/red)
+   ✅ Page 2 thumbnail shows Aim + Hole markers
+   ✅ Keeps/stores 10 sessions, shows 10 newest on top
+   ✅ Avg(10) uses TWO decimals (averages only)
+   ✅ “Yellow swoosh” eliminated by radius clamping
 ============================================================ */
 
 (() => {
@@ -29,8 +31,6 @@
   const windageDir = $("windageDir");
   const elevationBig = $("elevationBig");
   const elevationDir = $("elevationDir");
-
-  // NEW Page 1 exit-to-landing button (must exist in sec.html)
   const goHomeBtn = $("goHomeBtn");
 
   // Page 2 elements
@@ -38,23 +38,21 @@
   const vendorBtn = $("vendorBtn");
   const surveyBtn = $("surveyBtn");
 
-  // Page 2 header (we hide it to avoid duplicate SEC banner on top)
-  const reportHeader = document.querySelector(".reportHeader");
-
   // Storage keys (must match index.js)
   const KEY_PAYLOAD = "SCZN3_SEC_PAYLOAD_V1";
   const KEY_TARGET_IMG_DATA = "SCZN3_TARGET_IMG_DATAURL_V1";
   const KEY_TARGET_IMG_BLOB = "SCZN3_TARGET_IMG_BLOBURL_V1";
 
-  // History (Top 20 stored, render Top 15)
+  // History (Store 10, show 10)
   const KEY_HISTORY = "SCZN3_SEC_HISTORY_V1";
+  const KEEP_N = 10;
 
   // Survey default (published form)
   const DEFAULT_SURVEY_URL = "https://forms.gle/uCSDTk5BwT4euLYeA";
 
-  // ------------------------------------------------------------
+  // -----------------------------
   // Helpers
-  // ------------------------------------------------------------
+  // -----------------------------
   function safeJsonParse(s) {
     try { return JSON.parse(s); } catch { return null; }
   }
@@ -99,6 +97,13 @@
     return x.toFixed(2);
   }
 
+  function avg2(arr) {
+    const a = arr.map(Number).filter(Number.isFinite);
+    if (!a.length) return "0.00";
+    const s = a.reduce((p,c)=>p+c,0) / a.length;
+    return s.toFixed(2); // ✅ averages only
+  }
+
   function domainFromUrl(u) {
     try { return new URL(u).hostname.replace(/^www\./, ""); } catch { return ""; }
   }
@@ -109,7 +114,6 @@
   }
 
   function loadTargetImageUrl() {
-    // Prefer dataURL (more reliable across navigation), fallback to blobUrl
     const d = localStorage.getItem(KEY_TARGET_IMG_DATA) || "";
     if (d.startsWith("data:image/")) return d;
 
@@ -119,15 +123,9 @@
     return "";
   }
 
-  function goToLanding() {
-    // Same-folder landing for GitHub Pages: /docs/index.html
-    // Keep it simple: go to index.html in the same directory
-    window.location.href = "./index.html";
-  }
-
-  // ------------------------------------------------------------
+  // -----------------------------
   // History
-  // ------------------------------------------------------------
+  // -----------------------------
   function loadHistory() {
     const arr = safeJsonParse(localStorage.getItem(KEY_HISTORY) || "[]");
     return Array.isArray(arr) ? arr : [];
@@ -144,16 +142,11 @@
       score: Number(payload?.score ?? 0),
       dist: Number(payload?.debug?.distanceYds ?? payload?.distanceYds ?? 0),
       hits: Number(payload?.shots ?? 0),
-      windDir: String(payload?.windage?.dir || ""),
-      wind: Number(payload?.windage?.clicks ?? 0),
-      elevDir: String(payload?.elevation?.dir || ""),
-      elev: Number(payload?.elevation?.clicks ?? 0),
       vendor: domainFromUrl(payload?.vendorUrl || "")
     };
 
     hist.unshift(row);
-    // Keep last 20
-    const trimmed = hist.slice(0, 20);
+    const trimmed = hist.slice(0, KEEP_N);
     saveHistory(trimmed);
     return trimmed;
   }
@@ -162,28 +155,15 @@
     const scores = hist.map(h => Number(h.score)).filter(Number.isFinite);
     const sessions = scores.length;
 
-    const highest20 = sessions ? Math.max(...scores) : 0;
+    const highest = sessions ? Math.max(...scores) : 0;
+    const avg10 = avg2(scores.slice(0, KEEP_N));
 
-    const avg = (arr) => {
-      if (!arr.length) return 0;
-      const sum = arr.reduce((a,b) => a + b, 0);
-      return sum / arr.length;
-    };
-
-    const top5 = scores.slice(0, 5);
-    const top20 = scores.slice(0, 20);
-
-    return {
-      sessions,
-      highest20,
-      avg5: avg(top5),
-      avg20: avg(top20)
-    };
+    return { sessions, highest, avg10 };
   }
 
-  // ------------------------------------------------------------
+  // -----------------------------
   // Report Card image (Canvas -> <img>)
-  // ------------------------------------------------------------
+  // -----------------------------
   async function drawReportCardImage(payload, hist) {
     const stats = computeStats(hist);
 
@@ -196,11 +176,10 @@
     c.height = H;
     const ctx = c.getContext("2d");
 
-    // Background
     ctx.fillStyle = "#06070a";
     ctx.fillRect(0, 0, W, H);
 
-    // Rounded rect that NEVER “swooshes” (radius clamped)
+    // Rounded rect that NEVER “swooshes”
     function roundedRect(x, y, w, h, r) {
       const rr = Math.max(0, Math.min(Number(r || 0), w / 2, h / 2));
       ctx.beginPath();
@@ -227,13 +206,11 @@
       ctx.restore();
     }
 
-    // SEC Title inside the IMAGE (this is the only SEC title on Page 2)
+    // SEC header
     const secY = 120;
     ctx.font = "900 92px system-ui, -apple-system, Segoe UI, Roboto, Arial";
     ctx.textAlign = "center";
-    ctx.textBaseline = "alphabetic";
 
-    // RWB SEC
     const parts = ["S", "E", "C"];
     const colors = ["#ff4d4d", "#eef2f7", "#2f66ff"];
     const spacing = 90;
@@ -245,7 +222,6 @@
       ctx.fillText(parts[i], startX + spacing * i, secY);
     }
 
-    // Subtitle
     ctx.fillStyle = "rgba(238,242,247,.75)";
     ctx.font = "700 26px system-ui, -apple-system, Segoe UI, Roboto, Arial";
     ctx.fillText("Shooter Experience Card", W/2, secY + 42);
@@ -258,27 +234,24 @@
 
     ctx.font = "800 28px system-ui, -apple-system, Segoe UI, Roboto, Arial";
     ctx.fillStyle = "rgba(238,242,247,.70)";
-    ctx.textAlign = "center";
     ctx.fillText("SCORE", W/2, 285);
 
-    // Score value (kept bright for legibility inside the image)
     ctx.font = "900 120px system-ui, -apple-system, Segoe UI, Roboto, Arial";
     ctx.fillStyle = "rgba(238,242,247,.94)";
     ctx.fillText(String(Math.round(score)), W/2, 405);
 
-    // band pill
+    // Band pill
     const pillW = 720, pillH = 64;
     const pillX = (W - pillW)/2;
     const pillY = 430;
+    roundedRect(pillX, pillY, pillW, pillH, 999);
 
     let pillFill = "rgba(255,255,255,.08)";
-    let pillText = band.text;
     let pillTextColor = "rgba(238,242,247,.75)";
     if (band.cls === "scoreBandGreen"){ pillFill = "rgba(72,255,139,.92)"; pillTextColor="#031009"; }
     if (band.cls === "scoreBandYellow"){ pillFill = "rgba(255,232,90,.92)"; pillTextColor="#191300"; }
     if (band.cls === "scoreBandRed"){ pillFill = "rgba(255,77,77,.92)"; pillTextColor="#1b0000"; }
 
-    roundedRect(pillX, pillY, pillW, pillH, 999);
     ctx.fillStyle = pillFill;
     ctx.fill();
     ctx.strokeStyle = "rgba(255,255,255,.18)";
@@ -288,11 +261,11 @@
 
     ctx.fillStyle = pillTextColor;
     ctx.font = "900 28px system-ui, -apple-system, Segoe UI, Roboto, Arial";
-    ctx.fillText(pillText, W/2, pillY + 44);
+    ctx.fillText(band.text, W/2, pillY + 44);
 
-    // Identity line
-    const dist = Number(payload?.debug?.distanceYds ?? 0);
-    const hits = Number(payload?.shots ?? 0);
+    // One-line identity
+    const dist = Number(payload?.debug?.distanceYds ?? payload?.distanceYds ?? 0);
+    const hitsN = Number(payload?.shots ?? 0);
 
     const wdir = String(payload?.windage?.dir || "");
     const edir = String(payload?.elevation?.dir || "");
@@ -301,7 +274,7 @@
 
     ctx.fillStyle = "rgba(238,242,247,.78)";
     ctx.font = "800 26px system-ui, -apple-system, Segoe UI, Roboto, Arial";
-    ctx.fillText(`${dist || 100} yds  |  ${hits} hits  |  ${wclick} ${wdir}  |  ${eclick} ${edir}`, W/2, 560);
+    ctx.fillText(`${dist || 100} yds  |  ${hitsN} hits  |  ${wclick} ${wdir}  |  ${eclick} ${edir}`, W/2, 560);
 
     // Two equal squares: thumbnail + vendor
     const sq = 360;
@@ -316,12 +289,14 @@
     // Labels
     ctx.fillStyle = "rgba(238,242,247,.72)";
     ctx.font = "900 22px system-ui, -apple-system, Segoe UI, Roboto, Arial";
-    ctx.textAlign = "center";
     ctx.fillText("TARGET USED", start + sq/2, ySq - 16);
     ctx.fillText("OFFICIAL TARGET PARTNER", start + sq + gap + sq/2, ySq - 16);
 
-    // Draw thumbnail (cover)
+    // Thumbnail (cover crop) + markers
     const imgUrl = loadTargetImageUrl();
+    const aim = payload?.debug?.aim || null;
+    const hitArr = Array.isArray(payload?.debug?.hits) ? payload.debug.hits : [];
+
     if (imgUrl) {
       try {
         const img = await new Promise((resolve, reject) => {
@@ -332,25 +307,74 @@
           im.src = imgUrl;
         });
 
-        const r = Math.min(img.width / sq, img.height / sq);
-        const sw = sq * r;
-        const sh = sq * r;
-        const sx = (img.width - sw) / 2;
-        const sy = (img.height - sh) / 2;
+        // cover crop into inner rect
+        const innerX = start + 10;
+        const innerY = ySq + 10;
+        const innerW = sq - 20;
+        const innerH = sq - 20;
+
+        const scale = Math.max(innerW / img.width, innerH / img.height);
+        const dw = img.width * scale;
+        const dh = img.height * scale;
+        const dx = innerX + (innerW - dw)/2;
+        const dy = innerY + (innerH - dh)/2;
 
         ctx.save();
-        roundedRect(start + 10, ySq + 10, sq - 20, sq - 20, 22);
+        roundedRect(innerX, innerY, innerW, innerH, 22);
         ctx.clip();
-        ctx.drawImage(img, sx, sy, sw, sh, start + 10, ySq + 10, sq - 20, sq - 20);
+
+        // draw image
+        ctx.drawImage(img, dx, dy, dw, dh);
+
+        // helpers map x01,y01 to the drawn image area (dx..dx+dw)
+        function map01(p){
+          const x = dx + (Number(p?.x01 ?? 0) * dw);
+          const y = dy + (Number(p?.y01 ?? 0) * dh);
+          return { x, y };
+        }
+
+        // draw hits
+        for (const h of hitArr) {
+          const m = map01(h);
+          ctx.beginPath();
+          ctx.arc(m.x, m.y, 10, 0, Math.PI*2);
+          ctx.fillStyle = "rgba(183,255,60,.95)";
+          ctx.fill();
+          ctx.lineWidth = 4;
+          ctx.strokeStyle = "rgba(0,0,0,.55)";
+          ctx.stroke();
+        }
+
+        // draw aim point (distinct)
+        if (aim) {
+          const m = map01(aim);
+          ctx.beginPath();
+          ctx.arc(m.x, m.y, 12, 0, Math.PI*2);
+          ctx.fillStyle = "rgba(103,243,164,.95)";
+          ctx.fill();
+          ctx.lineWidth = 4;
+          ctx.strokeStyle = "rgba(0,0,0,.55)";
+          ctx.stroke();
+
+          // small crosshair ring
+          ctx.beginPath();
+          ctx.arc(m.x, m.y, 22, 0, Math.PI*2);
+          ctx.strokeStyle = "rgba(238,242,247,.85)";
+          ctx.lineWidth = 3;
+          ctx.stroke();
+        }
+
         ctx.restore();
-      } catch {}
+      } catch {
+        // ignore
+      }
     } else {
       ctx.fillStyle = "rgba(238,242,247,.25)";
       ctx.font = "900 26px system-ui, -apple-system, Segoe UI, Roboto, Arial";
       ctx.fillText("No Image", start + sq/2, ySq + sq/2);
     }
 
-    // Vendor box (text-only placeholder)
+    // Vendor box (text placeholder)
     const vendorUrl = String(payload?.vendorUrl || "");
     const vendorHost = domainFromUrl(vendorUrl);
     const vendorName = isBaker(vendorUrl) ? "Baker Printing" : (vendorHost || "Vendor Partner");
@@ -363,57 +387,50 @@
     ctx.font = "800 22px system-ui, -apple-system, Segoe UI, Roboto, Arial";
     ctx.fillText("After-Shot Intelligence", start + sq + gap + sq/2, ySq + sq/2 + 34);
 
-    // Stats panel
-    panel(pad, 1040, W - pad*2, 240);
+    // Stats panel (tight + relevant)
+    panel(pad, 1040, W - pad*2, 200);
     ctx.fillStyle = "rgba(238,242,247,.70)";
     ctx.font = "900 24px system-ui, -apple-system, Segoe UI, Roboto, Arial";
-    ctx.fillText("SESSION SUMMARY", W/2, 1090);
+    ctx.fillText("SESSION SUMMARY (LAST 10)", W/2, 1090);
 
     ctx.fillStyle = "rgba(238,242,247,.92)";
     ctx.font = "900 44px system-ui, -apple-system, Segoe UI, Roboto, Arial";
 
-    const leftX = pad + 140;
-    const rightX = W - pad - 140;
+    const leftX = pad + 200;
+    const rightX = W - pad - 200;
     const row1 = 1160;
-    const row2 = 1240;
 
-    ctx.textAlign = "center";
-    ctx.fillText(`${Math.round(stats.highest20)}`, leftX, row1);
-    ctx.fillText(`${stats.avg5.toFixed(1)}`, rightX, row1);
-
-    ctx.fillText(`${stats.avg20.toFixed(1)}`, leftX, row2);
-    ctx.fillText(`${stats.sessions}`, rightX, row2);
+    ctx.fillText(`${Math.round(stats.highest)}`, leftX, row1);
+    ctx.fillText(`${stats.avg10}`, rightX, row1);
 
     ctx.fillStyle = "rgba(238,242,247,.70)";
     ctx.font = "900 20px system-ui, -apple-system, Segoe UI, Roboto, Arial";
-    ctx.fillText("Highest (20)", leftX, row1 + 40);
-    ctx.fillText("Average (5)", rightX, row1 + 40);
-    ctx.fillText("Average (20)", leftX, row2 + 40);
-    ctx.fillText("Sessions", rightX, row2 + 40);
+    ctx.fillText("Highest (10)", leftX, row1 + 40);
+    ctx.fillText("Average (10)", rightX, row1 + 40);
 
-    // Top 15 history
-    panel(pad, 1320, W - pad*2, 500);
+    // Top 10 history (newest on top)
+    panel(pad, 1260, W - pad*2, 540);
     ctx.fillStyle = "rgba(238,242,247,.75)";
     ctx.font = "900 24px system-ui, -apple-system, Segoe UI, Roboto, Arial";
-    ctx.fillText("TOP 15 (MOST RECENT) — SCORE / YDS / HITS", W/2, 1375);
+    ctx.fillText("LAST 10 — SCORE / YDS / HITS (NEWEST TOP)", W/2, 1315);
 
-    const top15 = hist.slice(0, 15);
+    const top10 = hist.slice(0, KEEP_N);
     ctx.textAlign = "left";
-    ctx.font = "900 24px system-ui, -apple-system, Segoe UI, Roboto, Arial";
+    ctx.font = "900 26px system-ui, -apple-system, Segoe UI, Roboto, Arial";
 
-    const startY = 1425;
-    const lineH = 30;
+    const startY = 1370;
+    const lineH = 44;
     const colX = pad + 60;
 
-    for (let i = 0; i < top15.length; i++) {
-      const h = top15[i];
+    for (let i = 0; i < top10.length; i++) {
+      const h = top10[i];
       const rowY = startY + i * lineH;
 
       if (i === 0) {
         ctx.save();
         ctx.globalAlpha = 0.12;
         ctx.fillStyle = "#2f66ff";
-        roundedRect(pad + 30, rowY - 22, W - pad*2 - 60, 32, 10);
+        roundedRect(pad + 30, rowY - 32, W - pad*2 - 60, 42, 12);
         ctx.fill();
         ctx.restore();
       }
@@ -425,7 +442,6 @@
       ctx.fillText(`${String(i+1).padStart(2,"0")}.  ${s}   |   ${yd} yds   |   ${ht} hits`, colX, rowY);
     }
 
-    // footer time stamp
     ctx.textAlign = "center";
     ctx.fillStyle = "rgba(238,242,247,.45)";
     ctx.font = "800 20px system-ui, -apple-system, Segoe UI, Roboto, Arial";
@@ -434,9 +450,9 @@
     return c.toDataURL("image/png");
   }
 
-  // ------------------------------------------------------------
+  // -----------------------------
   // Payload
-  // ------------------------------------------------------------
+  // -----------------------------
   function loadPayload() {
     const qp = getQueryParam("payload");
     if (qp) {
@@ -451,52 +467,45 @@
     return null;
   }
 
-  // ------------------------------------------------------------
+  // -----------------------------
   // View switching
-  // ------------------------------------------------------------
+  // -----------------------------
   function showPrecision() {
-    // restore header for page 2 if user goes back
-    if (reportHeader) reportHeader.style.display = "";
     viewPrecision.classList.add("viewOn");
     viewReport.classList.remove("viewOn");
     try { window.scrollTo(0, 0); } catch {}
   }
 
   function showReport() {
-    // ✅ hide the HTML header on page 2 to avoid duplicate banner
-    if (reportHeader) reportHeader.style.display = "none";
     viewPrecision.classList.remove("viewOn");
     viewReport.classList.add("viewOn");
     try { window.scrollTo(0, 0); } catch {}
   }
 
-  // ------------------------------------------------------------
+  // -----------------------------
   // Render Page 1
-  // ------------------------------------------------------------
+  // -----------------------------
   function renderPrecision(payload) {
     const score = Number(payload?.score ?? 0);
     const band = scoreBandInfo(score);
 
-    // score number
     scoreValue.textContent = Number.isFinite(score) ? String(Math.round(score)) : "—";
-
-    // ✅ score number color changes by band (NOT white)
-    scoreValue.classList.remove("scoreGood", "scoreMid", "scoreLow");
-    if (band.scoreCls) scoreValue.classList.add(band.scoreCls);
 
     // band pill
     scoreBand.classList.remove("scoreBandNeutral", "scoreBandGreen", "scoreBandYellow", "scoreBandRed");
     scoreBand.classList.add(band.cls);
     scoreBand.textContent = band.text;
 
-    // clicks
+    // ✅ score number color by band (NOT white-only)
+    scoreValue.classList.remove("scoreGood","scoreMid","scoreLow");
+    if (band.scoreCls) scoreValue.classList.add(band.scoreCls);
+
     windageBig.textContent = fmt2(payload?.windage?.clicks ?? 0);
     windageDir.textContent = String(payload?.windage?.dir || "—");
 
     elevationBig.textContent = fmt2(payload?.elevation?.clicks ?? 0);
     elevationDir.textContent = String(payload?.elevation?.dir || "—");
 
-    // run line
     const dist = Number(payload?.debug?.distanceYds ?? payload?.distanceYds ?? 100);
     const shots = Number(payload?.shots ?? 0);
 
@@ -505,11 +514,10 @@
     runTime.textContent = nowStamp();
   }
 
-  // ------------------------------------------------------------
+  // -----------------------------
   // Render Page 2
-  // ------------------------------------------------------------
+  // -----------------------------
   async function renderReport(payload) {
-    // Vendor + survey links (LIVE ONLY HERE)
     const vendorUrl = String(payload?.vendorUrl || "");
     const surveyUrl = String(payload?.surveyUrl || "") || DEFAULT_SURVEY_URL;
 
@@ -535,15 +543,14 @@
       surveyBtn.style.pointerEvents = "none";
     }
 
-    // Build card image from history
-    const hist = loadHistory(); // current run already pushed
+    const hist = loadHistory();
     const dataUrl = await drawReportCardImage(payload, hist);
     secCardImg.src = dataUrl;
   }
 
-  // ------------------------------------------------------------
+  // -----------------------------
   // Boot
-  // ------------------------------------------------------------
+  // -----------------------------
   const payload = loadPayload();
   if (!payload) {
     alert("SEC data not found. Go back and run a target first.");
@@ -554,7 +561,6 @@
   // Push current run into history immediately
   pushHistory(payload);
 
-  // Render initial view
   renderPrecision(payload);
   showPrecision();
 
@@ -568,10 +574,10 @@
     showPrecision();
   });
 
-  // ✅ New: Page 1 “Zero another target / Score another” -> landing
+  // ✅ Exit to landing (works every time)
   if (goHomeBtn) {
     goHomeBtn.addEventListener("click", () => {
-      goToLanding();
+      window.location.href = "./index.html?from=sec&fresh=" + Date.now();
     });
   }
 })();
