@@ -5,10 +5,9 @@
    + iOS-safe photo input (not display:none)
    + SEC exit intelligence flag (?from=target)
 
-   NEW IN THIS REV:
-   ✅ Vendor pill wired ONLY when QR params include ?v=...
-   ✅ If NO ?v= param, vendor is CLEARED (prevents “sticky vendor”)
-   ✅ Saves vendor URL into localStorage (SCZN3_VENDOR_URL_V1) only when active
+   ✅ Vendor pill wired by QR params: ?v=...&sku=...&b=...
+   ✅ Vendor URL saved into localStorage (SCZN3_VENDOR_URL_V1)
+   ✅ Vendor pill becomes live instantly on landing
 ============================================================ */
 
 (() => {
@@ -67,8 +66,9 @@
   const KEY_TARGET_IMG_DATA = "SCZN3_TARGET_IMG_DATAURL_V1";
   const KEY_TARGET_IMG_BLOB = "SCZN3_TARGET_IMG_BLOBURL_V1";
   const KEY_VENDOR_URL = "SCZN3_VENDOR_URL_V1";
-  const KEY_VENDOR_ACTIVE = "SCZN3_VENDOR_ACTIVE_V1"; // "1" when ?v= is present
-
+  const KEY_VENDOR_SLUG = "SCZN3_VENDOR_SLUG_V1";
+  const KEY_VENDOR_SKU  = "SCZN3_VENDOR_SKU_V1";
+  const KEY_VENDOR_BATCH= "SCZN3_VENDOR_BATCH_V1";
   const KEY_DIST_UNIT = "SCZN3_RANGE_UNIT_V1"; // "YDS" | "M"
   const KEY_DIST_YDS = "SCZN3_RANGE_YDS_V1";   // numeric (yards)
 
@@ -76,11 +76,6 @@
   const KEY_TARGET_SIZE = "SCZN3_TARGET_SIZE_KEY_V1"; // e.g., "23x35"
   const KEY_TARGET_W = "SCZN3_TARGET_W_IN_V1";
   const KEY_TARGET_H = "SCZN3_TARGET_H_IN_V1";
-
-  // Optional vendor/sku/batch (for later analytics)
-  const KEY_VENDOR_SLUG = "SCZN3_VENDOR_SLUG_V1";
-  const KEY_VENDOR_SKU  = "SCZN3_VENDOR_SKU_V1";
-  const KEY_VENDOR_BATCH= "SCZN3_VENDOR_BATCH_V1";
 
   let objectUrl = null;
 
@@ -95,7 +90,6 @@
 
   // vendor rotate
   let vendorRotateTimer = null;
-  let vendorRotateOn = false;
 
   // dial unit
   let dialUnit = "MOA"; // "MOA" | "MRAD"
@@ -231,22 +225,20 @@
   function stopVendorRotate() {
     if (vendorRotateTimer) clearInterval(vendorRotateTimer);
     vendorRotateTimer = null;
-    vendorRotateOn = false;
   }
 
   function startVendorRotate() {
     stopVendorRotate();
     if (!elVendorLabel) return;
     vendorRotateTimer = setInterval(() => {
-      vendorRotateOn = !vendorRotateOn;
-      elVendorLabel.textContent = vendorRotateOn ? "VENDOR" : "BUY MORE TARGETS LIKE THIS";
+      const now = elVendorLabel.textContent || "";
+      elVendorLabel.textContent = (now === "VENDOR") ? "BUY MORE TARGETS LIKE THIS" : "VENDOR";
     }, 1200);
   }
 
   function hydrateVendorBox() {
-    const isActive = (localStorage.getItem(KEY_VENDOR_ACTIVE) === "1");
     const v = localStorage.getItem(KEY_VENDOR_URL) || "";
-    const ok = isActive && typeof v === "string" && v.startsWith("http");
+    const ok = typeof v === "string" && v.startsWith("http");
 
     if (!elVendorBox) return;
 
@@ -264,68 +256,46 @@
       elVendorBox.removeAttribute("rel");
       elVendorBox.style.pointerEvents = "none";
       elVendorBox.style.opacity = ".92";
-      if (elVendorLabel) elVendorLabel.textContent = "BUY MORE TARGETS LIKE THIS";
+      if (elVendorLabel) elVendorLabel.textContent = "VENDOR";
       stopVendorRotate();
     }
   }
 
   // ------------------------------------------------------------
-  // ✅ Vendor wiring from QR params (ACTIVE ONLY when ?v= exists)
+  // ✅ HARD LOCK Vendor wiring from QR params
   // ------------------------------------------------------------
-  function getParams() {
-    try { return new URLSearchParams(window.location.search || ""); }
-    catch { return new URLSearchParams(); }
-  }
-
-  function normalizeSlug(s) {
-    return String(s || "").trim().toLowerCase();
-  }
-
-  function vendorUrlFromParams() {
-    const p = getParams();
-
-    const slug = normalizeSlug(p.get("v"));
-    const sku  = String(p.get("sku") || "").trim().toLowerCase();
-    const batch= String(p.get("b") || "").trim().toLowerCase();
-
-    const isActive = !!slug;
-
-    // ✅ This is the fix: if no ?v= param, CLEAR vendor so it won’t “stick”
-    try {
-      localStorage.setItem(KEY_VENDOR_ACTIVE, isActive ? "1" : "0");
-      if (!isActive) {
-        localStorage.removeItem(KEY_VENDOR_URL);
-        localStorage.removeItem(KEY_VENDOR_SLUG);
-        localStorage.removeItem(KEY_VENDOR_SKU);
-        localStorage.removeItem(KEY_VENDOR_BATCH);
-      }
-    } catch {}
-
-    if (!isActive) return null;
-
-    // Persist identifiers for later analytics (optional)
-    if (slug) { try { localStorage.setItem(KEY_VENDOR_SLUG, slug); } catch {} }
-    if (sku)  { try { localStorage.setItem(KEY_VENDOR_SKU, sku); } catch {} }
-    if (batch){ try { localStorage.setItem(KEY_VENDOR_BATCH, batch); } catch {} }
-
-    // Vendor registry
-    const VENDOR_REGISTRY = {
-      baker: {
-        defaultUrl: "https://bakertargets.com/product/100-yard-bulls-eye-rifle-target-smart-target-version"
-      }
-    };
-
-    const entry = VENDOR_REGISTRY[slug];
-    if (!entry) return null;
-
-    return entry.defaultUrl || null;
-  }
+  const VENDOR_REGISTRY = {
+    baker: {
+      slug: "baker",
+      display: "Baker Printing",
+      url: "https://bakertargets.com/product/100-yard-bulls-eye-rifle-target-smart-target-version"
+    }
+  };
 
   function applyVendorFromQr() {
-    const url = vendorUrlFromParams();
-    if (url && url.startsWith("http")) {
-      try { localStorage.setItem(KEY_VENDOR_URL, url); } catch {}
+    const p = new URLSearchParams(window.location.search || "");
+    const slug = String(p.get("v") || "").toLowerCase().trim();
+    const sku  = String(p.get("sku") || "").trim();
+    const batch= String(p.get("b") || "").trim();
+
+    if (sku)   try { localStorage.setItem(KEY_VENDOR_SKU, sku); } catch {}
+    if (batch) try { localStorage.setItem(KEY_VENDOR_BATCH, batch); } catch {}
+
+    if (!slug || !VENDOR_REGISTRY[slug]) {
+      try {
+        localStorage.removeItem(KEY_VENDOR_URL);
+        localStorage.removeItem(KEY_VENDOR_SLUG);
+      } catch {}
+      hydrateVendorBox();
+      return;
     }
+
+    const vendor = VENDOR_REGISTRY[slug];
+    try {
+      localStorage.setItem(KEY_VENDOR_URL, vendor.url);
+      localStorage.setItem(KEY_VENDOR_SLUG, vendor.slug);
+    } catch {}
+
     hydrateVendorBox();
   }
 
@@ -676,9 +646,7 @@
       return;
     }
 
-    // ✅ vendor only if THIS page load was activated by ?v=
-    const isVendorActive = (localStorage.getItem(KEY_VENDOR_ACTIVE) === "1");
-    const vendorUrl = isVendorActive ? (localStorage.getItem(KEY_VENDOR_URL) || "") : "";
+    const vendorUrl = localStorage.getItem(KEY_VENDOR_URL) || "";
 
     const payload = {
       sessionId: "S-" + Date.now(),
@@ -828,7 +796,7 @@
   hideSticky();
   resetAll();
 
-  // ✅ IMPORTANT: apply vendor from QR FIRST
+  // ✅ MUST run vendor wiring first
   applyVendorFromQr();
 
   hydrateRange();
