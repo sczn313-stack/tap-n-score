@@ -6,9 +6,9 @@
    + SEC exit intelligence flag (?from=target)
 
    NEW IN THIS REV:
-   ✅ Vendor pill is wired by QR params: ?v=...&sku=...&b=...
-   ✅ Saves vendor URL into localStorage (SCZN3_VENDOR_URL_V1)
-   ✅ Landing vendor pill becomes live instantly (no manual setup)
+   ✅ Vendor pill wired ONLY when QR params include ?v=...
+   ✅ If NO ?v= param, vendor is CLEARED (prevents “sticky vendor”)
+   ✅ Saves vendor URL into localStorage (SCZN3_VENDOR_URL_V1) only when active
 ============================================================ */
 
 (() => {
@@ -67,6 +67,8 @@
   const KEY_TARGET_IMG_DATA = "SCZN3_TARGET_IMG_DATAURL_V1";
   const KEY_TARGET_IMG_BLOB = "SCZN3_TARGET_IMG_BLOBURL_V1";
   const KEY_VENDOR_URL = "SCZN3_VENDOR_URL_V1";
+  const KEY_VENDOR_ACTIVE = "SCZN3_VENDOR_ACTIVE_V1"; // "1" when ?v= is present
+
   const KEY_DIST_UNIT = "SCZN3_RANGE_UNIT_V1"; // "YDS" | "M"
   const KEY_DIST_YDS = "SCZN3_RANGE_YDS_V1";   // numeric (yards)
 
@@ -75,7 +77,7 @@
   const KEY_TARGET_W = "SCZN3_TARGET_W_IN_V1";
   const KEY_TARGET_H = "SCZN3_TARGET_H_IN_V1";
 
-  // NEW: store vendor/sku/batch (optional, for later analytics)
+  // Optional vendor/sku/batch (for later analytics)
   const KEY_VENDOR_SLUG = "SCZN3_VENDOR_SLUG_V1";
   const KEY_VENDOR_SKU  = "SCZN3_VENDOR_SKU_V1";
   const KEY_VENDOR_BATCH= "SCZN3_VENDOR_BATCH_V1";
@@ -242,8 +244,9 @@
   }
 
   function hydrateVendorBox() {
+    const isActive = (localStorage.getItem(KEY_VENDOR_ACTIVE) === "1");
     const v = localStorage.getItem(KEY_VENDOR_URL) || "";
-    const ok = typeof v === "string" && v.startsWith("http");
+    const ok = isActive && typeof v === "string" && v.startsWith("http");
 
     if (!elVendorBox) return;
 
@@ -267,7 +270,7 @@
   }
 
   // ------------------------------------------------------------
-  // ✅ Vendor wiring from QR params
+  // ✅ Vendor wiring from QR params (ACTIVE ONLY when ?v= exists)
   // ------------------------------------------------------------
   function getParams() {
     try { return new URLSearchParams(window.location.search || ""); }
@@ -285,31 +288,36 @@
     const sku  = String(p.get("sku") || "").trim().toLowerCase();
     const batch= String(p.get("b") || "").trim().toLowerCase();
 
-    if (slug) {
-      try { localStorage.setItem(KEY_VENDOR_SLUG, slug); } catch {}
-    }
-    if (sku) {
-      try { localStorage.setItem(KEY_VENDOR_SKU, sku); } catch {}
-    }
-    if (batch) {
-      try { localStorage.setItem(KEY_VENDOR_BATCH, batch); } catch {}
-    }
+    const isActive = !!slug;
 
-    // Vendor registry (scalable)
-    // NOTE: We intentionally map to the vendor PRODUCT URL (printer wants traffic).
-    // If you later want a vendor landing hub, swap the URLs here.
+    // ✅ This is the fix: if no ?v= param, CLEAR vendor so it won’t “stick”
+    try {
+      localStorage.setItem(KEY_VENDOR_ACTIVE, isActive ? "1" : "0");
+      if (!isActive) {
+        localStorage.removeItem(KEY_VENDOR_URL);
+        localStorage.removeItem(KEY_VENDOR_SLUG);
+        localStorage.removeItem(KEY_VENDOR_SKU);
+        localStorage.removeItem(KEY_VENDOR_BATCH);
+      }
+    } catch {}
+
+    if (!isActive) return null;
+
+    // Persist identifiers for later analytics (optional)
+    if (slug) { try { localStorage.setItem(KEY_VENDOR_SLUG, slug); } catch {} }
+    if (sku)  { try { localStorage.setItem(KEY_VENDOR_SKU, sku); } catch {} }
+    if (batch){ try { localStorage.setItem(KEY_VENDOR_BATCH, batch); } catch {} }
+
+    // Vendor registry
     const VENDOR_REGISTRY = {
       baker: {
         defaultUrl: "https://bakertargets.com/product/100-yard-bulls-eye-rifle-target-smart-target-version"
       }
     };
 
-    if (!slug) return null;
     const entry = VENDOR_REGISTRY[slug];
     if (!entry) return null;
 
-    // If later you want per-SKU URLs, do it here:
-    // if (slug === "baker" && sku === "st-100yd-smart") return "..."
     return entry.defaultUrl || null;
   }
 
@@ -668,7 +676,9 @@
       return;
     }
 
-    const vendorUrl = localStorage.getItem(KEY_VENDOR_URL) || "";
+    // ✅ vendor only if THIS page load was activated by ?v=
+    const isVendorActive = (localStorage.getItem(KEY_VENDOR_ACTIVE) === "1");
+    const vendorUrl = isVendorActive ? (localStorage.getItem(KEY_VENDOR_URL) || "") : "";
 
     const payload = {
       sessionId: "S-" + Date.now(),
@@ -818,7 +828,7 @@
   hideSticky();
   resetAll();
 
-  // ✅ IMPORTANT: apply vendor from QR FIRST (so pill is live immediately)
+  // ✅ IMPORTANT: apply vendor from QR FIRST
   applyVendorFromQr();
 
   hydrateRange();
