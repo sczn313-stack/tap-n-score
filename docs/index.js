@@ -3,12 +3,12 @@
    + Instruction mirroring (Aim ↔ Holes) in the info line (fade)
    + Matrix + target size chips
    + iOS-safe photo input (not display:none)
-   + NEW: SEC exit intelligence flag (?from=target)
+   + SEC exit intelligence flag (?from=target)
 
-   FIXES INCLUDED (YOUR NOTES):
-   ✅ Captures the *rendered* target preview (photo + aim + holes)
-      and stores it into KEY_TARGET_IMG_DATA so SEC Page 2 thumbnail
-      includes the aim point + bullet holes.
+   NEW IN THIS REV:
+   ✅ Vendor pill is wired by QR params: ?v=...&sku=...&b=...
+   ✅ Saves vendor URL into localStorage (SCZN3_VENDOR_URL_V1)
+   ✅ Landing vendor pill becomes live instantly (no manual setup)
 ============================================================ */
 
 (() => {
@@ -74,6 +74,11 @@
   const KEY_TARGET_SIZE = "SCZN3_TARGET_SIZE_KEY_V1"; // e.g., "23x35"
   const KEY_TARGET_W = "SCZN3_TARGET_W_IN_V1";
   const KEY_TARGET_H = "SCZN3_TARGET_H_IN_V1";
+
+  // NEW: store vendor/sku/batch (optional, for later analytics)
+  const KEY_VENDOR_SLUG = "SCZN3_VENDOR_SLUG_V1";
+  const KEY_VENDOR_SKU  = "SCZN3_VENDOR_SKU_V1";
+  const KEY_VENDOR_BATCH= "SCZN3_VENDOR_BATCH_V1";
 
   let objectUrl = null;
 
@@ -182,12 +187,11 @@
   function setInstruction(text, kind) {
     if (!elInstruction) return;
 
-    // kind: "aim" | "holes" | "go" | ""
     const color =
-      kind === "aim"   ? "rgba(103,243,164,.95)" :   // green
-      kind === "holes" ? "rgba(183,255,60,.95)"  :   // yellow-lime
-      kind === "go"    ? "rgba(47,102,255,.92)"  :   // blue
-                         "rgba(238,242,247,.70)";    // neutral
+      kind === "aim"   ? "rgba(103,243,164,.95)" :
+      kind === "holes" ? "rgba(183,255,60,.95)"  :
+      kind === "go"    ? "rgba(47,102,255,.92)"  :
+                         "rgba(238,242,247,.70)";
 
     elInstruction.style.transition = "opacity 180ms ease, transform 180ms ease, color 120ms ease";
     elInstruction.style.opacity = "0";
@@ -202,14 +206,8 @@
   }
 
   function syncInstruction() {
-    if (!elImg?.src) {
-      setInstruction("", "");
-      return;
-    }
-    if (!aim) {
-      setInstruction("Tap Aim Point.", "aim");
-      return;
-    }
+    if (!elImg?.src) { setInstruction("", ""); return; }
+    if (!aim) { setInstruction("Tap Aim Point.", "aim"); return; }
     setInstruction("Tap Bullet Holes.", "holes");
   }
 
@@ -269,6 +267,61 @@
   }
 
   // ------------------------------------------------------------
+  // ✅ Vendor wiring from QR params
+  // ------------------------------------------------------------
+  function getParams() {
+    try { return new URLSearchParams(window.location.search || ""); }
+    catch { return new URLSearchParams(); }
+  }
+
+  function normalizeSlug(s) {
+    return String(s || "").trim().toLowerCase();
+  }
+
+  function vendorUrlFromParams() {
+    const p = getParams();
+
+    const slug = normalizeSlug(p.get("v"));
+    const sku  = String(p.get("sku") || "").trim().toLowerCase();
+    const batch= String(p.get("b") || "").trim().toLowerCase();
+
+    if (slug) {
+      try { localStorage.setItem(KEY_VENDOR_SLUG, slug); } catch {}
+    }
+    if (sku) {
+      try { localStorage.setItem(KEY_VENDOR_SKU, sku); } catch {}
+    }
+    if (batch) {
+      try { localStorage.setItem(KEY_VENDOR_BATCH, batch); } catch {}
+    }
+
+    // Vendor registry (scalable)
+    // NOTE: We intentionally map to the vendor PRODUCT URL (printer wants traffic).
+    // If you later want a vendor landing hub, swap the URLs here.
+    const VENDOR_REGISTRY = {
+      baker: {
+        defaultUrl: "https://bakertargets.com/product/100-yard-bulls-eye-rifle-target-smart-target-version"
+      }
+    };
+
+    if (!slug) return null;
+    const entry = VENDOR_REGISTRY[slug];
+    if (!entry) return null;
+
+    // If later you want per-SKU URLs, do it here:
+    // if (slug === "baker" && sku === "st-100yd-smart") return "..."
+    return entry.defaultUrl || null;
+  }
+
+  function applyVendorFromQr() {
+    const url = vendorUrlFromParams();
+    if (url && url.startsWith("http")) {
+      try { localStorage.setItem(KEY_VENDOR_URL, url); } catch {}
+    }
+    hydrateVendorBox();
+  }
+
+  // ------------------------------------------------------------
   // Target photo storage
   // ------------------------------------------------------------
   async function storeTargetPhotoForSEC(file, blobUrl) {
@@ -283,88 +336,6 @@
       if (dataUrl && dataUrl.startsWith("data:image/")) {
         localStorage.setItem(KEY_TARGET_IMG_DATA, dataUrl);
       }
-    } catch {}
-  }
-
-  // ------------------------------------------------------------
-  // ✅ Rendered preview capture (photo + aim + holes)
-  // Stores into KEY_TARGET_IMG_DATA so SEC Page 2 thumbnail includes taps.
-  // ------------------------------------------------------------
-  function saveRenderedTargetPreviewForSEC() {
-    try {
-      if (!elWrap || !elImg || !elImg.src) return;
-      const wrapRect = elWrap.getBoundingClientRect();
-      const imgRect = elImg.getBoundingClientRect();
-
-      const w = Math.max(1, Math.round(wrapRect.width));
-      const h = Math.max(1, Math.round(wrapRect.height));
-
-      const canvas = document.createElement("canvas");
-      canvas.width = w;
-      canvas.height = h;
-      const ctx = canvas.getContext("2d");
-
-      // Background (match your dark theme)
-      ctx.fillStyle = "#06070a";
-      ctx.fillRect(0, 0, w, h);
-
-      // Draw the displayed image exactly where it appears within the wrap
-      const offX = imgRect.left - wrapRect.left;
-      const offY = imgRect.top - wrapRect.top;
-      const dw = imgRect.width;
-      const dh = imgRect.height;
-
-      const img = new Image();
-      img.crossOrigin = "anonymous";
-      img.onload = () => {
-        try {
-          ctx.drawImage(img, offX, offY, dw, dh);
-
-          // Draw aim + hit dots from normalized coords (no DOM dependency)
-          function drawDot(x01, y01, fill) {
-            const x = offX + x01 * dw;
-            const y = offY + y01 * dh;
-
-            const r = 10; // tuned for visibility in thumbnail
-            ctx.save();
-            // shadow
-            ctx.shadowColor = "rgba(0,0,0,.55)";
-            ctx.shadowBlur = 16;
-            ctx.shadowOffsetY = 6;
-
-            // fill
-            ctx.beginPath();
-            ctx.arc(x, y, r, 0, Math.PI * 2);
-            ctx.closePath();
-            ctx.fillStyle = fill;
-            ctx.fill();
-
-            // border
-            ctx.shadowBlur = 0;
-            ctx.lineWidth = 2;
-            ctx.strokeStyle = "rgba(0,0,0,.55)";
-            ctx.stroke();
-
-            ctx.restore();
-          }
-
-          if (aim && Number.isFinite(aim.x01) && Number.isFinite(aim.y01)) {
-            drawDot(aim.x01, aim.y01, "#67f3a4"); // aim (green)
-          }
-          for (const p of (hits || [])) {
-            if (!p) continue;
-            if (!Number.isFinite(p.x01) || !Number.isFinite(p.y01)) continue;
-            drawDot(p.x01, p.y01, "#b7ff3c"); // holes (yellow-lime)
-          }
-
-          const dataUrl = canvas.toDataURL("image/png");
-          if (dataUrl && dataUrl.startsWith("data:image/")) {
-            localStorage.setItem(KEY_TARGET_IMG_DATA, dataUrl);
-          }
-        } catch {}
-      };
-      img.onerror = () => {};
-      img.src = elImg.src;
     } catch {}
   }
 
@@ -648,11 +619,9 @@
     avg.x /= hits.length;
     avg.y /= hits.length;
 
-    // correction vector = aim - avgPoi (bull - poib)
     const dx = aim.x01 - avg.x; // + means move RIGHT
     const dy = aim.y01 - avg.y; // + means move DOWN (screen y)
 
-    // square scoring plane
     const squareIn = Math.min(targetWIn, targetHIn);
     const inchesX = dx * squareIn;
     const inchesY = dy * squareIn;
@@ -689,8 +658,6 @@
   function goToSEC(payload) {
     try { localStorage.setItem(KEY_PAYLOAD, JSON.stringify(payload)); } catch {}
     const b64 = b64FromObj(payload);
-
-    // ✅ mark that SEC came from the Target page (enables intelligent Exit)
     window.location.href = `./sec.html?from=target&payload=${encodeURIComponent(b64)}&fresh=${Date.now()}`;
   }
 
@@ -700,10 +667,6 @@
       alert("Tap Aim Point first, then tap at least one bullet hole.");
       return;
     }
-
-    // ✅ CRITICAL: capture rendered preview BEFORE leaving the page
-    // This is what makes Page 2 thumbnail show aim + holes.
-    saveRenderedTargetPreviewForSEC();
 
     const vendorUrl = localStorage.getItem(KEY_VENDOR_URL) || "";
 
@@ -717,7 +680,6 @@
       vendorUrl,
       surveyUrl: "",
       target: { key: targetSizeKey, wIn: Number(targetWIn), hIn: Number(targetHIn) },
-
       debug: { aim, hits, avgPoi: out.avgPoi, distanceYds: getDistanceYds(), inches: out.inches, squareIn: out.squareIn }
     };
 
@@ -856,7 +818,9 @@
   hideSticky();
   resetAll();
 
-  hydrateVendorBox();
+  // ✅ IMPORTANT: apply vendor from QR FIRST (so pill is live immediately)
+  applyVendorFromQr();
+
   hydrateRange();
   hydrateTargetSize();
 
