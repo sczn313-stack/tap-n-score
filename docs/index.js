@@ -1,13 +1,12 @@
-/* docs/index.js — FULL REPLACEMENT
-   Landing page lock/unlock gate + existing photo button wiring
-*/
-
 (() => {
-  // ====== LOCK CONFIG ======
-  const REQUIRED_KEY = "SEC-X2";          // change if you want
-  const STORAGE_FLAG = "tns_unlocked_v1"; // localStorage flag
 
-  // Allow unlock via URL: ?key=SEC-X2
+  /* =========================
+     LOCK CONFIG
+  ========================== */
+
+  const REQUIRED_KEY = "SEC-X2";
+  const STORAGE_FLAG = "tns_unlocked_v1";
+
   const url = new URL(window.location.href);
   const urlKey = (url.searchParams.get("key") || "").trim();
 
@@ -15,57 +14,90 @@
 
   if (!alreadyUnlocked && urlKey === REQUIRED_KEY) {
     localStorage.setItem(STORAGE_FLAG, "1");
-    // Clean URL (remove key so you don't leak it)
     url.searchParams.delete("key");
     window.history.replaceState({}, "", url.toString());
   }
 
-  // If still locked, show lock screen and STOP.
   if (localStorage.getItem(STORAGE_FLAG) !== "1") {
     renderLockScreen();
     return;
   }
 
-  // ====== NORMAL PAGE LOGIC ======
+  /* =========================
+     NORMAL PAGE LOGIC
+  ========================== */
+
   const photoBtn = document.getElementById("photoBtn");
   const photoInput = document.getElementById("photoInput");
 
-  if (photoBtn && photoInput) {
-    // iOS requires the click to happen inside a user gesture handler.
-    photoBtn.addEventListener("click", () => {
-      try {
-        photoInput.value = ""; // allow same file again
-        photoInput.click();
-      } catch (e) {
-        alert("Photo picker blocked. Please refresh and try again.");
-      }
-    });
-
-    photoInput.addEventListener("change", () => {
-      const file = photoInput.files && photoInput.files[0];
-      if (!file) return;
-
-      // TODO: your upload/analyze pipeline goes here.
-      // For now, just confirm selection:
-      console.log("Selected file:", file.name, file.type, file.size);
-      // Example: window.location.href = "./sec.html";
-    });
+  if (!photoBtn || !photoInput) {
+    console.log("Photo elements missing.");
+    return;
   }
 
-  // ====== LOCK UI ======
-  function renderLockScreen() {
+  photoBtn.addEventListener("click", () => {
+    photoInput.value = "";   // allow same file twice
+    photoInput.click();      // iOS-safe because inside user gesture
+  });
+
+  photoInput.addEventListener("change", () => {
+
+    const file = photoInput.files && photoInput.files[0];
+
+    if (!file) {
+      alert("No file selected.");
+      return;
+    }
+
+    alert(`Photo received ✅\n${file.name}\n${Math.round(file.size/1024)} KB`);
+
+    const reader = new FileReader();
+
+    reader.onload = function(e) {
+      showPreview(e.target.result);
+    };
+
+    reader.readAsDataURL(file);
+  });
+
+
+  /* =========================
+     PREVIEW DISPLAY
+  ========================== */
+
+  function showPreview(src) {
+
     document.body.innerHTML = `
-      <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:#070a12;color:#fff;font-family:-apple-system,system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif;padding:24px;">
+      <div style="min-height:100vh;background:#070a12;color:#fff;font-family:-apple-system,system-ui;padding:20px;">
+        <h2 style="margin-bottom:20px;">Image Preview</h2>
+        <img src="${src}" style="max-width:100%;border-radius:14px;box-shadow:0 10px 40px rgba(0,0,0,.6);" />
+        <br><br>
+        <button onclick="location.reload()" style="padding:14px 18px;border-radius:999px;border:0;font-weight:900;background:#d23434;color:#fff;">
+          Back
+        </button>
+      </div>
+    `;
+  }
+
+
+  /* =========================
+     LOCK UI
+  ========================== */
+
+  function renderLockScreen() {
+
+    document.body.innerHTML = `
+      <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:#070a12;color:#fff;font-family:-apple-system,system-ui;padding:24px;">
         <div style="width:min(520px,100%);border-radius:22px;padding:22px 18px;background:rgba(14,18,34,.92);box-shadow:0 18px 60px rgba(0,0,0,.55);">
           <div style="font-weight:900;letter-spacing:.08em;font-size:24px;margin:0 0 8px;">TAP-N-SCORE™</div>
           <div style="opacity:.75;margin:0 0 16px;">Enter access code to open this landing page.</div>
 
-          <input id="unlockInput" inputmode="text" autocomplete="one-time-code"
+          <input id="unlockInput"
             placeholder="Access code"
             style="width:100%;padding:16px 14px;border-radius:14px;border:1px solid rgba(255,255,255,.18);background:rgba(0,0,0,.20);color:#fff;font-size:18px;font-weight:800;outline:none;" />
 
           <button id="unlockBtn"
-            style="width:100%;margin-top:12px;border:0;border-radius:999px;padding:16px 18px;font-weight:900;font-size:18px;cursor:pointer;background:rgba(210,52,52,.92);color:#fff;">
+            style="width:100%;margin-top:12px;border:0;border-radius:999px;padding:16px 18px;font-weight:900;font-size:18px;background:rgba(210,52,52,.92);color:#fff;">
             Unlock
           </button>
 
@@ -97,4 +129,5 @@
 
     input.focus();
   }
+
 })();
