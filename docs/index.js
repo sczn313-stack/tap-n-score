@@ -1,13 +1,9 @@
 /* ============================================================
-   docs/index.js (FULL REPLACEMENT) — MATRIX + SQUARE PLANE
-   + Instruction mirroring (Aim ↔ Holes) in the info line (fade)
-   + Matrix + target size chips
-   + iOS-safe photo input (not display:none)
-   + SEC exit intelligence flag (?from=target)
-
-   ✅ Vendor pill wired by QR params: ?v=...&sku=...&b=...
-   ✅ Vendor URL saved into localStorage (SCZN3_VENDOR_URL_V1)
-   ✅ Vendor pill becomes live instantly on landing
+   docs/index.js (FULL REPLACEMENT)
+   MATRIX + SQUARE PLANE + Instruction mirroring (Aim ↔ Holes)
+   + iOS-safe photo input
+   + Vendor pill wired by QR params (?v=...&sku=...&b=...)
+   + Vendor pill shows VENDOR NAME and flips every ~1.5s
 ============================================================ */
 
 (() => {
@@ -65,15 +61,20 @@
   const KEY_PAYLOAD = "SCZN3_SEC_PAYLOAD_V1";
   const KEY_TARGET_IMG_DATA = "SCZN3_TARGET_IMG_DATAURL_V1";
   const KEY_TARGET_IMG_BLOB = "SCZN3_TARGET_IMG_BLOBURL_V1";
-  const KEY_VENDOR_URL = "SCZN3_VENDOR_URL_V1";
+
+  // Vendor keys
+  const KEY_VENDOR_URL  = "SCZN3_VENDOR_URL_V1";
+  const KEY_VENDOR_NAME = "SCZN3_VENDOR_NAME_V1";
   const KEY_VENDOR_SLUG = "SCZN3_VENDOR_SLUG_V1";
   const KEY_VENDOR_SKU  = "SCZN3_VENDOR_SKU_V1";
   const KEY_VENDOR_BATCH= "SCZN3_VENDOR_BATCH_V1";
+
+  // Distance keys
   const KEY_DIST_UNIT = "SCZN3_RANGE_UNIT_V1"; // "YDS" | "M"
-  const KEY_DIST_YDS = "SCZN3_RANGE_YDS_V1";   // numeric (yards)
+  const KEY_DIST_YDS  = "SCZN3_RANGE_YDS_V1";  // numeric yards
 
   // Target size persistence
-  const KEY_TARGET_SIZE = "SCZN3_TARGET_SIZE_KEY_V1"; // e.g., "23x35"
+  const KEY_TARGET_SIZE = "SCZN3_TARGET_SIZE_KEY_V1";
   const KEY_TARGET_W = "SCZN3_TARGET_W_IN_V1";
   const KEY_TARGET_H = "SCZN3_TARGET_H_IN_V1";
 
@@ -220,36 +221,54 @@
   }
 
   // ------------------------------------------------------------
-  // Vendor pill rotation
+  // ✅ Vendor helpers (name + rotate)
   // ------------------------------------------------------------
+  function domainFromUrl(u) {
+    try { return new URL(u).hostname.replace(/^www\./, ""); } catch { return ""; }
+  }
+  function vendorNameFromUrl(u) {
+    const d = domainFromUrl(u || "");
+    if (d.includes("bakertargets.com")) return "BAKER TARGETS";
+    if (d.includes("baker")) return "BAKER";
+    return "VENDOR";
+  }
+
   function stopVendorRotate() {
     if (vendorRotateTimer) clearInterval(vendorRotateTimer);
     vendorRotateTimer = null;
   }
 
-  function startVendorRotate() {
+  function startVendorRotate(primaryText) {
     stopVendorRotate();
     if (!elVendorLabel) return;
+
+    const a = String(primaryText || "VENDOR");
+    const b = "BUY MORE TARGETS LIKE THIS";
+
+    let flip = false;
+    elVendorLabel.textContent = a;
+
     vendorRotateTimer = setInterval(() => {
-      const now = elVendorLabel.textContent || "";
-      elVendorLabel.textContent = (now === "VENDOR") ? "BUY MORE TARGETS LIKE THIS" : "VENDOR";
-    }, 1200);
+      flip = !flip;
+      elVendorLabel.textContent = flip ? b : a;
+    }, 1500);
   }
 
   function hydrateVendorBox() {
-    const v = localStorage.getItem(KEY_VENDOR_URL) || "";
-    const ok = typeof v === "string" && v.startsWith("http");
+    const url = localStorage.getItem(KEY_VENDOR_URL) || "";
+    const name = localStorage.getItem(KEY_VENDOR_NAME) || vendorNameFromUrl(url);
+
+    const ok = typeof url === "string" && url.startsWith("http");
 
     if (!elVendorBox) return;
 
     if (ok) {
-      elVendorBox.href = v;
+      elVendorBox.href = url;
       elVendorBox.target = "_blank";
       elVendorBox.rel = "noopener";
       elVendorBox.style.pointerEvents = "auto";
       elVendorBox.style.opacity = "1";
-      if (elVendorLabel) elVendorLabel.textContent = "BUY MORE TARGETS LIKE THIS";
-      startVendorRotate();
+      startVendorRotate(name);
     } else {
       elVendorBox.removeAttribute("href");
       elVendorBox.removeAttribute("target");
@@ -262,39 +281,58 @@
   }
 
   // ------------------------------------------------------------
-  // ✅ HARD LOCK Vendor wiring from QR params
+  // ✅ Vendor wiring from QR params
   // ------------------------------------------------------------
-  const VENDOR_REGISTRY = {
-    baker: {
-      slug: "baker",
-      display: "Baker Printing",
-      url: "https://bakertargets.com/product/100-yard-bulls-eye-rifle-target-smart-target-version"
-    }
-  };
+  function getParams() {
+    try { return new URLSearchParams(window.location.search || ""); }
+    catch { return new URLSearchParams(); }
+  }
+
+  function normalizeSlug(s) {
+    return String(s || "").trim().toLowerCase();
+  }
+
+  function vendorUrlFromParams() {
+    const p = getParams();
+
+    const slug = normalizeSlug(p.get("v"));
+    const sku  = String(p.get("sku") || "").trim().toLowerCase();
+    const batch= String(p.get("b") || "").trim().toLowerCase();
+
+    if (slug)  { try { localStorage.setItem(KEY_VENDOR_SLUG, slug); } catch {} }
+    if (sku)   { try { localStorage.setItem(KEY_VENDOR_SKU, sku); } catch {} }
+    if (batch) { try { localStorage.setItem(KEY_VENDOR_BATCH, batch); } catch {} }
+
+    const VENDOR_REGISTRY = {
+      baker: {
+        name: "BAKER TARGETS",
+        defaultUrl: "https://bakertargets.com/product/100-yard-bulls-eye-rifle-target-smart-target-version"
+      }
+    };
+
+    if (!slug) return null;
+    const entry = VENDOR_REGISTRY[slug];
+    if (!entry) return null;
+
+    // Future: per-SKU mapping here
+    return entry.defaultUrl || null;
+  }
+
+  function vendorNameFromParams() {
+    const p = getParams();
+    const slug = normalizeSlug(p.get("v"));
+    const map = { baker: "BAKER TARGETS" };
+    return map[slug] || "";
+  }
 
   function applyVendorFromQr() {
-    const p = new URLSearchParams(window.location.search || "");
-    const slug = String(p.get("v") || "").toLowerCase().trim();
-    const sku  = String(p.get("sku") || "").trim();
-    const batch= String(p.get("b") || "").trim();
+    const url = vendorUrlFromParams();
+    const name = vendorNameFromParams();
 
-    if (sku)   try { localStorage.setItem(KEY_VENDOR_SKU, sku); } catch {}
-    if (batch) try { localStorage.setItem(KEY_VENDOR_BATCH, batch); } catch {}
-
-    if (!slug || !VENDOR_REGISTRY[slug]) {
-      try {
-        localStorage.removeItem(KEY_VENDOR_URL);
-        localStorage.removeItem(KEY_VENDOR_SLUG);
-      } catch {}
-      hydrateVendorBox();
-      return;
+    if (url && url.startsWith("http")) {
+      try { localStorage.setItem(KEY_VENDOR_URL, url); } catch {}
+      try { localStorage.setItem(KEY_VENDOR_NAME, name || vendorNameFromUrl(url)); } catch {}
     }
-
-    const vendor = VENDOR_REGISTRY[slug];
-    try {
-      localStorage.setItem(KEY_VENDOR_URL, vendor.url);
-      localStorage.setItem(KEY_VENDOR_SLUG, vendor.slug);
-    } catch {}
 
     hydrateVendorBox();
   }
@@ -647,6 +685,7 @@
     }
 
     const vendorUrl = localStorage.getItem(KEY_VENDOR_URL) || "";
+    const vendorName = localStorage.getItem(KEY_VENDOR_NAME) || vendorNameFromUrl(vendorUrl);
 
     const payload = {
       sessionId: "S-" + Date.now(),
@@ -656,6 +695,7 @@
       elevation: { dir: out.elevation.dir, clicks: Number(out.elevation.clicks.toFixed(2)) },
       dial: { unit: out.dial.unit, clickValue: Number(out.dial.clickValue.toFixed(2)) },
       vendorUrl,
+      vendorName,
       surveyUrl: "",
       target: { key: targetSizeKey, wIn: Number(targetWIn), hIn: Number(targetHIn) },
       debug: { aim, hits, avgPoi: out.avgPoi, distanceYds: getDistanceYds(), inches: out.inches, squareIn: out.squareIn }
@@ -796,7 +836,7 @@
   hideSticky();
   resetAll();
 
-  // ✅ MUST run vendor wiring first
+  // ✅ Apply vendor FIRST so the landing pill is live immediately
   applyVendorFromQr();
 
   hydrateRange();
