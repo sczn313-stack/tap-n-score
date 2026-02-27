@@ -1,18 +1,7 @@
 /* ============================================================
-   docs/sec.js (FULL REPLACEMENT) — TWO-PAGE SEC (STABLE “A”)
-
-   GOAL (A):
-   ✅ Restore reliable SEC Report Card image rendering (no blank panel)
-   ✅ Vendor button ALWAYS works if landing saved vendor URL
-   ✅ Vendor badge support (Baker logo) in the “OFFICIAL TARGET PARTNER” box
-   ✅ Keeps/stores 10 sessions, shows 10 newest on top
-   ✅ Avg(10) uses TWO decimals (averages only)
-   ✅ Exit button works (goHomeBtn -> index.html)
-   ✅ Score number color is WHITE (you asked to ensure this)
-
-   ASSUMPTIONS:
-   - Baker logo file exists at: docs/assets/vendor-baker-logo.png
-     (you showed it in /docs/assets)
+   docs/sec.js (FULL REPLACEMENT) — TWO-PAGE SEC
+   FIX: Vendor partner is ALWAYS sourced (payload OR localStorage)
+   + Vendor square shows Baker Targets name (and logo if available)
 ============================================================ */
 
 (() => {
@@ -24,7 +13,7 @@
   const toReportBtn = $("toReportBtn");
   const backBtn = $("backBtn");
 
-  // Page 1
+  // Page 1 elements
   const scoreValue = $("scoreValue");
   const scoreBand = $("scoreBand");
   const runDistance = $("runDistance");
@@ -36,7 +25,7 @@
   const elevationDir = $("elevationDir");
   const goHomeBtn = $("goHomeBtn");
 
-  // Page 2
+  // Page 2 elements
   const secCardImg = $("secCardImg");
   const vendorBtn = $("vendorBtn");
   const surveyBtn = $("surveyBtn");
@@ -45,33 +34,26 @@
   const KEY_PAYLOAD = "SCZN3_SEC_PAYLOAD_V1";
   const KEY_TARGET_IMG_DATA = "SCZN3_TARGET_IMG_DATAURL_V1";
   const KEY_TARGET_IMG_BLOB = "SCZN3_TARGET_IMG_BLOBURL_V1";
-  const KEY_VENDOR_URL = "SCZN3_VENDOR_URL_V1"; // ✅ landing saves this
-  const KEY_HISTORY = "SCZN3_SEC_HISTORY_V1";
 
+  // ✅ Vendor keys (MUST match index.js)
+  const KEY_VENDOR_URL  = "SCZN3_VENDOR_URL_V1";
+  const KEY_VENDOR_NAME = "SCZN3_VENDOR_NAME_V1";
+
+  // History
+  const KEY_HISTORY = "SCZN3_SEC_HISTORY_V1";
   const KEEP_N = 10;
 
-  // Default survey
+  // Survey default
   const DEFAULT_SURVEY_URL = "https://forms.gle/uCSDTk5BwT4euLYeA";
-
-  // Vendor badge assets (relative to /docs/)
-  const VENDOR_BADGE = {
-    baker: "./assets/vendor-baker-logo.png"
-  };
 
   // -----------------------------
   // Helpers
   // -----------------------------
-  function safeJsonParse(s) {
-    try { return JSON.parse(s); } catch { return null; }
-  }
+  function safeJsonParse(s) { try { return JSON.parse(s); } catch { return null; } }
 
   function getQueryParam(name) {
-    try {
-      const u = new URL(window.location.href);
-      return u.searchParams.get(name);
-    } catch {
-      return null;
-    }
+    const u = new URL(window.location.href);
+    return u.searchParams.get(name);
   }
 
   function b64ToObj(b64) {
@@ -102,29 +84,35 @@
   function avg2(arr) {
     const a = arr.map(Number).filter(Number.isFinite);
     if (!a.length) return "0.00";
-    const s = a.reduce((p, c) => p + c, 0) / a.length;
+    const s = a.reduce((p,c)=>p+c,0) / a.length;
     return s.toFixed(2);
-  }
-
-  function scoreBandInfo(score) {
-    const s = Number(score);
-    if (!Number.isFinite(s)) return { cls: "scoreBandNeutral", text: "—" };
-
-    // LOCKED: GREEN 90–100, YELLOW 60–89, RED 0–59
-    if (s >= 90) return { cls: "scoreBandGreen", text: "STRONG / EXCELLENT" };
-    if (s >= 60) return { cls: "scoreBandYellow", text: "IMPROVING / SOLID" };
-    return { cls: "scoreBandRed", text: "NEEDS WORK" };
   }
 
   function domainFromUrl(u) {
     try { return new URL(u).hostname.replace(/^www\./, ""); } catch { return ""; }
   }
 
-  function vendorKeyFromUrl(url) {
+  function isBaker(url) {
     const d = domainFromUrl(url || "");
-    if (!d) return "";
-    if (d.includes("bakertargets.com") || d.includes("thebakerpress.com") || d.includes("baker")) return "baker";
-    return "";
+    return d.includes("bakertargets.com") || d.includes("baker");
+  }
+
+  function resolveVendor(payload) {
+    const fromPayloadUrl = String(payload?.vendorUrl || "");
+    const fromStorageUrl = String(localStorage.getItem(KEY_VENDOR_URL) || "");
+    const vendorUrl = (fromPayloadUrl.startsWith("http") ? fromPayloadUrl : fromStorageUrl);
+
+    const fromPayloadName = String(payload?.vendorName || "");
+    const fromStorageName = String(localStorage.getItem(KEY_VENDOR_NAME) || "");
+    let vendorName = (fromPayloadName || fromStorageName || "");
+
+    if (!vendorName) vendorName = isBaker(vendorUrl) ? "BAKER TARGETS" : (domainFromUrl(vendorUrl) || "VENDOR");
+
+    // keep payload consistent going forward
+    payload.vendorUrl = vendorUrl;
+    payload.vendorName = vendorName;
+
+    return { vendorUrl, vendorName };
   }
 
   function loadTargetImageUrl() {
@@ -137,19 +125,13 @@
     return "";
   }
 
-  async function loadImage(url) {
-    // IMPORTANT: do NOT set crossOrigin for blob: or data:
-    // (it can break loads on iOS/Safari and isn’t needed)
-    return await new Promise((resolve, reject) => {
-      const im = new Image();
-      im.onload = () => resolve(im);
-      im.onerror = reject;
-      im.src = url;
-    });
-  }
+  function scoreBandInfo(score) {
+    const s = Number(score);
+    if (!Number.isFinite(s)) return { cls: "scoreBandNeutral", text: "—", scoreCls: "" };
 
-  function nextFrame() {
-    return new Promise((r) => requestAnimationFrame(() => r()));
+    if (s >= 90) return { cls: "scoreBandGreen", text: "STRONG / EXCELLENT", scoreCls: "scoreGood" };
+    if (s >= 60) return { cls: "scoreBandYellow", text: "IMPROVING / SOLID", scoreCls: "scoreMid" };
+    return { cls: "scoreBandRed", text: "NEEDS WORK", scoreCls: "scoreLow" };
   }
 
   // -----------------------------
@@ -171,8 +153,9 @@
       score: Number(payload?.score ?? 0),
       dist: Number(payload?.debug?.distanceYds ?? payload?.distanceYds ?? 0),
       hits: Number(payload?.shots ?? 0),
-      vendor: domainFromUrl(payload?.vendorUrl || payload?.vendor || "")
+      vendor: domainFromUrl(payload?.vendorUrl || "")
     };
+
     hist.unshift(row);
     const trimmed = hist.slice(0, KEEP_N);
     saveHistory(trimmed);
@@ -188,93 +171,11 @@
   }
 
   // -----------------------------
-  // Payload
-  // -----------------------------
-  function loadPayload() {
-    const qp = getQueryParam("payload");
-    if (qp) {
-      const obj = b64ToObj(qp);
-      if (obj) return obj;
-    }
-    const s = localStorage.getItem(KEY_PAYLOAD) || "";
-    const j = safeJsonParse(s);
-    if (j) return j;
-    return null;
-  }
-
-  // -----------------------------
-  // Vendor URL hardening (A)
-  // -----------------------------
-  function hydrateVendorUrl(payload) {
-    // 1) payload.vendorUrl if present
-    let v = String(payload?.vendorUrl || "").trim();
-
-    // 2) fallback to localStorage from landing page
-    if (!v) v = String(localStorage.getItem(KEY_VENDOR_URL) || "").trim();
-
-    // keep it in both places so it survives refresh
-    if (v && v.startsWith("http")) {
-      try { localStorage.setItem(KEY_VENDOR_URL, v); } catch {}
-      payload.vendorUrl = v;
-    }
-
-    return v;
-  }
-
-  // -----------------------------
-  // View switching
-  // -----------------------------
-  function showPrecision() {
-    viewPrecision?.classList.add("viewOn");
-    viewReport?.classList.remove("viewOn");
-    try { window.scrollTo(0, 0); } catch {}
-  }
-
-  function showReport() {
-    viewPrecision?.classList.remove("viewOn");
-    viewReport?.classList.add("viewOn");
-    try { window.scrollTo(0, 0); } catch {}
-  }
-
-  // -----------------------------
-  // Render Page 1
-  // -----------------------------
-  function renderPrecision(payload) {
-    const score = Number(payload?.score ?? 0);
-    const band = scoreBandInfo(score);
-
-    if (scoreValue) {
-      scoreValue.textContent = Number.isFinite(score) ? String(Math.round(score)) : "—";
-      // ✅ you asked: ensure numeric score color is WHITE
-      scoreValue.style.color = "#ffffff";
-      scoreValue.style.textShadow = "0 10px 30px rgba(0,0,0,.65)";
-    }
-
-    if (scoreBand) {
-      scoreBand.classList.remove("scoreBandNeutral", "scoreBandGreen", "scoreBandYellow", "scoreBandRed");
-      scoreBand.classList.add(band.cls);
-      scoreBand.textContent = band.text;
-    }
-
-    if (windageBig) windageBig.textContent = fmt2(payload?.windage?.clicks ?? 0);
-    if (windageDir) windageDir.textContent = String(payload?.windage?.dir || "—");
-
-    if (elevationBig) elevationBig.textContent = fmt2(payload?.elevation?.clicks ?? 0);
-    if (elevationDir) elevationDir.textContent = String(payload?.elevation?.dir || "—");
-
-    const dist = Number(payload?.debug?.distanceYds ?? payload?.distanceYds ?? 100);
-    const shots = Number(payload?.shots ?? 0);
-
-    if (runDistance) runDistance.textContent = `${Math.round(dist)} yds`;
-    if (runHits) runHits.textContent = `${shots} hits`;
-    if (runTime) runTime.textContent = nowStamp();
-  }
-
-  // -----------------------------
-  // Report Card renderer (A: stable)
+  // Report Card image (Canvas -> <img>)
   // -----------------------------
   async function drawReportCardImage(payload, hist) {
     const stats = computeStats(hist);
+    const { vendorUrl, vendorName } = resolveVendor(payload);
 
     const W = 1080;
     const H = 1920;
@@ -283,13 +184,11 @@
     const c = document.createElement("canvas");
     c.width = W;
     c.height = H;
-    const ctx = c.getContext("2d", { alpha: false });
+    const ctx = c.getContext("2d");
 
-    // background
     ctx.fillStyle = "#06070a";
     ctx.fillRect(0, 0, W, H);
 
-    // safe rounded rect (no “swoosh”)
     function roundedRect(x, y, w, h, r) {
       const rr = Math.max(0, Math.min(Number(r || 0), w / 2, h / 2));
       ctx.beginPath();
@@ -316,10 +215,11 @@
       ctx.restore();
     }
 
-    // Header: SEC
+    // Header
     const secY = 120;
-    ctx.textAlign = "center";
     ctx.font = "900 92px system-ui, -apple-system, Segoe UI, Roboto, Arial";
+    ctx.textAlign = "center";
+
     const parts = ["S", "E", "C"];
     const colors = ["#ff4d4d", "#eef2f7", "#2f66ff"];
     const spacing = 90;
@@ -333,34 +233,33 @@
 
     ctx.fillStyle = "rgba(238,242,247,.75)";
     ctx.font = "700 26px system-ui, -apple-system, Segoe UI, Roboto, Arial";
-    ctx.fillText("Shooter Experience Card", W / 2, secY + 42);
+    ctx.fillText("Shooter Experience Card", W/2, secY + 42);
 
     // Score block
-    panel(pad, 220, W - pad * 2, 220);
+    panel(pad, 220, W - pad*2, 220);
 
     const score = Number(payload?.score ?? 0);
     const band = scoreBandInfo(score);
 
     ctx.font = "800 28px system-ui, -apple-system, Segoe UI, Roboto, Arial";
     ctx.fillStyle = "rgba(238,242,247,.70)";
-    ctx.fillText("SCORE", W / 2, 285);
+    ctx.fillText("SCORE", W/2, 285);
 
     ctx.font = "900 120px system-ui, -apple-system, Segoe UI, Roboto, Arial";
     ctx.fillStyle = "rgba(238,242,247,.94)";
-    ctx.fillText(String(Math.round(score)), W / 2, 405);
+    ctx.fillText(String(Math.round(score)), W/2, 405);
 
     // Band pill
     const pillW = 720, pillH = 64;
-    const pillX = (W - pillW) / 2;
+    const pillX = (W - pillW)/2;
     const pillY = 430;
-
     roundedRect(pillX, pillY, pillW, pillH, 999);
 
     let pillFill = "rgba(255,255,255,.08)";
     let pillTextColor = "rgba(238,242,247,.75)";
-    if (band.cls === "scoreBandGreen")  { pillFill = "rgba(72,255,139,.92)"; pillTextColor = "#031009"; }
-    if (band.cls === "scoreBandYellow") { pillFill = "rgba(255,232,90,.92)"; pillTextColor = "#191300"; }
-    if (band.cls === "scoreBandRed")    { pillFill = "rgba(255,77,77,.92)";  pillTextColor = "#1b0000"; }
+    if (band.cls === "scoreBandGreen"){ pillFill = "rgba(72,255,139,.92)"; pillTextColor="#031009"; }
+    if (band.cls === "scoreBandYellow"){ pillFill = "rgba(255,232,90,.92)"; pillTextColor="#191300"; }
+    if (band.cls === "scoreBandRed"){ pillFill = "rgba(255,77,77,.92)"; pillTextColor="#1b0000"; }
 
     ctx.fillStyle = pillFill;
     ctx.fill();
@@ -371,10 +270,10 @@
 
     ctx.fillStyle = pillTextColor;
     ctx.font = "900 28px system-ui, -apple-system, Segoe UI, Roboto, Arial";
-    ctx.fillText(band.text, W / 2, pillY + 44);
+    ctx.fillText(band.text, W/2, pillY + 44);
 
     // One-line identity
-    const dist = Number(payload?.debug?.distanceYds ?? payload?.distanceYds ?? 0) || 100;
+    const dist = Number(payload?.debug?.distanceYds ?? payload?.distanceYds ?? 0);
     const hitsN = Number(payload?.shots ?? 0);
 
     const wdir = String(payload?.windage?.dir || "");
@@ -384,23 +283,22 @@
 
     ctx.fillStyle = "rgba(238,242,247,.78)";
     ctx.font = "800 26px system-ui, -apple-system, Segoe UI, Roboto, Arial";
-    ctx.fillText(`${Math.round(dist)} yds  |  ${hitsN} hits  |  ${wclick} ${wdir}  |  ${eclick} ${edir}`, W / 2, 560);
+    ctx.fillText(`${dist || 100} yds  |  ${hitsN} hits  |  ${wclick} ${wdir}  |  ${eclick} ${edir}`, W/2, 560);
 
-    // Two equal squares: thumbnail + vendor
+    // Squares
     const sq = 360;
     const gap = 60;
-    const total = sq * 2 + gap;
-    const start = (W - total) / 2;
+    const total = sq*2 + gap;
+    const start = (W - total)/2;
     const ySq = 620;
 
     panel(start, ySq, sq, sq);
     panel(start + sq + gap, ySq, sq, sq);
 
-    // Labels
     ctx.fillStyle = "rgba(238,242,247,.72)";
     ctx.font = "900 22px system-ui, -apple-system, Segoe UI, Roboto, Arial";
-    ctx.fillText("TARGET USED", start + sq / 2, ySq - 16);
-    ctx.fillText("OFFICIAL TARGET PARTNER", start + sq + gap + sq / 2, ySq - 16);
+    ctx.fillText("TARGET USED", start + sq/2, ySq - 16);
+    ctx.fillText("OFFICIAL TARGET PARTNER", start + sq + gap + sq/2, ySq - 16);
 
     // Thumbnail + markers
     const imgUrl = loadTargetImageUrl();
@@ -409,7 +307,13 @@
 
     if (imgUrl) {
       try {
-        const img = await loadImage(imgUrl);
+        const img = await new Promise((resolve, reject) => {
+          const im = new Image();
+          im.crossOrigin = "anonymous";
+          im.onload = () => resolve(im);
+          im.onerror = reject;
+          im.src = imgUrl;
+        });
 
         const innerX = start + 10;
         const innerY = ySq + 10;
@@ -419,26 +323,24 @@
         const scale = Math.max(innerW / img.width, innerH / img.height);
         const dw = img.width * scale;
         const dh = img.height * scale;
-        const dx = innerX + (innerW - dw) / 2;
-        const dy = innerY + (innerH - dh) / 2;
+        const dx = innerX + (innerW - dw)/2;
+        const dy = innerY + (innerH - dh)/2;
 
         ctx.save();
         roundedRect(innerX, innerY, innerW, innerH, 22);
         ctx.clip();
-
         ctx.drawImage(img, dx, dy, dw, dh);
 
-        function map01(p) {
+        function map01(p){
           const x = dx + (Number(p?.x01 ?? 0) * dw);
           const y = dy + (Number(p?.y01 ?? 0) * dh);
           return { x, y };
         }
 
-        // hits
         for (const h of hitArr) {
           const m = map01(h);
           ctx.beginPath();
-          ctx.arc(m.x, m.y, 10, 0, Math.PI * 2);
+          ctx.arc(m.x, m.y, 10, 0, Math.PI*2);
           ctx.fillStyle = "rgba(183,255,60,.95)";
           ctx.fill();
           ctx.lineWidth = 4;
@@ -446,11 +348,10 @@
           ctx.stroke();
         }
 
-        // aim
         if (aim) {
           const m = map01(aim);
           ctx.beginPath();
-          ctx.arc(m.x, m.y, 12, 0, Math.PI * 2);
+          ctx.arc(m.x, m.y, 12, 0, Math.PI*2);
           ctx.fillStyle = "rgba(103,243,164,.95)";
           ctx.fill();
           ctx.lineWidth = 4;
@@ -458,89 +359,73 @@
           ctx.stroke();
 
           ctx.beginPath();
-          ctx.arc(m.x, m.y, 22, 0, Math.PI * 2);
+          ctx.arc(m.x, m.y, 22, 0, Math.PI*2);
           ctx.strokeStyle = "rgba(238,242,247,.85)";
           ctx.lineWidth = 3;
           ctx.stroke();
         }
 
         ctx.restore();
-      } catch {
-        // leave panel empty if image fails
-        ctx.fillStyle = "rgba(238,242,247,.25)";
-        ctx.font = "900 26px system-ui, -apple-system, Segoe UI, Roboto, Arial";
-        ctx.fillText("Image Load Failed", start + sq / 2, ySq + sq / 2);
-      }
+      } catch {}
     } else {
       ctx.fillStyle = "rgba(238,242,247,.25)";
       ctx.font = "900 26px system-ui, -apple-system, Segoe UI, Roboto, Arial";
-      ctx.fillText("No Image", start + sq / 2, ySq + sq / 2);
+      ctx.fillText("No Image", start + sq/2, ySq + sq/2);
     }
 
-    // Vendor box: badge first (if known), else clean text
-    const vendorUrl = String(payload?.vendorUrl || "");
-    const vKey = vendorKeyFromUrl(vendorUrl);
-    const vendorPanelX = start + sq + gap;
-    const vendorPanelY = ySq;
-    const vendorInnerX = vendorPanelX + 10;
-    const vendorInnerY = vendorPanelY + 10;
-    const vendorInnerW = sq - 20;
-    const vendorInnerH = sq - 20;
+    // ✅ Vendor square: logo (if present) + name
+    const vendorX = start + sq + gap;
+    const vendorY = ySq;
+    const innerVX = vendorX + 10;
+    const innerVY = vendorY + 10;
+    const innerVW = sq - 20;
+    const innerVH = sq - 20;
 
-    let drewBadge = false;
-    if (vKey && VENDOR_BADGE[vKey]) {
+    let drewLogo = false;
+    if (isBaker(vendorUrl)) {
       try {
-        const badge = await loadImage(VENDOR_BADGE[vKey]);
-
-        // fit within vendorInner with padding, preserve aspect
-        const maxW = vendorInnerW * 0.84;
-        const maxH = vendorInnerH * 0.54;
-
-        const s = Math.min(maxW / badge.width, maxH / badge.height);
-        const bw = badge.width * s;
-        const bh = badge.height * s;
-        const bx = vendorInnerX + (vendorInnerW - bw) / 2;
-        const by = vendorInnerY + (vendorInnerH - bh) / 2 - 18;
+        const logo = await new Promise((resolve, reject) => {
+          const im = new Image();
+          im.onload = () => resolve(im);
+          im.onerror = reject;
+          im.src = "./assets/vendor-baker-logo.png";
+        });
 
         ctx.save();
-        roundedRect(vendorInnerX, vendorInnerY, vendorInnerW, vendorInnerH, 22);
+        roundedRect(innerVX, innerVY, innerVW, innerVH, 22);
         ctx.clip();
-        ctx.drawImage(badge, bx, by, bw, bh);
+
+        // fit inside top half
+        const maxW = innerVW * 0.78;
+        const maxH = innerVH * 0.40;
+        const s = Math.min(maxW / logo.width, maxH / logo.height);
+        const lw = logo.width * s;
+        const lh = logo.height * s;
+        const lx = innerVX + (innerVW - lw)/2;
+        const ly = innerVY + 48;
+
+        ctx.drawImage(logo, lx, ly, lw, lh);
         ctx.restore();
-
-        // tagline under badge
-        ctx.fillStyle = "rgba(238,242,247,.62)";
-        ctx.font = "800 22px system-ui, -apple-system, Segoe UI, Roboto, Arial";
-        ctx.textAlign = "center";
-        ctx.fillText("After-Shot Intelligence", vendorPanelX + sq / 2, vendorPanelY + sq - 56);
-
-        drewBadge = true;
-      } catch {
-        drewBadge = false;
-      }
+        drewLogo = true;
+      } catch {}
     }
 
-    if (!drewBadge) {
-      const host = domainFromUrl(vendorUrl);
-      const vendorName = host ? host.split(".")[0].replace(/[-_]+/g, " ") : "Vendor Partner";
-      const pretty = vendorName ? vendorName.replace(/\b\w/g, (m) => m.toUpperCase()) : "Vendor Partner";
+    ctx.fillStyle = "rgba(238,242,247,.92)";
+    ctx.font = "900 44px system-ui, -apple-system, Segoe UI, Roboto, Arial";
+    ctx.textAlign = "center";
 
-      ctx.fillStyle = "rgba(238,242,247,.92)";
-      ctx.font = "900 44px system-ui, -apple-system, Segoe UI, Roboto, Arial";
-      ctx.textAlign = "center";
-      ctx.fillText(pretty, vendorPanelX + sq / 2, vendorPanelY + sq / 2 - 10);
+    const nameText = String(vendorName || (isBaker(vendorUrl) ? "BAKER TARGETS" : "Vendor Partner"));
+    ctx.fillText(nameText, vendorX + sq/2, drewLogo ? (vendorY + sq/2 + 40) : (vendorY + sq/2 - 10));
 
-      ctx.fillStyle = "rgba(238,242,247,.62)";
-      ctx.font = "800 22px system-ui, -apple-system, Segoe UI, Roboto, Arial";
-      ctx.fillText("After-Shot Intelligence", vendorPanelX + sq / 2, vendorPanelY + sq / 2 + 34);
-    }
+    ctx.fillStyle = "rgba(238,242,247,.62)";
+    ctx.font = "800 22px system-ui, -apple-system, Segoe UI, Roboto, Arial";
+    ctx.fillText("After-Shot Intelligence", vendorX + sq/2, drewLogo ? (vendorY + sq/2 + 84) : (vendorY + sq/2 + 34));
 
-    // Stats panel
-    panel(pad, 1040, W - pad * 2, 200);
+    // Stats
+    panel(pad, 1040, W - pad*2, 200);
     ctx.fillStyle = "rgba(238,242,247,.70)";
     ctx.font = "900 24px system-ui, -apple-system, Segoe UI, Roboto, Arial";
-    ctx.textAlign = "center";
-    ctx.fillText("SESSION SUMMARY (LAST 10)", W / 2, 1090);
+    ctx.fillText("SESSION SUMMARY (LAST 10)", W/2, 1090);
 
     ctx.fillStyle = "rgba(238,242,247,.92)";
     ctx.font = "900 44px system-ui, -apple-system, Segoe UI, Roboto, Arial";
@@ -557,12 +442,11 @@
     ctx.fillText("Highest (10)", leftX, row1 + 40);
     ctx.fillText("Average (10)", rightX, row1 + 40);
 
-    // Last 10 panel
-    panel(pad, 1260, W - pad * 2, 540);
+    // Top 10
+    panel(pad, 1260, W - pad*2, 540);
     ctx.fillStyle = "rgba(238,242,247,.75)";
     ctx.font = "900 24px system-ui, -apple-system, Segoe UI, Roboto, Arial";
-    ctx.textAlign = "center";
-    ctx.fillText("LAST 10 — SCORE / YDS / HITS (NEWEST TOP)", W / 2, 1315);
+    ctx.fillText("LAST 10 — SCORE / YDS / HITS (NEWEST TOP)", W/2, 1315);
 
     const top10 = hist.slice(0, KEEP_N);
     ctx.textAlign = "left";
@@ -580,7 +464,7 @@
         ctx.save();
         ctx.globalAlpha = 0.12;
         ctx.fillStyle = "#2f66ff";
-        roundedRect(pad + 30, rowY - 32, W - pad * 2 - 60, 42, 12);
+        roundedRect(pad + 30, rowY - 32, W - pad*2 - 60, 42, 12);
         ctx.fill();
         ctx.restore();
       }
@@ -589,81 +473,111 @@
       const s = Math.round(Number(h.score || 0));
       const yd = Math.round(Number(h.dist || 0));
       const ht = Math.round(Number(h.hits || 0));
-      ctx.fillText(`${String(i + 1).padStart(2, "0")}.  ${s}   |   ${yd} yds   |   ${ht} hits`, colX, rowY);
+      ctx.fillText(`${String(i+1).padStart(2,"0")}.  ${s}   |   ${yd} yds   |   ${ht} hits`, colX, rowY);
     }
 
     ctx.textAlign = "center";
     ctx.fillStyle = "rgba(238,242,247,.45)";
     ctx.font = "800 20px system-ui, -apple-system, Segoe UI, Roboto, Arial";
-    ctx.fillText(`Generated ${nowStamp()}`, W / 2, 1875);
-
-    // ✅ Most important for “blank image” avoidance on some Safari builds:
-    // give the browser one frame before toDataURL
-    await nextFrame();
+    ctx.fillText(`Generated ${nowStamp()}`, W/2, 1875);
 
     return c.toDataURL("image/png");
+  }
+
+  // -----------------------------
+  // Payload
+  // -----------------------------
+  function loadPayload() {
+    const qp = getQueryParam("payload");
+    if (qp) {
+      const obj = b64ToObj(qp);
+      if (obj) return obj;
+    }
+
+    const s = localStorage.getItem(KEY_PAYLOAD) || "";
+    const j = safeJsonParse(s);
+    if (j) return j;
+
+    return null;
+  }
+
+  // -----------------------------
+  // View switching
+  // -----------------------------
+  function showPrecision() {
+    viewPrecision.classList.add("viewOn");
+    viewReport.classList.remove("viewOn");
+    try { window.scrollTo(0, 0); } catch {}
+  }
+
+  function showReport() {
+    viewPrecision.classList.remove("viewOn");
+    viewReport.classList.add("viewOn");
+    try { window.scrollTo(0, 0); } catch {}
+  }
+
+  // -----------------------------
+  // Render Page 1
+  // -----------------------------
+  function renderPrecision(payload) {
+    const score = Number(payload?.score ?? 0);
+    const band = scoreBandInfo(score);
+
+    scoreValue.textContent = Number.isFinite(score) ? String(Math.round(score)) : "—";
+
+    scoreBand.classList.remove("scoreBandNeutral", "scoreBandGreen", "scoreBandYellow", "scoreBandRed");
+    scoreBand.classList.add(band.cls);
+    scoreBand.textContent = band.text;
+
+    scoreValue.classList.remove("scoreGood","scoreMid","scoreLow");
+    if (band.scoreCls) scoreValue.classList.add(band.scoreCls);
+
+    windageBig.textContent = fmt2(payload?.windage?.clicks ?? 0);
+    windageDir.textContent = String(payload?.windage?.dir || "—");
+
+    elevationBig.textContent = fmt2(payload?.elevation?.clicks ?? 0);
+    elevationDir.textContent = String(payload?.elevation?.dir || "—");
+
+    const dist = Number(payload?.debug?.distanceYds ?? payload?.distanceYds ?? 100);
+    const shots = Number(payload?.shots ?? 0);
+
+    runDistance.textContent = `${Math.round(dist)} yds`;
+    runHits.textContent = `${shots} hits`;
+    runTime.textContent = nowStamp();
   }
 
   // -----------------------------
   // Render Page 2
   // -----------------------------
   async function renderReport(payload) {
-    const vendorUrl = hydrateVendorUrl(payload);
-    const surveyUrl = String(payload?.surveyUrl || "").trim() || DEFAULT_SURVEY_URL;
+    const { vendorUrl } = resolveVendor(payload);
+    const surveyUrl = String(payload?.surveyUrl || "") || DEFAULT_SURVEY_URL;
 
-    // Vendor button
-    if (vendorBtn) {
-      if (vendorUrl && vendorUrl.startsWith("http")) {
-        vendorBtn.href = vendorUrl;
-        vendorBtn.target = "_blank";
-        vendorBtn.rel = "noopener";
-        vendorBtn.style.opacity = "1";
-        vendorBtn.style.pointerEvents = "auto";
-
-        const vKey = vendorKeyFromUrl(vendorUrl);
-        vendorBtn.textContent = (vKey === "baker")
-          ? "Baker Printing — Shop Targets"
-          : "Visit Vendor";
-      } else {
-        vendorBtn.href = "#";
-        vendorBtn.style.opacity = ".65";
-        vendorBtn.style.pointerEvents = "none";
-        vendorBtn.textContent = "Vendor (Not Set)";
-      }
+    if (vendorUrl && vendorUrl.startsWith("http")) {
+      vendorBtn.href = vendorUrl;
+      vendorBtn.style.opacity = "1";
+      vendorBtn.style.pointerEvents = "auto";
+      vendorBtn.textContent = isBaker(vendorUrl) ? "Baker Targets — Shop Targets" : "Visit Vendor";
+    } else {
+      vendorBtn.href = "#";
+      vendorBtn.style.opacity = ".65";
+      vendorBtn.style.pointerEvents = "none";
+      vendorBtn.textContent = "Vendor (Not Set)";
     }
 
-    // Survey button
-    if (surveyBtn) {
-      if (surveyUrl && surveyUrl.startsWith("http")) {
-        surveyBtn.href = surveyUrl;
-        surveyBtn.target = "_blank";
-        surveyBtn.rel = "noopener";
-        surveyBtn.style.opacity = "1";
-        surveyBtn.style.pointerEvents = "auto";
-      } else {
-        surveyBtn.href = "#";
-        surveyBtn.style.opacity = ".65";
-        surveyBtn.style.pointerEvents = "none";
-      }
+    if (surveyUrl && surveyUrl.startsWith("http")) {
+      surveyBtn.href = surveyUrl;
+      surveyBtn.style.opacity = "1";
+      surveyBtn.style.pointerEvents = "auto";
+    } else {
+      surveyBtn.href = "#";
+      surveyBtn.style.opacity = ".65";
+      surveyBtn.style.pointerEvents = "none";
     }
 
-    // Report card image
-    if (secCardImg) {
-      secCardImg.alt = "SEC Report Card";
-      // tiny “loading” placeholder (prevents blank feeling)
-      secCardImg.src =
-        "data:image/svg+xml;charset=utf-8," +
-        encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1920">
-          <rect width="100%" height="100%" fill="#06070a"/>
-          <text x="50%" y="50%" fill="rgba(238,242,247,.75)" font-family="system-ui,-apple-system,Segoe UI,Roboto,Arial" font-size="46" font-weight="800" text-anchor="middle">
-            Rendering SEC…
-          </text>
-        </svg>`);
-
-      const hist = loadHistory();
-      const dataUrl = await drawReportCardImage(payload, hist);
-      secCardImg.src = dataUrl;
-    }
+    const hist = loadHistory();
+    const dataUrl = await drawReportCardImage(payload, hist);
+    secCardImg.src = dataUrl;
   }
 
   // -----------------------------
@@ -676,23 +590,20 @@
     return;
   }
 
-  // Harden vendor URL immediately (A)
-  hydrateVendorUrl(payload);
+  // ✅ Force vendor resolution immediately (so history/vendor is correct)
+  resolveVendor(payload);
 
-  // Push current run into history immediately
   pushHistory(payload);
 
-  // Render page 1
   renderPrecision(payload);
   showPrecision();
 
-  // Buttons
-  toReportBtn?.addEventListener("click", async () => {
+  toReportBtn.addEventListener("click", async () => {
     showReport();
     await renderReport(payload);
   });
 
-  backBtn?.addEventListener("click", () => {
+  backBtn.addEventListener("click", () => {
     showPrecision();
   });
 
