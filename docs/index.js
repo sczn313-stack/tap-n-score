@@ -1,9 +1,15 @@
 /* ============================================================
-   docs/index.js (FULL REPLACEMENT)
-   MATRIX + SQUARE PLANE + Instruction mirroring (Aim ↔ Holes)
-   + iOS-safe photo input
-   + Vendor pill wired by QR params (?v=...&sku=...&b=...)
-   + Vendor pill shows VENDOR NAME and flips every ~1.5s
+   docs/index.js (FULL REPLACEMENT) — MATRIX + SQUARE PLANE
+   + Instruction mirroring (Aim ↔ Holes) in the info line (fade)
+   + Matrix + target size chips
+   + iOS-safe photo input (not display:none)
+   + SEC exit intelligence flag (?from=target)
+
+   VENDOR FIX REV:
+   ✅ Vendor slug/sku/batch captured from QR params (?v=...&sku=...&b=...)
+   ✅ Vendor URL saved to localStorage (SCZN3_VENDOR_URL_V1)
+   ✅ Landing vendor badge rotates every 1.5s once vendor known
+   ✅ Vendor URL normalized to https:// if missing
 ============================================================ */
 
 (() => {
@@ -12,8 +18,9 @@
   // Landing / hero
   const elPhotoBtn = $("photoBtn");
   const elFile = $("photoInput");
-  const elVendorBox = $("vendorBox");
-  const elVendorLabel = $("vendorLabel");
+  const elVendorBox = $("vendorBox");     // usually <a>
+  const elVendorLabel = $("vendorLabel"); // inner text node
+  const elVendorLogo = $("vendorLogo");   // OPTIONAL <img id="vendorLogo"> if you have it
 
   // Scoring UI
   const elScoreSection = $("scoreSection");
@@ -62,19 +69,17 @@
   const KEY_TARGET_IMG_DATA = "SCZN3_TARGET_IMG_DATAURL_V1";
   const KEY_TARGET_IMG_BLOB = "SCZN3_TARGET_IMG_BLOBURL_V1";
 
-  // Vendor keys
-  const KEY_VENDOR_URL  = "SCZN3_VENDOR_URL_V1";
+  const KEY_VENDOR_URL = "SCZN3_VENDOR_URL_V1";
   const KEY_VENDOR_NAME = "SCZN3_VENDOR_NAME_V1";
   const KEY_VENDOR_SLUG = "SCZN3_VENDOR_SLUG_V1";
   const KEY_VENDOR_SKU  = "SCZN3_VENDOR_SKU_V1";
   const KEY_VENDOR_BATCH= "SCZN3_VENDOR_BATCH_V1";
 
-  // Distance keys
   const KEY_DIST_UNIT = "SCZN3_RANGE_UNIT_V1"; // "YDS" | "M"
-  const KEY_DIST_YDS  = "SCZN3_RANGE_YDS_V1";  // numeric yards
+  const KEY_DIST_YDS = "SCZN3_RANGE_YDS_V1";   // numeric (yards)
 
   // Target size persistence
-  const KEY_TARGET_SIZE = "SCZN3_TARGET_SIZE_KEY_V1";
+  const KEY_TARGET_SIZE = "SCZN3_TARGET_SIZE_KEY_V1"; // e.g., "23x35"
   const KEY_TARGET_W = "SCZN3_TARGET_W_IN_V1";
   const KEY_TARGET_H = "SCZN3_TARGET_H_IN_V1";
 
@@ -91,6 +96,7 @@
 
   // vendor rotate
   let vendorRotateTimer = null;
+  let rotateState = 0;
 
   // dial unit
   let dialUnit = "MOA"; // "MOA" | "MRAD"
@@ -118,7 +124,10 @@
     hardHideScoringUI();
     hideSticky();
     closeMatrix();
+    // Re-apply vendor on back/forward too
+    applyVendorFromQrOrStorage();
   });
+
   window.addEventListener("load", () => forceTop());
 
   // ------------------------------------------------------------
@@ -221,63 +230,88 @@
   }
 
   // ------------------------------------------------------------
-  // ✅ Vendor helpers (name + rotate)
+  // ✅ URL normalization
   // ------------------------------------------------------------
-  function domainFromUrl(u) {
-    try { return new URL(u).hostname.replace(/^www\./, ""); } catch { return ""; }
-  }
-  function vendorNameFromUrl(u) {
-    const d = domainFromUrl(u || "");
-    if (d.includes("bakertargets.com")) return "BAKER TARGETS";
-    if (d.includes("baker")) return "BAKER";
-    return "VENDOR";
+  function normalizeHttpUrl(u) {
+    const s = String(u || "").trim();
+    if (!s) return "";
+    if (/^https?:\/\//i.test(s)) return s;
+    if (s.startsWith("//")) return "https:" + s;
+    // if it's a domain like bakertargets.com/...
+    if (/^[a-z0-9.-]+\.[a-z]{2,}\/?/i.test(s)) return "https://" + s;
+    return s; // fallback, may be invalid but we don't destroy it
   }
 
+  // ------------------------------------------------------------
+  // Vendor badge rotation (1.5s)
+  // ------------------------------------------------------------
   function stopVendorRotate() {
     if (vendorRotateTimer) clearInterval(vendorRotateTimer);
     vendorRotateTimer = null;
+    rotateState = 0;
   }
 
-  function startVendorRotate(primaryText) {
+  function startVendorRotate(lineA, lineB) {
     stopVendorRotate();
     if (!elVendorLabel) return;
 
-    const a = String(primaryText || "VENDOR");
-    const b = "BUY MORE TARGETS LIKE THIS";
+    const a = String(lineA || "VENDOR");
+    const b = String(lineB || "BUY MORE TARGETS LIKE THIS");
 
-    let flip = false;
+    // set immediately
     elVendorLabel.textContent = a;
 
     vendorRotateTimer = setInterval(() => {
-      flip = !flip;
-      elVendorLabel.textContent = flip ? b : a;
+      rotateState = (rotateState + 1) % 2;
+      elVendorLabel.textContent = rotateState === 0 ? a : b;
     }, 1500);
   }
 
-  function hydrateVendorBox() {
-    const url = localStorage.getItem(KEY_VENDOR_URL) || "";
-    const name = localStorage.getItem(KEY_VENDOR_NAME) || vendorNameFromUrl(url);
-
-    const ok = typeof url === "string" && url.startsWith("http");
-
+  function hydrateVendorBadge() {
     if (!elVendorBox) return;
 
+    const storedUrl = normalizeHttpUrl(localStorage.getItem(KEY_VENDOR_URL) || "");
+    const storedName = String(localStorage.getItem(KEY_VENDOR_NAME) || "").trim();
+    const storedSlug = String(localStorage.getItem(KEY_VENDOR_SLUG) || "").trim();
+
+    // Determine display name
+    let name = storedName;
+    if (!name && storedSlug === "baker") name = "BAKER TARGETS";
+    if (!name) name = "VENDOR";
+
+    const ok = storedUrl.startsWith("http");
+
+    // Logo support if you have <img id="vendorLogo">
+    if (elVendorLogo) {
+      if (storedSlug === "baker") {
+        elVendorLogo.src = "./assets/vendor-baker-logo.png";
+        elVendorLogo.alt = "Baker Targets";
+        elVendorLogo.style.display = "block";
+      } else {
+        // if you want no logo for unknown vendor
+        elVendorLogo.style.display = "none";
+      }
+    }
+
     if (ok) {
-      elVendorBox.href = url;
+      elVendorBox.href = storedUrl;
       elVendorBox.target = "_blank";
       elVendorBox.rel = "noopener";
       elVendorBox.style.pointerEvents = "auto";
       elVendorBox.style.opacity = "1";
-      startVendorRotate(name);
     } else {
+      // Still show/rotate label (branding), but disable click
       elVendorBox.removeAttribute("href");
       elVendorBox.removeAttribute("target");
       elVendorBox.removeAttribute("rel");
       elVendorBox.style.pointerEvents = "none";
       elVendorBox.style.opacity = ".92";
-      if (elVendorLabel) elVendorLabel.textContent = "VENDOR";
-      stopVendorRotate();
     }
+
+    // Always rotate once a vendor is known (slug or url or name)
+    const hasVendorIdentity = !!storedSlug || !!storedName || ok;
+    if (hasVendorIdentity) startVendorRotate(name, "BUY MORE TARGETS LIKE THIS");
+    else stopVendorRotate();
   }
 
   // ------------------------------------------------------------
@@ -292,49 +326,40 @@
     return String(s || "").trim().toLowerCase();
   }
 
-  function vendorUrlFromParams() {
+  // Vendor registry (expand anytime)
+  const VENDOR_REGISTRY = {
+    baker: {
+      name: "BAKER TARGETS",
+      url: "https://bakertargets.com/product/100-yard-bulls-eye-rifle-target-smart-target-version"
+    }
+  };
+
+  function applyVendorFromQrOrStorage() {
     const p = getParams();
 
     const slug = normalizeSlug(p.get("v"));
-    const sku  = String(p.get("sku") || "").trim().toLowerCase();
-    const batch= String(p.get("b") || "").trim().toLowerCase();
+    const sku  = String(p.get("sku") || "").trim();
+    const batch= String(p.get("b") || "").trim();
 
-    if (slug)  { try { localStorage.setItem(KEY_VENDOR_SLUG, slug); } catch {} }
-    if (sku)   { try { localStorage.setItem(KEY_VENDOR_SKU, sku); } catch {} }
-    if (batch) { try { localStorage.setItem(KEY_VENDOR_BATCH, batch); } catch {} }
-
-    const VENDOR_REGISTRY = {
-      baker: {
-        name: "BAKER TARGETS",
-        defaultUrl: "https://bakertargets.com/product/100-yard-bulls-eye-rifle-target-smart-target-version"
-      }
-    };
-
-    if (!slug) return null;
-    const entry = VENDOR_REGISTRY[slug];
-    if (!entry) return null;
-
-    // Future: per-SKU mapping here
-    return entry.defaultUrl || null;
-  }
-
-  function vendorNameFromParams() {
-    const p = getParams();
-    const slug = normalizeSlug(p.get("v"));
-    const map = { baker: "BAKER TARGETS" };
-    return map[slug] || "";
-  }
-
-  function applyVendorFromQr() {
-    const url = vendorUrlFromParams();
-    const name = vendorNameFromParams();
-
-    if (url && url.startsWith("http")) {
-      try { localStorage.setItem(KEY_VENDOR_URL, url); } catch {}
-      try { localStorage.setItem(KEY_VENDOR_NAME, name || vendorNameFromUrl(url)); } catch {}
+    if (slug) {
+      try { localStorage.setItem(KEY_VENDOR_SLUG, slug); } catch {}
+    }
+    if (sku) {
+      try { localStorage.setItem(KEY_VENDOR_SKU, sku); } catch {}
+    }
+    if (batch) {
+      try { localStorage.setItem(KEY_VENDOR_BATCH, batch); } catch {}
     }
 
-    hydrateVendorBox();
+    // If slug provided, set vendor url/name from registry
+    if (slug && VENDOR_REGISTRY[slug]) {
+      const entry = VENDOR_REGISTRY[slug];
+      try { localStorage.setItem(KEY_VENDOR_URL, normalizeHttpUrl(entry.url)); } catch {}
+      try { localStorage.setItem(KEY_VENDOR_NAME, String(entry.name || "").trim()); } catch {}
+    }
+
+    // DO NOT clear vendor if no params (we want it to persist)
+    hydrateVendorBadge();
   }
 
   // ------------------------------------------------------------
@@ -486,369 +511,4 @@
     targetWIn = clampInches(wIn, 23);
     targetHIn = clampInches(hIn, 35);
 
-    try { localStorage.setItem(KEY_TARGET_SIZE, targetSizeKey); } catch {}
-    try { localStorage.setItem(KEY_TARGET_W, String(targetWIn)); } catch {}
-    try { localStorage.setItem(KEY_TARGET_H, String(targetHIn)); } catch {}
-
-    highlightSizeChip();
-    syncLiveTop();
-  }
-
-  function hydrateTargetSize() {
-    const key = localStorage.getItem(KEY_TARGET_SIZE) || "23x35";
-    const presetMap = {
-      "8.5x11": { w: 8.5, h: 11 },
-      "11x17":  { w: 11,  h: 17 },
-      "12x18":  { w: 12,  h: 18 },
-      "18x24":  { w: 18,  h: 24 },
-      "23x35":  { w: 23,  h: 35 },
-      "24x36":  { w: 24,  h: 36 }
-    };
-
-    const p = presetMap[key] || {
-      w: clampInches(localStorage.getItem(KEY_TARGET_W) || "23", 23),
-      h: clampInches(localStorage.getItem(KEY_TARGET_H) || "35", 35)
-    };
-
-    const finalKey = (key in presetMap) ? key : (key === "custom" ? "custom" : "23x35");
-    setTargetSize(finalKey, p.w, p.h);
-  }
-
-  function wireTargetSizeChips() {
-    if (!elSizeChipRow) return;
-
-    const chips = Array.from(elSizeChipRow.querySelectorAll("[data-size]"));
-    chips.forEach((btn) => {
-      btn.addEventListener("click", () => {
-        const key = btn.getAttribute("data-size") || "23x35";
-
-        if (key === "custom") {
-          setTargetSize("custom", targetWIn, targetHIn);
-          return;
-        }
-
-        const w = Number(btn.getAttribute("data-w") || targetWIn);
-        const h = Number(btn.getAttribute("data-h") || targetHIn);
-        setTargetSize(key, w, h);
-      });
-    });
-  }
-
-  function wireSwapSize() {
-    if (!elSwapSizeBtn) return;
-    elSwapSizeBtn.addEventListener("click", () => {
-      const newW = targetHIn;
-      const newH = targetWIn;
-      setTargetSize(targetSizeKey || "custom", newW, newH);
-    });
-  }
-
-  // ------------------------------------------------------------
-  // LIVE TOP
-  // ------------------------------------------------------------
-  function syncLiveTop() {
-    if (elLiveDistance) {
-      elLiveDistance.textContent = (rangeUnit === "M")
-        ? `${Math.round(ydsToM(rangeYds))} m`
-        : `${rangeYds} yds`;
-    }
-
-    if (elLiveDial) elLiveDial.textContent = `${getClickValue().toFixed(2)} ${dialUnit}`;
-
-    if (elLiveTarget) {
-      const label = (targetSizeKey || "").replace("x", "×");
-      elLiveTarget.textContent = label || "—";
-    }
-  }
-
-  // ------------------------------------------------------------
-  // Matrix drawer
-  // ------------------------------------------------------------
-  function openMatrix() {
-    if (!elMatrixPanel) return;
-    elMatrixPanel.classList.remove("matrixHidden");
-    elMatrixPanel.setAttribute("aria-hidden", "false");
-  }
-
-  function closeMatrix() {
-    if (!elMatrixPanel) return;
-    elMatrixPanel.classList.add("matrixHidden");
-    elMatrixPanel.setAttribute("aria-hidden", "true");
-  }
-
-  function isMatrixOpen() {
-    return !!elMatrixPanel && !elMatrixPanel.classList.contains("matrixHidden");
-  }
-
-  function toggleMatrix() { isMatrixOpen() ? closeMatrix() : openMatrix(); }
-
-  function applyPreset(unit, clickVal) {
-    setUnit(unit);
-    if (elClickValue) elClickValue.value = Number(clickVal).toFixed(2);
-    getClickValue();
-    closeMatrix();
-    syncLiveTop();
-  }
-
-  function wireMatrixPresets() {
-    if (!elMatrixPanel) return;
-    const items = Array.from(elMatrixPanel.querySelectorAll("[data-unit][data-click]"));
-    items.forEach((btn) => {
-      btn.addEventListener("click", () => {
-        const u = btn.getAttribute("data-unit") || "MOA";
-        const c = Number(btn.getAttribute("data-click") || "0.25");
-        applyPreset(u, c);
-      });
-    });
-  }
-
-  window.addEventListener("keydown", (e) => { if (e.key === "Escape") closeMatrix(); });
-
-  document.addEventListener("click", (e) => {
-    if (!isMatrixOpen()) return;
-    if (!elMatrixPanel) return;
-    const inside = elMatrixPanel.contains(e.target);
-    const isBtn = (e.target === elMatrixBtn) || e.target.closest?.("#matrixBtn");
-    if (!inside && !isBtn) closeMatrix();
-  }, { capture: true });
-
-  // ------------------------------------------------------------
-  // Score (LOCAL placeholder)
-  // ------------------------------------------------------------
-  function scoreFromRadiusInches(rIn) {
-    if (rIn <= 0.25) return 100;
-    if (rIn <= 0.50) return 95;
-    if (rIn <= 1.00) return 90;
-    if (rIn <= 1.50) return 85;
-    if (rIn <= 2.00) return 80;
-    if (rIn <= 2.50) return 75;
-    if (rIn <= 3.00) return 70;
-    if (rIn <= 3.50) return 65;
-    if (rIn <= 4.00) return 60;
-    return 50;
-  }
-
-  function computeCorrectionAndScore() {
-    if (!aim || hits.length < 1) return null;
-
-    const avg = hits.reduce((acc, p) => ({ x: acc.x + p.x01, y: acc.y + p.y01 }), { x: 0, y: 0 });
-    avg.x /= hits.length;
-    avg.y /= hits.length;
-
-    const dx = aim.x01 - avg.x; // + means move RIGHT
-    const dy = aim.y01 - avg.y; // + means move DOWN (screen y)
-
-    const squareIn = Math.min(targetWIn, targetHIn);
-    const inchesX = dx * squareIn;
-    const inchesY = dy * squareIn;
-    const rIn = Math.sqrt(inchesX * inchesX + inchesY * inchesY);
-
-    const dist = getDistanceYds();
-    const inchesPerUnit = (dialUnit === "MOA")
-      ? (dist / 100) * 1.047
-      : (dist / 100) * 3.6; // pilot
-
-    const unitX = inchesX / inchesPerUnit;
-    const unitY = inchesY / inchesPerUnit;
-
-    const clickVal = getClickValue();
-    const clicksX = unitX / clickVal;
-    const clicksY = unitY / clickVal;
-
-    return {
-      avgPoi: { x01: avg.x, y01: avg.y },
-      inches: { x: inchesX, y: inchesY, r: rIn },
-      score: scoreFromRadiusInches(rIn),
-      windage: { dir: clicksX >= 0 ? "RIGHT" : "LEFT", clicks: Math.abs(clicksX) },
-      elevation: { dir: clicksY >= 0 ? "DOWN" : "UP", clicks: Math.abs(clicksY) },
-      dial: { unit: dialUnit, clickValue: clickVal },
-      squareIn
-    };
-  }
-
-  function b64FromObj(obj) {
-    const json = JSON.stringify(obj);
-    return btoa(unescape(encodeURIComponent(json)));
-  }
-
-  function goToSEC(payload) {
-    try { localStorage.setItem(KEY_PAYLOAD, JSON.stringify(payload)); } catch {}
-    const b64 = b64FromObj(payload);
-    window.location.href = `./sec.html?from=target&payload=${encodeURIComponent(b64)}&fresh=${Date.now()}`;
-  }
-
-  function onShowResults() {
-    const out = computeCorrectionAndScore();
-    if (!out) {
-      alert("Tap Aim Point first, then tap at least one bullet hole.");
-      return;
-    }
-
-    const vendorUrl = localStorage.getItem(KEY_VENDOR_URL) || "";
-    const vendorName = localStorage.getItem(KEY_VENDOR_NAME) || vendorNameFromUrl(vendorUrl);
-
-    const payload = {
-      sessionId: "S-" + Date.now(),
-      score: out.score,
-      shots: hits.length,
-      windage: { dir: out.windage.dir, clicks: Number(out.windage.clicks.toFixed(2)) },
-      elevation: { dir: out.elevation.dir, clicks: Number(out.elevation.clicks.toFixed(2)) },
-      dial: { unit: out.dial.unit, clickValue: Number(out.dial.clickValue.toFixed(2)) },
-      vendorUrl,
-      vendorName,
-      surveyUrl: "",
-      target: { key: targetSizeKey, wIn: Number(targetWIn), hIn: Number(targetHIn) },
-      debug: { aim, hits, avgPoi: out.avgPoi, distanceYds: getDistanceYds(), inches: out.inches, squareIn: out.squareIn }
-    };
-
-    goToSEC(payload);
-  }
-
-  // ------------------------------------------------------------
-  // Photo picker
-  // ------------------------------------------------------------
-  elPhotoBtn?.addEventListener("click", () => elFile?.click());
-
-  elFile?.addEventListener("change", async () => {
-    const f = elFile.files?.[0];
-    if (!f) return;
-
-    resetAll();
-
-    if (objectUrl) URL.revokeObjectURL(objectUrl);
-    objectUrl = URL.createObjectURL(f);
-
-    await storeTargetPhotoForSEC(f, objectUrl);
-
-    elImg.onload = () => {
-      setText(elStatus, "Tap Aim Point.");
-      syncInstruction();
-      revealScoringUI();
-    };
-
-    elImg.onerror = () => {
-      setText(elStatus, "Photo failed to load.");
-      setInstruction("Try again.", "");
-      revealScoringUI();
-    };
-
-    elImg.src = objectUrl;
-    elFile.value = "";
-  });
-
-  // ------------------------------------------------------------
-  // Tap logic (iOS anti-scroll chaining, pinch-zoom allowed)
-  // ------------------------------------------------------------
-  function acceptTap(clientX, clientY) {
-    if (!elImg?.src) return;
-
-    const { x01, y01 } = getRelative01(clientX, clientY);
-
-    if (!aim) {
-      aim = { x01, y01 };
-      addDot(x01, y01, "aim");
-      setText(elStatus, "Tap Bullet Holes.");
-      hideSticky();
-      syncInstruction();
-      return;
-    }
-
-    hits.push({ x01, y01 });
-    addDot(x01, y01, "hit");
-    setTapCount();
-
-    hideSticky();
-    syncInstruction();
-    scheduleStickyMagic();
-  }
-
-  if (elWrap) {
-    elWrap.addEventListener("touchmove", (e) => {
-      if (e.touches && e.touches.length === 1) e.preventDefault();
-    }, { passive: false });
-
-    elWrap.addEventListener("touchstart", (e) => {
-      if (!e.touches || e.touches.length !== 1) { touchStart = null; return; }
-      const t = e.touches[0];
-      touchStart = { x: t.clientX, y: t.clientY, t: Date.now() };
-    }, { passive: true });
-
-    elWrap.addEventListener("touchend", (e) => {
-      const t = e.changedTouches?.[0];
-      if (!t || !touchStart) return;
-
-      const dx = Math.abs(t.clientX - touchStart.x);
-      const dy = Math.abs(t.clientY - touchStart.y);
-      if (dx > 10 || dy > 10) { touchStart = null; return; }
-
-      lastTouchTapAt = Date.now();
-      acceptTap(t.clientX, t.clientY);
-      touchStart = null;
-    }, { passive: true });
-
-    elWrap.addEventListener("click", (e) => {
-      const now = Date.now();
-      if (now - lastTouchTapAt < 800) return;
-      acceptTap(e.clientX, e.clientY);
-    }, { passive: true });
-  }
-
-  // ------------------------------------------------------------
-  // Buttons
-  // ------------------------------------------------------------
-  elClear?.addEventListener("click", () => {
-    resetAll();
-    if (elImg?.src) setText(elStatus, "Tap Aim Point.");
-  });
-
-  [elStickyBtn, $("showResultsBtn")].filter(Boolean).forEach((b) => {
-    b.addEventListener("click", (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      onShowResults();
-    });
-  });
-
-  // Distance +/- (internal yards)
-  elDistUp?.addEventListener("click", () => bumpRange(5));
-  elDistDown?.addEventListener("click", () => bumpRange(-5));
-
-  elDist?.addEventListener("change", syncInternalFromRangeInput);
-  elDist?.addEventListener("blur", syncInternalFromRangeInput);
-
-  elDistUnitYd?.addEventListener("click", () => setRangeUnit("YDS"));
-  elDistUnitM?.addEventListener("click", () => setRangeUnit("M"));
-
-  elUnitMoa?.addEventListener("click", () => setUnit("MOA"));
-  elUnitMrad?.addEventListener("click", () => setUnit("MRAD"));
-
-  elClickValue?.addEventListener("blur", () => { getClickValue(); syncLiveTop(); });
-  elClickValue?.addEventListener("change", () => { getClickValue(); syncLiveTop(); });
-
-  elMatrixBtn?.addEventListener("click", toggleMatrix);
-  elMatrixClose?.addEventListener("click", closeMatrix);
-
-  // ------------------------------------------------------------
-  // Boot
-  // ------------------------------------------------------------
-  setUnit("MOA");
-  closeMatrix();
-  hideSticky();
-  resetAll();
-
-  // ✅ Apply vendor FIRST so the landing pill is live immediately
-  applyVendorFromQr();
-
-  hydrateRange();
-  hydrateTargetSize();
-
-  wireMatrixPresets();
-  wireTargetSizeChips();
-  wireSwapSize();
-
-  highlightSizeChip();
-  syncLiveTop();
-
-  hardHideScoringUI();
-  forceTop();
-})();
+    try { localStorage
