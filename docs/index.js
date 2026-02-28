@@ -1,10 +1,12 @@
 /* ============================================================
    docs/index.js (FULL REPLACEMENT)
-   + Instruction mirroring (Aim ↔ Holes) in the info line (fade)
-   + Matrix + target size chips
-   + iOS-safe photo input (not display:none)
-   + SEC exit intelligence flag (?from=target)
-   + NEW: Vendor flip = BAKER SMART TARGETS ↔ BUY MORE TARGETS LIKE THIS (green) @ 1500ms
+   - Matrix drawer (distance, dial, target size, presets)
+   - iOS-safe photo input (not display:none)
+   - Tap flow: Aim → Hits → Sticky "Show results"
+   - SEC navigation: sec.html?from=target&payload=...
+   - Hard landing lock (always start at top, scoring hidden)
+   - ✅ Vendor pill: ALWAYS "BUY MORE TARGETS LIKE THIS"
+     (CSS provides the green pulse; JS only wires link if available)
 ============================================================ */
 
 (() => {
@@ -82,10 +84,6 @@
   let touchStart = null;
   let pauseTimer = null;
 
-  // vendor rotate
-  let vendorRotateTimer = null;
-  let vendorRotateOn = false;
-
   // dial unit
   let dialUnit = "MOA"; // "MOA" | "MRAD"
 
@@ -99,11 +97,6 @@
   let targetHIn = 35;
 
   const DEFAULTS = { MOA: 0.25, MRAD: 0.10 };
-
-  // Vendor flip text
-  const VENDOR_A = "BAKER SMART TARGETS";
-  const VENDOR_B = "BUY MORE TARGETS LIKE THIS";
-  const VENDOR_MS = 1500;
 
   // ------------------------------------------------------------
   // HARD LANDING LOCK
@@ -195,6 +188,7 @@
     elInstruction.style.transform = "translateY(2px)";
     elInstruction.style.color = color;
 
+    // Force reflow so the transition always triggers (important on iOS Safari)
     void elInstruction.offsetHeight;
 
     elInstruction.textContent = text || "";
@@ -203,14 +197,8 @@
   }
 
   function syncInstruction() {
-    if (!elImg?.src) {
-      setInstruction("", "");
-      return;
-    }
-    if (!aim) {
-      setInstruction("Tap Aim Point.", "aim");
-      return;
-    }
+    if (!elImg?.src) { setInstruction("", ""); return; }
+    if (!aim) { setInstruction("Tap Aim Point.", "aim"); return; }
     setInstruction("Tap Bullet Holes.", "holes");
   }
 
@@ -227,33 +215,12 @@
   }
 
   // ------------------------------------------------------------
-  // Vendor pill rotation (GREEN flip)
+  // ✅ Vendor pill (NO text flipping; CSS pulses green)
   // ------------------------------------------------------------
-  function stopVendorRotate() {
-    if (vendorRotateTimer) clearInterval(vendorRotateTimer);
-    vendorRotateTimer = null;
-    vendorRotateOn = false;
-    elVendorBox?.classList.remove("vendorGreenFlip");
-  }
-
-  function startVendorRotate() {
-    stopVendorRotate();
-    if (!elVendorLabel || !elVendorBox) return;
-
-    // ensure green style is ON while rotating
-    elVendorBox.classList.add("vendorGreenFlip");
-
-    // start on BUY MORE (your preferred default)
-    vendorRotateOn = false;
-    elVendorLabel.textContent = VENDOR_B;
-
-    vendorRotateTimer = setInterval(() => {
-      vendorRotateOn = !vendorRotateOn;
-      elVendorLabel.textContent = vendorRotateOn ? VENDOR_A : VENDOR_B;
-    }, VENDOR_MS);
-  }
-
   function hydrateVendorBox() {
+    // Always show this text (your request)
+    if (elVendorLabel) elVendorLabel.textContent = "BUY MORE TARGETS LIKE THIS";
+
     const v = localStorage.getItem(KEY_VENDOR_URL) || "";
     const ok = typeof v === "string" && v.startsWith("http");
 
@@ -265,19 +232,13 @@
       elVendorBox.rel = "noopener";
       elVendorBox.style.pointerEvents = "auto";
       elVendorBox.style.opacity = "1";
-
-      // green flip engaged
-      startVendorRotate();
     } else {
+      // Keep pill visible but not clickable until vendor url exists
       elVendorBox.removeAttribute("href");
       elVendorBox.removeAttribute("target");
       elVendorBox.removeAttribute("rel");
       elVendorBox.style.pointerEvents = "none";
       elVendorBox.style.opacity = ".92";
-
-      // no flip if no valid URL (keeps things quiet)
-      if (elVendorLabel) elVendorLabel.textContent = VENDOR_B;
-      stopVendorRotate();
     }
   }
 
@@ -642,6 +603,8 @@
       vendorUrl,
       surveyUrl: "",
       target: { key: targetSizeKey, wIn: Number(targetWIn), hIn: Number(targetHIn) },
+
+      // include taps for export markers
       debug: { aim, hits, avgPoi: out.avgPoi, distanceYds: getDistanceYds(), inches: out.inches, squareIn: out.squareIn }
     };
 
