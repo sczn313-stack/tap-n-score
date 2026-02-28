@@ -1,9 +1,10 @@
 /* ============================================================
-   docs/index.js (FULL REPLACEMENT) — MATRIX + SQUARE PLANE
+   docs/index.js (FULL REPLACEMENT)
    + Instruction mirroring (Aim ↔ Holes) in the info line (fade)
    + Matrix + target size chips
    + iOS-safe photo input (not display:none)
-   + NEW: SEC exit intelligence flag (?from=target)
+   + SEC exit intelligence flag (?from=target)
+   + NEW: Vendor flip = BAKER SMART TARGETS ↔ BUY MORE TARGETS LIKE THIS (green) @ 1500ms
 ============================================================ */
 
 (() => {
@@ -99,6 +100,11 @@
 
   const DEFAULTS = { MOA: 0.25, MRAD: 0.10 };
 
+  // Vendor flip text
+  const VENDOR_A = "BAKER SMART TARGETS";
+  const VENDOR_B = "BUY MORE TARGETS LIKE THIS";
+  const VENDOR_MS = 1500;
+
   // ------------------------------------------------------------
   // HARD LANDING LOCK
   // ------------------------------------------------------------
@@ -184,13 +190,11 @@
       kind === "go"    ? "rgba(47,102,255,.92)"  :   // blue
                          "rgba(238,242,247,.70)";    // neutral
 
-    // Fade-in effect (works on iPhone + iPad)
     elInstruction.style.transition = "opacity 180ms ease, transform 180ms ease, color 120ms ease";
     elInstruction.style.opacity = "0";
     elInstruction.style.transform = "translateY(2px)";
     elInstruction.style.color = color;
 
-    // Force reflow so the transition always triggers (important on iOS Safari)
     void elInstruction.offsetHeight;
 
     elInstruction.textContent = text || "";
@@ -223,21 +227,30 @@
   }
 
   // ------------------------------------------------------------
-  // Vendor pill rotation
+  // Vendor pill rotation (GREEN flip)
   // ------------------------------------------------------------
   function stopVendorRotate() {
     if (vendorRotateTimer) clearInterval(vendorRotateTimer);
     vendorRotateTimer = null;
     vendorRotateOn = false;
+    elVendorBox?.classList.remove("vendorGreenFlip");
   }
 
   function startVendorRotate() {
     stopVendorRotate();
-    if (!elVendorLabel) return;
+    if (!elVendorLabel || !elVendorBox) return;
+
+    // ensure green style is ON while rotating
+    elVendorBox.classList.add("vendorGreenFlip");
+
+    // start on BUY MORE (your preferred default)
+    vendorRotateOn = false;
+    elVendorLabel.textContent = VENDOR_B;
+
     vendorRotateTimer = setInterval(() => {
       vendorRotateOn = !vendorRotateOn;
-      elVendorLabel.textContent = vendorRotateOn ? "VENDOR" : "BUY MORE TARGETS LIKE THIS";
-    }, 1200);
+      elVendorLabel.textContent = vendorRotateOn ? VENDOR_A : VENDOR_B;
+    }, VENDOR_MS);
   }
 
   function hydrateVendorBox() {
@@ -252,7 +265,8 @@
       elVendorBox.rel = "noopener";
       elVendorBox.style.pointerEvents = "auto";
       elVendorBox.style.opacity = "1";
-      if (elVendorLabel) elVendorLabel.textContent = "BUY MORE TARGETS LIKE THIS";
+
+      // green flip engaged
       startVendorRotate();
     } else {
       elVendorBox.removeAttribute("href");
@@ -260,7 +274,9 @@
       elVendorBox.removeAttribute("rel");
       elVendorBox.style.pointerEvents = "none";
       elVendorBox.style.opacity = ".92";
-      if (elVendorLabel) elVendorLabel.textContent = "BUY MORE TARGETS LIKE THIS";
+
+      // no flip if no valid URL (keeps things quiet)
+      if (elVendorLabel) elVendorLabel.textContent = VENDOR_B;
       stopVendorRotate();
     }
   }
@@ -604,8 +620,6 @@
   function goToSEC(payload) {
     try { localStorage.setItem(KEY_PAYLOAD, JSON.stringify(payload)); } catch {}
     const b64 = b64FromObj(payload);
-
-    // ✅ NEW: mark that SEC came from the Target page (enables intelligent Exit)
     window.location.href = `./sec.html?from=target&payload=${encodeURIComponent(b64)}&fresh=${Date.now()}`;
   }
 
@@ -628,8 +642,6 @@
       vendorUrl,
       surveyUrl: "",
       target: { key: targetSizeKey, wIn: Number(targetWIn), hIn: Number(targetHIn) },
-
-      // include taps for export markers
       debug: { aim, hits, avgPoi: out.avgPoi, distanceYds: getDistanceYds(), inches: out.inches, squareIn: out.squareIn }
     };
 
