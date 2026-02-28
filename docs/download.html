@@ -1,0 +1,43 @@
+<!-- docs/download.html (FULL REPLACEMENT) — SIMPLE PNG VIEWER + EXIT -->
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="color-scheme" content="dark" />
+  <meta name="theme-color" content="#06070a" />
+
+  <title>SEC PNG</title>
+
+  <style>
+    html,body{height:100%; margin:0; background:#06070a; color:#eef2f7; font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;}
+    .wrap{min-height:100%; display:flex; flex-direction:column; align-items:center; padding:18px;}
+    .imgBox{width:100%; max-width:980px; background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.12); border-radius:16px; padding:12px;}
+    img{width:100%; height:auto; display:block; border-radius:12px;}
+    .btnRow{width:100%; max-width:980px; display:flex; gap:10px; margin-top:12px;}
+    button{flex:1; padding:14px 12px; border-radius:14px; border:1px solid rgba(255,255,255,.14); background:rgba(255,255,255,.06); color:#eef2f7; font-weight:800; font-size:16px;}
+    .primary{border-color:rgba(47,102,255,.45); background:rgba(47,102,255,.18);}
+    .tip{max-width:980px; opacity:.75; margin-top:10px; line-height:1.3;}
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+    <div class="imgBox">
+      <img id="pngImg" alt="SEC PNG" />
+    </div>
+
+    <div class="btnRow">
+      <button id="saveBtn" class="primary" type="button">Open / Save</button>
+      <button id="backSECBtn" type="button">Back to SEC</button>
+      <button id="backHomeBtn" type="button">Home</button>
+    </div>
+
+    <div class="tip">
+      iPhone/iPad: if this opens the image, press-and-hold it and choose <b>Save to Photos</b>.
+    </div>
+  </div>
+
+  <script src="./download.js?v=DL-0210A"></script>
+</body>
+</html>

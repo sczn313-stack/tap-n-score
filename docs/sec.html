@@ -1,0 +1,135 @@
+<!-- docs/sec.html (FULL REPLACEMENT) — TWO-PAGE SEC FLOW (NO “TROPHY”) -->
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="color-scheme" content="dark" />
+  <meta name="theme-color" content="#06070a" />
+
+  <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
+
+  <title>SEC — Tap-n-Score™</title>
+
+  <link rel="stylesheet" href="./sec.css?v=SEC-2P-REV-A" />
+</head>
+
+<body>
+  <main class="secPage">
+
+    <!-- =========================
+         PAGE 1 — PRECISION (SEC)
+    ========================== -->
+    <section id="viewPrecision" class="view viewOn" aria-label="SEC Precision View">
+      <header class="secHeader">
+        <div class="secHeaderTop">
+          <div class="secRWB" aria-label="SEC">
+            <span class="r">S</span><span class="w">E</span><span class="b">C</span>
+          </div>
+          <div class="secSub">Shooter Experience Card</div>
+        </div>
+      </header>
+
+      <section class="card">
+        <div class="scoreWrap">
+          <div class="scoreLabel">SCORE</div>
+          <div id="scoreValue" class="scoreValue">—</div>
+          <div id="scoreBand" class="scoreBand scoreBandNeutral">—</div>
+
+          <div id="scoreTip" class="scoreTip">
+            Tight cluster + closer to the aim point = higher score.
+          </div>
+        </div>
+
+        <div class="clicksBig">
+          <div class="clickBox">
+            <div class="clickHdr">WINDAGE</div>
+            <div id="windageBig" class="clickVal">—</div>
+            <div id="windageDir" class="clickDir">—</div>
+          </div>
+
+          <div class="clickBox">
+            <div class="clickHdr">ELEVATION</div>
+            <div id="elevationBig" class="clickVal">—</div>
+            <div id="elevationDir" class="clickDir">—</div>
+          </div>
+        </div>
+
+        <div class="miniLine" aria-label="Run details">
+          <span id="runDistance" class="miniPill">—</span>
+          <span id="runHits" class="miniPill">—</span>
+          <span id="runTime" class="miniPill">—</span>
+        </div>
+
+        <div class="primaryActions">
+          <button id="toReportBtn" class="primaryBtn" type="button">
+            Save SEC + Shooter History
+          </button>
+
+          <!-- ✅ NEW: Exit back to landing -->
+          <button id="goHomeBtn" class="secondaryGlowBtn" type="button">
+            Zero another target / Score another
+          </button>
+
+          <div class="microNote">
+            Next screen creates a “Report Card” image you can save to Photos.
+          </div>
+        </div>
+      </section>
+
+      <footer class="secFooter">
+        <span class="footerMark">SCZN3</span>
+      </footer>
+    </section>
+
+    <!-- =========================
+         PAGE 2 — REPORT CARD (SAVE)
+    ========================== -->
+    <section id="viewReport" class="view" aria-label="SEC Report Card View">
+      <header class="secHeader secHeaderTight">
+        <div class="secHeaderTop">
+          <div class="secRWB bigSEC" aria-label="SEC">
+            <span class="r">S</span><span class="w">E</span><span class="b">C</span>
+          </div>
+          <div class="secSub">Shooter Experience Card</div>
+        </div>
+      </header>
+
+      <section class="card reportCard">
+        <div class="saveHint">
+          Tap &amp; hold the card to save to Photos.
+        </div>
+
+        <div class="cardImgShell">
+          <img id="secCardImg" alt="SEC report card image" />
+        </div>
+
+        <div class="reportActions">
+          <button id="backBtn" class="btnSecondary" type="button">Back</button>
+
+          <a id="vendorBtn" class="vendorBtn" href="#" target="_blank" rel="noopener">
+            Visit Vendor
+          </a>
+
+          <a id="surveyBtn" class="surveyBtn" href="#" target="_blank" rel="noopener">
+            Quick Survey (30 seconds)
+          </a>
+        </div>
+
+        <div class="reportMicro">
+          Vendor link is only live here (after you complete the loop).
+        </div>
+      </section>
+
+      <footer class="secFooter">
+        <span class="footerMark">SCZN3</span>
+      </footer>
+    </section>
+
+  </main>
+
+  <script defer src="./sec.js?v=SEC-2P-REV-A"></script>
+</body>
+</html>

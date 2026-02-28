@@ -1,0 +1,61 @@
+/* docs/livebar_fix.css (FULL REPLACEMENT)
+   - Fix: MATRIX never covers target size on phones
+   - Add: instruction "pop + fade" animation for statusLine + instructionLine
+*/
+
+/* ===========================
+   LIVE BAR FIX (phones)
+=========================== */
+.liveRowOneLine{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+}
+
+.liveRowOneLine .liveLine{
+  min-width:0;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+
+#matrixBtn{ flex:0 0 auto; }
+
+/* Stack earlier so it catches iPhone widths */
+@media (max-width: 560px){
+  .liveRowOneLine{
+    flex-wrap:wrap;
+    justify-content:flex-start;
+    gap:10px;
+  }
+
+  .liveRowOneLine .liveLine{
+    flex:1 1 100%;
+    white-space:normal;
+    overflow:visible;
+    text-overflow:clip;
+    line-height:1.15;
+  }
+
+  #matrixBtn{
+    margin-left:auto;
+  }
+}
+
+/* ===========================
+   INSTRUCTION POP + FADE
+=========================== */
+@keyframes tnsPopFade {
+  0%   { opacity: 0; transform: translateY(6px) scale(0.985); filter: blur(0.2px); }
+  35%  { opacity: 1; transform: translateY(0)  scale(1.00);  filter: blur(0px); }
+  100% { opacity: 1; transform: translateY(0)  scale(1.00);  filter: blur(0px); }
+}
+
+.tnsPulse{
+  animation: tnsPopFade 260ms ease-out;
+}
+
+#statusLine, #instructionLine{
+  will-change: transform, opacity;
+}

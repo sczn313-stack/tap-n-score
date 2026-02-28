@@ -1,372 +1,784 @@
-/* docs/index.js (FULL REPLACEMENT) — Pilot clean: hides choose card after load; SEC naming; removes extra tip copy */
+/* ============================================================
+   docs/index.js (FULL REPLACEMENT) — MATRIX + SQUARE PLANE
+   + Instruction mirroring (Aim ↔ Holes) in the info line (fade)
+   + Matrix + target size chips
+   + iOS-safe photo input (not display:none)
+   + NEW: SEC exit intelligence flag (?from=target)
+============================================================ */
+
 (() => {
   const $ = (id) => document.getElementById(id);
 
-  // --- UI
-  const elDetailsBtn = $("detailsBtn");
-
-  const elChooseCard = $("chooseCard");
+  // Landing / hero
+  const elPhotoBtn = $("photoBtn");
   const elFile = $("photoInput");
-  const elFileName = $("fileName");
+  const elVendorBox = $("vendorBox");
+  const elVendorLabel = $("vendorLabel");
 
-  const elModeRifle = $("modeRifle");
-  const elModePistol = $("modePistol");
-
-  // Hidden inputs (behind the scenes)
-  const elDistance = $("distanceYds");
-  const elClickValue = $("clickValue");
-
-  const elWrap = $("targetWrap");
+  // Scoring UI
+  const elScoreSection = $("scoreSection");
   const elImg = $("targetImg");
   const elDots = $("dotsLayer");
+  const elWrap = $("targetWrap");
+  const elTapCount = $("tapCount");
+  const elClear = $("clearTapsBtn");
+  const elInstruction = $("instructionLine");
+  const elStatus = $("statusLine");
 
-  const elBullState = $("bullState");
-  const elHoleCount = $("holeCount");
+  // Sticky
+  const elStickyBar = $("stickyBar");
+  const elStickyBtn = $("stickyResultsBtn");
 
-  const elUndo = $("undoBtn");
-  const elClear = $("clearBtn");
-  const elShow = $("showBtn");
+  // LIVE top
+  const elLiveDistance = $("liveDistance");
+  const elLiveDial = $("liveDial");
+  const elLiveTarget = $("liveTarget");
 
-  const elResults = $("resultsCard");
-  const rWindDir = $("rWindDir");
-  const rWindClk = $("rWindClk");
-  const rElevDir = $("rElevDir");
-  const rElevClk = $("rElevClk");
+  // Matrix
+  const elMatrixBtn = $("matrixBtn");
+  const elMatrixPanel = $("matrixPanel");
+  const elMatrixClose = $("matrixCloseBtn");
 
-  const elSecLink = $("downloadSecLink");
+  // Distance controls
+  const elDist = $("distanceYds");
+  const elDistUp = $("distUp");
+  const elDistDown = $("distDown");
+  const elDistUnitLabel = $("distUnitLabel");
+  const elDistUnitYd = $("distUnitYd");
+  const elDistUnitM = $("distUnitM");
 
-  // Bottom sheet
-  const elBackdrop = $("sheetBackdrop");
-  const elSheet = $("bottomSheet");
-  const elSheetClose = $("sheetClose");
+  // Dial controls
+  const elUnitMoa = $("unitMoa");
+  const elUnitMrad = $("unitMrad");
+  const elClickValue = $("clickValue");
+  const elClickUnitLabel = $("clickUnitLabel");
 
-  // --- State
-  let selectedFile = null;
+  // Target size chip row
+  const elSizeChipRow = $("sizeChipRow");
+  const elSwapSizeBtn = $("swapSizeBtn");
+
+  // Storage keys
+  const KEY_PAYLOAD = "SCZN3_SEC_PAYLOAD_V1";
+  const KEY_TARGET_IMG_DATA = "SCZN3_TARGET_IMG_DATAURL_V1";
+  const KEY_TARGET_IMG_BLOB = "SCZN3_TARGET_IMG_BLOBURL_V1";
+  const KEY_VENDOR_URL = "SCZN3_VENDOR_URL_V1";
+  const KEY_DIST_UNIT = "SCZN3_RANGE_UNIT_V1"; // "YDS" | "M"
+  const KEY_DIST_YDS = "SCZN3_RANGE_YDS_V1";   // numeric (yards)
+
+  // Target size persistence
+  const KEY_TARGET_SIZE = "SCZN3_TARGET_SIZE_KEY_V1"; // e.g., "23x35"
+  const KEY_TARGET_W = "SCZN3_TARGET_W_IN_V1";
+  const KEY_TARGET_H = "SCZN3_TARGET_H_IN_V1";
+
   let objectUrl = null;
 
-  let bull = null;   // {x01,y01}
-  let holes = [];    // [{x01,y01}...]
+  // taps
+  let aim = null;
+  let hits = [];
 
-  // Tap intent
-  let down = null;
-  const TAP_MAX_MOVE_PX = 12;
-  const TAP_MAX_MS = 450;
-  let lastTapTs = 0;
+  // touch anti-double-fire
+  let lastTouchTapAt = 0;
+  let touchStart = null;
+  let pauseTimer = null;
 
-  // Internal size proxy until QR payload replaces it (NOT displayed)
-  const PAPER_W_IN = 8.5;
-  const PAPER_H_IN = 11.0;
+  // vendor rotate
+  let vendorRotateTimer = null;
+  let vendorRotateOn = false;
 
-  const clamp01 = (v) => Math.max(0, Math.min(1, v));
-  const fmtClicks = (n) => (Number.isFinite(n) ? n.toFixed(2) : "0.00");
+  // dial unit
+  let dialUnit = "MOA"; // "MOA" | "MRAD"
 
-  function setMode(mode){
-    const isRifle = mode === "rifle";
-    elModeRifle.classList.toggle("active", isRifle);
-    elModePistol.classList.toggle("active", !isRifle);
-    try { localStorage.setItem("tns_mode", mode); } catch {}
+  // distance state
+  let rangeUnit = "YDS"; // "YDS" | "M"
+  let rangeYds = 100;    // internal yards
+
+  // target size (inches)
+  let targetSizeKey = "23x35";
+  let targetWIn = 23;
+  let targetHIn = 35;
+
+  const DEFAULTS = { MOA: 0.25, MRAD: 0.10 };
+
+  // ------------------------------------------------------------
+  // HARD LANDING LOCK
+  // ------------------------------------------------------------
+  try { history.scrollRestoration = "manual"; } catch {}
+  function forceTop() { try { window.scrollTo(0, 0); } catch {} }
+  function hardHideScoringUI() { elScoreSection?.classList.add("scoreHidden"); }
+
+  window.addEventListener("pageshow", () => {
+    forceTop();
+    hardHideScoringUI();
+    hideSticky();
+    closeMatrix();
+  });
+  window.addEventListener("load", () => forceTop());
+
+  // ------------------------------------------------------------
+  // GLOBAL: 3+ taps on ANY button => history.back()
+  // ------------------------------------------------------------
+  const tripleTap = new WeakMap();
+  function registerButtonTap(btn) {
+    const now = Date.now();
+    const s = tripleTap.get(btn) || { t: 0, n: 0 };
+
+    if (now - s.t <= 750) s.n += 1;
+    else s.n = 1;
+
+    s.t = now;
+    tripleTap.set(btn, s);
+
+    if (s.n >= 3) {
+      try { window.history.back(); } catch {}
+      s.n = 0;
+      tripleTap.set(btn, s);
+    }
+  }
+  document.addEventListener("click", (e) => {
+    const b = e.target?.closest?.("button");
+    if (b) registerButtonTap(b);
+  }, { capture: true });
+
+  // ------------------------------------------------------------
+  // Helpers
+  // ------------------------------------------------------------
+  function clamp01(v) { return Math.max(0, Math.min(1, v)); }
+  function setText(el, t) { if (el) el.textContent = String(t ?? ""); }
+
+  function revealScoringUI() {
+    elScoreSection?.classList.remove("scoreHidden");
+    try { elScoreSection?.scrollIntoView({ behavior: "smooth", block: "start" }); } catch {}
   }
 
-  function getMode(){
-    try {
-      const m = localStorage.getItem("tns_mode");
-      return (m === "pistol" || m === "rifle") ? m : "rifle";
-    } catch {
-      return "rifle";
+  function setTapCount() { if (elTapCount) elTapCount.textContent = String(hits.length); }
+
+  function hideSticky() {
+    if (!elStickyBar) return;
+    elStickyBar.classList.add("stickyHidden");
+    elStickyBar.setAttribute("aria-hidden", "true");
+  }
+
+  function showSticky() {
+    if (!elStickyBar) return;
+    elStickyBar.classList.remove("stickyHidden");
+    elStickyBar.setAttribute("aria-hidden", "false");
+  }
+
+  function scheduleStickyMagic() {
+    clearTimeout(pauseTimer);
+    pauseTimer = setTimeout(() => {
+      if (hits.length >= 1) showSticky();
+    }, 650);
+  }
+
+  // ------------------------------------------------------------
+  // Instruction line (mirrored + fade)
+  // ------------------------------------------------------------
+  function setInstruction(text, kind) {
+    if (!elInstruction) return;
+
+    // kind: "aim" | "holes" | "go" | ""
+    const color =
+      kind === "aim"   ? "rgba(103,243,164,.95)" :   // green
+      kind === "holes" ? "rgba(183,255,60,.95)"  :   // yellow-lime
+      kind === "go"    ? "rgba(47,102,255,.92)"  :   // blue
+                         "rgba(238,242,247,.70)";    // neutral
+
+    // Fade-in effect (works on iPhone + iPad)
+    elInstruction.style.transition = "opacity 180ms ease, transform 180ms ease, color 120ms ease";
+    elInstruction.style.opacity = "0";
+    elInstruction.style.transform = "translateY(2px)";
+    elInstruction.style.color = color;
+
+    // Force reflow so the transition always triggers (important on iOS Safari)
+    void elInstruction.offsetHeight;
+
+    elInstruction.textContent = text || "";
+    elInstruction.style.opacity = "1";
+    elInstruction.style.transform = "translateY(0px)";
+  }
+
+  function syncInstruction() {
+    if (!elImg?.src) {
+      setInstruction("", "");
+      return;
+    }
+    if (!aim) {
+      setInstruction("Tap Aim Point.", "aim");
+      return;
+    }
+    setInstruction("Tap Bullet Holes.", "holes");
+  }
+
+  function resetAll() {
+    aim = null;
+    hits = [];
+    touchStart = null;
+    if (elDots) elDots.innerHTML = "";
+    setTapCount();
+    hideSticky();
+    syncInstruction();
+    setText(elStatus, elImg?.src ? "Tap Aim Point." : "Add a target photo to begin.");
+    closeMatrix();
+  }
+
+  // ------------------------------------------------------------
+  // Vendor pill rotation
+  // ------------------------------------------------------------
+  function stopVendorRotate() {
+    if (vendorRotateTimer) clearInterval(vendorRotateTimer);
+    vendorRotateTimer = null;
+    vendorRotateOn = false;
+  }
+
+  function startVendorRotate() {
+    stopVendorRotate();
+    if (!elVendorLabel) return;
+    vendorRotateTimer = setInterval(() => {
+      vendorRotateOn = !vendorRotateOn;
+      elVendorLabel.textContent = vendorRotateOn ? "VENDOR" : "BUY MORE TARGETS LIKE THIS";
+    }, 1200);
+  }
+
+  function hydrateVendorBox() {
+    const v = localStorage.getItem(KEY_VENDOR_URL) || "";
+    const ok = typeof v === "string" && v.startsWith("http");
+
+    if (!elVendorBox) return;
+
+    if (ok) {
+      elVendorBox.href = v;
+      elVendorBox.target = "_blank";
+      elVendorBox.rel = "noopener";
+      elVendorBox.style.pointerEvents = "auto";
+      elVendorBox.style.opacity = "1";
+      if (elVendorLabel) elVendorLabel.textContent = "BUY MORE TARGETS LIKE THIS";
+      startVendorRotate();
+    } else {
+      elVendorBox.removeAttribute("href");
+      elVendorBox.removeAttribute("target");
+      elVendorBox.removeAttribute("rel");
+      elVendorBox.style.pointerEvents = "none";
+      elVendorBox.style.opacity = ".92";
+      if (elVendorLabel) elVendorLabel.textContent = "BUY MORE TARGETS LIKE THIS";
+      stopVendorRotate();
     }
   }
 
-  function updateStatus(){
-    elBullState.textContent = bull ? "set" : "not set";
-    elHoleCount.textContent = String(holes.length);
-    elShow.disabled = !(bull && holes.length >= 1);
+  // ------------------------------------------------------------
+  // Target photo storage
+  // ------------------------------------------------------------
+  async function storeTargetPhotoForSEC(file, blobUrl) {
+    try { localStorage.setItem(KEY_TARGET_IMG_BLOB, blobUrl); } catch {}
+    try {
+      const dataUrl = await new Promise((resolve, reject) => {
+        const r = new FileReader();
+        r.onload = () => resolve(String(r.result || ""));
+        r.onerror = reject;
+        r.readAsDataURL(file);
+      });
+      if (dataUrl && dataUrl.startsWith("data:image/")) {
+        localStorage.setItem(KEY_TARGET_IMG_DATA, dataUrl);
+      }
+    } catch {}
   }
 
-  function clearDots(){ elDots.innerHTML = ""; }
-
-  function addDot(p, isBull){
+  // ------------------------------------------------------------
+  // Dots
+  // ------------------------------------------------------------
+  function addDot(x01, y01, kind) {
+    if (!elDots) return;
     const d = document.createElement("div");
-    d.className = "dot" + (isBull ? " bull" : "");
-    d.style.left = `${(p.x01 * 100).toFixed(4)}%`;
-    d.style.top  = `${(p.y01 * 100).toFixed(4)}%`;
+    d.className = "tapDot " + (kind === "aim" ? "tapDotAim" : "tapDotHit");
+    d.style.left = (x01 * 100) + "%";
+    d.style.top = (y01 * 100) + "%";
+    d.style.background = (kind === "aim") ? "#67f3a4" : "#b7ff3c";
+    d.style.border = "2px solid rgba(0,0,0,.55)";
+    d.style.boxShadow = "0 10px 28px rgba(0,0,0,.55)";
     elDots.appendChild(d);
   }
 
-  function renderDots(){
-    clearDots();
-    if (bull) addDot(bull, true);
-    for (const h of holes) addDot(h, false);
+  function getRelative01(clientX, clientY) {
+    const r = elImg.getBoundingClientRect();
+    const x = (clientX - r.left) / r.width;
+    const y = (clientY - r.top) / r.height;
+    return { x01: clamp01(x), y01: clamp01(y) };
   }
 
-  function rectOfImage(){ return elImg.getBoundingClientRect(); }
+  // ------------------------------------------------------------
+  // Range: internal yards, display YDS or M
+  // ------------------------------------------------------------
+  function ydsToM(yds) { return yds * 0.9144; }
+  function mToYds(m) { return m / 0.9144; }
 
-  function insideImage(x, y){
-    const r = rectOfImage();
-    return x >= r.left && x <= r.right && y >= r.top && y <= r.bottom;
+  function clampRangeYds(v) {
+    let n = Number(v);
+    if (!Number.isFinite(n)) n = 100;
+    n = Math.round(n);
+    n = Math.max(1, Math.min(5000, n));
+    return n;
   }
 
-  function clientTo01(x, y){
-    const r = rectOfImage();
+  function getDistanceYds() { return clampRangeYds(rangeYds); }
+
+  function setRangeUnit(u) {
+    rangeUnit = (u === "M") ? "M" : "YDS";
+    try { localStorage.setItem(KEY_DIST_UNIT, rangeUnit); } catch {}
+
+    elDistUnitYd?.classList.toggle("segOn", rangeUnit === "YDS");
+    elDistUnitM?.classList.toggle("segOn", rangeUnit === "M");
+
+    if (elDistUnitLabel) elDistUnitLabel.textContent = (rangeUnit === "M") ? "m" : "yds";
+
+    syncRangeInputFromInternal();
+    syncLiveTop();
+  }
+
+  function syncRangeInputFromInternal() {
+    if (!elDist) return;
+    if (rangeUnit === "M") elDist.value = String(Math.round(ydsToM(rangeYds)));
+    else elDist.value = String(rangeYds);
+  }
+
+  function syncInternalFromRangeInput() {
+    if (!elDist) return;
+    let n = Number(elDist.value);
+    if (!Number.isFinite(n)) n = (rangeUnit === "M") ? Math.round(ydsToM(rangeYds)) : rangeYds;
+
+    rangeYds = (rangeUnit === "M") ? clampRangeYds(mToYds(n)) : clampRangeYds(n);
+
+    try { localStorage.setItem(KEY_DIST_YDS, String(rangeYds)); } catch {}
+    syncRangeInputFromInternal();
+    syncLiveTop();
+  }
+
+  function bumpRange(stepYds) {
+    rangeYds = clampRangeYds(rangeYds + stepYds);
+    try { localStorage.setItem(KEY_DIST_YDS, String(rangeYds)); } catch {}
+    syncRangeInputFromInternal();
+    syncLiveTop();
+  }
+
+  function hydrateRange() {
+    rangeYds = clampRangeYds(Number(localStorage.getItem(KEY_DIST_YDS) || "100"));
+    const savedUnit = localStorage.getItem(KEY_DIST_UNIT) || "YDS";
+    setRangeUnit(savedUnit === "M" ? "M" : "YDS");
+  }
+
+  // ------------------------------------------------------------
+  // Dial unit + click
+  // ------------------------------------------------------------
+  function setUnit(newUnit) {
+    dialUnit = newUnit === "MRAD" ? "MRAD" : "MOA";
+
+    elUnitMoa?.classList.toggle("segOn", dialUnit === "MOA");
+    elUnitMrad?.classList.toggle("segOn", dialUnit === "MRAD");
+
+    const def = DEFAULTS[dialUnit];
+    if (elClickValue) elClickValue.value = String(def.toFixed(2));
+
+    if (elClickUnitLabel) elClickUnitLabel.textContent = dialUnit === "MOA" ? "MOA/click" : "MRAD/click";
+
+    syncLiveTop();
+  }
+
+  function getClickValue() {
+    let n = Number(elClickValue?.value);
+    if (!Number.isFinite(n) || n <= 0) {
+      n = DEFAULTS[dialUnit];
+      if (elClickValue) elClickValue.value = String(n.toFixed(2));
+    }
+    return Math.max(0.01, Math.min(5, n));
+  }
+
+  // ------------------------------------------------------------
+  // Target size
+  // ------------------------------------------------------------
+  function clampInches(v, fallback) {
+    let n = Number(v);
+    if (!Number.isFinite(n) || n <= 0) n = fallback;
+    return Math.max(1, Math.min(200, n));
+  }
+
+  function highlightSizeChip() {
+    if (!elSizeChipRow) return;
+    const chips = Array.from(elSizeChipRow.querySelectorAll("[data-size]"));
+    chips.forEach((c) => {
+      const key = c.getAttribute("data-size") || "";
+      c.classList.toggle("chipOn", key === targetSizeKey);
+    });
+  }
+
+  function setTargetSize(key, wIn, hIn) {
+    targetSizeKey = String(key || "23x35");
+    targetWIn = clampInches(wIn, 23);
+    targetHIn = clampInches(hIn, 35);
+
+    try { localStorage.setItem(KEY_TARGET_SIZE, targetSizeKey); } catch {}
+    try { localStorage.setItem(KEY_TARGET_W, String(targetWIn)); } catch {}
+    try { localStorage.setItem(KEY_TARGET_H, String(targetHIn)); } catch {}
+
+    highlightSizeChip();
+    syncLiveTop();
+  }
+
+  function hydrateTargetSize() {
+    const key = localStorage.getItem(KEY_TARGET_SIZE) || "23x35";
+    const presetMap = {
+      "8.5x11": { w: 8.5, h: 11 },
+      "11x17":  { w: 11,  h: 17 },
+      "12x18":  { w: 12,  h: 18 },
+      "18x24":  { w: 18,  h: 24 },
+      "23x35":  { w: 23,  h: 35 },
+      "24x36":  { w: 24,  h: 36 }
+    };
+
+    const p = presetMap[key] || {
+      w: clampInches(localStorage.getItem(KEY_TARGET_W) || "23", 23),
+      h: clampInches(localStorage.getItem(KEY_TARGET_H) || "35", 35)
+    };
+
+    const finalKey = (key in presetMap) ? key : (key === "custom" ? "custom" : "23x35");
+    setTargetSize(finalKey, p.w, p.h);
+  }
+
+  function wireTargetSizeChips() {
+    if (!elSizeChipRow) return;
+
+    const chips = Array.from(elSizeChipRow.querySelectorAll("[data-size]"));
+    chips.forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const key = btn.getAttribute("data-size") || "23x35";
+
+        if (key === "custom") {
+          setTargetSize("custom", targetWIn, targetHIn);
+          return;
+        }
+
+        const w = Number(btn.getAttribute("data-w") || targetWIn);
+        const h = Number(btn.getAttribute("data-h") || targetHIn);
+        setTargetSize(key, w, h);
+      });
+    });
+  }
+
+  function wireSwapSize() {
+    if (!elSwapSizeBtn) return;
+    elSwapSizeBtn.addEventListener("click", () => {
+      const newW = targetHIn;
+      const newH = targetWIn;
+      setTargetSize(targetSizeKey || "custom", newW, newH);
+    });
+  }
+
+  // ------------------------------------------------------------
+  // LIVE TOP
+  // ------------------------------------------------------------
+  function syncLiveTop() {
+    if (elLiveDistance) {
+      elLiveDistance.textContent = (rangeUnit === "M")
+        ? `${Math.round(ydsToM(rangeYds))} m`
+        : `${rangeYds} yds`;
+    }
+
+    if (elLiveDial) elLiveDial.textContent = `${getClickValue().toFixed(2)} ${dialUnit}`;
+
+    if (elLiveTarget) {
+      const label = (targetSizeKey || "").replace("x", "×");
+      elLiveTarget.textContent = label || "—";
+    }
+  }
+
+  // ------------------------------------------------------------
+  // Matrix drawer
+  // ------------------------------------------------------------
+  function openMatrix() {
+    if (!elMatrixPanel) return;
+    elMatrixPanel.classList.remove("matrixHidden");
+    elMatrixPanel.setAttribute("aria-hidden", "false");
+  }
+
+  function closeMatrix() {
+    if (!elMatrixPanel) return;
+    elMatrixPanel.classList.add("matrixHidden");
+    elMatrixPanel.setAttribute("aria-hidden", "true");
+  }
+
+  function isMatrixOpen() {
+    return !!elMatrixPanel && !elMatrixPanel.classList.contains("matrixHidden");
+  }
+
+  function toggleMatrix() { isMatrixOpen() ? closeMatrix() : openMatrix(); }
+
+  function applyPreset(unit, clickVal) {
+    setUnit(unit);
+    if (elClickValue) elClickValue.value = Number(clickVal).toFixed(2);
+    getClickValue();
+    closeMatrix();
+    syncLiveTop();
+  }
+
+  function wireMatrixPresets() {
+    if (!elMatrixPanel) return;
+    const items = Array.from(elMatrixPanel.querySelectorAll("[data-unit][data-click]"));
+    items.forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const u = btn.getAttribute("data-unit") || "MOA";
+        const c = Number(btn.getAttribute("data-click") || "0.25");
+        applyPreset(u, c);
+      });
+    });
+  }
+
+  window.addEventListener("keydown", (e) => { if (e.key === "Escape") closeMatrix(); });
+
+  document.addEventListener("click", (e) => {
+    if (!isMatrixOpen()) return;
+    if (!elMatrixPanel) return;
+    const inside = elMatrixPanel.contains(e.target);
+    const isBtn = (e.target === elMatrixBtn) || e.target.closest?.("#matrixBtn");
+    if (!inside && !isBtn) closeMatrix();
+  }, { capture: true });
+
+  // ------------------------------------------------------------
+  // Score (LOCAL placeholder)
+  // ------------------------------------------------------------
+  function scoreFromRadiusInches(rIn) {
+    if (rIn <= 0.25) return 100;
+    if (rIn <= 0.50) return 95;
+    if (rIn <= 1.00) return 90;
+    if (rIn <= 1.50) return 85;
+    if (rIn <= 2.00) return 80;
+    if (rIn <= 2.50) return 75;
+    if (rIn <= 3.00) return 70;
+    if (rIn <= 3.50) return 65;
+    if (rIn <= 4.00) return 60;
+    return 50;
+  }
+
+  function computeCorrectionAndScore() {
+    if (!aim || hits.length < 1) return null;
+
+    const avg = hits.reduce((acc, p) => ({ x: acc.x + p.x01, y: acc.y + p.y01 }), { x: 0, y: 0 });
+    avg.x /= hits.length;
+    avg.y /= hits.length;
+
+    // correction vector = aim - avgPoi (bull - poib)
+    const dx = aim.x01 - avg.x; // + means move RIGHT
+    const dy = aim.y01 - avg.y; // + means move DOWN (screen y)
+
+    // square scoring plane
+    const squareIn = Math.min(targetWIn, targetHIn);
+    const inchesX = dx * squareIn;
+    const inchesY = dy * squareIn;
+    const rIn = Math.sqrt(inchesX * inchesX + inchesY * inchesY);
+
+    const dist = getDistanceYds();
+    const inchesPerUnit = (dialUnit === "MOA")
+      ? (dist / 100) * 1.047
+      : (dist / 100) * 3.6; // pilot
+
+    const unitX = inchesX / inchesPerUnit;
+    const unitY = inchesY / inchesPerUnit;
+
+    const clickVal = getClickValue();
+    const clicksX = unitX / clickVal;
+    const clicksY = unitY / clickVal;
+
     return {
-      x01: clamp01((x - r.left) / r.width),
-      y01: clamp01((y - r.top) / r.height),
+      avgPoi: { x01: avg.x, y01: avg.y },
+      inches: { x: inchesX, y: inchesY, r: rIn },
+      score: scoreFromRadiusInches(rIn),
+      windage: { dir: clicksX >= 0 ? "RIGHT" : "LEFT", clicks: Math.abs(clicksX) },
+      elevation: { dir: clicksY >= 0 ? "DOWN" : "UP", clicks: Math.abs(clicksY) },
+      dial: { unit: dialUnit, clickValue: clickVal },
+      squareIn
     };
   }
 
-  function inchesPerMOA(distanceYds){
-    return 1.047 * (distanceYds / 100); // True MOA
+  function b64FromObj(obj) {
+    const json = JSON.stringify(obj);
+    return btoa(unescape(encodeURIComponent(json)));
   }
 
-  function meanPoint(points){
-    let sx = 0, sy = 0;
-    for (const p of points){ sx += p.x01; sy += p.y01; }
-    return { x01: sx / points.length, y01: sy / points.length };
+  function goToSEC(payload) {
+    try { localStorage.setItem(KEY_PAYLOAD, JSON.stringify(payload)); } catch {}
+    const b64 = b64FromObj(payload);
+
+    // ✅ NEW: mark that SEC came from the Target page (enables intelligent Exit)
+    window.location.href = `./sec.html?from=target&payload=${encodeURIComponent(b64)}&fresh=${Date.now()}`;
   }
 
-  function resetSession(keepImage){
-    bull = null;
-    holes = [];
-    clearDots();
-    updateStatus();
+  function onShowResults() {
+    const out = computeCorrectionAndScore();
+    if (!out) {
+      alert("Tap Aim Point first, then tap at least one bullet hole.");
+      return;
+    }
 
-    elResults.classList.add("hidden");
-    elSecLink.classList.add("hidden");
-    elSecLink.href = "#";
+    const vendorUrl = localStorage.getItem(KEY_VENDOR_URL) || "";
 
-    if (!keepImage) elImg.src = "";
+    const payload = {
+      sessionId: "S-" + Date.now(),
+      score: out.score,
+      shots: hits.length,
+      windage: { dir: out.windage.dir, clicks: Number(out.windage.clicks.toFixed(2)) },
+      elevation: { dir: out.elevation.dir, clicks: Number(out.elevation.clicks.toFixed(2)) },
+      dial: { unit: out.dial.unit, clickValue: Number(out.dial.clickValue.toFixed(2)) },
+      vendorUrl,
+      surveyUrl: "",
+      target: { key: targetSizeKey, wIn: Number(targetWIn), hIn: Number(targetHIn) },
+
+      // include taps for export markers
+      debug: { aim, hits, avgPoi: out.avgPoi, distanceYds: getDistanceYds(), inches: out.inches, squareIn: out.squareIn }
+    };
+
+    goToSEC(payload);
   }
 
-  function showDetailsBtn(){
-    elDetailsBtn.classList.remove("hidden");
-  }
+  // ------------------------------------------------------------
+  // Photo picker
+  // ------------------------------------------------------------
+  elPhotoBtn?.addEventListener("click", () => elFile?.click());
 
-  function hideChooseCard(){
-    // You requested: once target photo is on screen, "choose photo" should disappear.
-    if (elChooseCard) elChooseCard.classList.add("hidden");
-  }
-
-  function showChooseCard(){
-    if (elChooseCard) elChooseCard.classList.remove("hidden");
-  }
-
-  // --- File load
-  elFile.addEventListener("change", () => {
-    const f = elFile.files && elFile.files[0];
+  elFile?.addEventListener("change", async () => {
+    const f = elFile.files?.[0];
     if (!f) return;
 
-    selectedFile = f;
-    elFileName.textContent = f.name || "Photo selected";
+    resetAll();
 
     if (objectUrl) URL.revokeObjectURL(objectUrl);
     objectUrl = URL.createObjectURL(f);
 
+    await storeTargetPhotoForSEC(f, objectUrl);
+
     elImg.onload = () => {
-      resetSession(true);
-      showDetailsBtn();
-      hideChooseCard();
+      setText(elStatus, "Tap Aim Point.");
+      syncInstruction();
+      revealScoringUI();
+    };
+
+    elImg.onerror = () => {
+      setText(elStatus, "Photo failed to load.");
+      setInstruction("Try again.", "");
+      revealScoringUI();
     };
 
     elImg.src = objectUrl;
-  });
-
-  // --- Tap intent pipeline
-  elWrap.addEventListener("pointerdown", (e) => {
-    if (!elImg.src) return;
-    down = { x: e.clientX, y: e.clientY, t: performance.now() };
-  }, { passive: true });
-
-  elWrap.addEventListener("pointerup", (e) => {
-    if (!elImg.src || !down) return;
-
-    const up = { x: e.clientX, y: e.clientY, t: performance.now() };
-    const dt = up.t - down.t;
-    const dist = Math.hypot(up.x - down.x, up.y - down.y);
-    down = null;
-
-    const now = Date.now();
-    if (now - lastTapTs < 120) return;
-    lastTapTs = now;
-
-    if (dt > TAP_MAX_MS) return;
-    if (dist > TAP_MAX_MOVE_PX) return;
-    if (!insideImage(e.clientX, e.clientY)) return;
-
-    const p = clientTo01(e.clientX, e.clientY);
-
-    if (!bull){
-      bull = p;
-      renderDots();
-      updateStatus();
-      return;
-    }
-
-    holes.push(p);
-    renderDots();
-    updateStatus();
-  }, { passive: true });
-
-  // --- Controls
-  elUndo.addEventListener("click", () => {
-    if (holes.length > 0){
-      holes.pop();
-      renderDots();
-      updateStatus();
-      return;
-    }
-    if (bull){
-      bull = null;
-      renderDots();
-      updateStatus();
-    }
-  });
-
-  elClear.addEventListener("click", () => {
-    // Fully reset back to start state
     elFile.value = "";
-    elFileName.textContent = "No photo selected";
-
-    if (objectUrl){ URL.revokeObjectURL(objectUrl); objectUrl = null; }
-    selectedFile = null;
-
-    resetSession(false);
-    elDetailsBtn.classList.add("hidden");
-    showChooseCard();
   });
 
-  // --- Show results
-  elShow.addEventListener("click", async () => {
-    if (!bull || holes.length < 1) return;
+  // ------------------------------------------------------------
+  // Tap logic (iOS anti-scroll chaining, pinch-zoom allowed)
+  // ------------------------------------------------------------
+  function acceptTap(clientX, clientY) {
+    if (!elImg?.src) return;
 
-    // Behind-the-scenes values (UI hidden)
-    const distance = Math.max(1, Number(elDistance?.value || 100));
-    const click = Number(elClickValue?.value || 0.25);
+    const { x01, y01 } = getRelative01(clientX, clientY);
 
-    const poib = meanPoint(holes);
-
-    // correction vector = bull - poib
-    const dx01 = bull.x01 - poib.x01;
-    const dy01 = bull.y01 - poib.y01;
-
-    const dxIn = dx01 * PAPER_W_IN;
-    const dyIn = dy01 * PAPER_H_IN;
-
-    const windDir = dxIn >= 0 ? "RIGHT" : "LEFT";
-    const elevDir = dyIn <= 0 ? "UP" : "DOWN";
-
-    const windAbsIn = Math.abs(dxIn);
-    const elevAbsIn = Math.abs(dyIn);
-
-    const ipm = inchesPerMOA(distance);
-    const windMOA = windAbsIn / ipm;
-    const elevMOA = elevAbsIn / ipm;
-
-    const windClicks = windMOA / click;
-    const elevClicks = elevMOA / click;
-
-    rWindDir.textContent = windDir;
-    rWindClk.textContent = `${fmtClicks(windClicks)} clicks`;
-
-    rElevDir.textContent = elevDir;
-    rElevClk.textContent = `${fmtClicks(elevClicks)} clicks`;
-
-    elResults.classList.remove("hidden");
-
-    try {
-      const png = await buildSecPng({
-        mode: getMode(),
-        windDir, windClicks,
-        elevDir, elevClicks
-      });
-      elSecLink.href = png;
-      elSecLink.classList.remove("hidden");
-    } catch {
-      elSecLink.classList.add("hidden");
+    if (!aim) {
+      aim = { x01, y01 };
+      addDot(x01, y01, "aim");
+      setText(elStatus, "Tap Bullet Holes.");
+      hideSticky();
+      syncInstruction();
+      return;
     }
 
-    setTimeout(() => elResults.scrollIntoView({ behavior:"smooth", block:"start" }), 30);
+    hits.push({ x01, y01 });
+    addDot(x01, y01, "hit");
+    setTapCount();
+
+    hideSticky();
+    syncInstruction();
+    scheduleStickyMagic();
+  }
+
+  if (elWrap) {
+    elWrap.addEventListener("touchmove", (e) => {
+      if (e.touches && e.touches.length === 1) e.preventDefault();
+    }, { passive: false });
+
+    elWrap.addEventListener("touchstart", (e) => {
+      if (!e.touches || e.touches.length !== 1) { touchStart = null; return; }
+      const t = e.touches[0];
+      touchStart = { x: t.clientX, y: t.clientY, t: Date.now() };
+    }, { passive: true });
+
+    elWrap.addEventListener("touchend", (e) => {
+      const t = e.changedTouches?.[0];
+      if (!t || !touchStart) return;
+
+      const dx = Math.abs(t.clientX - touchStart.x);
+      const dy = Math.abs(t.clientY - touchStart.y);
+      if (dx > 10 || dy > 10) { touchStart = null; return; }
+
+      lastTouchTapAt = Date.now();
+      acceptTap(t.clientX, t.clientY);
+      touchStart = null;
+    }, { passive: true });
+
+    elWrap.addEventListener("click", (e) => {
+      const now = Date.now();
+      if (now - lastTouchTapAt < 800) return;
+      acceptTap(e.clientX, e.clientY);
+    }, { passive: true });
+  }
+
+  // ------------------------------------------------------------
+  // Buttons
+  // ------------------------------------------------------------
+  elClear?.addEventListener("click", () => {
+    resetAll();
+    if (elImg?.src) setText(elStatus, "Tap Aim Point.");
   });
 
-  // Mode toggle
-  elModeRifle.addEventListener("click", () => setMode("rifle"));
-  elModePistol.addEventListener("click", () => setMode("pistol"));
+  [elStickyBtn, $("showResultsBtn")].filter(Boolean).forEach((b) => {
+    b.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      onShowResults();
+    });
+  });
 
-  // --- Bottom sheet (Details)
-  function openSheet(){
-    if (elBackdrop && elSheet) {
-      elBackdrop.classList.remove("hidden");
-      elSheet.classList.remove("hidden");
-      elBackdrop.setAttribute("aria-hidden", "false");
-      document.body.style.overflow = "hidden";
-    }
-  }
-  function closeSheet(){
-    if (elBackdrop && elSheet) {
-      elBackdrop.classList.add("hidden");
-      elSheet.classList.add("hidden");
-      elBackdrop.setAttribute("aria-hidden", "true");
-      document.body.style.overflow = "";
-    }
-  }
+  // Distance +/- (internal yards)
+  elDistUp?.addEventListener("click", () => bumpRange(5));
+  elDistDown?.addEventListener("click", () => bumpRange(-5));
 
-  elDetailsBtn?.addEventListener("click", openSheet);
-  elSheetClose?.addEventListener("click", closeSheet);
-  elBackdrop?.addEventListener("click", closeSheet);
+  elDist?.addEventListener("change", syncInternalFromRangeInput);
+  elDist?.addEventListener("blur", syncInternalFromRangeInput);
 
-  // --- SEC PNG builder (Clicks-only numbers; 2 decimals)
-  async function buildSecPng(s) {
-    const W = 1200, H = 675;
-    const c = document.createElement("canvas");
-    c.width = W; c.height = H;
-    const ctx = c.getContext("2d");
+  elDistUnitYd?.addEventListener("click", () => setRangeUnit("YDS"));
+  elDistUnitM?.addEventListener("click", () => setRangeUnit("M"));
 
-    ctx.fillStyle = "#0b0e0f";
-    ctx.fillRect(0, 0, W, H);
+  elUnitMoa?.addEventListener("click", () => setUnit("MOA"));
+  elUnitMrad?.addEventListener("click", () => setUnit("MRAD"));
 
-    ctx.font = "900 56px system-ui, -apple-system, Segoe UI, Roboto, Arial";
-    ctx.fillStyle = "#ff3b30"; ctx.fillText("TAP", 60, 90);
-    ctx.fillStyle = "#ffffff"; ctx.fillText("-N-", 170, 90);
-    ctx.fillStyle = "#1f6feb"; ctx.fillText("SCORE", 270, 90);
-    ctx.fillStyle = "rgba(255,255,255,.85)";
-    ctx.font = "900 34px system-ui, -apple-system, Segoe UI, Roboto, Arial";
-    ctx.fillText("™", 470, 78);
+  elClickValue?.addEventListener("blur", () => { getClickValue(); syncLiveTop(); });
+  elClickValue?.addEventListener("change", () => { getClickValue(); syncLiveTop(); });
 
-    ctx.fillStyle = "rgba(255,255,255,.72)";
-    ctx.font = "650 26px system-ui, -apple-system, Segoe UI, Roboto, Arial";
-    ctx.fillText("Shooter Experience Card (SEC)", 60, 128);
+  elMatrixBtn?.addEventListener("click", toggleMatrix);
+  elMatrixClose?.addEventListener("click", closeMatrix);
 
-    // Panel
-    const x=60, y=180, w=1080, h=420;
-    roundRect(ctx, x, y, w, h, 22);
-    ctx.fillStyle = "rgba(255,255,255,.04)"; ctx.fill();
-    ctx.strokeStyle = "rgba(255,255,255,.10)"; ctx.lineWidth=2; ctx.stroke();
+  // ------------------------------------------------------------
+  // Boot
+  // ------------------------------------------------------------
+  setUnit("MOA");
+  closeMatrix();
+  hideSticky();
+  resetAll();
 
-    ctx.fillStyle = "rgba(255,255,255,.92)";
-    ctx.font = "900 34px system-ui, -apple-system, Segoe UI, Roboto, Arial";
-    ctx.fillText("Corrections (Scope)", x+34, y+70);
+  hydrateVendorBox();
+  hydrateRange();
+  hydrateTargetSize();
 
-    ctx.font = "900 30px system-ui, -apple-system, Segoe UI, Roboto, Arial";
-    ctx.fillText(`Windage: ${s.windDir} → ${fmtClicks(s.windClicks)} clicks`, x+34, y+140);
-    ctx.fillText(`Elevation: ${s.elevDir} → ${fmtClicks(s.elevClicks)} clicks`, x+34, y+195);
+  wireMatrixPresets();
+  wireTargetSizeChips();
+  wireSwapSize();
 
-    ctx.fillStyle = "rgba(255,255,255,.70)";
-    ctx.font = "750 24px system-ui, -apple-system, Segoe UI, Roboto, Arial";
-    ctx.fillText(`Mode: ${s.mode}`, x+34, y+270);
+  highlightSizeChip();
+  syncLiveTop();
 
-    return c.toDataURL("image/png");
-  }
-
-  function roundRect(ctx, x, y, w, h, r){
-    const rr = Math.min(r, w/2, h/2);
-    ctx.beginPath();
-    ctx.moveTo(x+rr, y);
-    ctx.arcTo(x+w, y, x+w, y+h, rr);
-    ctx.arcTo(x+w, y+h, x, y+h, rr);
-    ctx.arcTo(x, y+h, x, y, rr);
-    ctx.arcTo(x, y, x+w, y, rr);
-    ctx.closePath();
-  }
-
-  // --- init
-  setMode(getMode());
-  resetSession(false);
+  hardHideScoringUI();
+  forceTop();
 })();

@@ -1,1 +1,18 @@
-
+{
+  "name": "sczn3-sec-backend",
+  "version": "1.0.0",
+  "private": true,
+  "description": "SCZN3 / Tap-n-Score SEC backend",
+  "main": "server.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.19.2"
+  }
+}

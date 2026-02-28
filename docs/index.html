@@ -1,133 +1,207 @@
-<!-- docs/index.html (FULL REPLACEMENT) — Pilot clean: CHOOSE PHOTO hero; hides after load; SEC naming; no extra tip copy -->
+<!-- docs/index.html (FULL REPLACEMENT) — HERO TIP REMOVED + GRID/SILHOUETTE PILLS RESTORED IN MATRIX -->
 <!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="color-scheme" content="dark" />
-  <meta name="theme-color" content="#000000" />
+  <meta name="theme-color" content="#06070a" />
+
+  <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
+
   <title>Tap-n-Score™</title>
 
-  <link rel="stylesheet" href="./styles.css?v=20260122c" />
+  <link rel="stylesheet" href="./styles.css?v=TP-Aplus-0214C" />
+  <link rel="stylesheet" href="./sizechips.css?v=TP-Aplus-0214C" />
+  <link rel="stylesheet" href="./livebar_fix.css?v=TP-Aplus-0214C" />
 </head>
 
 <body>
   <main class="page">
 
-    <!-- Top bar -->
-    <header class="topbar">
-      <div class="brand">
-        <span class="bRed">TAP</span><span class="bW">-N-</span><span class="bBlue">SCORE</span><span class="bW tm">™</span>
+    <!-- QRC LANDING HERO (LOCKED) -->
+    <section class="hero" aria-label="Tap-n-Score landing">
+      <div class="brandRow">
+        <div class="brandTitle">
+          <span class="r">TAP</span><span class="w">-N-</span><span class="b">SCORE</span><span class="w">™</span>
+        </div>
+        <div class="brandSub">After-Shot Intelligence</div>
       </div>
-      <button id="detailsBtn" class="detailsBtn hidden" type="button">Details</button>
-    </header>
 
-    <div class="subline">After-Shot Intelligence</div>
+      <div class="heroMid">
+        <button id="photoBtn" class="heroBtn" type="button">Add Target Picture</button>
 
-    <!-- CARD 1: Choose photo (HERO) — hidden after photo loads -->
-    <section id="chooseCard" class="card">
-      <div id="chooseTargetRow" class="chooseRow">
+        <div class="vendorCenterRow" aria-label="Vendor / Buy more targets">
+          <a id="vendorBox" class="vendorBox vendorBoxFlow" href="#" aria-label="Vendor">
+            <span id="vendorLabel" class="vendorPillText">BUY MORE TARGETS LIKE THIS</span>
+          </a>
 
-        <!-- HERO button -->
-        <label class="chooseBtn">
-          <input id="photoInput" type="file" accept="image/*" />
-          <span>CHOOSE PHOTO</span>
-        </label>
+          <svg class="vendorWireFlow" viewBox="0 0 220 36" aria-hidden="true">
+            <path d="M10 10 C 60 30, 160 30, 210 10" fill="none" stroke="rgba(255,255,255,.26)" stroke-width="3" stroke-linecap="round"/>
+            <path d="M10 16 C 68 32, 152 32, 210 16" fill="none" stroke="rgba(47,102,255,.18)" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+        </div>
+      </div>
 
-        <div id="fileName" class="fileName">No photo selected</div>
-        <div class="hint">Tip: include the full target in the frame. Keep the camera straight.</div>
+      <!-- IMPORTANT (iOS): do NOT display:none file input -->
+      <input id="photoInput" class="fileHidden" type="file" accept="image/*" />
+    </section>
 
-        <!-- Mode stays visible -->
-        <div id="settingsRow" class="settingsRow">
-          <div class="seg">
-            <button id="modeRifle" class="segBtn active" type="button">Rifle</button>
-            <button id="modePistol" class="segBtn" type="button">Pistol</button>
+    <!-- TARGET PAGE -->
+    <section id="scoreSection" class="card mt12 scoreHidden">
+
+      <!-- HEADER: SHOOTER EXPERIENCE CARD + SEC -->
+      <div class="cardTitle cardTitleSEC">
+        <div class="secTitle">
+          <span class="r">SHOOTER</span>
+          <span class="w">EXPERIENCE</span>
+          <span class="b">CARD</span>
+        </div>
+
+        <div class="secTag" aria-label="SEC">
+          <span class="r">S</span><span class="w">E</span><span class="b">C</span>
+        </div>
+      </div>
+
+      <!-- LIVE DISPLAY -->
+      <div class="liveBar" aria-label="Live data display">
+        <div class="liveRow liveRowOneLine">
+          <div class="liveLine" aria-label="Distance, dial, and target size">
+            <span id="liveDistance" class="liveLinePrimary">100 yds</span>
+            <span class="liveSep" aria-hidden="true">|</span>
+            <span id="liveDial" class="liveLinePrimary">0.25 MOA</span>
+            <span class="liveSep" aria-hidden="true">|</span>
+            <span id="liveTarget" class="liveLineMini">23×35</span>
           </div>
 
-          <!-- Hidden for now (behind the scenes) -->
-          <div id="hiddenSettings" style="display:none">
-            <label for="distanceYds">Distance</label>
-            <input id="distanceYds" type="number" value="100" />
-            <label for="clickValue">Click</label>
-            <select id="clickValue">
-              <option value="0.25" selected>Quarter per click</option>
-              <option value="0.5">Half per click</option>
-              <option value="0.125">Eighth per click</option>
-            </select>
+          <button id="matrixBtn" class="matrixBtn matrixBtnTight" type="button" aria-label="Open matrix presets">
+            MATRIX
+          </button>
+        </div>
+      </div>
+
+      <!-- MATRIX DRAWER (ALL ADJUSTMENTS LIVE HERE) -->
+      <div id="matrixPanel" class="matrixPanel matrixHidden" aria-hidden="true">
+
+        <div class="matrixTitle">Adjust</div>
+
+        <!-- ✅ Target Type (RESTORED) -->
+        <div class="matrixGroup">
+          <div class="matrixLabel">Target Type</div>
+
+          <div class="chipRow chipRowTight" id="typeChipRow">
+            <button class="chip chipType" type="button" data-type="GRID">Grid</button>
+            <button class="chip chipType" type="button" data-type="SIL">Silhouette</button>
+          </div>
+
+          <!-- ✅ The “good explanation” lives here (and JS can tune it if needed) -->
+          <div id="typeMicro" class="matrixMicro">
+            Grid is active now. Silhouette anchor mode is next.
           </div>
         </div>
 
-        <!-- kept empty for layout safety -->
-        <div id="instructionLine" class="instruction" style="display:none"></div>
-      </div>
-    </section>
+        <!-- Target Size -->
+        <div class="matrixGroup">
+          <div class="matrixLabel">Target Size</div>
 
-    <!-- CARD 2: Photo interaction -->
-    <section class="card">
-      <div id="targetWrap" class="targetWrap" aria-label="Photo and tap layer">
-        <img id="targetImg" class="targetImg" alt="Photo" />
+          <div class="chipRow chipRowTight" id="sizeChipRow">
+            <button class="chip chipSize" type="button" data-size="8.5x11" data-w="8.5" data-h="11">8.5×11</button>
+            <button class="chip chipSize" type="button" data-size="11x17" data-w="11" data-h="17">11×17</button>
+            <button class="chip chipSize" type="button" data-size="12x18" data-w="12" data-h="18">12×18</button>
+
+            <button class="chip chipSize" type="button" data-size="18x24" data-w="18" data-h="24">18×24</button>
+            <button class="chip chipSize" type="button" data-size="23x35" data-w="23" data-h="35">23×35</button>
+            <button class="chip chipSize" type="button" data-size="24x36" data-w="24" data-h="36">24×36</button>
+
+            <button class="chip chipSize" type="button" data-size="custom">Custom</button>
+            <button id="swapSizeBtn" class="chip chipSize" type="button" aria-label="Swap width and height">Swap</button>
+          </div>
+
+          <div class="matrixMicro">This sets inches math so clicks come out right.</div>
+        </div>
+
+        <!-- Distance + Units -->
+        <div class="matrixGroup">
+          <div class="matrixLabel">Distance</div>
+
+          <div class="matrixRow">
+            <button id="distDown" class="miniBtn miniBtnTight" type="button" aria-label="Distance down">−</button>
+            <input id="distanceYds" class="miniInput miniInputTight" type="number" inputmode="numeric" min="1" max="5000" step="1" value="100" aria-label="Distance" />
+            <div id="distUnitLabel" class="miniUnit">yds</div>
+            <button id="distUp" class="miniBtn miniBtnTight" type="button" aria-label="Distance up">+</button>
+
+            <div class="unitToggle">
+              <button id="distUnitYd" class="segBtn segBtnTiny segOn" type="button">YDS</button>
+              <button id="distUnitM" class="segBtn segBtnTiny" type="button">M</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Dial unit + click -->
+        <div class="matrixGroup">
+          <div class="matrixLabel">Dial</div>
+
+          <div class="matrixRow">
+            <button id="unitMoa" class="segBtn segOn" type="button">MOA</button>
+            <button id="unitMrad" class="segBtn" type="button">MRAD</button>
+
+            <input id="clickValue" class="miniInputWide miniInputWideTight" type="number" inputmode="decimal" step="0.01" value="0.25" aria-label="Click value" />
+            <div id="clickUnitLabel" class="miniUnit">MOA/click</div>
+          </div>
+        </div>
+
+        <!-- Quick Presets -->
+        <div class="matrixGroup">
+          <div class="matrixLabel">Quick Presets</div>
+
+          <div class="chipRow" id="presetChipRow">
+            <button class="chip" type="button" data-unit="MOA" data-click="0.25">0.25 MOA</button>
+            <button class="chip" type="button" data-unit="MOA" data-click="0.50">0.50 MOA</button>
+            <button class="chip" type="button" data-unit="MOA" data-click="0.125">0.125 MOA</button>
+
+            <button class="chip" type="button" data-unit="MRAD" data-click="0.10">0.10 MRAD</button>
+            <button class="chip" type="button" data-unit="MRAD" data-click="0.20">0.20 MRAD</button>
+            <button class="chip" type="button" data-unit="MRAD" data-click="0.05">0.05 MRAD</button>
+          </div>
+        </div>
+
+        <div class="matrixFoot">
+          <button id="matrixCloseBtn" class="matrixCloseBtn" type="button">Done</button>
+        </div>
+      </div>
+
+      <div id="statusLine" class="hint" style="margin-top:0; margin-bottom:8px;">
+        Add a target photo to begin.
+      </div>
+
+      <div id="targetWrap" class="targetWrap" aria-label="Target photo area" data-stage="noimg">
+        <img id="targetImg" alt="Target preview" />
         <div id="dotsLayer" class="dotsLayer" aria-hidden="true"></div>
       </div>
 
-      <div class="statusRow">
-        <div class="chip">Bull: <span id="bullState">not set</span></div>
-        <div class="chip">Holes: <span id="holeCount">0</span></div>
-      </div>
-
-      <div class="btnRow">
-        <button id="undoBtn" class="btn ghost" type="button">Undo</button>
-        <button id="clearBtn" class="btn ghost" type="button">Clear</button>
-        <button id="showBtn" class="btn primary" type="button" disabled>Show Results</button>
-      </div>
-    </section>
-
-    <!-- CARD 3: Results -->
-    <section id="resultsCard" class="card hidden" aria-live="polite">
-      <div class="resultsTitle">Results</div>
-
-      <div class="corrBlock">
-        <div class="corrHdr">Corrections (Scope)</div>
-
-        <div class="corrLine">
-          Windage: <strong id="rWindDir">—</strong>
-          <span class="arrow">→</span>
-          <span id="rWindClk">—</span>
+      <div class="row rowTight">
+        <div class="pill">
+          Taps: <span id="tapCount">0</span>
         </div>
 
-        <div class="corrLine">
-          Elevation: <strong id="rElevDir">—</strong>
-          <span class="arrow">→</span>
-          <span id="rElevClk">—</span>
-        </div>
+        <button id="clearTapsBtn" class="btnSecondary" type="button">Clear</button>
       </div>
 
-      <div class="scoreRow">
-        <a id="downloadSecLink" class="btn secBtn hidden" download="SEC.png" href="#">Download SEC (PNG)</a>
-      </div>
+      <p id="instructionLine" class="hint instructionLine"></p>
     </section>
 
-    <!-- Bottom Sheet (Details) -->
-    <div id="sheetBackdrop" class="sheetBackdrop hidden" aria-hidden="true"></div>
-    <section id="bottomSheet" class="sheet hidden" role="dialog" aria-modal="true" aria-label="Details">
-      <div class="sheetHandle" aria-hidden="true"></div>
-      <div class="sheetHeader">
-        <div class="sheetTitle">Details</div>
-        <button id="sheetClose" class="sheetClose" type="button">Close</button>
-      </div>
-      <div class="sheetBody">
-        <ul class="bullets">
-          <li>Tap the bull center.</li>
-          <li>Tap each bullet hole.</li>
-          <li>We output direction + clicks.</li>
-        </ul>
-      </div>
-    </section>
+    <footer class="footer">
+      <span class="footerMark">SCZN3</span>
+    </footer>
 
-    <!-- Tiny version label for pilot support -->
-    <footer class="footerNote">v20260122c</footer>
+    <div id="stickyBar" class="stickyBar stickyHidden" aria-hidden="true">
+      <button id="stickyResultsBtn" class="stickyBtn" type="button">Show results</button>
+    </div>
 
   </main>
 
-  <script src="./index.js?v=20260122c"></script>
+  <script defer src="./index.js?v=TP-Aplus-0214C"></script>
 </body>
 </html>

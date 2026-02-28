@@ -1,0 +1,170 @@
+:root{
+  --bg:#06070a;
+  --card: rgba(255,255,255,.06);
+  --border: rgba(255,255,255,.12);
+  --txt:#eef2f7;
+  --muted: rgba(238,242,247,.65);
+  --muted2: rgba(238,242,247,.45);
+  --red:#d64040;
+  --blue:#2f66ff;
+  --green:#67f3a4;
+}
+
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0;
+  background: radial-gradient(1200px 800px at 30% 0%, rgba(47,102,255,.18), transparent 55%),
+              radial-gradient(900px 700px at 90% 15%, rgba(214,64,64,.14), transparent 55%),
+              var(--bg);
+  color:var(--txt);
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+}
+
+.page{
+  max-width: 980px;
+  margin: 0 auto;
+  padding: 18px 12px 24px;
+}
+
+.card{
+  border:1px solid var(--border);
+  background: rgba(255,255,255,.05);
+  border-radius: 18px;
+  padding: 14px 14px 18px;
+  box-shadow: 0 18px 60px rgba(0,0,0,.45);
+}
+
+.hdr{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+}
+
+.brand .title{
+  font-weight: 1000;
+  letter-spacing:.5px;
+  font-size: 22px;
+}
+.brand .sub{
+  margin-top:4px;
+  font-weight:800;
+  color:var(--muted);
+  font-size: 13px;
+}
+
+.r{color:var(--red)}
+.w{color:var(--txt)}
+.b{color:var(--blue)}
+
+.btnGhost{
+  appearance:none;
+  border:1px solid rgba(255,255,255,.16);
+  background: rgba(255,255,255,.06);
+  color:var(--txt);
+  font-weight: 900;
+  border-radius: 999px;
+  padding: 10px 14px;
+}
+
+.divider{
+  height:1px;
+  background: rgba(255,255,255,.10);
+  margin: 12px 0;
+}
+
+.meta{
+  display:grid;
+  gap:8px;
+}
+.metaRow{
+  display:flex;
+  justify-content:space-between;
+  gap:10px;
+  font-size: 13px;
+}
+.metaK{ color: var(--muted2); font-weight:800; letter-spacing:.5px; }
+.metaV{ color: var(--txt); font-weight:900; }
+
+.form{ margin-top: 6px; }
+
+.q{
+  padding: 12px 0;
+}
+.qTitle{
+  font-weight: 1000;
+  font-size: 14px;
+  letter-spacing:.2px;
+  margin-bottom: 10px;
+  color: rgba(238,242,247,.92);
+}
+
+.chips{
+  display:flex;
+  flex-wrap:wrap;
+  gap:10px;
+}
+.chip{
+  appearance:none;
+  border:1px solid rgba(255,255,255,.16);
+  background: rgba(255,255,255,.06);
+  color: var(--txt);
+  padding: 10px 12px;
+  border-radius: 999px;
+  font-weight: 900;
+  font-size: 13px;
+}
+.chipOn{
+  border-color: rgba(47,102,255,.65);
+  background: rgba(47,102,255,.18);
+}
+
+.note{
+  width:100%;
+  border-radius: 14px;
+  border:1px solid rgba(255,255,255,.14);
+  background: rgba(0,0,0,.25);
+  color: var(--txt);
+  padding: 12px;
+  font-size: 14px;
+  outline:none;
+}
+
+.actions{
+  display:grid;
+  gap:10px;
+  margin-top: 12px;
+}
+.btnPrimary, .btn{
+  appearance:none;
+  border-radius: 14px;
+  padding: 14px 14px;
+  font-weight: 1000;
+  font-size: 15px;
+  border:1px solid rgba(255,255,255,.14);
+}
+.btnPrimary{
+  background: rgba(47,102,255,.18);
+  border-color: rgba(47,102,255,.45);
+  color: var(--txt);
+}
+.btn{
+  background: rgba(255,255,255,.06);
+  color: var(--txt);
+}
+
+.status{
+  margin-top: 10px;
+  color: var(--muted);
+  font-weight: 800;
+  font-size: 13px;
+  min-height: 18px;
+}
+
+.tiny{
+  margin-top: 10px;
+  color: rgba(238,242,247,.38);
+  font-weight: 700;
+  font-size: 12px;
+}

@@ -1,0 +1,312 @@
+/* ============================================================
+   docs/sec.css (FULL REPLACEMENT) — TWO-PAGE SEC (TIGHT + CLEAN)
+   FIXES:
+   ✅ Tight header on Page 2 (no “duplicated banner” feel)
+   ✅ Page 1: score color classes (good/mid/low)
+   ✅ Buttons: consistent glow style
+============================================================ */
+
+:root{
+  --bg:#06070a;
+  --fg:rgba(238,242,247,.92);
+  --muted:rgba(238,242,247,.70);
+  --shadow:rgba(0,0,0,.45);
+
+  --red:#ff4d4d;
+  --white:#eef2f7;
+  --blue:#2f66ff;
+
+  --green:#48ff8b;
+  --yellow:#ffe85a;
+  --amber:#ffd24a;
+}
+
+*{ box-sizing:border-box; }
+html,body{ height:100%; }
+body{
+  margin:0;
+  background:var(--bg);
+  color:var(--fg);
+  font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+}
+
+.secPage{
+  min-height:100vh;
+  padding:12px 12px 16px;
+}
+
+.view{ display:none; }
+.view.viewOn{ display:block; }
+
+/* Header */
+.secHeader{ padding:8px 4px 10px; }
+.secHeader.secHeaderTight{ padding:4px 4px 6px; }
+
+.secHeaderTop{
+  display:flex;
+  align-items:flex-end;
+  justify-content:space-between;
+  gap:12px;
+}
+
+.secRWB{
+  font-weight:1000;
+  letter-spacing:.10em;
+  font-size:44px;
+  line-height:1;
+}
+.bigSEC{ font-size:46px; }
+
+.secRWB .r{ color:var(--red); }
+.secRWB .w{ color:var(--white); }
+.secRWB .b{ color:var(--blue); }
+
+.secSub{
+  font-weight:900;
+  font-size:12px;
+  letter-spacing:.12em;
+  color:rgba(238,242,247,.62);
+  text-transform:uppercase;
+  margin-bottom:6px;
+}
+
+/* Card */
+.card{
+  background:linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03));
+  border:1px solid rgba(255,255,255,.10);
+  border-radius:22px;
+  padding:14px;
+  box-shadow:0 18px 40px var(--shadow);
+}
+
+/* Score block */
+.scoreWrap{
+  text-align:center;
+  padding:10px 10px 12px;
+  border-radius:18px;
+  background:rgba(255,255,255,.04);
+  border:1px solid rgba(255,255,255,.10);
+}
+
+.scoreLabel{
+  font-weight:1000;
+  letter-spacing:.14em;
+  font-size:13px;
+  color:rgba(238,242,247,.70);
+}
+
+.scoreValue{
+  font-weight:1000;
+  font-size:86px;
+  line-height:1;
+  margin-top:6px;
+  margin-bottom:10px;
+  color:rgba(238,242,247,.92);
+}
+
+/* ✅ score number changes by band */
+.scoreGood{ color:rgba(72,255,139,.96); }
+.scoreMid{ color:rgba(255,232,90,.96); }
+.scoreLow{ color:rgba(255,77,77,.96); }
+
+.scoreBand{
+  display:inline-block;
+  padding:10px 16px;
+  border-radius:999px;
+  font-weight:1000;
+  letter-spacing:.08em;
+  font-size:12px;
+  text-transform:uppercase;
+  border:1px solid rgba(255,255,255,.14);
+  background:rgba(255,255,255,.06);
+  color:rgba(238,242,247,.82);
+  box-shadow:0 10px 30px rgba(0,0,0,.35);
+}
+
+.scoreBandGreen{ background:rgba(72,255,139,.92); color:#031009; border-color:rgba(255,255,255,.12); }
+.scoreBandYellow{ background:rgba(255,232,90,.92); color:#191300; border-color:rgba(255,255,255,.12); }
+.scoreBandRed{ background:rgba(255,77,77,.92); color:#1b0000; border-color:rgba(255,255,255,.12); }
+.scoreBandNeutral{ background:rgba(255,255,255,.06); color:rgba(238,242,247,.82); }
+
+.scoreTip{
+  margin-top:10px;
+  font-weight:800;
+  font-size:12px;
+  color:rgba(238,242,247,.66);
+}
+
+/* Big clicks */
+.clicksBig{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:12px;
+  margin-top:12px;
+}
+
+.clickBox{
+  border-radius:18px;
+  background:rgba(255,255,255,.04);
+  border:1px solid rgba(255,255,255,.10);
+  padding:12px;
+  text-align:center;
+}
+
+.clickHdr{
+  font-weight:1000;
+  letter-spacing:.12em;
+  font-size:12px;
+  color:rgba(238,242,247,.70);
+}
+
+.clickVal{
+  font-weight:1000;
+  font-size:56px;
+  line-height:1;
+  margin-top:8px;
+}
+
+.clickDir{
+  margin-top:6px;
+  font-weight:1000;
+  letter-spacing:.10em;
+  font-size:14px;
+  color:rgba(238,242,247,.86);
+}
+
+/* Run mini pills */
+.miniLine{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+  justify-content:center;
+  margin-top:12px;
+}
+
+.miniPill{
+  padding:8px 12px;
+  border-radius:999px;
+  font-weight:900;
+  font-size:12px;
+  letter-spacing:.05em;
+  background:rgba(255,255,255,.05);
+  border:1px solid rgba(255,255,255,.14);
+  color:rgba(238,242,247,.78);
+  box-shadow:0 10px 26px rgba(0,0,0,.35);
+}
+
+/* Actions */
+.primaryActions{
+  margin-top:12px;
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+}
+
+.primaryBtn{
+  width:100%;
+  border:0;
+  border-radius:18px;
+  padding:14px 14px;
+  font-weight:1000;
+  letter-spacing:.06em;
+  font-size:14px;
+  color:#071022;
+  background:linear-gradient(180deg, rgba(47,102,255,.96), rgba(47,102,255,.72));
+  box-shadow:0 16px 36px rgba(0,0,0,.45);
+}
+.primaryBtn:active{ transform:translateY(1px); }
+
+.secondaryGlowBtn{
+  width:100%;
+  border-radius:18px;
+  padding:13px 14px;
+  font-weight:1000;
+  letter-spacing:.06em;
+  font-size:14px;
+  background:rgba(255,255,255,.05);
+  border:1px solid rgba(255,255,255,.16);
+  color:rgba(238,242,247,.88);
+  box-shadow:
+    0 0 0 1px rgba(255,255,255,.05) inset,
+    0 14px 34px rgba(0,0,0,.42);
+}
+.secondaryGlowBtn:active{ transform:translateY(1px); }
+
+.microNote{
+  text-align:center;
+  font-weight:800;
+  font-size:12px;
+  color:rgba(238,242,247,.60);
+}
+
+/* Page 2 */
+.reportCard{ padding-top:12px; }
+
+.saveHint{
+  text-align:center;
+  font-weight:900;
+  font-size:12px;
+  color:rgba(238,242,247,.70);
+  margin-bottom:10px;
+}
+
+.cardImgShell{
+  border-radius:18px;
+  overflow:hidden;
+  border:1px solid rgba(255,255,255,.12);
+  background:rgba(0,0,0,.35);
+}
+
+#secCardImg{
+  width:100%;
+  display:block;
+}
+
+.reportActions{
+  display:flex;
+  gap:10px;
+  margin-top:12px;
+  flex-wrap:wrap;
+  justify-content:center;
+}
+
+.btnSecondary{
+  border-radius:14px;
+  padding:10px 14px;
+  font-weight:1000;
+  letter-spacing:.05em;
+  border:1px solid rgba(255,255,255,.14);
+  background:rgba(255,255,255,.05);
+  color:rgba(238,242,247,.86);
+}
+
+.vendorBtn, .surveyBtn{
+  border-radius:14px;
+  padding:10px 14px;
+  font-weight:1000;
+  letter-spacing:.05em;
+  border:1px solid rgba(255,255,255,.14);
+  background:rgba(255,255,255,.05);
+  color:rgba(238,242,247,.92);
+  text-decoration:none;
+}
+
+.reportMicro{
+  margin-top:10px;
+  text-align:center;
+  font-weight:800;
+  font-size:12px;
+  color:rgba(238,242,247,.55);
+}
+
+/* Footer */
+.secFooter{
+  padding:12px 4px 0;
+  text-align:center;
+}
+.footerMark{
+  font-weight:1000;
+  letter-spacing:.18em;
+  font-size:12px;
+  color:rgba(238,242,247,.40);
+}

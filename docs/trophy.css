@@ -1,0 +1,181 @@
+/* docs/trophy.css (FULL REPLACEMENT) */
+
+:root{
+  --bg:#06070a;
+  --ink:#eef2f7;
+  --soft:rgba(238,242,247,.60);
+  --line:rgba(255,255,255,.12);
+  --card:rgba(255,255,255,.06);
+
+  --green:#16a34a;
+  --yellow:#eab308;
+  --red:#ef4444;
+
+  --b:#2f66ff;
+}
+
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0;
+  background:var(--bg);
+  color:var(--ink);
+  font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;
+}
+
+.tPage{min-height:100%; padding:16px 12px 18px}
+.tShell{
+  max-width:980px;
+  margin:0 auto;
+  border:1px solid var(--line);
+  background:linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.035));
+  border-radius:18px;
+  overflow:hidden;
+  box-shadow:0 18px 70px rgba(0,0,0,.55);
+}
+
+.tHdr{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:12px;
+  padding:14px;
+  border-bottom:1px solid rgba(255,255,255,.10);
+}
+.tTitle{font-weight:1100; letter-spacing:.10em; font-size:18px}
+.tTitle .b{color:var(--b)}
+.tTitle .mini{margin-left:10px; letter-spacing:0; font-weight:850; color:rgba(238,242,247,.55); font-size:12px}
+.tSub{margin-top:6px; color:rgba(238,242,247,.55); font-weight:750; font-size:12px}
+
+.tHdrRight{display:flex; gap:10px; flex-wrap:wrap; justify-content:flex-end}
+
+.tBtn{
+  appearance:none;
+  border:1px solid rgba(255,255,255,.14);
+  background:rgba(255,255,255,.06);
+  color:var(--ink);
+  padding:10px 14px;
+  border-radius:14px;
+  font-weight:900;
+  font-size:14px;
+  cursor:pointer;
+}
+.tBtn:active{transform:translateY(1px)}
+.tBtnPrimary{
+  border:none;
+  background:rgba(47,102,255,.92);
+  box-shadow:0 18px 50px rgba(47,102,255,.18);
+}
+
+.tStats{
+  display:grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap:12px;
+  padding:14px;
+}
+.tStat{
+  border:1px solid rgba(255,255,255,.12);
+  background:rgba(255,255,255,.05);
+  border-radius:18px;
+  padding:14px;
+}
+.tStat .k{font-weight:1000; letter-spacing:.18em; font-size:11px; color:rgba(238,242,247,.55)}
+.tStat .v{margin-top:10px; font-weight:1100; font-size:30px}
+
+.tGrid{
+  display:grid;
+  grid-template-columns: 1fr 1fr;
+  gap:12px;
+  padding:0 14px 14px;
+}
+.panel{
+  border:1px solid rgba(255,255,255,.12);
+  background:rgba(255,255,255,.05);
+  border-radius:18px;
+  overflow:hidden;
+}
+.panelHdr{
+  padding:12px 14px;
+  border-bottom:1px solid rgba(255,255,255,.10);
+}
+.panelHdr .h{font-weight:1100}
+.panelHdr .m{margin-top:4px; color:rgba(238,242,247,.55); font-weight:750; font-size:12px}
+
+.list{padding:10px 12px}
+.row{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  padding:10px 10px;
+  border-radius:14px;
+  border:1px solid rgba(255,255,255,.08);
+  background:rgba(0,0,0,.22);
+  margin-bottom:10px;
+}
+.left{display:flex; flex-direction:column; gap:4px}
+.topline{display:flex; align-items:baseline; gap:10px}
+.score{
+  font-weight:1200;
+  font-size:28px;
+  line-height:1;
+}
+.meta{
+  color:rgba(238,242,247,.55);
+  font-weight:800;
+  font-size:12px;
+}
+.submeta{
+  color:rgba(238,242,247,.45);
+  font-weight:750;
+  font-size:12px;
+}
+
+.badge{
+  padding:6px 10px;
+  border-radius:999px;
+  font-weight:1000;
+  letter-spacing:.12em;
+  font-size:11px;
+  border:1px solid rgba(255,255,255,.14);
+  background:rgba(255,255,255,.06);
+  white-space:nowrap;
+}
+.badge.green{color:rgba(22,163,74,.98); border-color:rgba(22,163,74,.35)}
+.badge.yellow{color:rgba(234,179,8,.98); border-color:rgba(234,179,8,.35)}
+.badge.red{color:rgba(239,68,68,.98); border-color:rgba(239,68,68,.35)}
+
+.empty{
+  padding:18px 14px 22px;
+  color:rgba(238,242,247,.62);
+  font-weight:850;
+}
+
+.tFoot{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  padding:10px 14px 12px;
+  border-top:1px solid rgba(255,255,255,.10);
+  color:rgba(238,242,247,.40);
+  font-weight:850;
+  font-size:12px;
+}
+.tFoot .tiny{opacity:.55}
+.tFoot .center{letter-spacing:.16em}
+
+.linkBtn{
+  appearance:none;
+  border:none;
+  background:transparent;
+  color:rgba(238,242,247,.62);
+  font-weight:900;
+  cursor:pointer;
+  padding:8px 6px;
+}
+.linkBtn:active{transform:translateY(1px)}
+
+@media (max-width: 860px){
+  .tGrid{grid-template-columns:1fr}
+  .tStats{grid-template-columns:1fr}
+}
