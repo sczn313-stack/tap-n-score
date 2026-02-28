@@ -1,4 +1,9 @@
-/* docs/styles.css (FULL REPLACEMENT) — LIVE TOP 2-LINE + MATRIX RW&B SCREAMERS */
+/* docs/styles.css (FULL REPLACEMENT)
+   - Core RW&B landing + cards
+   - Matrix drawer styling + tighten for phones
+   - Sticky results bar
+   - ✅ vendorGreenFlip animation (BUY MORE TARGETS LIKE THIS pill pulses green)
+*/
 
 :root{
   --bg:#06070a;
@@ -11,8 +16,12 @@
   --white:#eef2f7;
   --blue:#2f66ff;
 
-  --aim:#67f3a4;
-  --hit:#b7ff3c;
+  --aim:#67f3a4;   /* green */
+  --hit:#b7ff3c;   /* lime */
+
+  /* Vendor green flip */
+  --vendorGreen: rgba(103,243,164,.22);
+  --vendorGreenEdge: rgba(103,243,164,.40);
 
   /* Screamer tuning */
   --screamGlow: rgba(103,243,164,.22);
@@ -22,6 +31,7 @@
 
 *{ box-sizing:border-box; }
 html,body{ height:100%; }
+
 body{
   margin:0;
   font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial;
@@ -51,7 +61,12 @@ body{
   overflow: hidden;
 }
 
-.brandRow{ display:flex; flex-direction:column; gap:6px; padding: 4px 2px 10px; }
+.brandRow{
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+  padding: 4px 2px 10px;
+}
 
 .brandTitle{
   font-weight: 1000;
@@ -61,6 +76,7 @@ body{
   text-transform: uppercase;
   user-select:none;
   -webkit-user-select:none;
+  text-align: center; /* helps on small screens */
 }
 .brandTitle .r{ color: var(--red); }
 .brandTitle .w{ color: var(--white); }
@@ -71,6 +87,7 @@ body{
   font-weight: 900;
   color: rgba(238,242,247,.80);
   letter-spacing: .02em;
+  text-align: center;
 }
 
 .heroMid{
@@ -221,7 +238,7 @@ body{
 .mt12{ margin-top:12px; }
 
 /* ============================================================
-   LIVE BAR — 2 LINES
+   LIVE BAR
 ============================================================ */
 .liveBar{
   padding: 10px 14px 12px;
@@ -235,9 +252,6 @@ body{
   justify-content:space-between;
   gap: 12px;
 }
-
-.liveRowTop{ flex-wrap: nowrap; }
-.liveRowBottom{ justify-content:flex-start; margin-top: 6px; }
 
 .liveLine{
   display:flex;
@@ -258,32 +272,6 @@ body{
   opacity: .40;
   font-weight: 900;
   letter-spacing: .12em;
-  white-space: nowrap;
-}
-
-/* Target line (line 2, left) */
-.liveTargetLine{
-  display:flex;
-  align-items:baseline;
-  gap: 8px;
-  min-width: 0;
-}
-
-.liveLineMiniLabel{
-  font-size: 12px;
-  font-weight: 1100;
-  letter-spacing: .14em;
-  text-transform: uppercase;
-  color: rgba(238,242,247,.70);
-  white-space: nowrap;
-}
-
-.liveLineMiniValue{
-  font-size: 13px;
-  font-weight: 1100;
-  letter-spacing: .10em;
-  text-transform: uppercase;
-  color: rgba(238,242,247,.92);
   white-space: nowrap;
 }
 
@@ -318,10 +306,8 @@ body{
     linear-gradient(180deg, rgba(255,255,255,.06), rgba(0,0,0,.20)),
     radial-gradient(900px 320px at 20% 0%, rgba(47,102,255,.16), transparent 60%),
     radial-gradient(900px 320px at 80% 0%, rgba(214,64,64,.14), transparent 60%);
-  box-shadow: 0 18px 50px rgba(0,0,0,.45);
   padding: 12px;
 
-  /* Screamer outer aura */
   outline: 1px solid rgba(103,243,164,.08);
   box-shadow:
     0 18px 50px rgba(0,0,0,.45),
@@ -331,7 +317,6 @@ body{
 }
 .matrixHidden{ display:none; }
 
-/* MATRIX title = RW&B authority bar */
 .matrixTitle{
   font-weight: 1200;
   letter-spacing: .18em;
@@ -352,7 +337,6 @@ body{
   overflow:hidden;
 }
 
-/* Title shimmer (one tasteful pass) */
 .matrixTitle::after{
   content:"";
   position:absolute;
@@ -371,7 +355,6 @@ body{
   100%{ transform: translateX(240%) rotate(18deg); opacity:0; }
 }
 
-/* each section */
 .matrixGroup{
   margin-bottom: 14px;
   padding: 10px 10px 12px;
@@ -383,7 +366,6 @@ body{
   overflow:hidden;
 }
 
-/* ACTIVE SECTION = SCREAMER SPOTLIGHT */
 .matrixGroup:focus-within{
   border-color: rgba(103,243,164,.22);
   box-shadow:
@@ -394,7 +376,6 @@ body{
   transform: translateY(-1px);
 }
 
-/* RW&B stripe on active section */
 .matrixGroup:focus-within::before{
   content:"";
   position:absolute;
@@ -413,7 +394,6 @@ body{
     0 0 18px rgba(103,243,164,.14);
 }
 
-/* section labels = bold + colored */
 .matrixLabel{
   font-size: 12px;
   font-weight: 1200;
@@ -432,7 +412,6 @@ body{
     );
 }
 
-/* label gets louder when active */
 .matrixGroup:focus-within .matrixLabel{
   border-color: rgba(103,243,164,.24);
   box-shadow:
@@ -455,7 +434,6 @@ body{
   line-height: 1.2;
 }
 
-/* chips */
 .chipRow{ display:flex; gap: 10px; flex-wrap: wrap; }
 .chipRowTight{ gap: 8px; }
 
@@ -474,7 +452,6 @@ body{
 }
 .chip:active{ transform: translateY(1px); }
 
-/* Focus ring = screamer */
 .chip:focus-visible{
   outline: none;
   border-color: rgba(103,243,164,.40);
@@ -483,7 +460,6 @@ body{
     0 0 22px rgba(103,243,164,.14);
 }
 
-/* selected chip highlight */
 .chipOn{
   border-color: rgba(103,243,164,.44) !important;
   background: rgba(103,243,164,.12) !important;
@@ -493,7 +469,6 @@ body{
     0 0 22px rgba(103,243,164,.16);
 }
 
-/* matrix footer */
 .matrixFoot{ display:flex; justify-content:flex-end; padding-top: 4px; }
 
 .matrixCloseBtn{
@@ -515,7 +490,6 @@ body{
   box-shadow: 0 0 0 2px rgba(103,243,164,.18), 0 0 24px rgba(103,243,164,.14);
 }
 
-/* controls */
 .miniBtn{
   width: 44px;
   height: 44px;
@@ -672,7 +646,6 @@ body{
   pointer-events:none;
 }
 
-/* Dot sizes (aim bigger, bullet holes smaller) */
 .tapDot{
   position:absolute;
   border-radius: 999px;
@@ -683,7 +656,6 @@ body{
 .tapDotAim{ width: 14px; height: 14px; }
 .tapDotHit{ width: 8px; height: 8px; }
 
-/* Row + buttons */
 .row{
   display:flex;
   gap:10px;
@@ -724,7 +696,6 @@ body{
   line-height: 1.35;
 }
 
-/* BIG INSTRUCTION */
 .instructionLine{
   padding: 2px 14px 16px;
   text-align:center;
@@ -779,18 +750,14 @@ body{
 .stickyBtn:active{ transform: translateY(1px); }
 
 /* ============================================================
-   MATRIX TIGHTEN (PASTE AT BOTTOM)
-   Goal: fit the entire Matrix drawer on one phone screen.
+   MATRIX TIGHTEN (phones)
 ============================================================ */
-
-/* Drawer box tighter */
 .matrixPanel{
   margin: 8px 12px 10px;
   padding: 10px;
   border-radius: 14px;
 }
 
-/* Headings tighter + bolder */
 .matrixTitle{
   font-size: 11px;
   font-weight: 1000;
@@ -806,12 +773,10 @@ body{
   letter-spacing: .10em;
 }
 
-/* Rows tighter */
 .matrixRow{ gap: 8px; }
 .chipRow{ gap: 8px; }
 .chipRowTight{ gap: 6px; }
 
-/* Chips smaller */
 .chip{
   height: 34px;
   padding: 0 10px;
@@ -819,7 +784,6 @@ body{
   letter-spacing: .06em;
 }
 
-/* Segment buttons smaller */
 .segBtn{
   height: 34px;
   padding: 0 10px;
@@ -833,7 +797,6 @@ body{
   letter-spacing: .12em;
 }
 
-/* +/- and inputs smaller */
 .miniBtn{
   width: 38px;
   height: 38px;
@@ -869,19 +832,16 @@ body{
   font-size: 16px;
 }
 
-/* Micro helper text smaller + optional hide on small screens */
 .matrixMicro{
   margin-top: 6px;
   font-size: 11px;
   line-height: 1.15;
   color: rgba(238,242,247,.50);
 }
-
 @media (max-width: 420px){
   .matrixMicro{ display:none; }
 }
 
-/* Close button tighter */
 .matrixCloseBtn{
   height: 36px;
   padding: 0 12px;
@@ -890,83 +850,16 @@ body{
   letter-spacing: .12em;
 }
 
-/* Unit toggle tighter */
 .unitToggle{ gap: 4px; }
+
 /* ============================================================
-   MATRIX FINAL: 2-ROW QUICK PRESETS + STRONG RW&B AUTHORITY
-   - Quick Presets become 3 columns x 2 rows
-   - Matrix section labels become a thin RW&B banner
-   - Distance/Dial/Quick Preset controls get stronger RW&B styling
+   MATRIX FINAL: Quick presets = 3 cols x 2 rows
 ============================================================ */
-
-/* --- RW&B thin banner for Matrix section titles --- */
-.matrixPanel .matrixLabel{
-  font-weight: 1000;
-  letter-spacing: .14em;
-  text-transform: uppercase;
-  font-size: 11px;
-
-  padding: 6px 10px;
-  border-radius: 12px;
-
-  color: rgba(238,242,247,.98);
-  background: linear-gradient(90deg,
-    rgba(214,64,64,.92) 0%,
-    rgba(238,242,247,.18) 50%,
-    rgba(47,102,255,.92) 100%
-  );
-  border: 1px solid rgba(255,255,255,.18);
-  box-shadow: 0 10px 24px rgba(0,0,0,.35);
-}
-
-/* --- Make matrix controls pop (not faded) --- */
-.matrixPanel .miniBtn,
-.matrixPanel .miniInput,
-.matrixPanel .miniInputWide,
-.matrixPanel .segBtn,
-.matrixPanel .chip{
-  border-color: rgba(255,255,255,.22) !important;
-  background: rgba(255,255,255,.10) !important;
-  color: rgba(238,242,247,.96) !important;
-}
-
-/* Give the MOA/MRAD + YDS/M buttons a stronger “active” look */
-.matrixPanel .segBtn.segOn{
-  border-color: rgba(255,255,255,.26) !important;
-  background: linear-gradient(90deg,
-    rgba(214,64,64,.35) 0%,
-    rgba(238,242,247,.10) 50%,
-    rgba(47,102,255,.35) 100%
-  ) !important;
-  box-shadow:
-    0 10px 22px rgba(0,0,0,.35),
-    0 0 0 1px rgba(255,255,255,.10) inset;
-}
-
-/* Chips: add subtle RW&B sheen */
-.matrixPanel .chip{
-  background: linear-gradient(90deg,
-    rgba(214,64,64,.18) 0%,
-    rgba(255,255,255,.08) 50%,
-    rgba(47,102,255,.18) 100%
-  ) !important;
-}
-
-/* Keep selected target size chip (chipOn) dominant */
-.matrixPanel .chipOn{
-  border-color: rgba(103,243,164,.55) !important;
-  background: rgba(103,243,164,.14) !important;
-  box-shadow: 0 10px 22px rgba(0,0,0,.35);
-}
-
-/* --- Quick Presets: force 2 lines (3 across) --- */
 #presetChipRow{
   display: grid !important;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
 }
-
-/* Tighten preset chip size just a touch so it never overflows */
 #presetChipRow .chip{
   height: 32px;
   padding: 0 8px;
@@ -975,17 +868,13 @@ body{
   text-align: center;
   justify-content: center;
 }
-
-/* If someone’s on an ultra-narrow screen, drop to 2 columns */
 @media (max-width: 360px){
   #presetChipRow{ grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
+
 /* ============================================================
    MIRRORED CORNER PROMPTS (TL / BR)
 ============================================================ */
-
-.targetWrap{ position: relative; }
-
 .cornerPrompt{
   position:absolute;
   z-index: 6;
@@ -1011,7 +900,6 @@ body{
   box-shadow: 0 14px 34px rgba(0,0,0,.55);
   backdrop-filter: blur(6px);
 }
-
 .cornerTL{ top: 10px; left: 10px; }
 .cornerBR{ bottom: 10px; right: 10px; }
 
@@ -1019,4 +907,47 @@ body{
   .cornerPrompt{ font-size: 11px; padding: 7px 9px; border-radius: 13px; }
   .cornerTL{ top: 8px; left: 8px; }
   .cornerBR{ bottom: 8px; right: 8px; }
+}
+
+/* ============================================================
+   ✅ vendorGreenFlip (CSS-only pulse)
+   This makes the vendor pill “flip” green every ~1.2s.
+   Works regardless of what text JS is rotating.
+============================================================ */
+@keyframes vendorGreenFlipPulse{
+  0%, 55%{
+    background: rgba(0,0,0,.24);
+    border-color: rgba(255,255,255,.14);
+    box-shadow: 0 16px 44px rgba(0,0,0,.35);
+    transform: translateZ(0);
+  }
+  70%{
+    background: linear-gradient(90deg,
+      rgba(103,243,164,.26) 0%,
+      rgba(255,255,255,.08) 50%,
+      rgba(103,243,164,.22) 100%
+    );
+    border-color: rgba(103,243,164,.40);
+    box-shadow:
+      0 18px 46px rgba(0,0,0,.55),
+      0 0 0 1px rgba(103,243,164,.18),
+      0 0 26px rgba(103,243,164,.18);
+    transform: translateZ(0) translateY(-1px);
+  }
+  100%{
+    background: rgba(0,0,0,.24);
+    border-color: rgba(255,255,255,.14);
+    box-shadow: 0 16px 44px rgba(0,0,0,.35);
+    transform: translateZ(0);
+  }
+}
+
+/* Apply the pulse to the vendor pill */
+#vendorBox.vendorBoxFlow{
+  animation: vendorGreenFlipPulse 1.2s ease-in-out infinite;
+}
+
+/* Slightly brighter text during pulse */
+#vendorBox.vendorBoxFlow .vendorPillText{
+  text-shadow: 0 10px 24px rgba(0,0,0,.55);
 }
