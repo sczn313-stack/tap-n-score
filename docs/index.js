@@ -5,8 +5,10 @@
    - Tap flow: Aim → Hits → Sticky "Show results"
    - SEC navigation: sec.html?from=target&payload=...
    - Hard landing lock (always start at top, scoring hidden)
-   - ✅ Vendor pill: ALWAYS "BUY MORE TARGETS LIKE THIS"
-     (CSS provides the green pulse; JS only wires link if available)
+   - ✅ Vendor pill:
+       - default text = BUY MORE TARGETS LIKE THIS (CSS pulses green)
+       - tap opens an in-flow slide-down panel (no forced routing)
+       - optional text flip ONLY when ?v=baker
 ============================================================ */
 
 (() => {
@@ -17,6 +19,10 @@
   const elFile = $("photoInput");
   const elVendorBox = $("vendorBox");
   const elVendorLabel = $("vendorLabel");
+
+  // ✅ Vendor panel (new)
+  const elVendorPanel = $("vendorPanel");
+  const elVendorPanelLink = $("vendorPanelLink");
 
   // Scoring UI
   const elScoreSection = $("scoreSection");
@@ -110,6 +116,7 @@
     hardHideScoringUI();
     hideSticky();
     closeMatrix();
+    closeVendorPanel();
   });
   window.addEventListener("load", () => forceTop());
 
@@ -176,19 +183,17 @@
   function setInstruction(text, kind) {
     if (!elInstruction) return;
 
-    // kind: "aim" | "holes" | "go" | ""
     const color =
-      kind === "aim"   ? "rgba(103,243,164,.95)" :   // green
-      kind === "holes" ? "rgba(183,255,60,.95)"  :   // yellow-lime
-      kind === "go"    ? "rgba(47,102,255,.92)"  :   // blue
-                         "rgba(238,242,247,.70)";    // neutral
+      kind === "aim"   ? "rgba(103,243,164,.95)" :
+      kind === "holes" ? "rgba(183,255,60,.95)"  :
+      kind === "go"    ? "rgba(47,102,255,.92)"  :
+                         "rgba(238,242,247,.70)";
 
     elInstruction.style.transition = "opacity 180ms ease, transform 180ms ease, color 120ms ease";
     elInstruction.style.opacity = "0";
     elInstruction.style.transform = "translateY(2px)";
     elInstruction.style.color = color;
 
-    // Force reflow so the transition always triggers (important on iOS Safari)
     void elInstruction.offsetHeight;
 
     elInstruction.textContent = text || "";
@@ -212,33 +217,76 @@
     syncInstruction();
     setText(elStatus, elImg?.src ? "Tap Aim Point." : "Add a target photo to begin.");
     closeMatrix();
+    closeVendorPanel();
   }
 
   // ------------------------------------------------------------
-  // ✅ Vendor pill (NO text flipping; CSS pulses green)
+  // ✅ Vendor panel + text flip (Baker only)
   // ------------------------------------------------------------
+  function isBakerMode() {
+    try {
+      const u = new URL(window.location.href);
+      const v = (u.searchParams.get("v") || "").toLowerCase();
+      return v === "baker";
+    } catch {
+      return false;
+    }
+  }
+
+  function closeVendorPanel() {
+    if (!elVendorPanel) return;
+    elVendorPanel.classList.remove("vendorOpen");
+  }
+
+  function toggleVendorPanel() {
+    if (!elVendorPanel) return;
+    elVendorPanel.classList.toggle("vendorOpen");
+  }
+
   function hydrateVendorBox() {
-    // Always show this text (your request)
+    // default
     if (elVendorLabel) elVendorLabel.textContent = "BUY MORE TARGETS LIKE THIS";
+
+    // if baker mode, rotate text between the two phrases
+    if (isBakerMode() && elVendorLabel) {
+      const a = "BUY MORE TARGETS LIKE THIS";
+      const b = "BAKER • SMART TARGET™";
+      let flip = false;
+      setInterval(() => {
+        flip = !flip;
+        elVendorLabel.textContent = flip ? b : a;
+      }, 1200);
+    }
 
     const v = localStorage.getItem(KEY_VENDOR_URL) || "";
     const ok = typeof v === "string" && v.startsWith("http");
 
-    if (!elVendorBox) return;
+    // panel link (if present)
+    if (elVendorPanelLink) {
+      if (ok) {
+        elVendorPanelLink.href = v;
+        elVendorPanelLink.style.pointerEvents = "auto";
+        elVendorPanelLink.style.opacity = "1";
+      } else {
+        elVendorPanelLink.href = "#";
+        elVendorPanelLink.style.pointerEvents = "none";
+        elVendorPanelLink.style.opacity = ".65";
+      }
+    }
 
-    if (ok) {
-      elVendorBox.href = v;
-      elVendorBox.target = "_blank";
-      elVendorBox.rel = "noopener";
-      elVendorBox.style.pointerEvents = "auto";
-      elVendorBox.style.opacity = "1";
-    } else {
-      // Keep pill visible but not clickable until vendor url exists
-      elVendorBox.removeAttribute("href");
+    // pill click behavior: open panel (in-flow), never force routing away
+    if (elVendorBox) {
       elVendorBox.removeAttribute("target");
       elVendorBox.removeAttribute("rel");
-      elVendorBox.style.pointerEvents = "none";
-      elVendorBox.style.opacity = ".92";
+      elVendorBox.href = "#";
+      elVendorBox.style.pointerEvents = "auto";
+      elVendorBox.style.opacity = "1";
+
+      elVendorBox.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        toggleVendorPanel();
+      });
     }
   }
 
@@ -540,11 +588,9 @@
     avg.x /= hits.length;
     avg.y /= hits.length;
 
-    // correction vector = aim - avgPoi (bull - poib)
     const dx = aim.x01 - avg.x; // + means move RIGHT
     const dy = aim.y01 - avg.y; // + means move DOWN (screen y)
 
-    // square scoring plane
     const squareIn = Math.min(targetWIn, targetHIn);
     const inchesX = dx * squareIn;
     const inchesY = dy * squareIn;
@@ -603,8 +649,6 @@
       vendorUrl,
       surveyUrl: "",
       target: { key: targetSizeKey, wIn: Number(targetWIn), hIn: Number(targetHIn) },
-
-      // include taps for export markers
       debug: { aim, hits, avgPoi: out.avgPoi, distanceYds: getDistanceYds(), inches: out.inches, squareIn: out.squareIn }
     };
 
@@ -644,7 +688,7 @@
   });
 
   // ------------------------------------------------------------
-  // Tap logic (iOS anti-scroll chaining, pinch-zoom allowed)
+  // Tap logic
   // ------------------------------------------------------------
   function acceptTap(clientX, clientY) {
     if (!elImg?.src) return;
@@ -734,6 +778,14 @@
 
   elMatrixBtn?.addEventListener("click", toggleMatrix);
   elMatrixClose?.addEventListener("click", closeMatrix);
+
+  // Close vendor panel if user taps elsewhere
+  document.addEventListener("click", (e) => {
+    if (!elVendorPanel || !elVendorBox) return;
+    const inPanel = elVendorPanel.contains(e.target);
+    const inPill = elVendorBox.contains(e.target);
+    if (!inPanel && !inPill) closeVendorPanel();
+  }, { capture: true });
 
   // ------------------------------------------------------------
   // Boot
