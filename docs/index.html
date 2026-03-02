@@ -135,7 +135,6 @@
             <span id="clickUnitLabel" class="miniUnit">MOA/click</span>
           </div>
 
-          <!-- Presets (your JS looks for [data-unit][data-click]) -->
           <div class="chipRow chipRowTight mt12" id="presetChipRow" aria-label="Presets">
             <button class="chip" type="button" data-unit="MOA" data-click="0.25">.25</button>
             <button class="chip" type="button" data-unit="MOA" data-click="0.50">.50</button>
@@ -172,7 +171,8 @@
 
       <!-- TARGET IMAGE + DOTS -->
       <div id="targetWrap" class="targetWrap" aria-label="Target image area">
-        <img id="targetImg" alt="Target" />
+        <!-- IMPORTANT: keep pointer events on wrapper, not img -->
+        <img id="targetImg" alt="Target" draggable="false" />
         <div id="dotsLayer" class="dotsLayer" aria-hidden="true"></div>
       </div>
 
@@ -198,7 +198,6 @@
 
   </main>
 
-  <!-- ✅ THIS is what “unlocks” your buttons: JS actually loads and binds -->
   <script src="./index.js?v=SEC-LOCK-2"></script>
 </body>
 </html>
