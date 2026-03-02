@@ -1,11 +1,4 @@
-/* docs/styles.css (FULL REPLACEMENT)
-   - Core RW&B landing + cards
-   - Matrix drawer styling + tighten for phones
-   - Sticky results bar
-   - ✅ vendorGreenFlip animation (BUY MORE TARGETS LIKE THIS pill pulses green)
-   - ✅ NEW: Hero SEC seal + Vendor slide-down panel (in-flow)
-   - ✅ MEASURED CHANGE: SEC dominance (bigger + glow + shimmer)
-*/
+/* docs/styles.css (FULL REPLACEMENT) */
 
 :root{
   --bg:#06070a;
@@ -18,19 +11,16 @@
   --white:#eef2f7;
   --blue:#2f66ff;
 
-  --aim:#67f3a4;   /* green */
-  --hit:#b7ff3c;   /* lime */
+  --aim:#67f3a4;
+  --hit:#b7ff3c;
 
-  /* Vendor green flip */
   --vendorGreen: rgba(103,243,164,.22);
   --vendorGreenEdge: rgba(103,243,164,.40);
 
-  /* Screamer tuning */
   --screamGlow: rgba(103,243,164,.22);
   --screamGlow2: rgba(47,102,255,.18);
   --screamEdge: rgba(214,64,64,.22);
 
-  /* ✅ SEC authority */
   --secGlowW: rgba(238,242,247,.20);
   --secGlowB: rgba(47,102,255,.22);
   --secGlowR: rgba(214,64,64,.18);
@@ -83,7 +73,7 @@ body{
   text-transform: uppercase;
   user-select:none;
   -webkit-user-select:none;
-  text-align: center; /* helps on small screens */
+  text-align: center;
 }
 .brandTitle .r{ color: var(--red); }
 .brandTitle .w{ color: var(--white); }
@@ -97,10 +87,7 @@ body{
   text-align: center;
 }
 
-/* ============================================================
-   ✅ HERO SEC SEAL (quiet meaning anchor)
-   ✅ MEASURED CHANGE: more dominance (bigger + glow + shimmer)
-============================================================ */
+/* ===== HERO SEC SEAL ===== */
 .heroSECSeal{
   margin-top: 8px;
   margin-bottom: 6px;
@@ -113,34 +100,25 @@ body{
   -webkit-user-select:none;
 }
 
-/* SEC row */
 .heroSEC{
   position: relative;
   font-weight: 1300;
   letter-spacing: .24em;
   text-transform: uppercase;
-
-  /* ✅ about “3 clicks bigger” */
   font-size: clamp(28px, 5.2vw, 44px);
   line-height: 1.0;
-
-  /* ✅ authority: crisp + glow */
   text-shadow:
     0 10px 26px rgba(0,0,0,.70),
     0 0 20px var(--secGlowW),
     0 0 26px var(--secGlowB),
     0 0 22px var(--secGlowR);
-
   filter: drop-shadow(0 16px 30px rgba(0,0,0,.55));
   transform: translateZ(0);
 }
-
-/* color */
 .heroSEC .r{ color: var(--red); }
 .heroSEC .w{ color: rgba(238,242,247,.96); }
 .heroSEC .b{ color: var(--blue); }
 
-/* ✅ shimmering pass (subtle, not tacky) */
 .heroSEC::after{
   content:"";
   position:absolute;
@@ -158,7 +136,6 @@ body{
   animation: secShimmer 3.2s ease-in-out infinite;
   mix-blend-mode: screen;
 }
-
 @keyframes secShimmer{
   0%   { transform: translateX(-120%) skewX(-18deg); opacity: 0; }
   18%  { opacity: .22; }
@@ -166,7 +143,6 @@ body{
   100% { transform: translateX(120%)  skewX(-18deg); opacity: 0; }
 }
 
-/* Subtext line stays quiet but readable */
 .heroSECSub{
   margin-top: 6px;
   display:flex;
@@ -209,14 +185,6 @@ body{
 }
 .heroBtn:active{ transform: translateZ(0) translateY(1px); }
 
-.heroTip{
-  font-weight: 900;
-  font-size: clamp(18px, 3.2vw, 30px);
-  line-height: 1.14;
-  color: rgba(238,242,247,.92);
-  max-width: 820px;
-}
-
 /* Vendor center row */
 .vendorCenterRow{
   margin-top: 10px;
@@ -243,7 +211,6 @@ body{
   user-select:none;
   -webkit-user-select:none;
 }
-
 .vendorBoxFlow{ width: min(520px, 92%); max-width: 720px; }
 .vendorBoxFlow, .vendorBoxFlow *{ pointer-events:auto; }
 
@@ -265,9 +232,7 @@ body{
   filter: drop-shadow(0 10px 20px rgba(0,0,0,.55));
 }
 
-/* ============================================================
-   ✅ VENDOR SLIDE-DOWN PANEL (Option B, in-flow)
-============================================================ */
+/* Vendor slide-down panel */
 .vendorPanel{
   width: min(520px, 92%);
   max-width: 720px;
@@ -283,20 +248,17 @@ body{
   transform: translateY(-4px);
   transition: max-height 220ms ease, opacity 220ms ease, transform 220ms ease;
 }
-
 .vendorPanel.vendorOpen{
   max-height: 220px;
   opacity: 1;
   transform: translateY(0px);
 }
-
-.vendorHidden{ display:block; } /* keeps layout stable; JS controls open class */
+.vendorHidden{ display:block; }
 
 .vendorPanelInner{
   padding: 12px 12px 14px;
   text-align:center;
 }
-
 .vendorPanelTitle{
   font-weight: 1100;
   letter-spacing: .16em;
@@ -304,7 +266,6 @@ body{
   font-size: 13px;
   color: rgba(238,242,247,.92);
 }
-
 .vendorPanelSub{
   margin-top: 8px;
   font-size: 13px;
@@ -312,7 +273,6 @@ body{
   color: rgba(238,242,247,.66);
   line-height: 1.25;
 }
-
 .vendorPanelBtn{
   margin-top: 12px;
   display:inline-flex;
@@ -361,7 +321,6 @@ body{
   color: rgba(238,242,247,.75);
 }
 
-/* header row: SHOOTER EXPERIENCE CARD + SEC */
 .cardTitleSEC{
   display:flex;
   align-items:center;
@@ -396,22 +355,18 @@ body{
 .scoreHidden{ display:none !important; }
 .mt12{ margin-top:12px; }
 
-/* ============================================================
-   LIVE BAR
-============================================================ */
+/* ===== LIVE BAR ===== */
 .liveBar{
   padding: 10px 14px 12px;
   border-bottom: 1px solid rgba(255,255,255,.08);
   background: rgba(0,0,0,.10);
 }
-
 .liveRow{
   display:flex;
   align-items:center;
   justify-content:space-between;
   gap: 12px;
 }
-
 .liveLine{
   display:flex;
   align-items:baseline;
@@ -419,14 +374,12 @@ body{
   min-width: 0;
   overflow:hidden;
 }
-
 .liveLinePrimary{
   font-size: 18px;
   font-weight: 1000;
   letter-spacing: .02em;
   white-space: nowrap;
 }
-
 .liveSep{
   opacity: .40;
   font-weight: 900;
@@ -434,7 +387,6 @@ body{
   white-space: nowrap;
 }
 
-/* Matrix button */
 .matrixBtn{
   height: 38px;
   padding: 0 12px;
@@ -454,9 +406,7 @@ body{
   border-radius: 999px;
 }
 
-/* ============================================================
-   MATRIX PANEL — RW&B AUTHORITY + SCREAMERS
-============================================================ */
+/* ===== MATRIX PANEL (your existing styles kept) ===== */
 .matrixPanel{
   margin: 10px 14px 12px;
   border-radius: 16px;
@@ -476,184 +426,148 @@ body{
 }
 .matrixHidden{ display:none; }
 
-.matrixTitle{
-  font-weight: 1200;
-  letter-spacing: .18em;
-  text-transform: uppercase;
-  font-size: 12px;
-  color: rgba(238,242,247,.95);
-  margin-bottom: 12px;
-  padding: 10px 12px;
-  border-radius: 14px;
-  border: 1px solid rgba(255,255,255,.14);
-  background:
-    linear-gradient(90deg,
-      rgba(214,64,64,.26),
-      rgba(238,242,247,.10),
-      rgba(47,102,255,.24)
-    );
+/* ====== KEY MISSING FUNCTIONAL STYLES (tap surface) ====== */
+.targetWrap{
   position: relative;
-  overflow:hidden;
-}
-
-.matrixTitle::after{
-  content:"";
-  position:absolute;
-  top:-40%;
-  left:-30%;
-  width: 60%;
-  height: 180%;
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,.10), transparent);
-  transform: rotate(18deg);
-  animation: screamShine 2.4s ease-in-out 1;
-  pointer-events:none;
-}
-@keyframes screamShine{
-  0%{ transform: translateX(-40%) rotate(18deg); opacity:0; }
-  30%{ opacity:.9; }
-  100%{ transform: translateX(240%) rotate(18deg); opacity:0; }
-}
-
-.matrixGroup{
-  margin-bottom: 14px;
-  padding: 10px 10px 12px;
+  margin: 14px;
   border-radius: 16px;
-  border: 1px solid rgba(255,255,255,.10);
-  background: rgba(0,0,0,.12);
-  transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
-  position: relative;
-  overflow:hidden;
-}
-
-.matrixGroup:focus-within{
-  border-color: rgba(103,243,164,.22);
-  box-shadow:
-    0 18px 46px rgba(0,0,0,.55),
-    0 0 0 1px rgba(103,243,164,.12),
-    0 0 26px var(--screamGlow),
-    0 0 22px var(--screamGlow2);
-  transform: translateY(-1px);
-}
-
-.matrixGroup:focus-within::before{
-  content:"";
-  position:absolute;
-  left:12px;
-  right:12px;
-  top:10px;
-  height: 5px;
-  border-radius: 999px;
-  background: linear-gradient(90deg,
-    rgba(214,64,64,.75),
-    rgba(238,242,247,.30),
-    rgba(47,102,255,.70)
-  );
-  box-shadow:
-    0 0 0 1px rgba(255,255,255,.08),
-    0 0 18px rgba(103,243,164,.14);
-}
-
-.matrixLabel{
-  font-size: 12px;
-  font-weight: 1200;
-  letter-spacing: .14em;
-  text-transform: uppercase;
-  color: rgba(238,242,247,.92);
-  margin-bottom: 10px;
-  padding: 10px 10px;
-  border-radius: 14px;
   border: 1px solid rgba(255,255,255,.12);
-  background:
-    linear-gradient(90deg,
-      rgba(214,64,64,.18),
-      rgba(255,255,255,.06),
-      rgba(47,102,255,.16)
-    );
+  background: rgba(0,0,0,.18);
+  overflow: hidden;
+
+  /* CRITICAL for iOS tap reliability */
+  touch-action: none;
+  -webkit-tap-highlight-color: transparent;
 }
 
-.matrixGroup:focus-within .matrixLabel{
-  border-color: rgba(103,243,164,.24);
-  box-shadow:
-    0 0 0 1px rgba(103,243,164,.10),
-    0 0 18px rgba(103,243,164,.10);
+#targetImg{
+  display:block;
+  width:100%;
+  height:auto;
+
+  /* CRITICAL: wrapper captures taps, not img */
+  pointer-events: none;
+
+  /* iOS safari drag/selection killers */
+  -webkit-user-drag: none;
+  user-drag: none;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
 }
 
-.matrixRow{
-  display:flex;
-  align-items:center;
-  gap: 10px;
+.dotsLayer{
+  position:absolute;
+  inset:0;
+
+  /* CRITICAL: overlay NEVER steals taps */
+  pointer-events: none;
+}
+
+.tapDot{
+  position:absolute;
+  width: 16px;
+  height: 16px;
+  border-radius: 999px;
+  transform: translate(-50%, -50%);
+}
+.tapDotAim{
+  outline: 2px solid rgba(103,243,164,.55);
+  box-shadow: 0 0 0 2px rgba(0,0,0,.25), 0 0 22px rgba(103,243,164,.22);
+}
+.tapDotHit{
+  outline: 2px solid rgba(183,255,60,.55);
+  box-shadow: 0 0 0 2px rgba(0,0,0,.25), 0 0 22px rgba(183,255,60,.18);
+}
+
+/* Controls row */
+.row{ display:flex; gap: 10px; align-items:center; }
+.rowTight{
+  padding: 0 14px 10px;
   flex-wrap: wrap;
 }
 
-.matrixMicro{
-  margin-top: 10px;
-  font-size: 12px;
-  font-weight: 900;
-  color: rgba(238,242,247,.62);
-  line-height: 1.2;
+.pill{
+  padding: 10px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,.14);
+  background: rgba(0,0,0,.18);
+  font-weight: 1000;
+  letter-spacing: .06em;
 }
 
-.chipRow{ display:flex; gap: 10px; flex-wrap: wrap; }
-.chipRowTight{ gap: 8px; }
-
-.chip{
-  height: 40px;
+.btnSecondary{
+  height: 42px;
   padding: 0 14px;
   border-radius: 999px;
-  border: 1px solid rgba(255,255,255,.16);
-  background: rgba(0,0,0,.16);
-  color: rgba(238,242,247,.95);
-  font-weight: 1100;
+  border: 1px solid rgba(255,255,255,.14);
+  background: rgba(255,255,255,.06);
+  color: rgba(238,242,247,.92);
+  font-weight: 1000;
   letter-spacing: .08em;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
-  transition: transform .14s ease, box-shadow .14s ease, border-color .14s ease, background .14s ease;
 }
-.chip:active{ transform: translateY(1px); }
+.btnSecondary:active{ transform: translateY(1px); }
 
-.chip:focus-visible{
-  outline: none;
-  border-color: rgba(103,243,164,.40);
-  box-shadow:
-    0 0 0 2px rgba(103,243,164,.18),
-    0 0 22px rgba(103,243,164,.14);
-}
-
-.chipOn{
-  border-color: rgba(103,243,164,.44) !important;
-  background: rgba(103,243,164,.12) !important;
-  color: rgba(238,242,247,.98) !important;
-  box-shadow:
-    0 0 0 1px rgba(103,243,164,.14),
-    0 0 22px rgba(103,243,164,.16);
-}
-
-.matrixFoot{ display:flex; justify-content:flex-end; padding-top: 4px; }
-
-.matrixCloseBtn{
-  height: 40px;
-  padding: 0 14px;
-  border-radius: 14px;
-  border: 1px solid rgba(103,243,164,.28);
-  background: rgba(103,243,164,.10);
-  color: rgba(238,242,247,.92);
+.instructionLine{
+  padding: 0 14px 8px;
+  margin: 0;
   font-weight: 1100;
-  letter-spacing: .10em;
-  cursor: pointer;
+  letter-spacing: .02em;
+  min-height: 22px;
+}
+
+.hint{
+  padding: 0 14px 14px;
+  margin: 0;
+  color: rgba(238,242,247,.70);
+  font-weight: 900;
+}
+
+/* Sticky results bar */
+.stickyBar{
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 10px 12px calc(10px + env(safe-area-inset-bottom));
+  background: rgba(0,0,0,.55);
+  backdrop-filter: blur(10px);
+  border-top: 1px solid rgba(255,255,255,.10);
+  display:flex;
+  justify-content:center;
+  z-index: 999;
+}
+.stickyHidden{ display:none !important; }
+
+.stickyBtn{
+  width: min(720px, 94%);
+  height: 54px;
+  border-radius: 999px;
+  border: 1px solid rgba(47,102,255,.35);
+  background: rgba(47,102,255,.18);
+  color: rgba(238,242,247,.92);
+  font-weight: 1200;
+  letter-spacing: .14em;
+  text-transform: uppercase;
   -webkit-tap-highlight-color: transparent;
-  transition: transform .14s ease, box-shadow .14s ease;
+  cursor:pointer;
 }
-.matrixCloseBtn:active{ transform: translateY(1px); }
-.matrixCloseBtn:focus-visible{
-  outline:none;
-  box-shadow: 0 0 0 2px rgba(103,243,164,.18), 0 0 24px rgba(103,243,164,.14);
+.stickyBtn:active{ transform: translateY(1px); }
+
+/* Footer */
+.footer{
+  margin-top: 18px;
+  padding: 14px 8px 0;
+  text-align:center;
+  color: rgba(238,242,247,.50);
+  font-weight: 900;
+  letter-spacing: .08em;
 }
+.footerMark{ opacity: .70; }
 
-/* ...everything below remains exactly the same as your current file... */
-
-/* ============================================================
-   ✅ vendorGreenFlip (CSS-only pulse)
-============================================================ */
+/* Vendor pulse */
 @keyframes vendorGreenFlipPulse{
   0%, 55%{
     background: rgba(0,0,0,.24);
@@ -685,7 +599,6 @@ body{
 #vendorBox.vendorBoxFlow{
   animation: vendorGreenFlipPulse 1.2s ease-in-out infinite;
 }
-
 #vendorBox.vendorBoxFlow .vendorPillText{
   text-shadow: 0 10px 24px rgba(0,0,0,.55);
 }
