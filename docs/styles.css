@@ -3,6 +3,7 @@
    - Matrix drawer styling + tighten for phones
    - Sticky results bar
    - ✅ vendorGreenFlip animation (BUY MORE TARGETS LIKE THIS pill pulses green)
+   - ✅ NEW: Hero SEC seal + Vendor slide-down panel (in-flow)
 */
 
 :root{
@@ -90,6 +91,47 @@ body{
   text-align: center;
 }
 
+/* ============================================================
+   ✅ HERO SEC SEAL (quiet meaning anchor)
+============================================================ */
+.heroSECSeal{
+  margin-top: 8px;
+  margin-bottom: 6px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  text-align:center;
+  user-select:none;
+  -webkit-user-select:none;
+}
+
+.heroSEC{
+  font-weight: 1200;
+  letter-spacing: .22em;
+  text-transform: uppercase;
+  font-size: clamp(22px, 4.4vw, 34px);
+  line-height: 1.0;
+}
+.heroSEC .r{ color: var(--red); }
+.heroSEC .w{ color: rgba(238,242,247,.92); }
+.heroSEC .b{ color: var(--blue); }
+
+.heroSECSub{
+  margin-top: 6px;
+  display:flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  justify-content:center;
+  font-size: 13px;
+  font-weight: 900;
+  letter-spacing: .06em;
+  color: rgba(238,242,247,.70);
+}
+.heroSECSub .r{ color: var(--red); font-weight: 1100; }
+.heroSECSub .w{ color: rgba(238,242,247,.88); font-weight: 1100; }
+.heroSECSub .b{ color: var(--blue); font-weight: 1100; }
+
 .heroMid{
   margin-top: 14px;
   display:flex;
@@ -172,6 +214,73 @@ body{
   pointer-events:none;
   filter: drop-shadow(0 10px 20px rgba(0,0,0,.55));
 }
+
+/* ============================================================
+   ✅ VENDOR SLIDE-DOWN PANEL (Option B, in-flow)
+============================================================ */
+.vendorPanel{
+  width: min(520px, 92%);
+  max-width: 720px;
+  margin-top: 6px;
+  border-radius: 18px;
+  border: 1px solid rgba(255,255,255,.14);
+  background: rgba(0,0,0,.22);
+  box-shadow: 0 18px 46px rgba(0,0,0,.55);
+  overflow:hidden;
+
+  max-height: 0;
+  opacity: 0;
+  transform: translateY(-4px);
+  transition: max-height 220ms ease, opacity 220ms ease, transform 220ms ease;
+}
+
+.vendorPanel.vendorOpen{
+  max-height: 220px;
+  opacity: 1;
+  transform: translateY(0px);
+}
+
+.vendorHidden{ display:block; } /* keeps layout stable; JS controls open class */
+
+.vendorPanelInner{
+  padding: 12px 12px 14px;
+  text-align:center;
+}
+
+.vendorPanelTitle{
+  font-weight: 1100;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  font-size: 13px;
+  color: rgba(238,242,247,.92);
+}
+
+.vendorPanelSub{
+  margin-top: 8px;
+  font-size: 13px;
+  font-weight: 900;
+  color: rgba(238,242,247,.66);
+  line-height: 1.25;
+}
+
+.vendorPanelBtn{
+  margin-top: 12px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  width: 100%;
+  height: 40px;
+  border-radius: 999px;
+  border: 1px solid rgba(47,102,255,.28);
+  background: rgba(47,102,255,.10);
+  color: rgba(238,242,247,.90);
+  text-decoration:none;
+  font-weight: 1000;
+  letter-spacing: .10em;
+  text-transform: uppercase;
+  -webkit-tap-highlight-color: transparent;
+}
+.vendorPanelBtn:active{ transform: translateY(1px); }
 
 /* iOS: do NOT display:none file input */
 .fileHidden{
@@ -530,7 +639,7 @@ body{
   font-size: 18px;
   text-align:center;
   outline:none;
-  flex: 0 0 auto;
+  flex:  0 0 auto;
   transition: border-color .14s ease, box-shadow .14s ease;
 }
 .miniInput:focus{
@@ -911,8 +1020,6 @@ body{
 
 /* ============================================================
    ✅ vendorGreenFlip (CSS-only pulse)
-   This makes the vendor pill “flip” green every ~1.2s.
-   Works regardless of what text JS is rotating.
 ============================================================ */
 @keyframes vendorGreenFlipPulse{
   0%, 55%{
@@ -942,12 +1049,10 @@ body{
   }
 }
 
-/* Apply the pulse to the vendor pill */
 #vendorBox.vendorBoxFlow{
   animation: vendorGreenFlipPulse 1.2s ease-in-out infinite;
 }
 
-/* Slightly brighter text during pulse */
 #vendorBox.vendorBoxFlow .vendorPillText{
   text-shadow: 0 10px 24px rgba(0,0,0,.55);
 }
