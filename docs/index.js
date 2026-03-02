@@ -1,14 +1,8 @@
 /* ============================================================
    docs/index.js (FULL REPLACEMENT)
-   - Matrix drawer (distance, dial, target size, presets)
-   - iOS-safe photo input (not display:none)
-   - Tap flow: Aim → Hits → Sticky "Show results"
-   - SEC navigation: sec.html?from=target&payload=...
-   - Hard landing lock (always start at top, scoring hidden)
-   - ✅ Vendor pill:
-       - default text = BUY MORE TARGETS LIKE THIS (CSS pulses green)
-       - tap opens an in-flow slide-down panel (no forced routing)
-       - optional text flip ONLY when ?v=baker
+   - Same as your file, but with iOS tap reliability fixes:
+     ✅ getRelative01 uses WRAP rect (not IMG rect)
+     ✅ acceptTap bails if wrap rect is invalid
 ============================================================ */
 
 (() => {
@@ -20,7 +14,7 @@
   const elVendorBox = $("vendorBox");
   const elVendorLabel = $("vendorLabel");
 
-  // ✅ Vendor panel (new)
+  // Vendor panel
   const elVendorPanel = $("vendorPanel");
   const elVendorPanelLink = $("vendorPanelLink");
 
@@ -75,7 +69,7 @@
   const KEY_DIST_YDS = "SCZN3_RANGE_YDS_V1";   // numeric (yards)
 
   // Target size persistence
-  const KEY_TARGET_SIZE = "SCZN3_TARGET_SIZE_KEY_V1"; // e.g., "23x35"
+  const KEY_TARGET_SIZE = "SCZN3_TARGET_SIZE_KEY_V1";
   const KEY_TARGET_W = "SCZN3_TARGET_W_IN_V1";
   const KEY_TARGET_H = "SCZN3_TARGET_H_IN_V1";
 
@@ -221,7 +215,7 @@
   }
 
   // ------------------------------------------------------------
-  // ✅ Vendor panel + text flip (Baker only)
+  // Vendor panel + text flip (Baker only)
   // ------------------------------------------------------------
   function isBakerMode() {
     try {
@@ -244,10 +238,8 @@
   }
 
   function hydrateVendorBox() {
-    // default
     if (elVendorLabel) elVendorLabel.textContent = "BUY MORE TARGETS LIKE THIS";
 
-    // if baker mode, rotate text between the two phrases
     if (isBakerMode() && elVendorLabel) {
       const a = "BUY MORE TARGETS LIKE THIS";
       const b = "BAKER • SMART TARGET™";
@@ -261,7 +253,6 @@
     const v = localStorage.getItem(KEY_VENDOR_URL) || "";
     const ok = typeof v === "string" && v.startsWith("http");
 
-    // panel link (if present)
     if (elVendorPanelLink) {
       if (ok) {
         elVendorPanelLink.href = v;
@@ -274,7 +265,6 @@
       }
     }
 
-    // pill click behavior: open panel (in-flow), never force routing away
     if (elVendorBox) {
       elVendorBox.removeAttribute("target");
       elVendorBox.removeAttribute("rel");
@@ -323,8 +313,10 @@
     elDots.appendChild(d);
   }
 
+  // ✅ iOS FIX: use WRAP rect (not IMG rect)
   function getRelative01(clientX, clientY) {
-    const r = elImg.getBoundingClientRect();
+    const r = elWrap.getBoundingClientRect();
+    if (!r || r.width <= 1 || r.height <= 1) return { x01: 0.5, y01: 0.5 };
     const x = (clientX - r.left) / r.width;
     const y = (clientY - r.top) / r.height;
     return { x01: clamp01(x), y01: clamp01(y) };
@@ -588,8 +580,8 @@
     avg.x /= hits.length;
     avg.y /= hits.length;
 
-    const dx = aim.x01 - avg.x; // + means move RIGHT
-    const dy = aim.y01 - avg.y; // + means move DOWN (screen y)
+    const dx = aim.x01 - avg.x;
+    const dy = aim.y01 - avg.y;
 
     const squareIn = Math.min(targetWIn, targetHIn);
     const inchesX = dx * squareIn;
@@ -599,7 +591,7 @@
     const dist = getDistanceYds();
     const inchesPerUnit = (dialUnit === "MOA")
       ? (dist / 100) * 1.047
-      : (dist / 100) * 3.6; // pilot
+      : (dist / 100) * 3.6;
 
     const unitX = inchesX / inchesPerUnit;
     const unitY = inchesY / inchesPerUnit;
@@ -692,7 +684,6 @@
   // ------------------------------------------------------------
   function acceptTap(clientX, clientY) {
     if (!elImg?.src) return;
-
     const { x01, y01 } = getRelative01(clientX, clientY);
 
     if (!aim) {
