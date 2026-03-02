@@ -13,9 +13,9 @@
 
   <title>Tap-n-Score™</title>
 
-  <link rel="stylesheet" href="./styles.css?v=SEC-LOCK-1" />
-  <link rel="stylesheet" href="./sizechips.css?v=SEC-LOCK-1" />
-  <link rel="stylesheet" href="./livebar_fix.css?v=SEC-LOCK-1" />
+  <link rel="stylesheet" href="./styles.css?v=SEC-LOCK-2" />
+  <link rel="stylesheet" href="./sizechips.css?v=SEC-LOCK-2" />
+  <link rel="stylesheet" href="./livebar_fix.css?v=SEC-LOCK-2" />
 </head>
 
 <body>
@@ -30,7 +30,7 @@
         <div class="brandSub">After-Shot Intelligence</div>
       </div>
 
-      <!-- NEW: SEC SEAL (Centered, Clean, Not Cluttered) -->
+      <!-- SEC SEAL -->
       <div class="heroSECSeal">
         <div class="heroSEC">
           <span class="r">S</span><span class="w">E</span><span class="b">C</span>
@@ -43,50 +43,28 @@
       </div>
 
       <div class="heroMid">
-
-        <!-- UPDATED BUTTON TEXT -->
-        <button id="photoBtn" class="heroBtn" type="button">
-          📷 TAP TO ADD TARGET PHOTO
-        </button>
+        <button id="photoBtn" class="heroBtn" type="button">📷 TAP TO ADD TARGET PHOTO</button>
 
         <div class="vendorCenterRow" aria-label="Vendor / Buy more targets">
-
           <!-- Vendor Pill -->
           <a id="vendorBox" class="vendorBox vendorBoxFlow" href="#" aria-label="Vendor">
-            <span id="vendorLabel" class="vendorPillText">
-              BUY MORE TARGETS LIKE THIS
-            </span>
+            <span id="vendorLabel" class="vendorPillText">BUY MORE TARGETS LIKE THIS</span>
           </a>
 
-          <!-- Slightly deeper smile wire -->
+          <!-- Smile wire -->
           <svg class="vendorWireFlow" viewBox="0 0 220 36" aria-hidden="true">
-            <path d="M10 10 C 58 33, 162 33, 210 10"
-              fill="none"
-              stroke="rgba(255,255,255,.26)"
-              stroke-width="3"
-              stroke-linecap="round"/>
-            <path d="M10 16 C 68 35, 152 35, 210 16"
-              fill="none"
-              stroke="rgba(47,102,255,.18)"
-              stroke-width="2"
-              stroke-linecap="round"/>
+            <path d="M10 10 C 58 33, 162 33, 210 10" fill="none" stroke="rgba(255,255,255,.26)" stroke-width="3" stroke-linecap="round"/>
+            <path d="M10 16 C 68 35, 152 35, 210 16" fill="none" stroke="rgba(47,102,255,.18)" stroke-width="2" stroke-linecap="round"/>
           </svg>
 
-          <!-- NEW: Slide-down panel -->
-          <div id="vendorPanel" class="vendorPanel vendorHidden">
+          <!-- Slide-down panel -->
+          <div id="vendorPanel" class="vendorPanel vendorHidden" aria-hidden="true">
             <div class="vendorPanelInner">
-              <div class="vendorPanelTitle">
-                BAKER • SMART TARGET™
-              </div>
-              <div class="vendorPanelSub">
-                You’re still in the Tap-n-Score™ flow.
-              </div>
-              <a id="vendorPanelLink" class="vendorPanelBtn" href="#" target="_blank" rel="noopener">
-                Visit Baker
-              </a>
+              <div class="vendorPanelTitle">BAKER • SMART TARGET™</div>
+              <div class="vendorPanelSub">You’re still in the Tap-n-Score™ flow.</div>
+              <a id="vendorPanelLink" class="vendorPanelBtn" href="#" target="_blank" rel="noopener">Visit Baker</a>
             </div>
           </div>
-
         </div>
       </div>
 
@@ -94,4 +72,133 @@
       <input id="photoInput" class="fileHidden" type="file" accept="image/*" />
     </section>
 
-    <!-- Everything below remains EXACTLY as your existing version -->
+    <!-- SCORE SECTION (JS hides this on hard landing until photo loads) -->
+    <section id="scoreSection" class="card scoreHidden" aria-label="Scoring">
+      <div class="cardTitle cardTitleSEC">
+        <div class="secTitle">
+          <span class="r">S</span><span class="w">HOOTER</span>
+          <span class="w"> </span>
+          <span class="b">EXPERIENCE</span>
+          <span class="w"> </span>
+          <span class="r">CARD</span>
+        </div>
+        <div class="secTag">
+          <span class="r">S</span><span class="w">E</span><span class="b">C</span>
+        </div>
+      </div>
+
+      <!-- LIVE BAR -->
+      <div class="liveBar">
+        <div class="liveRow">
+          <div class="liveLine" aria-label="Live settings">
+            <div class="liveLinePrimary" id="liveDistance">100 yds</div>
+            <div class="liveSep">•</div>
+            <div class="liveLinePrimary" id="liveDial">0.25 MOA</div>
+            <div class="liveSep">•</div>
+            <div class="liveLinePrimary" id="liveTarget">23×35</div>
+          </div>
+
+          <button id="matrixBtn" class="matrixBtn matrixBtnTight" type="button" aria-label="Open matrix">
+            MATRIX
+          </button>
+        </div>
+      </div>
+
+      <!-- MATRIX PANEL -->
+      <div id="matrixPanel" class="matrixPanel matrixHidden" aria-hidden="true">
+        <div class="matrixTitle">SETTINGS MATRIX</div>
+
+        <!-- Distance -->
+        <div class="matrixGroup">
+          <div class="matrixLabel">DISTANCE</div>
+          <div class="matrixRow">
+            <button id="distDown" class="miniBtn" type="button" aria-label="Distance down">−</button>
+            <input id="distanceYds" class="miniInput" inputmode="numeric" value="100" aria-label="Distance value"/>
+            <button id="distUp" class="miniBtn" type="button" aria-label="Distance up">+</button>
+
+            <div class="unitToggle">
+              <button id="distUnitYd" class="segBtn segBtnTiny segOn" type="button">YDS</button>
+              <button id="distUnitM" class="segBtn segBtnTiny" type="button">M</button>
+              <span id="distUnitLabel" class="miniUnit">yds</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Dial -->
+        <div class="matrixGroup">
+          <div class="matrixLabel">DIAL</div>
+          <div class="matrixRow">
+            <button id="unitMoa" class="segBtn segOn" type="button">MOA</button>
+            <button id="unitMrad" class="segBtn" type="button">MRAD</button>
+
+            <input id="clickValue" class="miniInputWide" inputmode="decimal" value="0.25" aria-label="Click value"/>
+            <span id="clickUnitLabel" class="miniUnit">MOA/click</span>
+          </div>
+
+          <!-- Presets (your JS looks for [data-unit][data-click]) -->
+          <div class="chipRow chipRowTight mt12" id="presetChipRow" aria-label="Presets">
+            <button class="chip" type="button" data-unit="MOA" data-click="0.25">.25</button>
+            <button class="chip" type="button" data-unit="MOA" data-click="0.50">.50</button>
+            <button class="chip" type="button" data-unit="MRAD" data-click="0.10">.10</button>
+            <button class="chip" type="button" data-unit="MRAD" data-click="0.20">.20</button>
+            <button class="chip" type="button" data-unit="MOA" data-click="0.125">.125</button>
+            <button class="chip" type="button" data-unit="MRAD" data-click="0.05">.05</button>
+          </div>
+        </div>
+
+        <!-- Target size -->
+        <div class="matrixGroup">
+          <div class="matrixLabel">TARGET SIZE</div>
+
+          <div id="sizeChipRow" class="chipRow" aria-label="Target size chips">
+            <button class="chip" type="button" data-size="8.5x11" data-w="8.5" data-h="11">8.5×11</button>
+            <button class="chip" type="button" data-size="11x17" data-w="11" data-h="17">11×17</button>
+            <button class="chip" type="button" data-size="12x18" data-w="12" data-h="18">12×18</button>
+            <button class="chip" type="button" data-size="18x24" data-w="18" data-h="24">18×24</button>
+            <button class="chip" type="button" data-size="23x35" data-w="23" data-h="35">23×35</button>
+            <button class="chip" type="button" data-size="24x36" data-w="24" data-h="36">24×36</button>
+            <button class="chip" type="button" data-size="custom">CUSTOM</button>
+          </div>
+
+          <div class="matrixRow mt12">
+            <button id="swapSizeBtn" class="segBtn segBtnTiny" type="button">SWAP W/H</button>
+          </div>
+        </div>
+
+        <div class="matrixFoot">
+          <button id="matrixCloseBtn" class="matrixCloseBtn" type="button">CLOSE</button>
+        </div>
+      </div>
+
+      <!-- TARGET IMAGE + DOTS -->
+      <div id="targetWrap" class="targetWrap" aria-label="Target image area">
+        <img id="targetImg" alt="Target" />
+        <div id="dotsLayer" class="dotsLayer" aria-hidden="true"></div>
+      </div>
+
+      <!-- Controls -->
+      <div class="row rowTight">
+        <div class="pill">Taps: <span id="tapCount">0</span></div>
+        <button id="clearTapsBtn" class="btnSecondary" type="button">Clear</button>
+        <button id="showResultsBtn" class="btnSecondary" type="button">Show results</button>
+      </div>
+
+      <p id="instructionLine" class="instructionLine"></p>
+      <p id="statusLine" class="hint">Add a target photo to begin.</p>
+    </section>
+
+    <!-- Sticky Results Bar -->
+    <div id="stickyBar" class="stickyBar stickyHidden" aria-hidden="true">
+      <button id="stickyResultsBtn" class="stickyBtn" type="button">SHOW RESULTS</button>
+    </div>
+
+    <div class="footer">
+      <div class="footerMark">Faith • Order • Precision</div>
+    </div>
+
+  </main>
+
+  <!-- ✅ THIS is what “unlocks” your buttons: JS actually loads and binds -->
+  <script src="./index.js?v=SEC-LOCK-2"></script>
+</body>
+</html>
