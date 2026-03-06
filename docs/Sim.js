@@ -1,5 +1,3 @@
-Replace docs/Sim.js with this exact full file:
-
 (() => {
   const NS = 'http://www.w3.org/2000/svg';
   const VIEWBOX = 800;
@@ -408,9 +406,3 @@ Replace docs/Sim.js with this exact full file:
   renderRings();
   resetSimulator();
 })();
-
-Then commit it and reload:
-
-https://tapnscore.com/Sim.html
-
-If the page still acts up after that, paste the exact filename shown in GitHub for the JS file.
