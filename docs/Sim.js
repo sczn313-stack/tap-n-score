@@ -322,3 +322,5 @@
   renderRings();
   resetSimulator();
 })();
+renderRings();
+resetSimulator();
