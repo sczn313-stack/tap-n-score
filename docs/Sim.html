@@ -1,1 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tap-n-Score — Back-to-Basics Simulator</title>
+  <link rel="stylesheet" href="Sim.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <div>
+        <h1>Tap-n-Score™ Back-to-Basics Simulator</h1>
+        <p class="sub">Tap aim point → tap 3–5 impacts → show POIB and scope correction.</p>
+      </div>
+      <div class="badge">The Smart Target™ · Powered by SCZN3 Precision</div>
+    </header>
 
+    <main class="layout">
+      <section class="panel controls">
+        <h2>Simulator Setup</h2>
+
+        <label>
+          Distance
+          <select id="distanceYards">
+            <option value="25">25 yd</option>
+            <option value="50">50 yd</option>
+            <option value="100" selected>100 yd</option>
+          </select>
+        </label>
+
+        <label>
+          Click Value
+          <select id="clickValueMOA">
+            <option value="0.125">1/8 MOA</option>
+            <option value="0.25" selected>1/4 MOA</option>
+            <option value="0.5">1/2 MOA</option>
+          </select>
+        </label>
+
+        <label>
+          Shot Count Goal
+          <select id="shotGoal">
+            <option value="3">3 shots</option>
+            <option value="4">4 shots</option>
+            <option value="5" selected>5 shots</option>
+          </select>
+        </label>
+
+        <label>
+          Inches per ring
+          <select id="ringSpacingInches">
+            <option value="0.5">0.50"</option>
+            <option value="1" selected>1.00"</option>
+            <option value="2">2.00"</option>
+          </select>
+        </label>
+
+        <div class="status-wrap">
+          <div id="modePill" class="mode-pill">Mode: Select aim point</div>
+          <div id="statusText" class="status-text">Tap the bull to place the aim point.</div>
+        </div>
+
+        <div class="button-row">
+          <button id="undoBtn" type="button">Undo Last Tap</button>
+          <button id="resetBtn" type="button">Reset</button>
+          <button id="resultsBtn" type="button" class="primary">Show Results</button>
+        </div>
+
+        <details class="notes" open>
+          <summary>What this version does</summary>
+          <p>Uses inches-only math, computes POIB from shot taps, calculates group size, converts offset to MOA, and returns scope clicks.</p>
+        </details>
+      </section>
+
+      <section class="panel simulator-panel">
+        <div id="targetWrap" class="target-wrap">
+          <div id="targetSurface" class="target-surface" aria-label="Back to basics target simulator">
+            <svg id="targetSvg" class="target-svg" viewBox="0 0 800 800" preserveAspectRatio="xMidYMid meet">
+              <rect x="0" y="0" width="800" height="800" fill="#f8f8f8"></rect>
+              <g id="ringLayer"></g>
+              <line x1="400" y1="40" x2="400" y2="760" stroke="#b8b8b8" stroke-width="1" stroke-dasharray="8 10"></line>
+              <line x1="40" y1="400" x2="760" y2="400" stroke="#b8b8b8" stroke-width="1" stroke-dasharray="8 10"></line>
+              <circle cx="400" cy="400" r="9" fill="#111"></circle>
+              <circle cx="400" cy="400" r="2" fill="#fafafa"></circle>
+              <g id="overlayLayer"></g>
+            </svg>
+          </div>
+        </div>
+      </section>
+
+      <aside class="panel results-panel">
+        <h2>SEC Preview</h2>
+        <div id="secCard" class="sec-card empty">
+          <div class="sec-brand">Shooter Experience Card</div>
+          <div class="sec-empty">Results will appear after you set an aim point and tap your shots.</div>
+        </div>
+      </aside>
+    </main>
+  </div>
+
+  <script src="Sim.js"></script>
+</body>
+</html>
