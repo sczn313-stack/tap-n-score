@@ -16,22 +16,44 @@ h1 {
   margin-top: 10px;
   color: #ccc;
   font-size: 18px;
+  line-height: 1.4;
 }
 
 .sim-container {
   margin: auto;
-  margin-top: 40px;
+  margin-top: 30px;
   width: 90%;
   max-width: 800px;
 }
 
+.toolbar {
+  margin-bottom: 12px;
+  text-align: left;
+}
+
+.grid-label {
+  font-size: 16px;
+  font-weight: bold;
+}
+
 .target-area {
-  background: #e6e6e6;
-  border: 6px solid #333;
-  height: 500px;
   position: relative;
+  width: 100%;
+  max-width: 700px;
+  height: 500px;
+  margin: auto;
+  border: 6px solid #333;
   cursor: crosshair;
   overflow: hidden;
+  background-color: #e6e6e6;
+}
+
+.target-area.show-grid {
+  background-image:
+    linear-gradient(rgba(0, 0, 255, 0.18) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 0, 255, 0.18) 1px, transparent 1px);
+  background-size: 100px 100px, 100px 100px;
+  background-position: 0 0, 0 0;
 }
 
 .hit {
@@ -58,6 +80,7 @@ h1 {
   height: 24px;
   transform: translate(-50%, -50%);
   pointer-events: none;
+  z-index: 5;
 }
 
 .poib-h,
@@ -78,6 +101,27 @@ h1 {
   height: 24px;
   left: 10px;
   top: 0;
+}
+
+.correction-arrow {
+  position: absolute;
+  height: 3px;
+  background: #ffd54f;
+  transform-origin: left center;
+  pointer-events: none;
+  z-index: 5;
+}
+
+.correction-arrow-head {
+  position: absolute;
+  right: -2px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 0;
+  height: 0;
+  border-left: 12px solid #ffd54f;
+  border-top: 7px solid transparent;
+  border-bottom: 7px solid transparent;
 }
 
 .controls {
