@@ -1,133 +1,46 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
+
 <head>
+
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
 <title>Tap-n-Score Simulator</title>
 
-<style>
-body{
-  font-family: Arial;
-  text-align:center;
-  background:#0a0a0a;
-  color:white;
-}
+<link rel="stylesheet" href="sim.css">
 
-h1{
-  margin-top:40px;
-}
-
-#target{
-  width:600px;
-  height:600px;
-  background:#eee;
-  margin:auto;
-  margin-top:40px;
-  position:relative;
-  border:4px solid #444;
-}
-
-.dot{
-  width:12px;
-  height:12px;
-  border-radius:50%;
-  position:absolute;
-  transform:translate(-50%,-50%);
-}
-
-.aim{
-  background:red;
-}
-
-.hit{
-  background:blue;
-}
-
-button{
-  margin-top:30px;
-  padding:14px 28px;
-  font-size:18px;
-  border:none;
-  border-radius:8px;
-  background:#ff4444;
-  color:white;
-}
-</style>
 </head>
-
 
 <body>
 
 <h1>Tap-n-Score Simulator</h1>
 
-<p>Tap once for AIM then tap for bullet hits</p>
+<p class="subtitle">
+Tap once for AIM then tap for bullet hits
+</p>
 
-<div id="target"></div>
+<div class="sim-container">
 
-<button onclick="calculate()">Calculate POIB</button>
+<div id="target" class="target-area"></div>
 
-<p id="result"></p>
+<div class="controls">
 
-<script>
+<button onclick="calculate()">
+Calculate POIB
+</button>
 
-let aim = null
-let hits = []
+<button class="reset" onclick="resetSim()">
+Reset
+</button>
 
-const target = document.getElementById("target")
+</div>
 
-target.addEventListener("click",(e)=>{
+<p id="result" class="results"></p>
 
-  const rect = target.getBoundingClientRect()
+</div>
 
-  const x = e.clientX - rect.left
-  const y = e.clientY - rect.top
-
-  if(!aim){
-    aim = {x,y}
-    draw(x,y,"aim")
-  } else {
-    hits.push({x,y})
-    draw(x,y,"hit")
-  }
-
-})
-
-function draw(x,y,type){
-
-  const d = document.createElement("div")
-
-  d.className = "dot " + type
-
-  d.style.left = x + "px"
-  d.style.top = y + "px"
-
-  target.appendChild(d)
-
-}
-
-function calculate(){
-
-  if(hits.length === 0) return
-
-  let sx=0
-  let sy=0
-
-  hits.forEach(h=>{
-    sx += h.x
-    sy += h.y
-  })
-
-  const avgX = sx / hits.length
-  const avgY = sy / hits.length
-
-  const dx = avgX - aim.x
-  const dy = avgY - aim.y
-
-  document.getElementById("result").innerText =
-  "POI Offset: X " + dx.toFixed(1) + "  Y " + dy.toFixed(1)
-
-}
-
-</script>
+<script src="sim.js"></script>
 
 </body>
 </html>
