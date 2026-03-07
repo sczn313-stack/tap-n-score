@@ -8,6 +8,19 @@ const CLICK_VALUE_MOA = 0.25;
 
 const target = document.getElementById("target");
 const result = document.getElementById("result");
+const gridToggle = document.getElementById("gridToggle");
+
+if (gridToggle.checked) {
+  target.classList.add("show-grid");
+}
+
+gridToggle.addEventListener("change", () => {
+  if (gridToggle.checked) {
+    target.classList.add("show-grid");
+  } else {
+    target.classList.remove("show-grid");
+  }
+});
 
 target.addEventListener("click", (e) => {
   const rect = target.getBoundingClientRect();
@@ -17,7 +30,7 @@ target.addEventListener("click", (e) => {
   if (!aim) {
     aim = { x, y };
     drawDot(x, y, "aim");
-    setResult("Aim point set. Tap bullet hits, then press Calculate POIB.");
+    setResult("Aim point set. Tap bullet holes, then press Calculate POIB.");
     return;
   }
 
@@ -35,6 +48,8 @@ function drawDot(x, y, type) {
 }
 
 function drawPOIB(x, y) {
+  clearPOIB();
+
   const wrap = document.createElement("div");
   wrap.className = "poib-marker";
   wrap.style.left = x + "px";
@@ -53,6 +68,33 @@ function drawPOIB(x, y) {
 
 function clearPOIB() {
   document.querySelectorAll(".poib-marker").forEach((node) => node.remove());
+}
+
+function drawCorrectionArrow(fromX, fromY, toX, toY) {
+  clearCorrectionArrow();
+
+  const arrow = document.createElement("div");
+  arrow.className = "correction-arrow";
+
+  const dx = toX - fromX;
+  const dy = toY - fromY;
+  const length = Math.hypot(dx, dy);
+  const angle = Math.atan2(dy, dx) * (180 / Math.PI);
+
+  arrow.style.width = length + "px";
+  arrow.style.left = fromX + "px";
+  arrow.style.top = fromY + "px";
+  arrow.style.transform = `translateY(-50%) rotate(${angle}deg)`;
+
+  const head = document.createElement("div");
+  head.className = "correction-arrow-head";
+  arrow.appendChild(head);
+
+  target.appendChild(arrow);
+}
+
+function clearCorrectionArrow() {
+  document.querySelectorAll(".correction-arrow").forEach((node) => node.remove());
 }
 
 function pxToInches(px) {
@@ -95,8 +137,6 @@ function calculate() {
     return;
   }
 
-  clearPOIB();
-
   let sumX = 0;
   let sumY = 0;
 
@@ -109,6 +149,7 @@ function calculate() {
   const poibY = sumY / hits.length;
 
   drawPOIB(poibX, poibY);
+  drawCorrectionArrow(poibX, poibY, aim.x, aim.y);
 
   const dxPx = poibX - aim.x;
   const dyPx = poibY - aim.y;
@@ -143,6 +184,8 @@ function resetSim() {
   aim = null;
   hits = [];
   target.innerHTML = "";
+  clearPOIB();
+  clearCorrectionArrow();
   setResult("");
 }
 
