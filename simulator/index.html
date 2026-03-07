@@ -1,46 +1,39 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-<title>Tap-n-Score Simulator</title>
-
-<link rel="stylesheet" href="sim.css">
-
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tap-n-Score Simulator</title>
+  <link rel="stylesheet" href="sim.css" />
 </head>
-
 <body>
 
-<h1>Tap-n-Score Simulator</h1>
+  <h1>Tap-n-Score Simulator</h1>
 
-<p class="subtitle">
-Tap once for AIM then tap for bullet hits
-</p>
+  <p class="subtitle">
+    Step 1: Tap the aim point<br>
+    Step 2: Tap bullet holes<br>
+    Step 3: Calculate POIB
+  </p>
 
-<div class="sim-container">
+  <div class="sim-container">
+    <div class="toolbar">
+      <label class="grid-label">
+        <input type="checkbox" id="gridToggle" checked />
+        Show 1" Grid
+      </label>
+    </div>
 
-<div id="target" class="target-area"></div>
+    <div id="target" class="target-area"></div>
 
-<div class="controls">
+    <div class="controls">
+      <button onclick="calculate()">Calculate POIB</button>
+      <button class="reset" onclick="resetSim()">Reset</button>
+    </div>
 
-<button onclick="calculate()">
-Calculate POIB
-</button>
+    <p id="result" class="results"></p>
+  </div>
 
-<button class="reset" onclick="resetSim()">
-Reset
-</button>
-
-</div>
-
-<p id="result" class="results"></p>
-
-</div>
-
-<script src="sim.js"></script>
-
+  <script src="sim.js"></script>
 </body>
 </html>
