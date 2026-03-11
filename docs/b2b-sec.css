@@ -7,7 +7,7 @@
   --goldLine:#b98725;
   --red:#e14a4a;
   --white:#f6f8fc;
-  --green:#96db71;
+  --green:#9ae56e;
   --orange:#e4a444;
   --orangeBorder:#2a2115;
   --shadow:0 10px 30px rgba(0,0,0,.34);
@@ -97,17 +97,34 @@ html,body{
 }
 
 .drillPill{
-  min-height:48px;
-  padding:10px 16px;
+  min-height:56px;
+  padding:8px 16px;
   border-radius:16px;
   background:linear-gradient(180deg, #355fa9 0%, #1d3871 100%);
   border:1px solid #6284c7;
   display:flex;
-  align-items:center;
-  font-weight:900;
-  font-size:clamp(18px,2vw,30px);
+  flex-direction:column;
+  justify-content:center;
   box-shadow:var(--shadow), inset 0 1px 0 rgba(255,255,255,.14);
 }
+
+.drillTitleMain{
+  font-weight:900;
+  font-size:clamp(18px,2vw,28px);
+  line-height:1.05;
+}
+
+.drillTitleSub{
+  margin-top:2px;
+  font-weight:900;
+  font-size:clamp(12px,1.1vw,16px);
+  line-height:1.05;
+  letter-spacing:.2px;
+}
+
+.subR{color:var(--red)}
+.subW{color:#ffffff}
+.subB{color:#376dff}
 
 .historyBtn,.actionBtn{
   border:1px solid #6e89c7;
@@ -212,9 +229,10 @@ html,body{
   inset:0;
   display:grid;
   place-items:center;
-  color:#fff1c9;
+  color:#fff7d8;
+  text-shadow:0 0 6px rgba(255,245,180,.18);
   font-weight:900;
-  font-size:28px;
+  font-size:32px;
   line-height:1;
   z-index:1;
 }
@@ -222,33 +240,34 @@ html,body{
 .nodeReticleH,
 .nodeReticleV{
   position:absolute;
-  background:#141414;
+  background:#111111;
   z-index:2;
-  opacity:.96;
+  opacity:.72;
 }
 
 .nodeReticleH{
-  width:18px;
-  height:3px;
+  width:10px;
+  height:2px;
   left:50%;
   top:50%;
   transform:translate(-50%, -50%);
 }
 
 .nodeReticleV{
-  width:3px;
-  height:18px;
+  width:2px;
+  height:10px;
   left:50%;
   top:50%;
   transform:translate(-50%, -50%);
 }
 
 .laneLabel{
-  color:#ffd77a;
+  color:#ffe08a;
+  text-shadow:0 0 6px rgba(255,220,120,.12);
   font-weight:900;
-  font-size:30px;
+  font-size:32px;
   line-height:1;
-  min-width:24px;
+  min-width:26px;
 }
 
 .cell{
@@ -260,13 +279,13 @@ html,body{
 }
 
 .mark{
-  font-size:46px;
+  font-size:50px;
   line-height:1;
   font-weight:900;
 }
 
 .mark.hit{color:var(--green)}
-.mark.miss{color:#e25959}
+.mark.miss{color:#f06464}
 
 .star{
   position:absolute;
@@ -351,6 +370,14 @@ html,body{
   line-height:1.2;
 }
 
+.nextHint{
+  margin-top:5px;
+  color:#d9e5ff;
+  font-size:clamp(12px,1vw,15px);
+  line-height:1.15;
+  opacity:.95;
+}
+
 .actions{
   display:grid;
   gap:12px;
@@ -389,7 +416,14 @@ html,body{
   }
 
   .drillPill{
+    min-height:54px;
+  }
+
+  .drillTitleMain{
     font-size:20px;
-    min-height:46px;
+  }
+
+  .drillTitleSub{
+    font-size:12px;
   }
 }
