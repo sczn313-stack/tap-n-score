@@ -1,44 +1,61 @@
 (() => {
-  const STORAGE_KEY = "tns_b2b_history_v1";
+  const STORAGE_KEY = "tns_history_back_to_basics_v2";
+  const DEFAULT_DRILL_ID = "back-to-basics";
 
-  // Demo data if no payload is present.
-  const demoCurrent = {
-    date: new Date().toLocaleDateString("en-US", { month: "short", day: "numeric" }),
-    hits: [1,1,1,1,1,1,1,0,1,1],
-    stars: [0,0,0,1,0,1,0,0,0,0],
-    verified: true
-  };
+  function qs(name) {
+    return new URLSearchParams(window.location.search).get(name);
+  }
 
-  // Query options:
-  // ?hits=1,1,0,1,1,1,0,1,1,1
-  // ?stars=0,0,1,0,0,1,0,0,0,0
-  // ?date=Apr%2012
+  function getDrill() {
+    const drillId = qs("drill") || DEFAULT_DRILL_ID;
+    return window.TNS_getDrill ? window.TNS_getDrill(drillId) : null;
+  }
+
+  function parseCsvNumbers(value, count = 10) {
+    if (!value) return Array(count).fill(0);
+    const arr = value.split(",").map(v => (Number(v) ? 1 : 0)).slice(0, count);
+    while (arr.length < count) arr.push(0);
+    return arr;
+  }
+
   function parseSessionFromUrl() {
-    const qs = new URLSearchParams(window.location.search);
-    const hitsRaw = (qs.get("hits") || "").trim();
-    const starsRaw = (qs.get("stars") || "").trim();
-    const date = (qs.get("date") || "").trim();
+    const hits = parseCsvNumbers(qs("hits"), 10);
+    const stars = parseCsvNumbers(qs("stars"), 10);
+    const hasHitsParam = new URLSearchParams(window.location.search).has("hits");
 
-    if (!hitsRaw) return null;
-
-    const hits = hitsRaw.split(",").slice(0, 10).map(v => Number(v) ? 1 : 0);
-    while (hits.length < 10) hits.push(0);
-
-    const stars = starsRaw
-      ? starsRaw.split(",").slice(0, 10).map(v => Number(v) ? 1 : 0)
-      : Array(10).fill(0);
-
-    while (stars.length < 10) stars.push(0);
+    const now = new Date();
+    const date =
+      qs("date") ||
+      now.toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric"
+      });
 
     return {
-      date: date || new Date().toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      date,
       hits,
       stars,
-      verified: true
+      verified: true,
+      fromUrl: hasHitsParam
     };
   }
 
-  function getStoredHistory() {
+  function demoSession() {
+    return {
+      id: "demo-session",
+      date: new Date().toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric"
+      }),
+      hits: [1, 1, 1, 1, 1, 1, 1, 0, 1, 1],
+      stars: [0, 0, 0, 1, 0, 1, 0, 0, 0, 0],
+      verified: true,
+      fromUrl: false
+    };
+  }
+
+  function getHistory() {
     try {
       return JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
     } catch {
@@ -50,74 +67,71 @@
     localStorage.setItem(STORAGE_KEY, JSON.stringify(history));
   }
 
-  function scoreOf(session) {
-    return session.hits.reduce((a, b) => a + b, 0);
-  }
-
-  function starsOf(session) {
-    return session.stars.reduce((a, b) => a + b, 0);
-  }
-
-  function bestScore(history) {
-    if (!history.length) return 0;
-    return Math.max(...history.map(scoreOf));
-  }
-
-  function computeLevel(history) {
-    const verified = history.filter(s => s.verified);
-    const s8 = verified.filter(s => scoreOf(s) >= 8).length;
-    const s9 = verified.filter(s => scoreOf(s) >= 9).length;
-    const clean10 = verified.some(s => scoreOf(s) === 10);
-
-    if (clean10) return 5;
-    if (s9 >= 2) return 4;
-    if (s8 >= 2) return 3;
-    if (verified.some(s => scoreOf(s) >= 7)) return 2;
-    return 1;
-  }
-
-  function levelStars(level) {
-    return "★".repeat(level) + "☆".repeat(5 - level);
-  }
-
-  function laneShape(n) {
-    return [2,5,8].includes(n) ? "square" : "";
-  }
-
-  function buildHistory() {
-    const history = getStoredHistory();
-    const current = parseSessionFromUrl() || demoCurrent;
-
-    const fingerprint = JSON.stringify({
-      date: current.date,
-      hits: current.hits,
-      stars: current.stars
+  function sameSession(a, b) {
+    return JSON.stringify({
+      date: a.date,
+      hits: a.hits,
+      stars: a.stars
+    }) === JSON.stringify({
+      date: b.date,
+      hits: b.hits,
+      stars: b.stars
     });
+  }
 
-    const exists = history.some(s => JSON.stringify({
-      date: s.date, hits: s.hits, stars: s.stars
-    }) === fingerprint);
-
+  function addSessionIfNeeded(history, session) {
+    const exists = history.some(item => sameSession(item, session));
     if (!exists) {
-      history.unshift(current);
-      if (history.length > 20) history.length = 20;
+      history.unshift(session);
+      if (history.length > 25) history.length = 25;
       saveHistory(history);
     }
-
-    return getStoredHistory();
+    return getHistory();
   }
 
-  function render(history) {
-    const lastFive = history.slice(0, 5);
-    const level = computeLevel(history);
+  function scoreSession(session) {
+    return window.TNS_scoreSession
+      ? window.TNS_scoreSession(session)
+      : (session.hits || []).reduce((a, b) => a + (Number(b) ? 1 : 0), 0);
+  }
 
-    document.getElementById("levelChip").textContent = `LEVEL ${level}`;
-    document.getElementById("levelLabel").textContent = `LEVEL ${level}`;
-    document.getElementById("levelStars").textContent = levelStars(level);
-    document.getElementById("lifetimeBest").textContent = `${bestScore(history)}/10${history.some(s => starsOf(s) > 0 && scoreOf(s) === bestScore(history)) ? "★" : ""}`;
+  function starCount(session) {
+    return (session.stars || []).reduce((a, b) => a + (Number(b) ? 1 : 0), 0);
+  }
 
+  function bestSession(history) {
+    if (!history.length) return null;
+    return [...history].sort((a, b) => scoreSession(b) - scoreSession(a))[0];
+  }
+
+  function laneShapeClass(drill, lane) {
+    const shape = drill?.laneShapes?.[lane] || "circle";
+    return shape === "square" ? "square" : "";
+  }
+
+  function setText(id, value) {
+    const el = document.getElementById(id);
+    if (el) el.textContent = value;
+  }
+
+  function renderHeader(drill, history) {
+    const level = window.TNS_getCurrentLevel(drill, history);
+    const stars = window.TNS_getLevelStars(drill, history);
+    const nextReq = window.TNS_getNextRequirementText(drill, history);
+    const best = bestSession(history);
+
+    setText("drillTitle", drill.title);
+    setText("levelChip", `LEVEL ${level}`);
+    setText("levelLabel", `LEVEL ${level}`);
+    setText("levelStars", stars);
+    setText("nextReq", nextReq || "");
+    setText("lifetimeBest", best ? `${scoreSession(best)}/10` : "0/10");
+  }
+
+  function renderMatrix(drill, history) {
     const header = document.getElementById("matrixHeader");
     const body = document.getElementById("matrixBody");
+    const sessions = history.slice(0, 5);
 
     header.innerHTML = "";
     body.innerHTML = "";
@@ -127,51 +141,49 @@
     corner.textContent = "Lanes";
     header.appendChild(corner);
 
-    lastFive.forEach(s => {
-      const box = document.createElement("div");
-      box.className = "dateHead";
-      box.innerHTML = `
-        <div class="date">${s.date}</div>
-        <div class="score">${scoreOf(s)}/10</div>
+    sessions.forEach(session => {
+      const cell = document.createElement("div");
+      cell.className = "dateHead";
+      cell.innerHTML = `
+        <div class="date">${session.date}</div>
+        <div class="score">${scoreSession(session)}/10</div>
       `;
-      header.appendChild(box);
+      header.appendChild(cell);
     });
 
-    // fill empty columns up to 5
-    for (let i = lastFive.length; i < 5; i++) {
-      const box = document.createElement("div");
-      box.className = "dateHead";
-      box.innerHTML = `<div class="date">—</div><div class="score">—</div>`;
-      header.appendChild(box);
+    for (let i = sessions.length; i < 5; i++) {
+      const cell = document.createElement("div");
+      cell.className = "dateHead";
+      cell.innerHTML = `<div class="date">—</div><div class="score">—</div>`;
+      header.appendChild(cell);
     }
 
-    for (let lane = 1; lane <= 10; lane++) {
+    for (let lane = 1; lane <= drill.laneCount; lane++) {
       const row = document.createElement("div");
       row.className = "matrixRow";
 
       const laneCell = document.createElement("div");
       laneCell.className = "laneCell";
       laneCell.innerHTML = `
-        <div class="laneBadge ${laneShape(lane)}">${lane}</div>
-        <div class="laneNum">${lane}</div>
+        <div class="laneBadge ${laneShapeClass(drill, lane)}">${lane}</div>
       `;
       row.appendChild(laneCell);
 
       for (let col = 0; col < 5; col++) {
-        const s = lastFive[col];
+        const session = sessions[col];
         const cell = document.createElement("div");
         cell.className = "cell";
 
-        if (s) {
-          const hit = s.hits[lane - 1] === 1;
-          const star = s.stars[lane - 1] === 1;
+        if (!session) {
+          cell.innerHTML = `<div class="mark miss" style="opacity:.18">•</div>`;
+        } else {
+          const hit = session.hits[lane - 1] === 1;
+          const star = session.stars[lane - 1] === 1;
 
           cell.innerHTML = `
             <div class="mark ${hit ? "hit" : "miss"}">${hit ? "✓" : "✕"}</div>
             ${star ? `<div class="star">★</div>` : ""}
           `;
-        } else {
-          cell.innerHTML = `<div class="mark miss" style="opacity:.22">•</div>`;
         }
 
         row.appendChild(cell);
@@ -181,20 +193,59 @@
     }
   }
 
-  function wireButtons() {
-    document.getElementById("backBtn").onclick = () => history.back();
-    document.getElementById("historyBtn").onclick = () => {
-      alert("History view is already shown in the matrix.");
-    };
-    document.getElementById("newScanBtn").onclick = () => {
+  function wireButtons(drill) {
+    const backBtn = document.getElementById("backBtn");
+    const historyBtn = document.getElementById("historyBtn");
+    const newScanBtn = document.getElementById("newScanBtn");
+    const vendorBtn = document.getElementById("vendorBtn");
+    const surveyBtn = document.getElementById("surveyBtn");
+
+    if (backBtn) backBtn.onclick = () => history.back();
+    if (historyBtn) historyBtn.onclick = () => alert("History is shown in the session grid.");
+    if (newScanBtn) newScanBtn.onclick = () => {
       window.location.href = "./index.html";
     };
-    document.getElementById("leaderboardBtn").onclick = () => {
-      alert("Leaderboard hook goes here.");
-    };
+
+    if (vendorBtn) {
+      vendorBtn.textContent = `🎯  ${drill.vendorLabel || "BUY MORE TARGETS LIKE THIS"}`;
+      vendorBtn.onclick = () => {
+        if (drill.vendorUrl) window.open(drill.vendorUrl, "_blank", "noopener");
+      };
+    }
+
+    if (surveyBtn) {
+      surveyBtn.onclick = () => {
+        if (drill.surveyUrl) {
+          window.open(drill.surveyUrl, "_blank", "noopener");
+        } else {
+          alert("Survey link not set yet.");
+        }
+      };
+    }
   }
 
-  const history = buildHistory();
-  render(history);
-  wireButtons();
+  function init() {
+    const drill = getDrill();
+    if (!drill) {
+      alert("Drill definition not found.");
+      return;
+    }
+
+    const sessionFromUrl = parseSessionFromUrl();
+    const hasLiveHits = new URLSearchParams(window.location.search).has("hits");
+
+    let history = getHistory();
+
+    if (hasLiveHits) {
+      history = addSessionIfNeeded(history, sessionFromUrl);
+    } else if (!history.length) {
+      history = addSessionIfNeeded(history, demoSession());
+    }
+
+    renderHeader(drill, history);
+    renderMatrix(drill, history);
+    wireButtons(drill);
+  }
+
+  init();
 })();
