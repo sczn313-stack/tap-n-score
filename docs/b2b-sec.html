@@ -1,1 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>Tap-n-Score™ — Back to Basics SEC</title>
+  <link rel="stylesheet" href="./b2b-sec.css?v=1" />
+</head>
+<body>
+  <main class="appShell">
+    <header class="topBar">
+      <button class="backBtn" id="backBtn" aria-label="Back">‹</button>
+      <div class="brandWrap">
+        <div class="brand">TAP-N-SCORE™</div>
+        <div class="subBrand">BACK TO BASICS DRILL</div>
+      </div>
+      <div class="levelChip" id="levelChip">LEVEL 1</div>
+    </header>
 
+    <section class="toolbar">
+      <button class="historyBtn" id="historyBtn">History ›</button>
+    </section>
+
+    <section class="matrixCard">
+      <div class="matrixHeader" id="matrixHeader"></div>
+      <div class="matrixBody" id="matrixBody"></div>
+    </section>
+
+    <section class="summaryRow">
+      <div class="summaryCard">
+        <div class="summaryLabel">LIFETIME BEST SCORE</div>
+        <div class="summaryValue" id="lifetimeBest">0/10</div>
+      </div>
+
+      <div class="summaryCard">
+        <div class="summaryLabel" id="levelLabel">LEVEL 1</div>
+        <div class="stars" id="levelStars">☆☆☆☆☆</div>
+      </div>
+    </section>
+
+    <section class="actions">
+      <button class="actionBtn" id="newScanBtn">📷&nbsp;&nbsp;NEW SCAN</button>
+      <button class="actionBtn" id="leaderboardBtn">🏆&nbsp;&nbsp;LEADERBOARD</button>
+    </section>
+  </main>
+
+  <script src="./b2b-sec.js?v=1"></script>
+</body>
+</html>
