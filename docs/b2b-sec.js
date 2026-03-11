@@ -1,55 +1,50 @@
 (() => {
-  const STORAGE_KEY = "tns_history_back_to_basics_v2";
+  const STORAGE_KEY = "tns_history_back_to_basics_v4";
   const DEFAULT_DRILL_ID = "back-to-basics";
 
-  function qs(name) {
+  function query(name) {
     return new URLSearchParams(window.location.search).get(name);
   }
 
-  function getDrill() {
-    const drillId = qs("drill") || DEFAULT_DRILL_ID;
-    return window.TNS_getDrill ? window.TNS_getDrill(drillId) : null;
-  }
-
-  function parseCsvNumbers(value, count = 10) {
+  function parseCsvBits(value, count) {
     if (!value) return Array(count).fill(0);
-    const arr = value.split(",").map(v => (Number(v) ? 1 : 0)).slice(0, count);
-    while (arr.length < count) arr.push(0);
-    return arr;
+    const out = value.split(",").slice(0, count).map(v => Number(v) ? 1 : 0);
+    while (out.length < count) out.push(0);
+    return out;
   }
 
-  function parseSessionFromUrl() {
-    const hits = parseCsvNumbers(qs("hits"), 10);
-    const stars = parseCsvNumbers(qs("stars"), 10);
-    const hasHitsParam = new URLSearchParams(window.location.search).has("hits");
+  function getDrill() {
+    const drillId = query("drill") || DEFAULT_DRILL_ID;
+    return window.TNS_getDrill(drillId);
+  }
 
+  function createSessionFromUrl(drill) {
+    const hasHits = new URLSearchParams(window.location.search).has("hits");
     const now = new Date();
-    const date =
-      qs("date") ||
-      now.toLocaleDateString("en-US", {
-        month: "short",
-        day: "numeric"
-      });
+    const date = query("date") || now.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 
     return {
       id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
       date,
-      hits,
-      stars,
+      hits: parseCsvBits(query("hits"), drill.laneCount),
+      stars: parseCsvBits(query("stars"), drill.laneCount),
       verified: true,
-      fromUrl: hasHitsParam
+      fromUrl: hasHits
     };
   }
 
-  function demoSession() {
+  function demoSession(drill) {
+    const hits = Array(drill.laneCount).fill(0);
+    const stars = Array(drill.laneCount).fill(0);
+
+    [1,2,3,4,5,6,7,9,10].forEach(n => hits[n - 1] = 1);
+    [4,6].forEach(n => stars[n - 1] = 1);
+
     return {
       id: "demo-session",
-      date: new Date().toLocaleDateString("en-US", {
-        month: "short",
-        day: "numeric"
-      }),
-      hits: [1, 1, 1, 1, 1, 1, 1, 0, 1, 1],
-      stars: [0, 0, 0, 1, 0, 1, 0, 0, 0, 0],
+      date: new Date().toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+      hits,
+      stars,
       verified: true,
       fromUrl: false
     };
@@ -79,7 +74,7 @@
     });
   }
 
-  function addSessionIfNeeded(history, session) {
+  function addSession(history, session) {
     const exists = history.some(item => sameSession(item, session));
     if (!exists) {
       history.unshift(session);
@@ -90,28 +85,12 @@
   }
 
   function scoreSession(session) {
-    return window.TNS_scoreSession
-      ? window.TNS_scoreSession(session)
-      : (session.hits || []).reduce((a, b) => a + (Number(b) ? 1 : 0), 0);
-  }
-
-  function starCount(session) {
-    return (session.stars || []).reduce((a, b) => a + (Number(b) ? 1 : 0), 0);
+    return window.TNS_scoreSession(session);
   }
 
   function bestSession(history) {
     if (!history.length) return null;
     return [...history].sort((a, b) => scoreSession(b) - scoreSession(a))[0];
-  }
-
-  function laneShapeClass(drill, lane) {
-    const shape = drill?.laneShapes?.[lane] || "circle";
-    return shape === "square" ? "square" : "";
-  }
-
-  function setText(id, value) {
-    const el = document.getElementById(id);
-    if (el) el.textContent = value;
   }
 
   function renderHeader(drill, history) {
@@ -120,12 +99,22 @@
     const nextReq = window.TNS_getNextRequirementText(drill, history);
     const best = bestSession(history);
 
-    setText("drillTitle", drill.title);
-    setText("levelChip", `LEVEL ${level}`);
-    setText("levelLabel", `LEVEL ${level}`);
-    setText("levelStars", stars);
-    setText("nextReq", nextReq || "");
-    setText("lifetimeBest", best ? `${scoreSession(best)}/10` : "0/10");
+    document.getElementById("drillTitle").textContent = drill.title;
+    document.getElementById("levelChip").textContent = `LEVEL ${level}`;
+    document.getElementById("levelLabel").textContent = `LEVEL ${level}`;
+    document.getElementById("levelStars").textContent = stars;
+    document.getElementById("nextReq").textContent = nextReq || "";
+    document.getElementById("lifetimeBest").textContent = best ? `${scoreSession(best)}/10` : "0/10";
+  }
+
+  function makeNodeIcon(shape, lane) {
+    return `
+      <div class="nodeIcon ${shape}">
+        <div class="nodeNum">${lane}</div>
+        <div class="nodeReticleH"></div>
+        <div class="nodeReticleV"></div>
+      </div>
+    `;
   }
 
   function renderMatrix(drill, history) {
@@ -162,10 +151,13 @@
       const row = document.createElement("div");
       row.className = "matrixRow";
 
+      const shape = drill.laneShapes[lane] === "square" ? "square" : "circle";
+
       const laneCell = document.createElement("div");
       laneCell.className = "laneCell";
       laneCell.innerHTML = `
-        <div class="laneBadge ${laneShapeClass(drill, lane)}">${lane}</div>
+        ${makeNodeIcon(shape, lane)}
+        <div class="laneLabel">${lane}</div>
       `;
       row.appendChild(laneCell);
 
@@ -194,52 +186,40 @@
   }
 
   function wireButtons(drill) {
-    const backBtn = document.getElementById("backBtn");
-    const historyBtn = document.getElementById("historyBtn");
-    const newScanBtn = document.getElementById("newScanBtn");
-    const vendorBtn = document.getElementById("vendorBtn");
-    const surveyBtn = document.getElementById("surveyBtn");
+    document.getElementById("backBtn").onclick = () => history.back();
 
-    if (backBtn) backBtn.onclick = () => history.back();
-    if (historyBtn) historyBtn.onclick = () => alert("History is shown in the session grid.");
-    if (newScanBtn) newScanBtn.onclick = () => {
+    document.getElementById("historyBtn").onclick = () => {
+      alert("History is shown in the grid.");
+    };
+
+    document.getElementById("newScanBtn").onclick = () => {
       window.location.href = "./index.html";
     };
 
-    if (vendorBtn) {
-      vendorBtn.textContent = `🎯  ${drill.vendorLabel || "BUY MORE TARGETS LIKE THIS"}`;
-      vendorBtn.onclick = () => {
-        if (drill.vendorUrl) window.open(drill.vendorUrl, "_blank", "noopener");
-      };
-    }
+    document.getElementById("vendorBtn").textContent = `🎯  ${drill.vendorLabel}`;
+    document.getElementById("vendorBtn").onclick = () => {
+      window.open(drill.vendorUrl, "_blank", "noopener");
+    };
 
-    if (surveyBtn) {
-      surveyBtn.onclick = () => {
-        if (drill.surveyUrl) {
-          window.open(drill.surveyUrl, "_blank", "noopener");
-        } else {
-          alert("Survey link not set yet.");
-        }
-      };
-    }
+    document.getElementById("surveyBtn").onclick = () => {
+      if (drill.surveyUrl) {
+        window.open(drill.surveyUrl, "_blank", "noopener");
+      } else {
+        alert("Survey link not set yet.");
+      }
+    };
   }
 
   function init() {
     const drill = getDrill();
-    if (!drill) {
-      alert("Drill definition not found.");
-      return;
-    }
-
-    const sessionFromUrl = parseSessionFromUrl();
-    const hasLiveHits = new URLSearchParams(window.location.search).has("hits");
-
     let history = getHistory();
+    const urlSession = createSessionFromUrl(drill);
+    const hasHits = new URLSearchParams(window.location.search).has("hits");
 
-    if (hasLiveHits) {
-      history = addSessionIfNeeded(history, sessionFromUrl);
+    if (hasHits) {
+      history = addSession(history, urlSession);
     } else if (!history.length) {
-      history = addSessionIfNeeded(history, demoSession());
+      history = addSession(history, demoSession(drill));
     }
 
     renderHeader(drill, history);
