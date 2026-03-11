@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
   <title>SEC — Back to Basics</title>
-  <link rel="stylesheet" href="./b2b-sec.css?v=4" />
+  <link rel="stylesheet" href="./b2b-sec.css?v=5" />
 </head>
 <body>
   <main class="appShell">
@@ -31,7 +31,10 @@
     <section class="summaryRow">
       <div class="summaryCard bestCard">
         <div class="summaryLabel">LIFETIME BEST SCORE</div>
-        <div class="summaryValue" id="lifetimeBest">0/10</div>
+        <div class="summaryValueWrap">
+          <div class="summaryValue" id="lifetimeBest">0/10</div>
+          <div class="bestBadge hidden" id="bestBadge">NEW BEST</div>
+        </div>
       </div>
 
       <div class="summaryCard levelCard">
@@ -49,6 +52,6 @@
   </main>
 
   <script src="./drills.js?v=2"></script>
-  <script src="./b2b-sec.js?v=4"></script>
+  <script src="./b2b-sec.js?v=5"></script>
 </body>
 </html>
