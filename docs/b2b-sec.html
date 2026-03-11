@@ -4,16 +4,18 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
   <title>Tap-n-Score™ — Back to Basics SEC</title>
-  <link rel="stylesheet" href="./b2b-sec.css?v=1" />
+  <link rel="stylesheet" href="./b2b-sec.css?v=2" />
 </head>
 <body>
   <main class="appShell">
     <header class="topBar">
       <button class="backBtn" id="backBtn" aria-label="Back">‹</button>
+
       <div class="brandWrap">
         <div class="brand">TAP-N-SCORE™</div>
-        <div class="subBrand">BACK TO BASICS DRILL</div>
+        <div class="subBrand" id="drillTitle">BACK TO BASICS DRILL</div>
       </div>
+
       <div class="levelChip" id="levelChip">LEVEL 1</div>
     </header>
 
@@ -34,16 +36,19 @@
 
       <div class="summaryCard">
         <div class="summaryLabel" id="levelLabel">LEVEL 1</div>
-        <div class="stars" id="levelStars">☆☆☆☆☆</div>
+        <div class="stars" id="levelStars">★☆☆☆☆</div>
+        <div class="nextReq" id="nextReq">Complete 1 verified session</div>
       </div>
     </section>
 
-    <section class="actions">
+    <section class="actions actions3">
       <button class="actionBtn" id="newScanBtn">📷&nbsp;&nbsp;NEW SCAN</button>
-      <button class="actionBtn" id="leaderboardBtn">🏆&nbsp;&nbsp;LEADERBOARD</button>
+      <button class="actionBtn" id="vendorBtn">🎯&nbsp;&nbsp;BUY MORE TARGETS LIKE THIS</button>
+      <button class="actionBtn" id="surveyBtn">📝&nbsp;&nbsp;DO SURVEY</button>
     </section>
   </main>
 
-  <script src="./b2b-sec.js?v=1"></script>
+  <script src="./drills.js?v=1"></script>
+  <script src="./b2b-sec.js?v=2"></script>
 </body>
 </html>
