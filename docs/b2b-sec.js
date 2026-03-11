@@ -1,5 +1,5 @@
 (() => {
-  const STORAGE_KEY = "tns_history_back_to_basics_v4";
+  const STORAGE_KEY = "tns_history_back_to_basics_v5";
   const DEFAULT_DRILL_ID = "back-to-basics";
 
   function query(name) {
@@ -36,7 +36,6 @@
   function demoSession(drill) {
     const hits = Array(drill.laneCount).fill(0);
     const stars = Array(drill.laneCount).fill(0);
-
     [1,2,3,4,5,6,7,9,10].forEach(n => hits[n - 1] = 1);
     [4,6].forEach(n => stars[n - 1] = 1);
 
@@ -88,23 +87,58 @@
     return window.TNS_scoreSession(session);
   }
 
-  function bestSession(history) {
-    if (!history.length) return null;
-    return [...history].sort((a, b) => scoreSession(b) - scoreSession(a))[0];
+  function bestScore(history) {
+    if (!history.length) return 0;
+    return Math.max(...history.map(scoreSession));
   }
 
-  function renderHeader(drill, history) {
-    const level = window.TNS_getCurrentLevel(drill, history);
-    const stars = window.TNS_getLevelStars(drill, history);
+  function renderHeader(drill, history, currentSession, previousBest, previousLevel) {
+    const currentLevel = window.TNS_getCurrentLevel(drill, history);
+    const starString = window.TNS_getLevelStars(drill, history);
     const nextReq = window.TNS_getNextRequirementText(drill, history);
-    const best = bestSession(history);
+    const best = bestScore(history);
+    const currentScore = currentSession ? scoreSession(currentSession) : 0;
+    const isNewBest = currentSession && currentScore >= previousBest && currentScore > 0;
 
     document.getElementById("drillTitle").textContent = drill.title;
-    document.getElementById("levelChip").textContent = `LEVEL ${level}`;
-    document.getElementById("levelLabel").textContent = `LEVEL ${level}`;
-    document.getElementById("levelStars").textContent = stars;
+    document.getElementById("levelChip").textContent = `LEVEL ${currentLevel}`;
+    document.getElementById("levelLabel").textContent = `LEVEL ${currentLevel}`;
     document.getElementById("nextReq").textContent = nextReq || "";
-    document.getElementById("lifetimeBest").textContent = best ? `${scoreSession(best)}/10` : "0/10";
+    document.getElementById("lifetimeBest").textContent = `${best}/10`;
+
+    const bestBadge = document.getElementById("bestBadge");
+    if (isNewBest) bestBadge.classList.remove("hidden");
+    else bestBadge.classList.add("hidden");
+
+    const levelChip = document.getElementById("levelChip");
+    if (currentLevel > previousLevel) {
+      levelChip.classList.remove("levelPulse");
+      void levelChip.offsetWidth;
+      levelChip.classList.add("levelPulse");
+    }
+
+    animateStars(starString);
+  }
+
+  function animateStars(starString) {
+    const starsEl = document.getElementById("levelStars");
+    starsEl.textContent = "☆☆☆☆☆";
+
+    let i = 0;
+    function step() {
+      if (i > starString.length) return;
+      starsEl.textContent = starString.slice(0, i) + "☆".repeat(Math.max(0, 5 - i));
+      starsEl.classList.remove("starFlash");
+      void starsEl.offsetWidth;
+      starsEl.classList.add("starFlash");
+      i += 1;
+      if (i <= starString.replace(/☆/g, "").length) {
+        setTimeout(step, 140);
+      } else {
+        starsEl.textContent = starString;
+      }
+    }
+    step();
   }
 
   function makeNodeIcon(shape, lane) {
@@ -202,27 +236,32 @@
     };
 
     document.getElementById("surveyBtn").onclick = () => {
-      if (drill.surveyUrl) {
-        window.open(drill.surveyUrl, "_blank", "noopener");
-      } else {
-        alert("Survey link not set yet.");
-      }
+      if (drill.surveyUrl) window.open(drill.surveyUrl, "_blank", "noopener");
+      else alert("Survey link not set yet.");
     };
   }
 
   function init() {
     const drill = getDrill();
     let history = getHistory();
+    const previousBest = bestScore(history);
+    const previousLevel = window.TNS_getCurrentLevel(drill, history);
+
     const urlSession = createSessionFromUrl(drill);
     const hasHits = new URLSearchParams(window.location.search).has("hits");
+    let currentSession = null;
 
     if (hasHits) {
       history = addSession(history, urlSession);
+      currentSession = urlSession;
     } else if (!history.length) {
       history = addSession(history, demoSession(drill));
+      currentSession = history[0];
+    } else {
+      currentSession = history[0];
     }
 
-    renderHeader(drill, history);
+    renderHeader(drill, history, currentSession, previousBest, previousLevel);
     renderMatrix(drill, history);
     wireButtons(drill);
   }
