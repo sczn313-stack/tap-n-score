@@ -11,12 +11,10 @@
   --blue2:#1d3871;
   --red:#e14a4a;
   --white:#f6f8fc;
-  --muted:#d6dceb;
   --green:#96db71;
   --orange:#e4a444;
   --orangeBorder:#2a2115;
   --shadow:0 10px 30px rgba(0,0,0,.34);
-  --radius:18px;
 }
 
 *{box-sizing:border-box}
@@ -34,20 +32,20 @@ html,body{
 .appShell{
   width:min(980px, 100%);
   margin:0 auto;
-  padding:12px 12px 20px;
+  padding:10px 12px 18px;
 }
 
 .topHeader{
   display:grid;
-  grid-template-columns:56px 1fr auto;
+  grid-template-columns:52px 1fr auto;
   align-items:center;
   gap:10px;
   margin-bottom:8px;
 }
 
 .miniBtn{
-  height:50px;
-  min-width:50px;
+  height:46px;
+  min-width:46px;
   border:0;
   border-radius:14px;
   background:rgba(17,25,44,.92);
@@ -57,7 +55,7 @@ html,body{
 }
 
 .backBtn{
-  font-size:34px;
+  font-size:32px;
   line-height:1;
   font-weight:900;
 }
@@ -66,7 +64,7 @@ html,body{
   text-align:center;
   font-weight:900;
   letter-spacing:.5px;
-  font-size:clamp(44px, 6vw, 76px);
+  font-size:clamp(40px, 5.2vw, 68px);
   line-height:1;
 }
 
@@ -75,11 +73,11 @@ html,body{
 .secB{color:#376dff}
 
 .levelChip{
-  padding:12px 18px;
+  padding:10px 16px;
   border-radius:18px;
   color:#221b0c;
   font-weight:900;
-  font-size:clamp(16px,1.8vw,24px);
+  font-size:clamp(15px,1.6vw,22px);
   background:linear-gradient(180deg, #f7db72 0%, var(--gold2) 100%);
   box-shadow:inset 0 1px 0 rgba(255,255,255,.45), var(--shadow);
   white-space:nowrap;
@@ -94,15 +92,15 @@ html,body{
 }
 
 .drillPill{
-  min-height:52px;
-  padding:11px 16px;
+  min-height:48px;
+  padding:10px 16px;
   border-radius:16px;
   background:linear-gradient(180deg, #355fa9 0%, #1d3871 100%);
   border:1px solid #6284c7;
   display:flex;
   align-items:center;
   font-weight:900;
-  font-size:clamp(18px,2vw,32px);
+  font-size:clamp(18px,2vw,30px);
   box-shadow:var(--shadow), inset 0 1px 0 rgba(255,255,255,.14);
 }
 
@@ -117,8 +115,8 @@ html,body{
 }
 
 .historyBtn{
-  padding:10px 18px;
-  font-size:clamp(16px,1.8vw,24px);
+  padding:10px 16px;
+  font-size:clamp(15px,1.6vw,22px);
   white-space:nowrap;
 }
 
@@ -138,8 +136,8 @@ html,body{
 
 .matrixHeader,.matrixRow{
   display:grid;
-  grid-template-columns:118px repeat(5, minmax(105px, 1fr));
-  min-width:660px;
+  grid-template-columns:136px repeat(5, minmax(102px, 1fr));
+  min-width:675px;
 }
 
 .matrixHeader{
@@ -148,7 +146,7 @@ html,body{
 
 .cornerHead,.dateHead,.laneCell,.cell{
   border:1px solid rgba(255,255,255,.12);
-  min-height:68px;
+  min-height:64px;
 }
 
 .cornerHead{
@@ -159,23 +157,25 @@ html,body{
   color:#dce2ef;
   background:#0f1730;
   border-top-left-radius:14px;
-  font-size:clamp(15px,1.5vw,22px);
+  font-size:clamp(15px,1.4vw,20px);
 }
 
 .dateHead{
-  padding:7px 5px;
+  padding:6px 5px;
   text-align:center;
   background:linear-gradient(180deg, rgba(242,200,75,.18), rgba(242,200,75,.06));
 }
+
 .dateHead .date{
   font-weight:900;
-  font-size:clamp(16px,1.8vw,30px);
+  font-size:clamp(15px,1.7vw,28px);
 }
+
 .dateHead .score{
-  margin-top:4px;
+  margin-top:3px;
   font-weight:900;
   color:#ffd86e;
-  font-size:clamp(18px,2vw,34px);
+  font-size:clamp(18px,1.9vw,32px);
 }
 
 .matrixBody .matrixRow:last-child .laneCell{border-bottom-left-radius:14px}
@@ -185,30 +185,65 @@ html,body{
   display:flex;
   align-items:center;
   justify-content:flex-start;
-  padding:8px 12px;
+  gap:12px;
+  padding:8px 10px;
   background:#0f1730;
 }
 
-.laneBadge{
+.nodeIcon{
   width:48px;
   height:48px;
-  border-radius:50%;
-  border:4px solid var(--orangeBorder);
   background:var(--orange);
-  position:relative;
+  border:4px solid var(--orangeBorder);
   box-shadow:inset 0 1px 0 rgba(255,255,255,.18);
+  position:relative;
+  flex:0 0 48px;
 }
-.laneBadge.square{border-radius:8px}
-.laneBadge::after{
-  content:"+";
+.nodeIcon.circle{border-radius:50%}
+.nodeIcon.square{border-radius:8px}
+
+.nodeNum{
   position:absolute;
   inset:0;
   display:grid;
   place-items:center;
-  color:#151515;
-  font-size:32px;
+  color:#fff1c9;
   font-weight:900;
+  font-size:28px;
   line-height:1;
+  z-index:1;
+}
+
+.nodeReticleH,
+.nodeReticleV{
+  position:absolute;
+  background:#141414;
+  z-index:2;
+  opacity:.96;
+}
+
+.nodeReticleH{
+  width:18px;
+  height:3px;
+  left:50%;
+  top:50%;
+  transform:translate(-50%, -50%);
+}
+
+.nodeReticleV{
+  width:3px;
+  height:18px;
+  left:50%;
+  top:50%;
+  transform:translate(-50%, -50%);
+}
+
+.laneLabel{
+  color:#ffd77a;
+  font-weight:900;
+  font-size:30px;
+  line-height:1;
+  min-width:24px;
 }
 
 .cell{
@@ -220,24 +255,25 @@ html,body{
 }
 
 .mark{
-  font-size:48px;
+  font-size:46px;
   line-height:1;
   font-weight:900;
 }
+
 .mark.hit{color:var(--green)}
 .mark.miss{color:#e25959}
 
 .star{
   position:absolute;
-  right:12px;
-  top:10px;
+  right:10px;
+  top:8px;
   color:var(--gold);
-  font-size:26px;
+  font-size:24px;
 }
 
 .summaryRow{
   display:grid;
-  grid-template-columns:1fr 1fr;
+  grid-template-columns:1fr 1.15fr;
   gap:12px;
   margin-top:12px;
 }
@@ -245,32 +281,33 @@ html,body{
 .summaryCard{
   padding:12px 14px;
   border-color:var(--goldLine);
-  min-height:118px;
+  min-height:114px;
 }
 
 .summaryLabel{
   color:#ffd77a;
   font-weight:900;
-  font-size:clamp(15px,1.4vw,22px);
+  font-size:clamp(15px,1.3vw,21px);
 }
+
 .summaryValue{
   margin-top:8px;
   font-weight:900;
-  font-size:clamp(38px,4vw,68px);
+  font-size:clamp(36px,3.7vw,62px);
   color:#dcedff;
 }
 
 .stars{
   margin-top:8px;
   color:var(--gold);
-  font-size:clamp(24px,2.4vw,40px);
+  font-size:clamp(23px,2.2vw,36px);
   letter-spacing:4px;
 }
 
 .nextReq{
   margin-top:6px;
   color:#eef2fb;
-  font-size:clamp(13px,1.2vw,18px);
+  font-size:clamp(13px,1.1vw,17px);
   font-weight:800;
   line-height:1.2;
 }
@@ -280,14 +317,15 @@ html,body{
   gap:12px;
   margin-top:12px;
 }
+
 .actions3{
   grid-template-columns:1fr 1fr 1fr;
 }
 
 .actionBtn{
-  min-height:62px;
-  padding:14px 14px;
-  font-size:clamp(15px,1.55vw,24px);
+  min-height:58px;
+  padding:13px 14px;
+  font-size:clamp(14px,1.45vw,22px);
   text-align:center;
   white-space:nowrap;
 }
@@ -304,15 +342,15 @@ html,body{
   }
 
   .topHeader{
-    grid-template-columns:50px 1fr auto;
+    grid-template-columns:48px 1fr auto;
   }
 
   .secMark{
-    font-size:42px;
+    font-size:38px;
   }
 
   .drillPill{
     font-size:20px;
-    min-height:48px;
+    min-height:46px;
   }
 }
