@@ -1,5 +1,5 @@
 (() => {
-  const STORAGE_KEY = "tns_history_back_to_basics_v8";
+  const STORAGE_KEY = "tns_history_back_to_basics_v9";
   const DEFAULT_DRILL_ID = "back-to-basics";
 
   function query(name) {
@@ -22,10 +22,12 @@
     const hasHits = new URLSearchParams(window.location.search).has("hits");
     const now = new Date();
     const date = query("date") || now.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+    const time = query("time") || now.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
 
     return {
       id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
       date,
+      time,
       hits: parseCsvBits(query("hits"), drill.laneCount),
       stars: parseCsvBits(query("stars"), drill.laneCount),
       verified: true,
@@ -39,9 +41,12 @@
     [1,2,3,4,5,6,7,9,10].forEach(n => hits[n - 1] = 1);
     [4,6].forEach(n => stars[n - 1] = 1);
 
+    const now = new Date();
+
     return {
       id: "demo-session",
-      date: new Date().toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+      date: now.toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+      time: now.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }),
       hits,
       stars,
       verified: true,
@@ -64,10 +69,12 @@
   function sameSession(a, b) {
     return JSON.stringify({
       date: a.date,
+      time: a.time,
       hits: a.hits,
       stars: a.stars
     }) === JSON.stringify({
       date: b.date,
+      time: b.time,
       hits: b.hits,
       stars: b.stars
     });
@@ -138,6 +145,8 @@
     document.getElementById("nextReq").textContent = nextReq || "";
     document.getElementById("nextHint").textContent = nextHint || "";
     document.getElementById("lifetimeBest").textContent = `${best}/10`;
+    document.getElementById("timeStamp").textContent =
+      currentSession ? `${currentSession.date} • ${currentSession.time}` : "—";
 
     const bestBadge = document.getElementById("bestBadge");
     if (isNewBest) bestBadge.classList.remove("hidden");
