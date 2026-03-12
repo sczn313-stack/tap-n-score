@@ -1,65 +1,242 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-  <title>SEC — Back to Basics</title>
-  <link rel="stylesheet" href="b2b-sec.css?v=12" />
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SEC — Shooter Experience Card</title>
+
+<link rel="stylesheet" href="./b2b-sec.css">
 </head>
+
 <body>
-  <main class="appShell">
-    <header class="topHeader">
-      <button class="miniBtn backBtn" id="backBtn" aria-label="Back">‹</button>
+<div class="appShell">
 
-      <div class="secMark" aria-label="SEC">
-        <span class="secR">S</span><span class="secW">E</span><span class="secB">C</span>
+  <!-- ================= TOP HEADER ================= -->
+  <div class="topHeader">
+
+    <button class="miniBtn backBtn" onclick="history.back()">‹</button>
+
+    <div class="secMark">
+      <span class="secR">S</span><span class="secW">E</span><span class="secB">C</span>
+    </div>
+
+    <div id="levelChip" class="levelChip">LEVEL 1</div>
+
+  </div>
+
+
+  <!-- ================= DRILL HEADER ================= -->
+  <div class="subHeader">
+
+    <div class="drillPill">
+      <div class="drillTitleMain">BACK-TO-BASICS</div>
+      <div class="drillTitleSub">
+        <span class="subR">SCAN</span>
+        <span class="subW"> → SHOOT → </span>
+        <span class="subB">SCORE</span>
+      </div>
+    </div>
+
+    <button class="historyBtn">HISTORY</button>
+
+  </div>
+
+
+  <!-- ================= MATRIX CARD ================= -->
+  <div class="matrixCard">
+
+    <!-- HEADER ROW -->
+    <div class="matrixHeader">
+
+      <div class="cornerHead">LANE</div>
+
+      <div class="dateHead">
+        <div class="date">RUN 1</div>
+        <div class="score">—</div>
       </div>
 
-      <div class="levelChip" id="levelChip">LEVEL 1</div>
-    </header>
+      <div class="dateHead">
+        <div class="date">RUN 2</div>
+        <div class="score">—</div>
+      </div>
 
-    <section class="subHeader">
-      <div class="drillPill">
-        <div class="drillTitleMain" id="drillTitle">Back to Basics</div>
-        <div class="drillTitleSub" aria-label="Shooter Experience Card">
-          <span class="subR">S</span><span class="subW">hooter </span><span class="subW">E</span><span class="subW">xperience </span><span class="subB">C</span><span class="subW">ard</span>
+      <div class="dateHead">
+        <div class="date">RUN 3</div>
+        <div class="score">—</div>
+      </div>
+
+      <div class="dateHead">
+        <div class="date">RUN 4</div>
+        <div class="score">—</div>
+      </div>
+
+      <div class="dateHead">
+        <div class="date">RUN 5</div>
+        <div class="score">—</div>
+      </div>
+
+    </div>
+
+
+    <!-- BODY -->
+    <div class="matrixBody">
+
+      <!-- LANE 1 -->
+      <div class="matrixRow">
+
+        <div class="laneCell">
+          <div class="nodeIcon circle">
+            <div class="nodeNum">1</div>
+            <div class="nodeReticleH"></div>
+            <div class="nodeReticleV"></div>
+          </div>
+          <div class="laneLabel">A</div>
         </div>
+
+        <div class="cell"></div>
+        <div class="cell"></div>
+        <div class="cell"></div>
+        <div class="cell"></div>
+        <div class="cell"></div>
+
       </div>
 
-      <button class="historyBtn" id="historyBtn">History ›</button>
-    </section>
 
-    <section class="matrixCard">
-      <div class="matrixHeader" id="matrixHeader"></div>
-      <div class="matrixBody" id="matrixBody"></div>
-    </section>
+      <!-- LANE 2 -->
+      <div class="matrixRow">
 
-    <section class="summaryRow">
-      <div class="summaryCard bestCard">
-        <div class="summaryLabel">LIFETIME BEST SCORE</div>
-        <div class="summaryValueWrap">
-          <div class="summaryValue" id="lifetimeBest">0/10</div>
-          <div class="bestBadge hidden" id="bestBadge">NEW BEST</div>
+        <div class="laneCell">
+          <div class="nodeIcon square">
+            <div class="nodeNum">2</div>
+            <div class="nodeReticleH"></div>
+            <div class="nodeReticleV"></div>
+          </div>
+          <div class="laneLabel">B</div>
         </div>
-        <div class="timeStamp" id="timeStamp">—</div>
+
+        <div class="cell"></div>
+        <div class="cell"></div>
+        <div class="cell"></div>
+        <div class="cell"></div>
+        <div class="cell"></div>
+
       </div>
 
-      <div class="summaryCard levelCard">
-        <div class="summaryLabel" id="levelLabel">LEVEL 1</div>
-        <div class="stars" id="levelStars">★☆☆☆☆</div>
-        <div class="nextReq" id="nextReq">Complete 1 verified session</div>
-        <div class="nextHint" id="nextHint">One more strong session moves you up.</div>
+
+      <!-- LANE 3 -->
+      <div class="matrixRow">
+
+        <div class="laneCell">
+          <div class="nodeIcon circle">
+            <div class="nodeNum">3</div>
+            <div class="nodeReticleH"></div>
+            <div class="nodeReticleV"></div>
+          </div>
+          <div class="laneLabel">C</div>
+        </div>
+
+        <div class="cell"></div>
+        <div class="cell"></div>
+        <div class="cell"></div>
+        <div class="cell"></div>
+        <div class="cell"></div>
+
       </div>
-    </section>
 
-    <section class="actions actions3">
-      <button class="actionBtn" id="newScanBtn">📷&nbsp;NEW SCAN</button>
-      <button class="actionBtn" id="vendorBtn">🎯&nbsp;BUY MORE TARGETS LIKE THIS</button>
-      <button class="actionBtn" id="surveyBtn">📝&nbsp;DO SURVEY</button>
-    </section>
-  </main>
 
-  <script src="drills.js?v=12"></script>
-  <script src="b2b-sec.js?v=12"></script>
+      <!-- LANE 4 -->
+      <div class="matrixRow">
+
+        <div class="laneCell">
+          <div class="nodeIcon square">
+            <div class="nodeNum">4</div>
+            <div class="nodeReticleH"></div>
+            <div class="nodeReticleV"></div>
+          </div>
+          <div class="laneLabel">D</div>
+        </div>
+
+        <div class="cell"></div>
+        <div class="cell"></div>
+        <div class="cell"></div>
+        <div class="cell"></div>
+        <div class="cell"></div>
+
+      </div>
+
+
+      <!-- LANE 5 -->
+      <div class="matrixRow">
+
+        <div class="laneCell">
+          <div class="nodeIcon circle">
+            <div class="nodeNum">5</div>
+            <div class="nodeReticleH"></div>
+            <div class="nodeReticleV"></div>
+          </div>
+          <div class="laneLabel">E</div>
+        </div>
+
+        <div class="cell"></div>
+        <div class="cell"></div>
+        <div class="cell"></div>
+        <div class="cell"></div>
+        <div class="cell"></div>
+
+      </div>
+
+    </div>
+  </div>
+
+
+
+  <!-- ================= SUMMARY ================= -->
+  <div class="summaryRow">
+
+    <!-- BEST SCORE -->
+    <div class="summaryCard">
+      <div class="summaryLabel">BEST SCORE</div>
+
+      <div class="summaryValueWrap">
+        <div id="bestScore" class="summaryValue">0</div>
+        <div id="bestBadge" class="bestBadge hidden">NEW BEST</div>
+      </div>
+
+      <div class="stars">★★★★★</div>
+    </div>
+
+
+    <!-- CURRENT RESULT -->
+    <div class="summaryCard">
+
+      <div class="summaryLabel">CURRENT RUN</div>
+
+      <div class="summaryValueWrap">
+        <div id="currentScore" class="summaryValue">0</div>
+      </div>
+
+      <div class="timeStamp" id="timeStamp">—</div>
+
+      <div class="nextReq">Complete all lanes</div>
+      <div class="nextHint">Advance to next level after mastery</div>
+
+    </div>
+
+  </div>
+
+
+
+  <!-- ================= ACTIONS ================= -->
+  <div class="actions actions3">
+
+    <button class="actionBtn">TRY AGAIN</button>
+
+    <button class="actionBtn">NEXT LEVEL</button>
+
+    <button class="actionBtn">SHARE SEC</button>
+
+  </div>
+
+</div>
 </body>
 </html>
