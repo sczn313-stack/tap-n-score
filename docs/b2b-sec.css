@@ -1,429 +1,314 @@
-:root{
-  --bg1:#0b1220;
-  --bg2:#142548;
-  --line:#415271;
-  --gold:#f2c84b;
-  --gold2:#d6a930;
-  --goldLine:#b98725;
-  --red:#e14a4a;
-  --white:#f6f8fc;
-  --green:#9ae56e;
-  --orange:#e4a444;
-  --orangeBorder:#2a2115;
-  --shadow:0 10px 30px rgba(0,0,0,.34);
-}
+(() => {
+  const STORAGE_KEY = "tns_history_back_to_basics_v9";
+  const DEFAULT_DRILL_ID = "back-to-basics";
 
-*{box-sizing:border-box}
-html,body{
-  margin:0;
-  min-height:100%;
-  font-family:Arial, Helvetica, sans-serif;
-  color:var(--white);
-  background:
-    radial-gradient(circle at 20% 10%, rgba(74,111,194,.30), transparent 28%),
-    radial-gradient(circle at 80% 15%, rgba(46,78,148,.22), transparent 24%),
-    linear-gradient(180deg, var(--bg2) 0%, var(--bg1) 100%);
-}
-
-.appShell{
-  width:min(980px, 100%);
-  margin:0 auto;
-  padding:10px 12px 18px;
-}
-
-.topHeader{
-  display:grid;
-  grid-template-columns:52px 1fr auto;
-  align-items:center;
-  gap:10px;
-  margin-bottom:8px;
-}
-
-.miniBtn{
-  height:46px;
-  min-width:46px;
-  border:0;
-  border-radius:14px;
-  background:rgba(17,25,44,.92);
-  color:var(--white);
-  box-shadow:var(--shadow);
-  cursor:pointer;
-}
-
-.backBtn{
-  font-size:32px;
-  line-height:1;
-  font-weight:900;
-}
-
-.secMark{
-  text-align:center;
-  font-weight:900;
-  letter-spacing:.5px;
-  font-size:clamp(40px, 5.2vw, 68px);
-  line-height:1;
-}
-
-.secR{color:var(--red)}
-.secW{color:#ffffff}
-.secB{color:#376dff}
-
-.levelChip{
-  padding:10px 16px;
-  border-radius:18px;
-  color:#221b0c;
-  font-weight:900;
-  font-size:clamp(15px,1.6vw,22px);
-  background:linear-gradient(180deg, #f7db72 0%, var(--gold2) 100%);
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.45), var(--shadow);
-  white-space:nowrap;
-}
-
-.levelPulse{
-  animation:levelPulse 1s ease 0s 2;
-}
-
-@keyframes levelPulse{
-  0%,100%{transform:scale(1);box-shadow:inset 0 1px 0 rgba(255,255,255,.45), 0 10px 30px rgba(0,0,0,.34)}
-  50%{transform:scale(1.06);box-shadow:0 0 0 6px rgba(242,200,75,.18), 0 0 28px rgba(242,200,75,.55)}
-}
-
-.subHeader{
-  display:grid;
-  grid-template-columns:1fr auto;
-  gap:10px;
-  align-items:center;
-  margin-bottom:10px;
-}
-
-.drillPill{
-  min-height:56px;
-  padding:8px 16px;
-  border-radius:16px;
-  background:linear-gradient(180deg, #355fa9 0%, #1d3871 100%);
-  border:1px solid #6284c7;
-  display:flex;
-  flex-direction:column;
-  justify-content:center;
-  box-shadow:var(--shadow), inset 0 1px 0 rgba(255,255,255,.14);
-}
-
-.drillTitleMain{
-  font-weight:900;
-  font-size:clamp(18px,2vw,28px);
-  line-height:1.05;
-}
-
-.drillTitleSub{
-  margin-top:2px;
-  font-weight:900;
-  font-size:clamp(12px,1.1vw,16px);
-  line-height:1.05;
-  letter-spacing:.2px;
-}
-
-.subR{color:var(--red)}
-.subW{color:#ffffff}
-.subB{color:#376dff}
-
-.historyBtn,.actionBtn{
-  border:1px solid #6e89c7;
-  color:var(--white);
-  background:linear-gradient(180deg, #3b5fa6 0%, #24478c 100%);
-  border-radius:18px;
-  box-shadow:var(--shadow), inset 0 1px 0 rgba(255,255,255,.16);
-  cursor:pointer;
-  font-weight:900;
-}
-
-.historyBtn{
-  padding:10px 16px;
-  font-size:clamp(15px,1.6vw,22px);
-  white-space:nowrap;
-}
-
-.matrixCard,.summaryCard{
-  background:
-    linear-gradient(180deg, rgba(255,255,255,.02), rgba(255,255,255,.01)),
-    linear-gradient(180deg, #131d32 0%, #0e1628 100%);
-  border:1px solid #516280;
-  border-radius:22px;
-  box-shadow:var(--shadow);
-}
-
-.matrixCard{
-  padding:10px;
-  overflow:auto;
-}
-
-.matrixHeader,.matrixRow{
-  display:grid;
-  grid-template-columns:136px repeat(5, minmax(102px, 1fr));
-  min-width:675px;
-}
-
-.matrixHeader{
-  margin-bottom:8px;
-}
-
-.cornerHead,.dateHead,.laneCell,.cell{
-  border:1px solid rgba(255,255,255,.12);
-  min-height:64px;
-}
-
-.cornerHead{
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  font-weight:900;
-  color:#dce2ef;
-  background:#0f1730;
-  border-top-left-radius:14px;
-  font-size:clamp(15px,1.4vw,20px);
-}
-
-.dateHead{
-  padding:6px 5px;
-  text-align:center;
-  background:linear-gradient(180deg, rgba(242,200,75,.18), rgba(242,200,75,.06));
-}
-
-.dateHead .date{
-  font-weight:900;
-  font-size:clamp(15px,1.7vw,28px);
-}
-
-.dateHead .score{
-  margin-top:3px;
-  font-weight:900;
-  color:#ffd86e;
-  font-size:clamp(18px,1.9vw,32px);
-}
-
-.matrixBody .matrixRow:last-child .laneCell{border-bottom-left-radius:14px}
-.matrixBody .matrixRow:last-child .cell:last-child{border-bottom-right-radius:14px}
-
-.laneCell{
-  display:flex;
-  align-items:center;
-  justify-content:flex-start;
-  gap:12px;
-  padding:8px 10px;
-  background:#0f1730;
-}
-
-.nodeIcon{
-  width:48px;
-  height:48px;
-  background:var(--orange);
-  border:4px solid var(--orangeBorder);
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.18);
-  position:relative;
-  flex:0 0 48px;
-}
-.nodeIcon.circle{border-radius:50%}
-.nodeIcon.square{border-radius:8px}
-
-.nodeNum{
-  position:absolute;
-  inset:0;
-  display:grid;
-  place-items:center;
-  color:#fff7d8;
-  text-shadow:0 0 6px rgba(255,245,180,.18);
-  font-weight:900;
-  font-size:32px;
-  line-height:1;
-  z-index:1;
-}
-
-.nodeReticleH,
-.nodeReticleV{
-  position:absolute;
-  background:#111111;
-  z-index:2;
-  opacity:.72;
-}
-
-.nodeReticleH{
-  width:10px;
-  height:2px;
-  left:50%;
-  top:50%;
-  transform:translate(-50%, -50%);
-}
-
-.nodeReticleV{
-  width:2px;
-  height:10px;
-  left:50%;
-  top:50%;
-  transform:translate(-50%, -50%);
-}
-
-.laneLabel{
-  color:#ffe08a;
-  text-shadow:0 0 6px rgba(255,220,120,.12);
-  font-weight:900;
-  font-size:32px;
-  line-height:1;
-  min-width:26px;
-}
-
-.cell{
-  position:relative;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  background:linear-gradient(180deg, rgba(255,255,255,.015), rgba(53,95,169,.06));
-}
-
-.mark{
-  font-size:50px;
-  line-height:1;
-  font-weight:900;
-}
-
-.mark.hit{color:var(--green)}
-.mark.miss{color:#f06464}
-
-.star{
-  position:absolute;
-  right:10px;
-  top:8px;
-  color:var(--gold);
-  font-size:24px;
-}
-
-.summaryRow{
-  display:grid;
-  grid-template-columns:1fr 1.15fr;
-  gap:12px;
-  margin-top:12px;
-}
-
-.summaryCard{
-  padding:12px 14px;
-  border-color:var(--goldLine);
-  min-height:114px;
-}
-
-.summaryLabel{
-  color:#ffd77a;
-  font-weight:900;
-  font-size:clamp(15px,1.3vw,21px);
-}
-
-.summaryValueWrap{
-  display:flex;
-  align-items:flex-end;
-  gap:10px;
-  margin-top:8px;
-}
-
-.summaryValue{
-  font-weight:900;
-  font-size:clamp(36px,3.7vw,62px);
-  color:#dcedff;
-}
-
-.bestBadge{
-  padding:6px 10px;
-  border-radius:12px;
-  background:linear-gradient(180deg, #f7db72 0%, var(--gold2) 100%);
-  color:#221b0c;
-  font-size:14px;
-  font-weight:900;
-  white-space:nowrap;
-  animation:bestPop .55s ease;
-}
-
-@keyframes bestPop{
-  0%{transform:scale(.8);opacity:0}
-  100%{transform:scale(1);opacity:1}
-}
-
-.hidden{display:none}
-
-.stars{
-  margin-top:8px;
-  color:var(--gold);
-  font-size:clamp(23px,2.2vw,36px);
-  letter-spacing:4px;
-}
-
-.starFlash{
-  animation:starFlash .65s ease;
-}
-
-@keyframes starFlash{
-  0%{opacity:.25;transform:scale(.96)}
-  60%{opacity:1;transform:scale(1.08)}
-  100%{opacity:1;transform:scale(1)}
-}
-
-.nextReq{
-  margin-top:6px;
-  color:#eef2fb;
-  font-size:clamp(13px,1.1vw,17px);
-  font-weight:800;
-  line-height:1.2;
-}
-
-.nextHint{
-  margin-top:5px;
-  color:#d9e5ff;
-  font-size:clamp(12px,1vw,15px);
-  line-height:1.15;
-  opacity:.95;
-}
-
-.actions{
-  display:grid;
-  gap:12px;
-  margin-top:12px;
-}
-
-.actions3{
-  grid-template-columns:1fr 1fr 1fr;
-}
-
-.actionBtn{
-  min-height:58px;
-  padding:13px 14px;
-  font-size:clamp(14px,1.45vw,22px);
-  text-align:center;
-  white-space:nowrap;
-}
-
-@media (max-width:860px){
-  .subHeader{grid-template-columns:1fr}
-  .historyBtn{justify-self:end}
-}
-
-@media (max-width:720px){
-  .summaryRow,
-  .actions3{
-    grid-template-columns:1fr;
+  function query(name) {
+    return new URLSearchParams(window.location.search).get(name);
   }
 
-  .topHeader{
-    grid-template-columns:48px 1fr auto;
+  function parseCsvBits(value, count) {
+    if (!value) return Array(count).fill(0);
+    const out = value.split(",").slice(0, count).map(v => Number(v) ? 1 : 0);
+    while (out.length < count) out.push(0);
+    return out;
   }
 
-  .secMark{
-    font-size:38px;
+  function getDrill() {
+    const drillId = query("drill") || DEFAULT_DRILL_ID;
+    return window.TNS_getDrill(drillId);
   }
 
-  .drillPill{
-    min-height:54px;
+  function createSessionFromUrl(drill) {
+    const hasHits = new URLSearchParams(window.location.search).has("hits");
+    const now = new Date();
+    const date = query("date") || now.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+    const time = query("time") || now.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+
+    return {
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      date,
+      time,
+      hits: parseCsvBits(query("hits"), drill.laneCount),
+      stars: parseCsvBits(query("stars"), drill.laneCount),
+      verified: true,
+      fromUrl: hasHits
+    };
   }
 
-  .drillTitleMain{
-    font-size:20px;
+  function demoSession(drill) {
+    const hits = Array(drill.laneCount).fill(0);
+    const stars = Array(drill.laneCount).fill(0);
+    [1,2,3,4,5,6,7,9,10].forEach(n => hits[n - 1] = 1);
+    [4,6].forEach(n => stars[n - 1] = 1);
+
+    const now = new Date();
+
+    return {
+      id: "demo-session",
+      date: now.toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+      time: now.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }),
+      hits,
+      stars,
+      verified: true,
+      fromUrl: false
+    };
   }
 
-  .drillTitleSub{
-    font-size:12px;
+  function getHistory() {
+    try {
+      return JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
+    } catch {
+      return [];
+    }
   }
-}
+
+  function saveHistory(history) {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(history));
+  }
+
+  function sameSession(a, b) {
+    return JSON.stringify({
+      date: a.date,
+      time: a.time,
+      hits: a.hits,
+      stars: a.stars
+    }) === JSON.stringify({
+      date: b.date,
+      time: b.time,
+      hits: b.hits,
+      stars: b.stars
+    });
+  }
+
+  function addSession(history, session) {
+    const exists = history.some(item => sameSession(item, session));
+    if (!exists) {
+      history.unshift(session);
+      if (history.length > 25) history.length = 25;
+      saveHistory(history);
+    }
+    return getHistory();
+  }
+
+  function scoreSession(session) {
+    return window.TNS_scoreSession(session);
+  }
+
+  function bestScore(history) {
+    if (!history.length) return 0;
+    return Math.max(...history.map(scoreSession));
+  }
+
+  function getProgressHint(drill, history) {
+    const currentLevel = window.TNS_getCurrentLevel(drill, history);
+    const currentScores = history.map(scoreSession);
+
+    if (currentLevel >= drill.progression.maxLevel) {
+      return "You’ve reached the top level on this drill.";
+    }
+
+    if (currentLevel === 1) {
+      const has7 = currentScores.some(s => s >= 7);
+      return has7 ? "You’re ready to unlock the next level." : "Reach 7/10 once to level up.";
+    }
+
+    if (currentLevel === 2) {
+      const count8 = currentScores.filter(s => s >= 8).length;
+      return count8 === 1 ? "One more 8/10 session unlocks the next level." : "Reach 8/10 twice to level up.";
+    }
+
+    if (currentLevel === 3) {
+      const count9 = currentScores.filter(s => s >= 9).length;
+      return count9 === 1 ? "One more 9/10 session unlocks the next level." : "Reach 9/10 twice to level up.";
+    }
+
+    if (currentLevel === 4) {
+      const has10 = currentScores.some(s => s === 10);
+      return has10 ? "Clean run achieved." : "Shoot a clean 10/10 to reach the top level.";
+    }
+
+    return "Keep shooting verified sessions to progress.";
+  }
+
+  function renderHeader(drill, history, currentSession, previousBest, previousLevel) {
+    const currentLevel = window.TNS_getCurrentLevel(drill, history);
+    const starString = window.TNS_getLevelStars(drill, history);
+    const nextReq = window.TNS_getNextRequirementText(drill, history);
+    const nextHint = getProgressHint(drill, history);
+    const best = bestScore(history);
+    const currentScore = currentSession ? scoreSession(currentSession) : 0;
+    const isNewBest = currentSession && currentScore >= previousBest && currentScore > 0;
+
+    document.getElementById("drillTitle").textContent = drill.title;
+    document.getElementById("levelChip").textContent = `LEVEL ${currentLevel}`;
+    document.getElementById("levelLabel").textContent = `LEVEL ${currentLevel}`;
+    document.getElementById("nextReq").textContent = nextReq || "";
+    document.getElementById("nextHint").textContent = nextHint || "";
+    document.getElementById("lifetimeBest").textContent = `${best}/10`;
+    document.getElementById("timeStamp").textContent =
+      currentSession ? `${currentSession.date} • ${currentSession.time}` : "—";
+
+    const bestBadge = document.getElementById("bestBadge");
+    if (isNewBest) bestBadge.classList.remove("hidden");
+    else bestBadge.classList.add("hidden");
+
+    const levelChip = document.getElementById("levelChip");
+    if (currentLevel > previousLevel) {
+      levelChip.classList.remove("levelPulse");
+      void levelChip.offsetWidth;
+      levelChip.classList.add("levelPulse");
+    }
+
+    animateStars(starString);
+  }
+
+  function animateStars(starString) {
+    const starsEl = document.getElementById("levelStars");
+    starsEl.textContent = "☆☆☆☆☆";
+
+    const filledCount = (starString.match(/★/g) || []).length;
+    let i = 0;
+
+    function step() {
+      if (i > filledCount) {
+        starsEl.textContent = starString;
+        return;
+      }
+      starsEl.textContent = "★".repeat(i) + "☆".repeat(5 - i);
+      starsEl.classList.remove("starFlash");
+      void starsEl.offsetWidth;
+      starsEl.classList.add("starFlash");
+      i += 1;
+      setTimeout(step, 140);
+    }
+
+    step();
+  }
+
+  function makeNodeIcon(shape, lane) {
+    return `
+      <div class="nodeIcon ${shape}">
+        <div class="nodeNum">${lane}</div>
+        <div class="nodeReticleH"></div>
+        <div class="nodeReticleV"></div>
+      </div>
+    `;
+  }
+
+  function renderMatrix(drill, history) {
+    const header = document.getElementById("matrixHeader");
+    const body = document.getElementById("matrixBody");
+    const sessions = history.slice(0, 5);
+
+    header.innerHTML = "";
+    body.innerHTML = "";
+
+    const corner = document.createElement("div");
+    corner.className = "cornerHead";
+    corner.textContent = "Lanes";
+    header.appendChild(corner);
+
+    sessions.forEach(session => {
+      const cell = document.createElement("div");
+      cell.className = "dateHead";
+      cell.innerHTML = `
+        <div class="date">${session.date}</div>
+        <div class="score">${scoreSession(session)}/10</div>
+      `;
+      header.appendChild(cell);
+    });
+
+    for (let i = sessions.length; i < 5; i++) {
+      const cell = document.createElement("div");
+      cell.className = "dateHead";
+      cell.innerHTML = `<div class="date">—</div><div class="score">—</div>`;
+      header.appendChild(cell);
+    }
+
+    for (let lane = 1; lane <= drill.laneCount; lane++) {
+      const row = document.createElement("div");
+      row.className = "matrixRow";
+
+      const shape = drill.laneShapes[lane] === "square" ? "square" : "circle";
+
+      const laneCell = document.createElement("div");
+      laneCell.className = "laneCell";
+      laneCell.innerHTML = `
+        ${makeNodeIcon(shape, lane)}
+        <div class="laneLabel">${lane}</div>
+      `;
+      row.appendChild(laneCell);
+
+      for (let col = 0; col < 5; col++) {
+        const session = sessions[col];
+        const cell = document.createElement("div");
+        cell.className = "cell";
+
+        if (!session) {
+          cell.innerHTML = `<div class="mark miss" style="opacity:.18">•</div>`;
+        } else {
+          const hit = session.hits[lane - 1] === 1;
+          const star = session.stars[lane - 1] === 1;
+
+          cell.innerHTML = `
+            <div class="mark ${hit ? "hit" : "miss"}">${hit ? "✓" : "✕"}</div>
+            ${star ? `<div class="star">★</div>` : ""}
+          `;
+        }
+
+        row.appendChild(cell);
+      }
+
+      body.appendChild(row);
+    }
+  }
+
+  function wireButtons(drill) {
+    document.getElementById("backBtn").onclick = () => history.back();
+
+    document.getElementById("historyBtn").onclick = () => {
+      alert("History is shown in the grid.");
+    };
+
+    document.getElementById("newScanBtn").onclick = () => {
+      window.location.href = "./index.html";
+    };
+
+    document.getElementById("vendorBtn").textContent = `🎯  ${drill.vendorLabel}`;
+    document.getElementById("vendorBtn").onclick = () => {
+      window.open(drill.vendorUrl, "_blank", "noopener");
+    };
+
+    document.getElementById("surveyBtn").onclick = () => {
+      if (drill.surveyUrl) window.open(drill.surveyUrl, "_blank", "noopener");
+      else alert("Survey link not set yet.");
+    };
+  }
+
+  function init() {
+    const drill = getDrill();
+    let history = getHistory();
+    const previousBest = bestScore(history);
+    const previousLevel = window.TNS_getCurrentLevel(drill, history);
+
+    const urlSession = createSessionFromUrl(drill);
+    const hasHits = new URLSearchParams(window.location.search).has("hits");
+    let currentSession = null;
+
+    if (hasHits) {
+      history = addSession(history, urlSession);
+      currentSession = urlSession;
+    } else if (!history.length) {
+      history = addSession(history, demoSession(drill));
+      currentSession = history[0];
+    } else {
+      currentSession = history[0];
+    }
+
+    renderHeader(drill, history, currentSession, previousBest, previousLevel);
+    renderMatrix(drill, history);
+    wireButtons(drill);
+  }
+
+  init();
+})();
