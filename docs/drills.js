@@ -1,137 +1,126 @@
-window.TNS_DRILLS = {
+/* ============================================================
+   drills.js — Tap-n-Score Drill Engine v1.0
+   Back-to-Basics baseline implementation
+============================================================ */
+
+/* ---------- DRILL DEFINITIONS ---------- */
+
+const TNS_DRILLS = {
   "back-to-basics": {
     id: "back-to-basics",
     title: "Back to Basics",
-    vendor: "baker",
-    vendorLabel: "BUY MORE TARGETS LIKE THIS",
-    vendorUrl: "https://bakertargets.com/",
-    surveyUrl: "./survey.html?drill=back-to-basics",
+
     laneCount: 10,
 
+    /* Shape per lane (circle | square) */
     laneShapes: {
       1: "circle",
-      2: "square",
+      2: "circle",
       3: "circle",
-      4: "circle",
-      5: "square",
-      6: "circle",
+      4: "square",
+      5: "circle",
+      6: "square",
       7: "circle",
-      8: "square",
+      8: "circle",
       9: "circle",
       10: "circle"
     },
 
-    laneText: {
-      1: "1 — slow (5x)",
-      2: "Shoot 2 then 3 (4x)",
-      3: "Shoot 2 then 3 (4x)",
-      4: "4 — strong hand only (5x)",
-      5: "Shoot 5 then 6 (4x)",
-      6: "Shoot 5 then 6 (4x)",
-      7: "7 — weak hand only (5x)",
-      8: "Shoot 8 then 9 (4x)",
-      9: "Shoot 8 then 9 (4x)",
-      10: "10 — slow, both hands (5x)"
-    },
+    /* Vendor + survey */
+    vendorLabel: "BUY MORE TARGETS LIKE THIS",
+    vendorUrl: "https://bakertargets.com/",
+    surveyUrl: "",
 
-    scoring: {
-      mode: "binary-10",
-      maxScore: 10,
-      allowStar: true,
-      starLabel: "Center hit",
-      passValue: 1,
-      missValue: 0,
-      notes: [
-        "1 point per lane",
-        "Bullet breaking the line counts",
-        "Maximum score = 10"
-      ],
-      rules: [
-        "Multiple hits in a lane count once",
-        "Center hits earn a star"
-      ]
-    },
+    /* ---------- PROGRESSION MODEL ---------- */
 
     progression: {
       maxLevel: 5,
-      levels: {
-        1: {
-          label: "LEVEL 1",
-          stars: 1,
-          requirementText: "Reach 7/10 once",
-          unlockedBy(history) {
-            return history.length >= 1;
-          }
+
+      levels: [
+        {
+          level: 1,
+          stars: "★☆☆☆☆",
+          requirementText: "Complete 1 verified session",
+          achieved: history => history.length >= 1
         },
-        2: {
-          label: "LEVEL 2",
-          stars: 2,
-          requirementText: "Reach 8/10 twice",
-          unlockedBy(history) {
-            return history.some(s => scoreSession(s) >= 7);
-          }
+        {
+          level: 2,
+          stars: "★★☆☆☆",
+          requirementText: "Score 7/10 or higher once",
+          achieved: history =>
+            history.some(s => TNS_scoreSession(s) >= 7)
         },
-        3: {
-          label: "LEVEL 3",
-          stars: 3,
-          requirementText: "Reach 9/10 twice",
-          unlockedBy(history) {
-            return history.filter(s => scoreSession(s) >= 8).length >= 2;
-          }
+        {
+          level: 3,
+          stars: "★★★☆☆",
+          requirementText: "Score 8/10 or higher twice",
+          achieved: history =>
+            history.filter(s => TNS_scoreSession(s) >= 8).length >= 2
         },
-        4: {
-          label: "LEVEL 4",
-          stars: 4,
+        {
+          level: 4,
+          stars: "★★★★☆",
+          requirementText: "Score 9/10 or higher twice",
+          achieved: history =>
+            history.filter(s => TNS_scoreSession(s) >= 9).length >= 2
+        },
+        {
+          level: 5,
+          stars: "★★★★★",
           requirementText: "Shoot a clean 10/10",
-          unlockedBy(history) {
-            return history.filter(s => scoreSession(s) >= 9).length >= 2;
-          }
-        },
-        5: {
-          label: "LEVEL 5",
-          stars: 5,
-          requirementText: "MAX LEVEL REACHED",
-          unlockedBy(history) {
-            return history.some(s => scoreSession(s) === 10);
-          }
+          achieved: history =>
+            history.some(s => TNS_scoreSession(s) === 10)
         }
-      }
+      ]
     }
   }
 };
 
-function scoreSession(session) {
-  if (!session || !Array.isArray(session.hits)) return 0;
-  return session.hits.reduce((sum, v) => sum + (Number(v) ? 1 : 0), 0);
-}
+/* ---------- PUBLIC ENGINE API ---------- */
 
-window.TNS_scoreSession = scoreSession;
-
-window.TNS_getDrill = function (drillId) {
-  return window.TNS_DRILLS[drillId] || window.TNS_DRILLS["back-to-basics"];
+/* Get drill by ID */
+window.TNS_getDrill = function (id) {
+  return TNS_DRILLS[id] || TNS_DRILLS["back-to-basics"];
 };
 
+/* Score a session (count hits) */
+window.TNS_scoreSession = function (session) {
+  if (!session || !session.hits) return 0;
+  return session.hits.reduce((sum, v) => sum + (v ? 1 : 0), 0);
+};
+
+/* Determine current level */
 window.TNS_getCurrentLevel = function (drill, history) {
-  const safeHistory = Array.isArray(history) ? history : [];
+  if (!drill || !history) return 1;
+
+  const levels = drill.progression.levels;
   let current = 1;
 
-  for (let level = 1; level <= drill.progression.maxLevel; level++) {
-    const def = drill.progression.levels[level];
-    if (def && def.unlockedBy(safeHistory)) current = level;
+  for (const lvl of levels) {
+    if (lvl.achieved(history)) {
+      current = lvl.level;
+    } else {
+      break;
+    }
   }
 
-  return current;
+  return Math.min(current, drill.progression.maxLevel);
 };
 
-window.TNS_getNextRequirementText = function (drill, history) {
-  const current = window.TNS_getCurrentLevel(drill, history);
-  if (current >= drill.progression.maxLevel) return "MAX LEVEL REACHED";
-  const nextLevel = drill.progression.levels[current + 1];
-  return nextLevel ? nextLevel.requirementText : "";
-};
-
+/* Get stars string for level */
 window.TNS_getLevelStars = function (drill, history) {
-  const current = window.TNS_getCurrentLevel(drill, history);
-  const filled = drill.progression.levels[current].stars || current;
-  return "★".repeat(filled) + "☆".repeat(drill.progression.maxLevel - filled);
+  const level = window.TNS_getCurrentLevel(drill, history);
+  const lvlDef = drill.progression.levels[level - 1];
+  return lvlDef ? lvlDef.stars : "☆☆☆☆☆";
 };
+
+/* Requirement text for current level */
+window.TNS_getNextRequirementText = function (drill, history) {
+  const level = window.TNS_getCurrentLevel(drill, history);
+  const lvlDef = drill.progression.levels[level - 1];
+  return lvlDef ? lvlDef.requirementText : "";
+};
+
+/* ============================================================
+   END OF FILE
+============================================================ */
