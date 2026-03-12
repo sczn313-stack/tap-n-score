@@ -25,6 +25,10 @@ html,body{
     linear-gradient(180deg, var(--bg2) 0%, var(--bg1) 100%);
 }
 
+body{
+  padding:0;
+}
+
 .appShell{
   width:min(980px, 100%);
   margin:0 auto;
