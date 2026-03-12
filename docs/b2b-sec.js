@@ -1,5 +1,5 @@
 (() => {
-  const STORAGE_KEY = "tns_history_back_to_basics_v9";
+  const STORAGE_KEY = "tns_history_back_to_basics_v10";
   const DEFAULT_DRILL_ID = "back-to-basics";
 
   function query(name) {
@@ -8,7 +8,11 @@
 
   function parseCsvBits(value, count) {
     if (!value) return Array(count).fill(0);
-    const out = value.split(",").slice(0, count).map(v => Number(v) ? 1 : 0);
+    const out = value
+      .split(",")
+      .slice(0, count)
+      .map(v => (Number(v) ? 1 : 0));
+
     while (out.length < count) out.push(0);
     return out;
   }
@@ -21,13 +25,18 @@
   function createSessionFromUrl(drill) {
     const hasHits = new URLSearchParams(window.location.search).has("hits");
     const now = new Date();
-    const date = query("date") || now.toLocaleDateString("en-US", { month: "short", day: "numeric" });
-    const time = query("time") || now.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
 
     return {
       id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-      date,
-      time,
+      date:
+        query("date") ||
+        now.toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+      time:
+        query("time") ||
+        now.toLocaleTimeString("en-US", {
+          hour: "numeric",
+          minute: "2-digit"
+        }),
       hits: parseCsvBits(query("hits"), drill.laneCount),
       stars: parseCsvBits(query("stars"), drill.laneCount),
       verified: true,
@@ -38,15 +47,22 @@
   function demoSession(drill) {
     const hits = Array(drill.laneCount).fill(0);
     const stars = Array(drill.laneCount).fill(0);
-    [1,2,3,4,5,6,7,9,10].forEach(n => hits[n - 1] = 1);
-    [4,6].forEach(n => stars[n - 1] = 1);
+    [1, 2, 3, 4, 5, 6, 7, 9, 10].forEach(n => {
+      hits[n - 1] = 1;
+    });
+    [4, 6].forEach(n => {
+      stars[n - 1] = 1;
+    });
 
     const now = new Date();
 
     return {
       id: "demo-session",
       date: now.toLocaleDateString("en-US", { month: "short", day: "numeric" }),
-      time: now.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }),
+      time: now.toLocaleTimeString("en-US", {
+        hour: "numeric",
+        minute: "2-digit"
+      }),
       hits,
       stars,
       verified: true,
@@ -72,7 +88,8 @@
       time: a.time,
       hits: a.hits,
       stars: a.stars
-    }) === JSON.stringify({
+    }) ===
+    JSON.stringify({
       date: b.date,
       time: b.time,
       hits: b.hits,
@@ -101,33 +118,65 @@
 
   function getProgressHint(drill, history) {
     const currentLevel = window.TNS_getCurrentLevel(drill, history);
-    const currentScores = history.map(scoreSession);
+    const scores = history.map(scoreSession);
 
     if (currentLevel >= drill.progression.maxLevel) {
       return "You’ve reached the top level on this drill.";
     }
 
     if (currentLevel === 1) {
-      const has7 = currentScores.some(s => s >= 7);
-      return has7 ? "You’re ready to unlock the next level." : "Reach 7/10 once to level up.";
+      return scores.some(s => s >= 7)
+        ? "You’re ready to unlock the next level."
+        : "Reach 7/10 once to level up.";
     }
 
     if (currentLevel === 2) {
-      const count8 = currentScores.filter(s => s >= 8).length;
-      return count8 === 1 ? "One more 8/10 session unlocks the next level." : "Reach 8/10 twice to level up.";
+      const count8 = scores.filter(s => s >= 8).length;
+      return count8 === 1
+        ? "One more 8/10 session unlocks the next level."
+        : "Reach 8/10 twice to level up.";
     }
 
     if (currentLevel === 3) {
-      const count9 = currentScores.filter(s => s >= 9).length;
-      return count9 === 1 ? "One more 9/10 session unlocks the next level." : "Reach 9/10 twice to level up.";
+      const count9 = scores.filter(s => s >= 9).length;
+      return count9 === 1
+        ? "One more 9/10 session unlocks the next level."
+        : "Reach 9/10 twice to level up.";
     }
 
     if (currentLevel === 4) {
-      const has10 = currentScores.some(s => s === 10);
-      return has10 ? "Clean run achieved." : "Shoot a clean 10/10 to reach the top level.";
+      return scores.some(s => s === 10)
+        ? "Clean run achieved."
+        : "Shoot a clean 10/10 to reach the top level.";
     }
 
     return "Keep shooting verified sessions to progress.";
+  }
+
+  function animateStars(starString) {
+    const starsEl = document.getElementById("levelStars");
+    if (!starsEl) return;
+
+    const filledCount = (starString.match(/★/g) || []).length;
+    let i = 0;
+    starsEl.textContent = "☆☆☆☆☆";
+
+    function step() {
+      if (i > filledCount) {
+        starsEl.textContent = starString;
+        return;
+      }
+
+      starsEl.textContent = "★".repeat(i) + "☆".repeat(5 - i);
+      starsEl.classList.remove("starFlash");
+      void starsEl.offsetWidth;
+      starsEl.classList.add("starFlash");
+
+      i += 1;
+      setTimeout(step, 140);
+    }
+
+    step();
   }
 
   function renderHeader(drill, history, currentSession, previousBest, previousLevel) {
@@ -139,50 +188,40 @@
     const currentScore = currentSession ? scoreSession(currentSession) : 0;
     const isNewBest = currentSession && currentScore >= previousBest && currentScore > 0;
 
-    document.getElementById("drillTitle").textContent = drill.title;
-    document.getElementById("levelChip").textContent = `LEVEL ${currentLevel}`;
-    document.getElementById("levelLabel").textContent = `LEVEL ${currentLevel}`;
-    document.getElementById("nextReq").textContent = nextReq || "";
-    document.getElementById("nextHint").textContent = nextHint || "";
-    document.getElementById("lifetimeBest").textContent = `${best}/10`;
-    document.getElementById("timeStamp").textContent =
-      currentSession ? `${currentSession.date} • ${currentSession.time}` : "—";
-
-    const bestBadge = document.getElementById("bestBadge");
-    if (isNewBest) bestBadge.classList.remove("hidden");
-    else bestBadge.classList.add("hidden");
-
+    const drillTitle = document.getElementById("drillTitle");
     const levelChip = document.getElementById("levelChip");
-    if (currentLevel > previousLevel) {
+    const levelLabel = document.getElementById("levelLabel");
+    const nextReqEl = document.getElementById("nextReq");
+    const nextHintEl = document.getElementById("nextHint");
+    const lifetimeBest = document.getElementById("lifetimeBest");
+    const timeStamp = document.getElementById("timeStamp");
+    const bestBadge = document.getElementById("bestBadge");
+
+    if (drillTitle) drillTitle.textContent = drill.title;
+    if (levelChip) levelChip.textContent = `LEVEL ${currentLevel}`;
+    if (levelLabel) levelLabel.textContent = `LEVEL ${currentLevel}`;
+    if (nextReqEl) nextReqEl.textContent = nextReq || "";
+    if (nextHintEl) nextHintEl.textContent = nextHint || "";
+    if (lifetimeBest) lifetimeBest.textContent = `${best}/10`;
+
+    if (timeStamp) {
+      timeStamp.textContent = currentSession
+        ? `${currentSession.date} • ${currentSession.time}`
+        : "—";
+    }
+
+    if (bestBadge) {
+      if (isNewBest) bestBadge.classList.remove("hidden");
+      else bestBadge.classList.add("hidden");
+    }
+
+    if (levelChip && currentLevel > previousLevel) {
       levelChip.classList.remove("levelPulse");
       void levelChip.offsetWidth;
       levelChip.classList.add("levelPulse");
     }
 
     animateStars(starString);
-  }
-
-  function animateStars(starString) {
-    const starsEl = document.getElementById("levelStars");
-    starsEl.textContent = "☆☆☆☆☆";
-
-    const filledCount = (starString.match(/★/g) || []).length;
-    let i = 0;
-
-    function step() {
-      if (i > filledCount) {
-        starsEl.textContent = starString;
-        return;
-      }
-      starsEl.textContent = "★".repeat(i) + "☆".repeat(5 - i);
-      starsEl.classList.remove("starFlash");
-      void starsEl.offsetWidth;
-      starsEl.classList.add("starFlash");
-      i += 1;
-      setTimeout(step, 140);
-    }
-
-    step();
   }
 
   function makeNodeIcon(shape, lane) {
@@ -198,6 +237,8 @@
   function renderMatrix(drill, history) {
     const header = document.getElementById("matrixHeader");
     const body = document.getElementById("matrixBody");
+    if (!header || !body) return;
+
     const sessions = history.slice(0, 5);
 
     header.innerHTML = "";
@@ -264,25 +305,44 @@
   }
 
   function wireButtons(drill) {
-    document.getElementById("backBtn").onclick = () => history.back();
+    const backBtn = document.getElementById("backBtn");
+    const historyBtn = document.getElementById("historyBtn");
+    const newScanBtn = document.getElementById("newScanBtn");
+    const vendorBtn = document.getElementById("vendorBtn");
+    const surveyBtn = document.getElementById("surveyBtn");
 
-    document.getElementById("historyBtn").onclick = () => {
-      alert("History is shown in the grid.");
-    };
+    if (backBtn) {
+      backBtn.onclick = () => history.back();
+    }
 
-    document.getElementById("newScanBtn").onclick = () => {
-      window.location.href = "./index.html";
-    };
+    if (historyBtn) {
+      historyBtn.onclick = () => {
+        alert("History is shown in the grid.");
+      };
+    }
 
-    document.getElementById("vendorBtn").textContent = `🎯  ${drill.vendorLabel}`;
-    document.getElementById("vendorBtn").onclick = () => {
-      window.open(drill.vendorUrl, "_blank", "noopener");
-    };
+    if (newScanBtn) {
+      newScanBtn.onclick = () => {
+        window.location.href = "./index.html";
+      };
+    }
 
-    document.getElementById("surveyBtn").onclick = () => {
-      if (drill.surveyUrl) window.open(drill.surveyUrl, "_blank", "noopener");
-      else alert("Survey link not set yet.");
-    };
+    if (vendorBtn) {
+      vendorBtn.textContent = `🎯  ${drill.vendorLabel}`;
+      vendorBtn.onclick = () => {
+        window.open(drill.vendorUrl, "_blank", "noopener");
+      };
+    }
+
+    if (surveyBtn) {
+      surveyBtn.onclick = () => {
+        if (drill.surveyUrl) {
+          window.open(drill.surveyUrl, "_blank", "noopener");
+        } else {
+          alert("Survey link not set yet.");
+        }
+      };
+    }
   }
 
   function init() {
