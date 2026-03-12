@@ -47,9 +47,11 @@
   function demoSession(drill) {
     const hits = Array(drill.laneCount).fill(0);
     const stars = Array(drill.laneCount).fill(0);
+
     [1, 2, 3, 4, 5, 6, 7, 9, 10].forEach(n => {
       hits[n - 1] = 1;
     });
+
     [4, 6].forEach(n => {
       stars[n - 1] = 1;
     });
@@ -88,8 +90,7 @@
       time: a.time,
       hits: a.hits,
       stars: a.stars
-    }) ===
-    JSON.stringify({
+    }) === JSON.stringify({
       date: b.date,
       time: b.time,
       hits: b.hits,
@@ -323,7 +324,7 @@
 
     if (newScanBtn) {
       newScanBtn.onclick = () => {
-        window.location.href = "./index.html";
+        window.location.href = "/docs/index.html";
       };
     }
 
