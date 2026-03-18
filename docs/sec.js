@@ -1,6 +1,7 @@
 /* ============================================================
    docs/sec.js — FULL REPLACEMENT
    B2B LANE VISUAL BUILD + REPLAY LOOP + PROGRESS LADDER
+   + B2B DASHBOARD BRIDGE
 ============================================================ */
 
 (() => {
@@ -11,6 +12,8 @@
   const toReportBtn = $("toReportBtn");
   const backBtn = $("backBtn");
   const replayBtn = $("replayBtn");
+  const b2bDashBtn = $("b2bDashBtn");
+  const b2bDashBtn2 = $("b2bDashBtn2");
 
   const scoreValue = $("scoreValue");
   const scoreBand = $("scoreBand");
@@ -53,7 +56,8 @@
 
   function isB2B(payload) {
     return String(payload?.drill?.mode || "").toLowerCase() === "b2b"
-      || String(payload?.sku || "").toLowerCase().includes("b2b");
+      || String(payload?.sku || "").toLowerCase().includes("b2b")
+      || String(payload?.target?.key || "").toLowerCase() === "bkr-b2b";
   }
 
   function scoreBandInfo(score, b2b) {
@@ -76,6 +80,15 @@
       } catch {}
     }
     return safeJsonParse(localStorage.getItem(KEY_PAYLOAD) || "");
+  }
+
+  function payloadToB64(obj) {
+    return btoa(unescape(encodeURIComponent(JSON.stringify(obj))));
+  }
+
+  function goToB2BDashboard(payload) {
+    const b64 = payloadToB64(payload);
+    location.href = `./b2b.html?payload=${encodeURIComponent(b64)}&fresh=${Date.now()}`;
   }
 
   function showPrecision() {
@@ -185,6 +198,13 @@
     ladderNext.textContent = state.next;
   }
 
+  function renderB2BButtons(payload) {
+    const b2b = isB2B(payload);
+
+    if (b2bDashBtn) b2bDashBtn.hidden = !b2b;
+    if (b2bDashBtn2) b2bDashBtn2.hidden = !b2b;
+  }
+
   function renderPrecision(p) {
     const b2b = isB2B(p);
     const score = Number(p?.score || 0);
@@ -209,10 +229,12 @@
       runTime.textContent = nowStamp();
 
       renderLadder(p);
+      renderB2BButtons(p);
       return;
     }
 
     if (ladderWrap) ladderWrap.hidden = true;
+    renderB2BButtons(p);
 
     windageBig.textContent = fmt2(p?.windage?.clicks);
     windageDir.textContent = p?.windage?.dir || "—";
@@ -310,6 +332,8 @@
 
     const s = p.surveyUrl || DEFAULT_SURVEY_URL;
     surveyBtn.href = s;
+
+    renderB2BButtons(p);
   }
 
   function goBackToLanding() {
@@ -339,5 +363,13 @@
 
   if (goHomeBtn) {
     goHomeBtn.onclick = goBackToLanding;
+  }
+
+  if (b2bDashBtn) {
+    b2bDashBtn.onclick = () => goToB2BDashboard(payload);
+  }
+
+  if (b2bDashBtn2) {
+    b2bDashBtn2.onclick = () => goToB2BDashboard(payload);
   }
 })();
