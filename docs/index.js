@@ -3,7 +3,7 @@
    - Keeps printed QR URL permanent
    - Routes Baker B2B into B2B tap scoring
    - Uses zone-based lane detection
-   - FIX: lane 10 priority / separation from lane 8
+   - FINAL FIX: lane 10 priority band / lane 8 cutoff
    - Leaves normal targets on generic correction flow
    - Adds distance + cleaner payload metadata
 ============================================================ */
@@ -102,10 +102,9 @@
 
   /* ============================================================
      B2B ZONE SCORING
-     FIX NOTES:
-     - Lane 10 gets priority
-     - Lane 10 pulled slightly lower
-     - Lane 8 slightly tightened so it stops stealing lane 10 taps
+     FINAL FIX:
+     - Lane 10 has its own priority band
+     - Lane 8 is tightened and cut off from lower region
   ============================================================ */
   const B2B_ZONES = [
     { id: 1,  shape: "circle", cx: 0.16, cy: 0.22, r: 0.105 },
@@ -117,11 +116,20 @@
     { id: 6,  shape: "circle", cx: 0.84, cy: 0.50, r: 0.105 },
 
     { id: 7,  shape: "circle", cx: 0.16, cy: 0.78, r: 0.098 },
-    { id: 8,  shape: "square", cx: 0.50, cy: 0.77, hw: 0.090, hh: 0.082 },
+    { id: 8,  shape: "square", cx: 0.50, cy: 0.765, hw: 0.088, hh: 0.070 },
     { id: 9,  shape: "circle", cx: 0.84, cy: 0.78, r: 0.098 },
 
-    { id: 10, shape: "circle", cx: 0.50, cy: 0.935, r: 0.102 }
+    { id: 10, shape: "circle", cx: 0.50, cy: 0.935, r: 0.105 }
   ];
+
+  const B2B_LANE10_PRIORITY = {
+    left: 0.32,
+    right: 0.68,
+    top: 0.86,
+    bottom: 1.00
+  };
+
+  const B2B_LANE8_MAX_Y = 0.83;
 
   try { history.scrollRestoration = "manual"; } catch {}
 
@@ -660,8 +668,7 @@
 
     if (zone.shape === "circle") {
       const dist = Math.sqrt(dx * dx + dy * dy);
-      const norm = zone.r > 0 ? dist / zone.r : 999;
-      return norm;
+      return zone.r > 0 ? dist / zone.r : 999;
     }
 
     if (zone.shape === "square") {
@@ -673,6 +680,15 @@
     return 999;
   }
 
+  function inLane10PriorityBand(hit) {
+    return (
+      hit.x01 >= B2B_LANE10_PRIORITY.left &&
+      hit.x01 <= B2B_LANE10_PRIORITY.right &&
+      hit.y01 >= B2B_LANE10_PRIORITY.top &&
+      hit.y01 <= B2B_LANE10_PRIORITY.bottom
+    );
+  }
+
   function scoreB2BFromHits(hitPoints) {
     if (!hitPoints || hitPoints.length === 0) {
       return { score: 0, lanes: [], laneCount: 0, missedTaps: 0 };
@@ -682,23 +698,25 @@
     let missedTaps = 0;
 
     for (const hit of hitPoints) {
-      const matching = B2B_ZONES.filter(zone => pointInB2BZone(hit, zone));
+      if (inLane10PriorityBand(hit)) {
+        hitLanes.add(10);
+        continue;
+      }
+
+      let matching = B2B_ZONES.filter(zone => pointInB2BZone(hit, zone));
+
+      if (hit.y01 >= B2B_LANE8_MAX_Y) {
+        matching = matching.filter(zone => zone.id !== 8);
+      }
 
       if (!matching.length) {
         missedTaps += 1;
         continue;
       }
 
-      let chosen = null;
-
-      const lane10 = matching.find(z => z.id === 10);
-      if (lane10) {
-        chosen = lane10;
-      } else {
-        chosen = matching
-          .map(zone => ({ zone, score: zoneDistanceScore(hit, zone) }))
-          .sort((a, b) => a.score - b.score)[0].zone;
-      }
+      const chosen = matching
+        .map(zone => ({ zone, score: zoneDistanceScore(hit, zone) }))
+        .sort((a, b) => a.score - b.score)[0].zone;
 
       hitLanes.add(chosen.id);
     }
@@ -774,7 +792,9 @@
           rawTapCount: hits.length,
           missedTaps: b2b.missedTaps,
           hits,
-          zones: B2B_ZONES
+          zones: B2B_ZONES,
+          lane10Priority: B2B_LANE10_PRIORITY,
+          lane8MaxY: B2B_LANE8_MAX_Y
         }
       };
 
