@@ -4,31 +4,23 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="theme-color" content="#06070a" />
-  <title>Redirecting…</title>
-
-  <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0" />
-  <meta http-equiv="Pragma" content="no-cache" />
-  <meta http-equiv="Expires" content="0" />
-
+  <title>Page Not Found</title>
   <style>
     body { margin:0; background:#06070a; color:#fff; font-family:system-ui; }
     .box { min-height:100vh; display:flex; align-items:center; justify-content:center; padding:24px; }
     .card { max-width:520px; width:100%; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.10); border-radius:16px; padding:18px 16px; }
     .h { font-weight:800; font-size:20px; margin:0 0 6px; }
-    .p { opacity:.85; margin:0; }
+    .p { opacity:.85; margin:0 0 14px; }
+    a { color:#8ab4ff; text-decoration:none; font-weight:700; }
   </style>
 </head>
 <body>
   <div class="box">
     <div class="card">
-      <p class="h">Redirecting…</p>
-      <p class="p">Taking you back to Tap-n-Score.</p>
+      <p class="h">Page Not Found</p>
+      <p class="p">This page could not be found.</p>
+      <a href="/docs/index.html">Go to Tap-n-Score</a>
     </div>
   </div>
-
-  <script>
-    // If any weird / missing path happens, snap back to the app root.
-    location.replace("/tap-n-score/?fresh=1");
-  </script>
 </body>
 </html>
