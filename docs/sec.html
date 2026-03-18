@@ -12,7 +12,7 @@
 
   <title>SEC — Tap-n-Score™</title>
 
-  <link rel="stylesheet" href="./sec.css?v=SEC-2P-B2B-REV-2" />
+  <link rel="stylesheet" href="./sec.css?v=SEC-2P-B2B-LADDER-1" />
 </head>
 
 <body>
@@ -62,6 +62,26 @@
           <span id="runTime" class="miniPill">—</span>
         </div>
 
+        <!-- =========================
+             B2B LADDER
+        ========================== -->
+        <div id="ladderWrap" class="ladderWrap" hidden>
+          <div class="ladderTopRow">
+            <div class="ladderLabel">B2B PROGRESS LADDER</div>
+            <div id="ladderLevelChip" class="ladderLevelChip">LEVEL 1</div>
+          </div>
+
+          <div id="ladderStars" class="ladderStars">★☆☆☆☆</div>
+
+          <div id="ladderText" class="ladderText">
+            Complete one verified drill session.
+          </div>
+
+          <div id="ladderNext" class="ladderNext">
+            Next: Score 7/10 or higher once.
+          </div>
+        </div>
+
         <div class="primaryActions">
           <button id="toReportBtn" class="primaryBtn" type="button">
             Save SEC + Shooter History
@@ -107,8 +127,8 @@
         <div class="reportActions">
           <button id="backBtn" class="btnSecondary" type="button">Back</button>
 
-          <button id="replayBtn" class="secondaryGlowBtn" type="button">
-            Score another target
+          <button id="replayBtn" class="replayBtn" type="button">
+            Replay Drill / Score Again
           </button>
 
           <a id="vendorBtn" class="vendorBtn" href="#" target="_blank" rel="noopener">
@@ -132,6 +152,6 @@
 
   </main>
 
-  <script defer src="./sec.js?v=SEC-2P-B2B-REV-2"></script>
+  <script defer src="./sec.js?v=SEC-2P-B2B-LADDER-1"></script>
 </body>
 </html>
