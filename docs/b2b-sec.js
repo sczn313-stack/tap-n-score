@@ -1,5 +1,5 @@
 (() => {
-  const STORAGE_KEY = "tns_history_back_to_basics_v10";
+  const STORAGE_KEY = "tns_history_back_to_basics_v11";
   const DEFAULT_DRILL_ID = "back-to-basics";
 
   function query(name) {
@@ -30,7 +30,10 @@
       id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
       date:
         query("date") ||
-        now.toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+        now.toLocaleDateString("en-US", {
+          month: "short",
+          day: "numeric"
+        }),
       time:
         query("time") ||
         now.toLocaleTimeString("en-US", {
@@ -60,7 +63,10 @@
 
     return {
       id: "demo-session",
-      date: now.toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+      date: now.toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric"
+      }),
       time: now.toLocaleTimeString("en-US", {
         hour: "numeric",
         minute: "2-digit"
@@ -247,7 +253,7 @@
 
     const corner = document.createElement("div");
     corner.className = "cornerHead";
-    corner.textContent = "Lanes";
+    corner.textContent = "Drill";
     header.appendChild(corner);
 
     sessions.forEach(session => {
@@ -272,12 +278,13 @@
       row.className = "matrixRow";
 
       const shape = drill.laneShapes[lane] === "square" ? "square" : "circle";
+      const laneText = window.TNS_getLaneText(drill, lane) || `${lane}`;
 
       const laneCell = document.createElement("div");
       laneCell.className = "laneCell";
       laneCell.innerHTML = `
         ${makeNodeIcon(shape, lane)}
-        <div class="laneLabel">${lane}</div>
+        <div class="laneLabel" style="font-size:16px; line-height:1.15; min-width:auto;">${laneText}</div>
       `;
       row.appendChild(laneCell);
 
