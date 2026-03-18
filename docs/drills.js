@@ -1,9 +1,7 @@
 /* ============================================================
-   drills.js — Tap-n-Score Drill Engine v1.0
-   Back-to-Basics baseline implementation
+   drills.js — Tap-n-Score Drill Engine v1.1
+   Back-to-Basics locked drill implementation
 ============================================================ */
-
-/* ---------- DRILL DEFINITIONS ---------- */
 
 const TNS_DRILLS = {
   "back-to-basics": {
@@ -12,7 +10,6 @@ const TNS_DRILLS = {
 
     laneCount: 10,
 
-    /* Shape per lane (circle | square) */
     laneShapes: {
       1: "circle",
       2: "circle",
@@ -26,12 +23,29 @@ const TNS_DRILLS = {
       10: "circle"
     },
 
-    /* Vendor + survey */
+    laneText: {
+      1: "1 — slow (5x)",
+      2: "1 → 2",
+      3: "1 → 3 (4x)",
+      4: "4 — strong hand only (5x)",
+      5: "1 → 5",
+      6: "1 → 6 (4x)",
+      7: "7 — weak hand only (5x)",
+      8: "1 → 8",
+      9: "1 → 9 (4x)",
+      10: "10 — slow (5x)"
+    },
+
     vendorLabel: "BUY MORE TARGETS LIKE THIS",
     vendorUrl: "https://bakertargets.com/",
     surveyUrl: "",
 
-    /* ---------- PROGRESSION MODEL ---------- */
+    scoring: {
+      maxScore: 10,
+      scoreMode: "one-point-per-lane",
+      centerHitAddsStar: true,
+      multipleHitsSameLaneCountOnce: true
+    },
 
     progression: {
       maxLevel: 5,
@@ -78,18 +92,15 @@ const TNS_DRILLS = {
 
 /* ---------- PUBLIC ENGINE API ---------- */
 
-/* Get drill by ID */
 window.TNS_getDrill = function (id) {
   return TNS_DRILLS[id] || TNS_DRILLS["back-to-basics"];
 };
 
-/* Score a session (count hits) */
 window.TNS_scoreSession = function (session) {
   if (!session || !session.hits) return 0;
   return session.hits.reduce((sum, v) => sum + (v ? 1 : 0), 0);
 };
 
-/* Determine current level */
 window.TNS_getCurrentLevel = function (drill, history) {
   if (!drill || !history) return 1;
 
@@ -107,18 +118,21 @@ window.TNS_getCurrentLevel = function (drill, history) {
   return Math.min(current, drill.progression.maxLevel);
 };
 
-/* Get stars string for level */
 window.TNS_getLevelStars = function (drill, history) {
   const level = window.TNS_getCurrentLevel(drill, history);
   const lvlDef = drill.progression.levels[level - 1];
   return lvlDef ? lvlDef.stars : "☆☆☆☆☆";
 };
 
-/* Requirement text for current level */
 window.TNS_getNextRequirementText = function (drill, history) {
   const level = window.TNS_getCurrentLevel(drill, history);
   const lvlDef = drill.progression.levels[level - 1];
   return lvlDef ? lvlDef.requirementText : "";
+};
+
+window.TNS_getLaneText = function (drill, lane) {
+  if (!drill || !drill.laneText) return "";
+  return drill.laneText[lane] || "";
 };
 
 /* ============================================================
