@@ -1,8 +1,9 @@
 /* ============================================================
-   docs/index.js — B2B Go-Live Router + Scoring
+   docs/index.js — B2B Go-Live Router + Scoring + Run Metadata
    - Keeps printed QR URL permanent
    - Routes Baker B2B into B2B tap scoring
    - Leaves normal targets on generic correction flow
+   - Adds distance + cleaner payload metadata
 ============================================================ */
 
 (() => {
@@ -74,6 +75,7 @@
   const KEY_TARGET_IMG_DATA = "SCZN3_TARGET_IMG_DATAURL_V1";
   const KEY_TARGET_IMG_BLOB = "SCZN3_TARGET_IMG_BLOBURL_V1";
   const KEY_VENDOR_URL = "SCZN3_VENDOR_URL_V1";
+  const KEY_VENDOR_NAME = "SCZN3_VENDOR_NAME_V1";
   const KEY_DIST_UNIT = "SCZN3_RANGE_UNIT_V1";
   const KEY_DIST_YDS = "SCZN3_RANGE_YDS_V1";
   const KEY_TARGET_SIZE = "SCZN3_TARGET_SIZE_KEY_V1";
@@ -92,6 +94,7 @@
   let targetSizeKey = "23x35";
   let targetWIn = 23;
   let targetHIn = 35;
+  let runStartedAt = 0;
 
   const DEFAULTS = { MOA: 0.25, MRAD: 0.10 };
 
@@ -153,6 +156,18 @@
     }, 650);
   }
 
+  function nowTs() {
+    return Date.now();
+  }
+
+  function ensureRunStarted() {
+    if (!runStartedAt) runStartedAt = nowTs();
+  }
+
+  function newSessionId() {
+    return "S-" + nowTs() + "-" + Math.random().toString(36).slice(2, 8);
+  }
+
   function setInstruction(text, kind) {
     if (!elInstruction) return;
 
@@ -197,6 +212,7 @@
     aim = null;
     hits = [];
     touchStart = null;
+    runStartedAt = 0;
     if (elDots) elDots.innerHTML = "";
     setTapCount();
     hideSticky();
@@ -227,6 +243,10 @@
 
   function hydrateVendorBox() {
     if (elVendorLabel) elVendorLabel.textContent = "BUY MORE TARGETS LIKE THIS";
+
+    if (isBakerMode()) {
+      try { localStorage.setItem(KEY_VENDOR_NAME, "BAKER TARGETS"); } catch {}
+    }
 
     if (isBakerMode() && elVendorLabel) {
       const a = "BUY MORE TARGETS LIKE THIS";
@@ -595,7 +615,9 @@
   }
 
   function scoreB2BFromHits(hitPoints) {
-    if (!hitPoints || hitPoints.length === 0) return { score: 0, lanes: [], laneCount: 0 };
+    if (!hitPoints || hitPoints.length === 0) {
+      return { score: 0, lanes: [], laneCount: 0 };
+    }
 
     const laneCenters = [
       { id: 1, x: 0.16, y: 0.22 },
@@ -631,10 +653,31 @@
     });
 
     const lanes = Array.from(hitLanes).sort((a, b) => a - b);
+
     return {
       score: lanes.length,
       lanes,
       laneCount: lanes.length
+    };
+  }
+
+  function buildBasePayload() {
+    return {
+      sessionId: newSessionId(),
+      vendor: getVendor(),
+      sku: getSku(),
+      vendorUrl: localStorage.getItem(KEY_VENDOR_URL) || "",
+      vendorName: localStorage.getItem(KEY_VENDOR_NAME) || "",
+      surveyUrl: "",
+      distanceYds: getDistanceYds(),
+      target: {
+        key: B2B_MODE ? "bkr-b2b" : targetSizeKey,
+        wIn: Number(targetWIn),
+        hIn: Number(targetHIn)
+      },
+      runStartedAt,
+      runCompletedAt: nowTs(),
+      runDurationSec: runStartedAt ? Math.max(0, Math.round((nowTs() - runStartedAt) / 1000)) : 0
     };
   }
 
@@ -650,28 +693,31 @@
   }
 
   function onShowResults() {
-    const vendorUrl = localStorage.getItem(KEY_VENDOR_URL) || "";
+    const base = buildBasePayload();
 
     if (B2B_MODE) {
       const b2b = scoreB2BFromHits(hits);
 
       const payload = {
-        sessionId: "S-" + Date.now(),
-        score: b2b.score,
-        shots: hits.length,
-        hits: b2b.laneCount,
-        vendorUrl,
-        surveyUrl: "",
-        target: { key: "bkr-b2b", wIn: Number(targetWIn), hIn: Number(targetHIn) },
+        ...base,
+        mode: "drill",
         drill: {
           mode: "b2b",
-          lanesHit: b2b.lanes
+          name: "Back to Basics",
+          lanesHit: b2b.lanes,
+          maxScore: 10
         },
+        score: b2b.score,
+        maxScore: 10,
+        taps: hits.length,
+        shots: hits.length,
+        hits: b2b.laneCount,
         windage: { dir: "", clicks: 0 },
         elevation: { dir: "", clicks: 0 },
         dial: { unit: "B2B", clickValue: 0 },
         debug: {
           mode: "b2b",
+          distanceYds: getDistanceYds(),
           lanesHit: b2b.lanes,
           rawTapCount: hits.length,
           hits
@@ -689,15 +735,14 @@
     }
 
     const payload = {
-      sessionId: "S-" + Date.now(),
+      ...base,
+      mode: "zero",
       score: out.score,
+      taps: hits.length,
       shots: hits.length,
       windage: { dir: out.windage.dir, clicks: Number(out.windage.clicks.toFixed(2)) },
       elevation: { dir: out.elevation.dir, clicks: Number(out.elevation.clicks.toFixed(2)) },
       dial: { unit: out.dial.unit, clickValue: Number(out.dial.clickValue.toFixed(2)) },
-      vendorUrl,
-      surveyUrl: "",
-      target: { key: targetSizeKey, wIn: Number(targetWIn), hIn: Number(targetHIn) },
       debug: {
         aim,
         hits,
@@ -725,6 +770,7 @@
     await storeTargetPhotoForSEC(f, objectUrl);
 
     elImg.onload = () => {
+      runStartedAt = nowTs();
       setText(elStatus, B2B_MODE ? "Tap each lane that has at least one hit." : "Tap Aim Point.");
       syncInstruction();
       revealScoringUI();
@@ -742,6 +788,8 @@
 
   function acceptTap(clientX, clientY) {
     if (!elImg?.src) return;
+    ensureRunStarted();
+
     const { x01, y01 } = getRelative01(clientX, clientY);
 
     if (!B2B_MODE) {
@@ -804,6 +852,7 @@
   elClear?.addEventListener("click", () => {
     resetAll();
     if (elImg?.src) {
+      runStartedAt = nowTs();
       setText(elStatus, B2B_MODE ? "Tap each lane that has at least one hit." : "Tap Aim Point.");
     }
   });
