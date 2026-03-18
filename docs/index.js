@@ -1,9 +1,8 @@
 /* ============================================================
-   docs/index.js — B2B Go-Live Router v1
-   Purpose:
-   - Keep printed QR URL permanent
-   - Route B2B target into B2B engine
-   - Leave all other targets on normal landing flow
+   docs/index.js — B2B Go-Live Router + Scoring
+   - Keeps printed QR URL permanent
+   - Routes Baker B2B into B2B tap scoring
+   - Leaves normal targets on generic correction flow
 ============================================================ */
 
 (() => {
@@ -34,33 +33,8 @@
     return getVendor() === "baker" && getSku() === "bkr-b2b";
   }
 
-  function alreadyOnB2BPage() {
-    const u = getUrl();
-    if (!u) return false;
-    return /\/docs\/b2b-sec\.html$/i.test(u.pathname) || /\/b2b-sec\.html$/i.test(u.pathname);
-  }
+  const B2B_MODE = isB2B();
 
-  function routeTargetIfNeeded() {
-    if (!isB2B()) return false;
-    if (alreadyOnB2BPage()) return false;
-
-    const u = getUrl();
-    if (!u) return false;
-
-    const qs = u.searchParams.toString();
-    const next = `./b2b-sec.html${qs ? `?${qs}` : ""}`;
-    window.location.replace(next);
-    return true;
-  }
-
-  // ------------------------------------------------------------
-  // HARD ROUTE B2B BEFORE ANY OTHER LOGIC RUNS
-  // ------------------------------------------------------------
-  if (routeTargetIfNeeded()) return;
-
-  // ------------------------------------------------------------
-  // EXISTING NORMAL PAGE LOGIC
-  // ------------------------------------------------------------
   const elPhotoBtn = $("photoBtn");
   const elFile = $("photoInput");
   const elVendorBox = $("vendorBox");
@@ -205,10 +179,17 @@
       setInstruction("", "");
       return;
     }
+
+    if (B2B_MODE) {
+      setInstruction("Tap each lane that has at least one hit.", "holes");
+      return;
+    }
+
     if (!aim) {
       setInstruction("Tap Aim Point.", "aim");
       return;
     }
+
     setInstruction("Tap Bullet Holes.", "holes");
   }
 
@@ -220,7 +201,12 @@
     setTapCount();
     hideSticky();
     syncInstruction();
-    setText(elStatus, elImg?.src ? "Tap Aim Point." : "Add a target photo to begin.");
+    setText(
+      elStatus,
+      elImg?.src
+        ? (B2B_MODE ? "Tap each lane that was hit." : "Tap Aim Point.")
+        : "Add a target photo to begin."
+    );
     closeMatrix();
     closeVendorPanel();
   }
@@ -284,6 +270,7 @@
 
   async function storeTargetPhotoForSEC(file, blobUrl) {
     try { localStorage.setItem(KEY_TARGET_IMG_BLOB, blobUrl); } catch {}
+
     try {
       const dataUrl = await new Promise((resolve, reject) => {
         const r = new FileReader();
@@ -291,6 +278,7 @@
         r.onerror = reject;
         r.readAsDataURL(file);
       });
+
       if (dataUrl && dataUrl.startsWith("data:image/")) {
         localStorage.setItem(KEY_TARGET_IMG_DATA, dataUrl);
       }
@@ -312,8 +300,10 @@
   function getRelative01(clientX, clientY) {
     const r = elWrap.getBoundingClientRect();
     if (!r || r.width <= 1 || r.height <= 1) return { x01: 0.5, y01: 0.5 };
+
     const x = (clientX - r.left) / r.width;
     const y = (clientY - r.top) / r.height;
+
     return { x01: clamp01(x), y01: clamp01(y) };
   }
 
@@ -339,7 +329,9 @@
     elDistUnitYd?.classList.toggle("segOn", rangeUnit === "YDS");
     elDistUnitM?.classList.toggle("segOn", rangeUnit === "M");
 
-    if (elDistUnitLabel) elDistUnitLabel.textContent = (rangeUnit === "M") ? "m" : "yds";
+    if (elDistUnitLabel) {
+      elDistUnitLabel.textContent = (rangeUnit === "M") ? "m" : "yds";
+    }
 
     syncRangeInputFromInternal();
     syncLiveTop();
@@ -489,11 +481,13 @@
     }
 
     if (elLiveDial) {
-      elLiveDial.textContent = `${getClickValue().toFixed(2)} ${dialUnit}`;
+      elLiveDial.textContent = B2B_MODE
+        ? "DRILL MODE"
+        : `${getClickValue().toFixed(2)} ${dialUnit}`;
     }
 
     if (elLiveTarget) {
-      const label = (targetSizeKey || "").replace("x", "×");
+      const label = B2B_MODE ? "B2B" : (targetSizeKey || "").replace("x", "×");
       elLiveTarget.textContent = label || "—";
     }
   }
@@ -600,6 +594,50 @@
     };
   }
 
+  function scoreB2BFromHits(hitPoints) {
+    if (!hitPoints || hitPoints.length === 0) return { score: 0, lanes: [], laneCount: 0 };
+
+    const laneCenters = [
+      { id: 1, x: 0.16, y: 0.22 },
+      { id: 2, x: 0.50, y: 0.22 },
+      { id: 3, x: 0.84, y: 0.22 },
+      { id: 4, x: 0.16, y: 0.50 },
+      { id: 5, x: 0.50, y: 0.50 },
+      { id: 6, x: 0.84, y: 0.50 },
+      { id: 7, x: 0.16, y: 0.78 },
+      { id: 8, x: 0.50, y: 0.78 },
+      { id: 9, x: 0.84, y: 0.78 },
+      { id: 10, x: 0.50, y: 0.94 }
+    ];
+
+    const hitLanes = new Set();
+
+    hitPoints.forEach((hit) => {
+      let closest = null;
+      let bestDist = Infinity;
+
+      laneCenters.forEach((lane) => {
+        const dx = hit.x01 - lane.x;
+        const dy = hit.y01 - lane.y;
+        const d = dx * dx + dy * dy;
+
+        if (d < bestDist) {
+          bestDist = d;
+          closest = lane.id;
+        }
+      });
+
+      if (closest !== null) hitLanes.add(closest);
+    });
+
+    const lanes = Array.from(hitLanes).sort((a, b) => a - b);
+    return {
+      score: lanes.length,
+      lanes,
+      laneCount: lanes.length
+    };
+  }
+
   function b64FromObj(obj) {
     const json = JSON.stringify(obj);
     return btoa(unescape(encodeURIComponent(json)));
@@ -612,13 +650,44 @@
   }
 
   function onShowResults() {
+    const vendorUrl = localStorage.getItem(KEY_VENDOR_URL) || "";
+
+    if (B2B_MODE) {
+      const b2b = scoreB2BFromHits(hits);
+
+      const payload = {
+        sessionId: "S-" + Date.now(),
+        score: b2b.score,
+        shots: hits.length,
+        hits: b2b.laneCount,
+        vendorUrl,
+        surveyUrl: "",
+        target: { key: "bkr-b2b", wIn: Number(targetWIn), hIn: Number(targetHIn) },
+        drill: {
+          mode: "b2b",
+          lanesHit: b2b.lanes
+        },
+        windage: { dir: "", clicks: 0 },
+        elevation: { dir: "", clicks: 0 },
+        dial: { unit: "B2B", clickValue: 0 },
+        debug: {
+          mode: "b2b",
+          lanesHit: b2b.lanes,
+          rawTapCount: hits.length,
+          hits
+        }
+      };
+
+      goToSEC(payload);
+      return;
+    }
+
     const out = computeCorrectionAndScore();
     if (!out) {
       alert("Tap Aim Point first, then tap at least one bullet hole.");
       return;
     }
 
-    const vendorUrl = localStorage.getItem(KEY_VENDOR_URL) || "";
     const payload = {
       sessionId: "S-" + Date.now(),
       score: out.score,
@@ -656,7 +725,7 @@
     await storeTargetPhotoForSEC(f, objectUrl);
 
     elImg.onload = () => {
-      setText(elStatus, "Tap Aim Point.");
+      setText(elStatus, B2B_MODE ? "Tap each lane that has at least one hit." : "Tap Aim Point.");
       syncInstruction();
       revealScoringUI();
     };
@@ -675,18 +744,21 @@
     if (!elImg?.src) return;
     const { x01, y01 } = getRelative01(clientX, clientY);
 
-    if (!aim) {
-      aim = { x01, y01 };
-      addDot(x01, y01, "aim");
-      setText(elStatus, "Tap Bullet Holes.");
-      hideSticky();
-      syncInstruction();
-      return;
+    if (!B2B_MODE) {
+      if (!aim) {
+        aim = { x01, y01 };
+        addDot(x01, y01, "aim");
+        setText(elStatus, "Tap Bullet Holes.");
+        hideSticky();
+        syncInstruction();
+        return;
+      }
     }
 
     hits.push({ x01, y01 });
     addDot(x01, y01, "hit");
     setTapCount();
+
     hideSticky();
     syncInstruction();
     scheduleStickyMagic();
@@ -731,7 +803,9 @@
 
   elClear?.addEventListener("click", () => {
     resetAll();
-    if (elImg?.src) setText(elStatus, "Tap Aim Point.");
+    if (elImg?.src) {
+      setText(elStatus, B2B_MODE ? "Tap each lane that has at least one hit." : "Tap Aim Point.");
+    }
   });
 
   [elStickyBtn, $("showResultsBtn")].filter(Boolean).forEach((b) => {
