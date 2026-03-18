@@ -30,7 +30,7 @@ body{
 }
 
 .appShell{
-  width:min(980px, 100%);
+  width:min(1120px, 100%);
   margin:0 auto;
   padding:10px 12px 18px;
 }
@@ -169,8 +169,8 @@ body{
 
 .matrixHeader,.matrixRow{
   display:grid;
-  grid-template-columns:136px repeat(5, minmax(102px, 1fr));
-  min-width:675px;
+  grid-template-columns:280px repeat(5, minmax(102px, 1fr));
+  min-width:980px;
 }
 
 .matrixHeader{
@@ -277,9 +277,11 @@ body{
   color:#ffe08a;
   text-shadow:0 0 6px rgba(255,220,120,.12);
   font-weight:900;
-  font-size:32px;
-  line-height:1;
-  min-width:26px;
+  font-size:15px;
+  line-height:1.15;
+  min-width:0;
+  flex:1 1 auto;
+  white-space:normal;
 }
 
 .cell{
@@ -446,5 +448,14 @@ body{
   .drillTitleSub{
     font-size:12px;
     white-space:normal;
+  }
+
+  .matrixHeader,.matrixRow{
+    grid-template-columns:240px repeat(5, minmax(88px, 1fr));
+    min-width:860px;
+  }
+
+  .laneLabel{
+    font-size:14px;
   }
 }
