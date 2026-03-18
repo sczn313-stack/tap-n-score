@@ -1,73 +1,64 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>SEC — Shooter Experience Card</title>
-  <link rel="stylesheet" href="./b2b-sec.css">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="color-scheme" content="dark" />
+  <meta name="theme-color" content="#06070a" />
+
+  <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
+
+  <title>B2B Dashboard — Tap-n-Score™</title>
+
+  <link rel="stylesheet" href="./b2b.css?v=B2B-DASH-1" />
 </head>
 <body>
-  <div class="appShell">
+  <main class="dashPage">
 
-    <div class="topHeader">
-      <button id="backBtn" class="miniBtn backBtn" aria-label="Back">‹</button>
+    <header class="dashHeader">
+      <button id="backBtn" class="iconBtn" type="button" aria-label="Back">‹</button>
 
-      <div class="secMark">
-        <span class="secR">S</span><span class="secW">E</span><span class="secB">C</span>
+      <div class="brandBlock">
+        <div class="brandTitle">
+          <span class="r">TAP</span><span class="w">-N-</span><span class="b">SCORE</span><span class="w">™</span>
+        </div>
+        <div class="drillTitle">BACK TO BASICS DRILL</div>
       </div>
 
       <div id="levelChip" class="levelChip">LEVEL 1</div>
-    </div>
+    </header>
 
-    <div class="subHeader">
-      <div class="drillPill">
-        <div id="drillTitle" class="drillTitleMain">Back to Basics</div>
-        <div class="drillTitleSub">
-          <span class="subR">S</span><span class="subW">hooter </span>
-          <span class="subW">E</span><span class="subW">xperience </span>
-          <span class="subB">C</span><span class="subW">ard</span>
-        </div>
+    <section class="topActions">
+      <button id="historyBtn" class="historyBtn" type="button">History</button>
+    </section>
+
+    <section class="matrixCard">
+      <div class="matrixScroll">
+        <div id="matrixGrid" class="matrixGrid"></div>
       </div>
+    </section>
 
-      <button id="historyBtn" class="historyBtn">HISTORY</button>
-    </div>
-
-    <div class="matrixCard">
-      <div id="matrixHeader" class="matrixHeader"></div>
-      <div id="matrixBody" class="matrixBody"></div>
-    </div>
-
-    <div class="summaryRow">
+    <section class="summaryRow">
       <div class="summaryCard">
         <div class="summaryLabel">LIFETIME BEST SCORE</div>
-
-        <div class="summaryValueWrap">
-          <div id="lifetimeBest" class="summaryValue">0/10</div>
-          <div id="bestBadge" class="bestBadge hidden">NEW BEST</div>
-        </div>
-
-        <div id="timeStamp" class="timeStamp">—</div>
+        <div id="bestScore" class="summaryValue">0/10</div>
       </div>
 
       <div class="summaryCard">
-        <div id="levelLabel" class="summaryLabel">LEVEL 1</div>
-
-        <div id="levelStars" class="stars">★☆☆☆☆</div>
-
-        <div id="nextReq" class="nextReq">Complete 1 verified session</div>
-        <div id="nextHint" class="nextHint">One more strong session moves you up.</div>
+        <div class="summaryLabel">CURRENT LEVEL</div>
+        <div id="levelStars" class="levelStars">★☆☆☆☆</div>
       </div>
-    </div>
+    </section>
 
-    <div class="actions actions3">
-      <button id="newScanBtn" class="actionBtn">NEW SCAN</button>
-      <button id="vendorBtn" class="actionBtn">BUY MORE TARGETS LIKE THIS</button>
-      <button id="surveyBtn" class="actionBtn">DO SURVEY</button>
-    </div>
+    <section class="ctaRow">
+      <button id="newScanBtn" class="ctaBtn primary" type="button">📷 NEW SCAN</button>
+      <button id="leaderboardBtn" class="ctaBtn" type="button">🏆 LEADERBOARD</button>
+    </section>
 
-  </div>
+  </main>
 
-  <script src="./drills.js"></script>
-  <script src="./b2b-sec.js"></script>
+  <script defer src="./b2b.js?v=B2B-DASH-1"></script>
 </body>
 </html>
