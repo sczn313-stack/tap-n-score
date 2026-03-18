@@ -1,7 +1,9 @@
 /* ============================================================
    docs/sec.js (FULL REPLACEMENT) — TWO-PAGE SEC
-   FIX: Vendor partner is ALWAYS sourced (payload OR localStorage)
-   + Vendor square shows Baker Targets name (and logo if available)
+   B2B-AWARE VERSION
+   - Vendor partner is ALWAYS sourced (payload OR localStorage)
+   - Vendor square shows Baker Targets name (and logo if available)
+   - B2B mode displays drill scoring correctly
 ============================================================ */
 
 (() => {
@@ -35,7 +37,7 @@
   const KEY_TARGET_IMG_DATA = "SCZN3_TARGET_IMG_DATAURL_V1";
   const KEY_TARGET_IMG_BLOB = "SCZN3_TARGET_IMG_BLOBURL_V1";
 
-  // ✅ Vendor keys (MUST match index.js)
+  // Vendor keys
   const KEY_VENDOR_URL  = "SCZN3_VENDOR_URL_V1";
   const KEY_VENDOR_NAME = "SCZN3_VENDOR_NAME_V1";
 
@@ -46,10 +48,9 @@
   // Survey default
   const DEFAULT_SURVEY_URL = "https://forms.gle/uCSDTk5BwT4euLYeA";
 
-  // -----------------------------
-  // Helpers
-  // -----------------------------
-  function safeJsonParse(s) { try { return JSON.parse(s); } catch { return null; } }
+  function safeJsonParse(s) {
+    try { return JSON.parse(s); } catch { return null; }
+  }
 
   function getQueryParam(name) {
     const u = new URL(window.location.href);
@@ -84,7 +85,7 @@
   function avg2(arr) {
     const a = arr.map(Number).filter(Number.isFinite);
     if (!a.length) return "0.00";
-    const s = a.reduce((p,c)=>p+c,0) / a.length;
+    const s = a.reduce((p, c) => p + c, 0) / a.length;
     return s.toFixed(2);
   }
 
@@ -97,6 +98,15 @@
     return d.includes("bakertargets.com") || d.includes("baker");
   }
 
+  function isB2BPayload(payload) {
+    return (
+      String(payload?.drill?.mode || "").toLowerCase() === "b2b" ||
+      String(payload?.dial?.unit || "").toLowerCase() === "b2b" ||
+      String(payload?.target?.key || "").toLowerCase() === "bkr-b2b" ||
+      String(payload?.sku || "").toLowerCase() === "bkr-b2b"
+    );
+  }
+
   function resolveVendor(payload) {
     const fromPayloadUrl = String(payload?.vendorUrl || "");
     const fromStorageUrl = String(localStorage.getItem(KEY_VENDOR_URL) || "");
@@ -106,9 +116,10 @@
     const fromStorageName = String(localStorage.getItem(KEY_VENDOR_NAME) || "");
     let vendorName = (fromPayloadName || fromStorageName || "");
 
-    if (!vendorName) vendorName = isBaker(vendorUrl) ? "BAKER TARGETS" : (domainFromUrl(vendorUrl) || "VENDOR");
+    if (!vendorName) {
+      vendorName = isBaker(vendorUrl) ? "BAKER TARGETS" : (domainFromUrl(vendorUrl) || "VENDOR");
+    }
 
-    // keep payload consistent going forward
     payload.vendorUrl = vendorUrl;
     payload.vendorName = vendorName;
 
@@ -125,18 +136,21 @@
     return "";
   }
 
-  function scoreBandInfo(score) {
+  function scoreBandInfo(score, isB2B = false) {
     const s = Number(score);
     if (!Number.isFinite(s)) return { cls: "scoreBandNeutral", text: "—", scoreCls: "" };
+
+    if (isB2B) {
+      if (s >= 9) return { cls: "scoreBandGreen", text: "STRONG / EXCELLENT", scoreCls: "scoreGood" };
+      if (s >= 6) return { cls: "scoreBandYellow", text: "IMPROVING / SOLID", scoreCls: "scoreMid" };
+      return { cls: "scoreBandRed", text: "NEEDS WORK", scoreCls: "scoreLow" };
+    }
 
     if (s >= 90) return { cls: "scoreBandGreen", text: "STRONG / EXCELLENT", scoreCls: "scoreGood" };
     if (s >= 60) return { cls: "scoreBandYellow", text: "IMPROVING / SOLID", scoreCls: "scoreMid" };
     return { cls: "scoreBandRed", text: "NEEDS WORK", scoreCls: "scoreLow" };
   }
 
-  // -----------------------------
-  // History
-  // -----------------------------
   function loadHistory() {
     const arr = safeJsonParse(localStorage.getItem(KEY_HISTORY) || "[]");
     return Array.isArray(arr) ? arr : [];
@@ -148,12 +162,17 @@
 
   function pushHistory(payload) {
     const hist = loadHistory();
+    const b2b = isB2BPayload(payload);
+
     const row = {
       t: Date.now(),
       score: Number(payload?.score ?? 0),
-      dist: Number(payload?.debug?.distanceYds ?? payload?.distanceYds ?? 0),
-      hits: Number(payload?.shots ?? 0),
-      vendor: domainFromUrl(payload?.vendorUrl || "")
+      dist: b2b ? 0 : Number(payload?.debug?.distanceYds ?? payload?.distanceYds ?? 0),
+      hits: b2b
+        ? Number(payload?.hits ?? payload?.shots ?? 0)
+        : Number(payload?.shots ?? 0),
+      vendor: domainFromUrl(payload?.vendorUrl || ""),
+      mode: b2b ? "b2b" : "standard"
     };
 
     hist.unshift(row);
@@ -162,19 +181,20 @@
     return trimmed;
   }
 
-  function computeStats(hist) {
-    const scores = hist.map(h => Number(h.score)).filter(Number.isFinite);
+  function computeStats(hist, payload) {
+    const b2b = isB2BPayload(payload);
+    const filtered = hist.filter(h => (b2b ? h.mode === "b2b" : h.mode !== "b2b"));
+    const scores = filtered.map(h => Number(h.score)).filter(Number.isFinite);
     const sessions = scores.length;
     const highest = sessions ? Math.max(...scores) : 0;
     const avg10 = avg2(scores.slice(0, KEEP_N));
-    return { sessions, highest, avg10 };
+    return { sessions, highest, avg10, filtered };
   }
 
-  // -----------------------------
-  // Report Card image (Canvas -> <img>)
-  // -----------------------------
   async function drawReportCardImage(payload, hist) {
-    const stats = computeStats(hist);
+    const b2b = isB2BPayload(payload);
+    const stats = computeStats(hist, payload);
+    const useHist = stats.filtered;
     const { vendorUrl, vendorName } = resolveVendor(payload);
 
     const W = 1080;
@@ -215,7 +235,6 @@
       ctx.restore();
     }
 
-    // Header
     const secY = 120;
     ctx.font = "900 92px system-ui, -apple-system, Segoe UI, Roboto, Arial";
     ctx.textAlign = "center";
@@ -233,33 +252,31 @@
 
     ctx.fillStyle = "rgba(238,242,247,.75)";
     ctx.font = "700 26px system-ui, -apple-system, Segoe UI, Roboto, Arial";
-    ctx.fillText("Shooter Experience Card", W/2, secY + 42);
+    ctx.fillText("Shooter Experience Card", W / 2, secY + 42);
 
-    // Score block
-    panel(pad, 220, W - pad*2, 220);
+    panel(pad, 220, W - pad * 2, 220);
 
     const score = Number(payload?.score ?? 0);
-    const band = scoreBandInfo(score);
+    const band = scoreBandInfo(score, b2b);
 
     ctx.font = "800 28px system-ui, -apple-system, Segoe UI, Roboto, Arial";
     ctx.fillStyle = "rgba(238,242,247,.70)";
-    ctx.fillText("SCORE", W/2, 285);
+    ctx.fillText("SCORE", W / 2, 285);
 
     ctx.font = "900 120px system-ui, -apple-system, Segoe UI, Roboto, Arial";
     ctx.fillStyle = "rgba(238,242,247,.94)";
-    ctx.fillText(String(Math.round(score)), W/2, 405);
+    ctx.fillText(String(Math.round(score)), W / 2, 405);
 
-    // Band pill
     const pillW = 720, pillH = 64;
-    const pillX = (W - pillW)/2;
+    const pillX = (W - pillW) / 2;
     const pillY = 430;
     roundedRect(pillX, pillY, pillW, pillH, 999);
 
     let pillFill = "rgba(255,255,255,.08)";
     let pillTextColor = "rgba(238,242,247,.75)";
-    if (band.cls === "scoreBandGreen"){ pillFill = "rgba(72,255,139,.92)"; pillTextColor="#031009"; }
-    if (band.cls === "scoreBandYellow"){ pillFill = "rgba(255,232,90,.92)"; pillTextColor="#191300"; }
-    if (band.cls === "scoreBandRed"){ pillFill = "rgba(255,77,77,.92)"; pillTextColor="#1b0000"; }
+    if (band.cls === "scoreBandGreen") { pillFill = "rgba(72,255,139,.92)"; pillTextColor = "#031009"; }
+    if (band.cls === "scoreBandYellow") { pillFill = "rgba(255,232,90,.92)"; pillTextColor = "#191300"; }
+    if (band.cls === "scoreBandRed") { pillFill = "rgba(255,77,77,.92)"; pillTextColor = "#1b0000"; }
 
     ctx.fillStyle = pillFill;
     ctx.fill();
@@ -270,26 +287,28 @@
 
     ctx.fillStyle = pillTextColor;
     ctx.font = "900 28px system-ui, -apple-system, Segoe UI, Roboto, Arial";
-    ctx.fillText(band.text, W/2, pillY + 44);
-
-    // One-line identity
-    const dist = Number(payload?.debug?.distanceYds ?? payload?.distanceYds ?? 0);
-    const hitsN = Number(payload?.shots ?? 0);
-
-    const wdir = String(payload?.windage?.dir || "");
-    const edir = String(payload?.elevation?.dir || "");
-    const wclick = fmt2(payload?.windage?.clicks ?? 0);
-    const eclick = fmt2(payload?.elevation?.clicks ?? 0);
+    ctx.fillText(band.text, W / 2, pillY + 44);
 
     ctx.fillStyle = "rgba(238,242,247,.78)";
     ctx.font = "800 26px system-ui, -apple-system, Segoe UI, Roboto, Arial";
-    ctx.fillText(`${dist || 100} yds  |  ${hitsN} hits  |  ${wclick} ${wdir}  |  ${eclick} ${edir}`, W/2, 560);
 
-    // Squares
+    if (b2b) {
+      const hitsN = Number(payload?.hits ?? payload?.shots ?? 0);
+      ctx.fillText(`DRILL MODE  |  ${hitsN} taps  |  SCORE ${Math.round(score)}/10`, W / 2, 560);
+    } else {
+      const dist = Number(payload?.debug?.distanceYds ?? payload?.distanceYds ?? 0);
+      const hitsN = Number(payload?.shots ?? 0);
+      const wdir = String(payload?.windage?.dir || "");
+      const edir = String(payload?.elevation?.dir || "");
+      const wclick = fmt2(payload?.windage?.clicks ?? 0);
+      const eclick = fmt2(payload?.elevation?.clicks ?? 0);
+      ctx.fillText(`${dist || 100} yds  |  ${hitsN} hits  |  ${wclick} ${wdir}  |  ${eclick} ${edir}`, W / 2, 560);
+    }
+
     const sq = 360;
     const gap = 60;
-    const total = sq*2 + gap;
-    const start = (W - total)/2;
+    const total = sq * 2 + gap;
+    const start = (W - total) / 2;
     const ySq = 620;
 
     panel(start, ySq, sq, sq);
@@ -297,10 +316,9 @@
 
     ctx.fillStyle = "rgba(238,242,247,.72)";
     ctx.font = "900 22px system-ui, -apple-system, Segoe UI, Roboto, Arial";
-    ctx.fillText("TARGET USED", start + sq/2, ySq - 16);
-    ctx.fillText("OFFICIAL TARGET PARTNER", start + sq + gap + sq/2, ySq - 16);
+    ctx.fillText("TARGET USED", start + sq / 2, ySq - 16);
+    ctx.fillText("OFFICIAL TARGET PARTNER", start + sq + gap + sq / 2, ySq - 16);
 
-    // Thumbnail + markers
     const imgUrl = loadTargetImageUrl();
     const aim = payload?.debug?.aim || null;
     const hitArr = Array.isArray(payload?.debug?.hits) ? payload.debug.hits : [];
@@ -323,15 +341,15 @@
         const scale = Math.max(innerW / img.width, innerH / img.height);
         const dw = img.width * scale;
         const dh = img.height * scale;
-        const dx = innerX + (innerW - dw)/2;
-        const dy = innerY + (innerH - dh)/2;
+        const dx = innerX + (innerW - dw) / 2;
+        const dy = innerY + (innerH - dh) / 2;
 
         ctx.save();
         roundedRect(innerX, innerY, innerW, innerH, 22);
         ctx.clip();
         ctx.drawImage(img, dx, dy, dw, dh);
 
-        function map01(p){
+        function map01(p) {
           const x = dx + (Number(p?.x01 ?? 0) * dw);
           const y = dy + (Number(p?.y01 ?? 0) * dh);
           return { x, y };
@@ -340,7 +358,7 @@
         for (const h of hitArr) {
           const m = map01(h);
           ctx.beginPath();
-          ctx.arc(m.x, m.y, 10, 0, Math.PI*2);
+          ctx.arc(m.x, m.y, 10, 0, Math.PI * 2);
           ctx.fillStyle = "rgba(183,255,60,.95)";
           ctx.fill();
           ctx.lineWidth = 4;
@@ -348,10 +366,10 @@
           ctx.stroke();
         }
 
-        if (aim) {
+        if (!b2b && aim) {
           const m = map01(aim);
           ctx.beginPath();
-          ctx.arc(m.x, m.y, 12, 0, Math.PI*2);
+          ctx.arc(m.x, m.y, 12, 0, Math.PI * 2);
           ctx.fillStyle = "rgba(103,243,164,.95)";
           ctx.fill();
           ctx.lineWidth = 4;
@@ -359,7 +377,7 @@
           ctx.stroke();
 
           ctx.beginPath();
-          ctx.arc(m.x, m.y, 22, 0, Math.PI*2);
+          ctx.arc(m.x, m.y, 22, 0, Math.PI * 2);
           ctx.strokeStyle = "rgba(238,242,247,.85)";
           ctx.lineWidth = 3;
           ctx.stroke();
@@ -370,10 +388,9 @@
     } else {
       ctx.fillStyle = "rgba(238,242,247,.25)";
       ctx.font = "900 26px system-ui, -apple-system, Segoe UI, Roboto, Arial";
-      ctx.fillText("No Image", start + sq/2, ySq + sq/2);
+      ctx.fillText("No Image", start + sq / 2, ySq + sq / 2);
     }
 
-    // ✅ Vendor square: logo (if present) + name
     const vendorX = start + sq + gap;
     const vendorY = ySq;
     const innerVX = vendorX + 10;
@@ -395,13 +412,12 @@
         roundedRect(innerVX, innerVY, innerVW, innerVH, 22);
         ctx.clip();
 
-        // fit inside top half
         const maxW = innerVW * 0.78;
         const maxH = innerVH * 0.40;
         const s = Math.min(maxW / logo.width, maxH / logo.height);
         const lw = logo.width * s;
         const lh = logo.height * s;
-        const lx = innerVX + (innerVW - lw)/2;
+        const lx = innerVX + (innerVW - lw) / 2;
         const ly = innerVY + 48;
 
         ctx.drawImage(logo, lx, ly, lw, lh);
@@ -415,17 +431,16 @@
     ctx.textAlign = "center";
 
     const nameText = String(vendorName || (isBaker(vendorUrl) ? "BAKER TARGETS" : "Vendor Partner"));
-    ctx.fillText(nameText, vendorX + sq/2, drewLogo ? (vendorY + sq/2 + 40) : (vendorY + sq/2 - 10));
+    ctx.fillText(nameText, vendorX + sq / 2, drewLogo ? (vendorY + sq / 2 + 40) : (vendorY + sq / 2 - 10));
 
     ctx.fillStyle = "rgba(238,242,247,.62)";
     ctx.font = "800 22px system-ui, -apple-system, Segoe UI, Roboto, Arial";
-    ctx.fillText("After-Shot Intelligence", vendorX + sq/2, drewLogo ? (vendorY + sq/2 + 84) : (vendorY + sq/2 + 34));
+    ctx.fillText("After-Shot Intelligence", vendorX + sq / 2, drewLogo ? (vendorY + sq / 2 + 84) : (vendorY + sq / 2 + 34));
 
-    // Stats
-    panel(pad, 1040, W - pad*2, 200);
+    panel(pad, 1040, W - pad * 2, 200);
     ctx.fillStyle = "rgba(238,242,247,.70)";
     ctx.font = "900 24px system-ui, -apple-system, Segoe UI, Roboto, Arial";
-    ctx.fillText("SESSION SUMMARY (LAST 10)", W/2, 1090);
+    ctx.fillText("SESSION SUMMARY (LAST 10)", W / 2, 1090);
 
     ctx.fillStyle = "rgba(238,242,247,.92)";
     ctx.font = "900 44px system-ui, -apple-system, Segoe UI, Roboto, Arial";
@@ -442,13 +457,12 @@
     ctx.fillText("Highest (10)", leftX, row1 + 40);
     ctx.fillText("Average (10)", rightX, row1 + 40);
 
-    // Top 10
-    panel(pad, 1260, W - pad*2, 540);
+    panel(pad, 1260, W - pad * 2, 540);
     ctx.fillStyle = "rgba(238,242,247,.75)";
     ctx.font = "900 24px system-ui, -apple-system, Segoe UI, Roboto, Arial";
-    ctx.fillText("LAST 10 — SCORE / YDS / HITS (NEWEST TOP)", W/2, 1315);
+    ctx.fillText("LAST 10 — SCORE / YDS / HITS (NEWEST TOP)", W / 2, 1315);
 
-    const top10 = hist.slice(0, KEEP_N);
+    const top10 = useHist.slice(0, KEEP_N);
     ctx.textAlign = "left";
     ctx.font = "900 26px system-ui, -apple-system, Segoe UI, Roboto, Arial";
 
@@ -464,7 +478,7 @@
         ctx.save();
         ctx.globalAlpha = 0.12;
         ctx.fillStyle = "#2f66ff";
-        roundedRect(pad + 30, rowY - 32, W - pad*2 - 60, 42, 12);
+        roundedRect(pad + 30, rowY - 32, W - pad * 2 - 60, 42, 12);
         ctx.fill();
         ctx.restore();
       }
@@ -473,20 +487,22 @@
       const s = Math.round(Number(h.score || 0));
       const yd = Math.round(Number(h.dist || 0));
       const ht = Math.round(Number(h.hits || 0));
-      ctx.fillText(`${String(i+1).padStart(2,"0")}.  ${s}   |   ${yd} yds   |   ${ht} hits`, colX, rowY);
+
+      if (b2b) {
+        ctx.fillText(`${String(i + 1).padStart(2, "0")}.  ${s}/10   |   DRILL   |   ${ht} taps`, colX, rowY);
+      } else {
+        ctx.fillText(`${String(i + 1).padStart(2, "0")}.  ${s}   |   ${yd} yds   |   ${ht} hits`, colX, rowY);
+      }
     }
 
     ctx.textAlign = "center";
     ctx.fillStyle = "rgba(238,242,247,.45)";
     ctx.font = "800 20px system-ui, -apple-system, Segoe UI, Roboto, Arial";
-    ctx.fillText(`Generated ${nowStamp()}`, W/2, 1875);
+    ctx.fillText(`Generated ${nowStamp()}`, W / 2, 1875);
 
     return c.toDataURL("image/png");
   }
 
-  // -----------------------------
-  // Payload
-  // -----------------------------
   function loadPayload() {
     const qp = getQueryParam("payload");
     if (qp) {
@@ -501,9 +517,6 @@
     return null;
   }
 
-  // -----------------------------
-  // View switching
-  // -----------------------------
   function showPrecision() {
     viewPrecision.classList.add("viewOn");
     viewReport.classList.remove("viewOn");
@@ -516,12 +529,10 @@
     try { window.scrollTo(0, 0); } catch {}
   }
 
-  // -----------------------------
-  // Render Page 1
-  // -----------------------------
   function renderPrecision(payload) {
+    const b2b = isB2BPayload(payload);
     const score = Number(payload?.score ?? 0);
-    const band = scoreBandInfo(score);
+    const band = scoreBandInfo(score, b2b);
 
     scoreValue.textContent = Number.isFinite(score) ? String(Math.round(score)) : "—";
 
@@ -529,8 +540,22 @@
     scoreBand.classList.add(band.cls);
     scoreBand.textContent = band.text;
 
-    scoreValue.classList.remove("scoreGood","scoreMid","scoreLow");
+    scoreValue.classList.remove("scoreGood", "scoreMid", "scoreLow");
     if (band.scoreCls) scoreValue.classList.add(band.scoreCls);
+
+    if (b2b) {
+      windageBig.textContent = String(Math.round(score));
+      windageDir.textContent = "/10";
+
+      const taps = Number(payload?.hits ?? payload?.shots ?? 0);
+      elevationBig.textContent = String(taps);
+      elevationDir.textContent = "TAPS";
+
+      runDistance.textContent = "DRILL MODE";
+      runHits.textContent = `${taps} taps`;
+      runTime.textContent = nowStamp();
+      return;
+    }
 
     windageBig.textContent = fmt2(payload?.windage?.clicks ?? 0);
     windageDir.textContent = String(payload?.windage?.dir || "—");
@@ -546,9 +571,6 @@
     runTime.textContent = nowStamp();
   }
 
-  // -----------------------------
-  // Render Page 2
-  // -----------------------------
   async function renderReport(payload) {
     const { vendorUrl } = resolveVendor(payload);
     const surveyUrl = String(payload?.surveyUrl || "") || DEFAULT_SURVEY_URL;
@@ -580,9 +602,6 @@
     secCardImg.src = dataUrl;
   }
 
-  // -----------------------------
-  // Boot
-  // -----------------------------
   const payload = loadPayload();
   if (!payload) {
     alert("SEC data not found. Go back and run a target first.");
@@ -590,9 +609,7 @@
     return;
   }
 
-  // ✅ Force vendor resolution immediately (so history/vendor is correct)
   resolveVendor(payload);
-
   pushHistory(payload);
 
   renderPrecision(payload);
