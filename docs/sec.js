@@ -2,6 +2,7 @@
    docs/sec.js — FULL REPLACEMENT
    B2B LANE VISUAL BUILD + REPLAY LOOP + PROGRESS LADDER
    + B2B DASHBOARD BRIDGE
+   + FIX: replay/home preserves B2B route params
 ============================================================ */
 
 (() => {
@@ -89,6 +90,18 @@
   function goToB2BDashboard(payload) {
     const b64 = payloadToB64(payload);
     location.href = `./b2b.html?payload=${encodeURIComponent(b64)}&fresh=${Date.now()}`;
+  }
+
+  function getReturnToIndexUrl(payload) {
+    const fresh = Date.now();
+
+    if (isB2B(payload)) {
+      const vendor = String(payload?.vendor || "baker").toLowerCase() || "baker";
+      const sku = String(payload?.sku || payload?.target?.key || "bkr-b2b").toLowerCase() || "bkr-b2b";
+      return `./index.html?v=${encodeURIComponent(vendor)}&sku=${encodeURIComponent(sku)}&fresh=${fresh}`;
+    }
+
+    return `./index.html?fresh=${fresh}`;
   }
 
   function showPrecision() {
@@ -336,8 +349,8 @@
     renderB2BButtons(p);
   }
 
-  function goBackToLanding() {
-    location.href = "./index.html?fresh=" + Date.now();
+  function goBackToLanding(payload) {
+    location.href = getReturnToIndexUrl(payload);
   }
 
   const payload = loadPayload();
@@ -358,11 +371,11 @@
   backBtn.onclick = showPrecision;
 
   if (replayBtn) {
-    replayBtn.onclick = goBackToLanding;
+    replayBtn.onclick = () => goBackToLanding(payload);
   }
 
   if (goHomeBtn) {
-    goHomeBtn.onclick = goBackToLanding;
+    goHomeBtn.onclick = () => goBackToLanding(payload);
   }
 
   if (b2bDashBtn) {
