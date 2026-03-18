@@ -1,6 +1,6 @@
 /* ============================================================
    docs/sec.css (FULL REPLACEMENT) — TWO-PAGE SEC
-   B2B-AWARE VERSION + REPLAY BUTTON
+   B2B-AWARE VERSION + REPLAY BUTTON + LADDER
 ============================================================ */
 
 :root{
@@ -114,10 +114,6 @@ body{
   color:rgba(238,242,247,.92);
 }
 
-.scoreGood{ color:rgba(72,255,139,.96); }
-.scoreMid{ color:rgba(255,232,90,.96); }
-.scoreLow{ color:rgba(255,77,77,.96); }
-
 .scoreBand{
   display:inline-block;
   padding:10px 16px;
@@ -146,6 +142,11 @@ body{
 .scoreBandRed{
   background:rgba(255,77,77,.92);
   color:#1b0000;
+}
+
+.scoreBandNeutral{
+  background:rgba(255,255,255,.06);
+  color:rgba(238,242,247,.82);
 }
 
 .scoreTip{
@@ -184,6 +185,11 @@ body{
   letter-spacing:.12em;
   font-size:12px;
   color:rgba(238,242,247,.70);
+  min-height:30px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  text-align:center;
 }
 
 .clickVal{
@@ -224,6 +230,68 @@ body{
 }
 
 /* =========================
+   LADDER
+========================= */
+
+.ladderWrap{
+  margin-top:14px;
+  padding:14px;
+  border-radius:18px;
+  background:rgba(255,255,255,.04);
+  border:1px solid rgba(255,255,255,.10);
+}
+
+.ladderTopRow{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+}
+
+.ladderLabel{
+  font-weight:1000;
+  letter-spacing:.10em;
+  font-size:12px;
+  color:rgba(238,242,247,.74);
+}
+
+.ladderLevelChip{
+  padding:8px 12px;
+  border-radius:999px;
+  font-weight:1000;
+  font-size:12px;
+  background:linear-gradient(180deg, rgba(47,102,255,.96), rgba(47,102,255,.72));
+  color:#eef2f7;
+}
+
+.ladderStars{
+  margin-top:12px;
+  text-align:center;
+  font-size:28px;
+  letter-spacing:.18em;
+  color:var(--amber);
+  font-weight:1000;
+}
+
+.ladderText{
+  margin-top:10px;
+  text-align:center;
+  font-size:13px;
+  font-weight:900;
+  color:rgba(238,242,247,.88);
+  line-height:1.35;
+}
+
+.ladderNext{
+  margin-top:8px;
+  text-align:center;
+  font-size:12px;
+  font-weight:800;
+  color:rgba(238,242,247,.62);
+  line-height:1.35;
+}
+
+/* =========================
    ACTION BUTTONS
 ========================= */
 
@@ -254,8 +322,6 @@ body{
   color:rgba(238,242,247,.88);
 }
 
-/* 🔥 NEW: REPLAY BUTTON STYLE */
-
 .replayBtn{
   width:100%;
   border-radius:18px;
@@ -269,7 +335,9 @@ body{
   box-shadow:0 16px 36px rgba(0,0,0,.45);
 }
 
-.replayBtn:active{
+.replayBtn:active,
+.primaryBtn:active,
+.secondaryGlowBtn:active{
   transform:translateY(1px);
 }
 
@@ -278,6 +346,14 @@ body{
 ========================= */
 
 .reportCard{ padding-top:12px; }
+
+.saveHint{
+  text-align:center;
+  font-weight:900;
+  font-size:12px;
+  color:rgba(238,242,247,.70);
+  margin-bottom:10px;
+}
 
 .cardImgShell{
   border-radius:18px;
@@ -312,6 +388,15 @@ body{
   text-align:center;
 }
 
+.reportMicro{
+  margin-top:10px;
+  text-align:center;
+  font-weight:800;
+  font-size:12px;
+  color:rgba(238,242,247,.55);
+  line-height:1.35;
+}
+
 /* =========================
    FOOTER
 ========================= */
@@ -333,20 +418,24 @@ body{
 ========================= */
 
 @media (max-width:680px){
-
   .scoreValue{ font-size:72px; }
-
   .clicksBig{ grid-template-columns:1fr; }
-
   .clickVal{ font-size:48px; }
-
   .secRWB{ font-size:38px; }
-
   .bigSEC{ font-size:40px; }
-
   .reportActions{ flex-direction:column; }
 
   .btnSecondary,
   .vendorBtn,
-  .surveyBtn{ width:100%; }
-} 
+  .surveyBtn,
+  .replayBtn{ width:100%; }
+
+  .ladderTopRow{
+    flex-direction:column;
+    align-items:stretch;
+  }
+
+  .ladderLevelChip{
+    text-align:center;
+  }
+}
