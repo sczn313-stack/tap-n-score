@@ -1,382 +1,201 @@
 (() => {
-  const STORAGE_KEY = "tns_history_back_to_basics_v11";
-  const DEFAULT_DRILL_ID = "back-to-basics";
+  const $ = (id) => document.getElementById(id);
 
-  function query(name) {
-    return new URLSearchParams(window.location.search).get(name);
+  const backBtn = $("backBtn");
+  const newScanBtn = $("newScanBtn");
+  const leaderboardBtn = $("leaderboardBtn");
+  const historyBtn = $("historyBtn");
+  const matrixGrid = $("matrixGrid");
+  const bestScore = $("bestScore");
+  const levelChip = $("levelChip");
+  const levelStars = $("levelStars");
+
+  const KEY_PAYLOAD = "SCZN3_SEC_PAYLOAD_V1";
+  const KEY_B2B_DASH_HISTORY = "SCZN3_B2B_DASH_HISTORY_V1";
+  const KEEP_RUNS = 5;
+
+  function safeJsonParse(s){
+    try { return JSON.parse(s); } catch { return null; }
   }
 
-  function parseCsvBits(value, count) {
-    if (!value) return Array(count).fill(0);
-    const out = value
-      .split(",")
-      .slice(0, count)
-      .map(v => (Number(v) ? 1 : 0));
-
-    while (out.length < count) out.push(0);
-    return out;
+  function loadPayload() {
+    const qp = new URL(window.location.href).searchParams.get("payload");
+    if (qp) {
+      try {
+        return JSON.parse(decodeURIComponent(escape(atob(qp))));
+      } catch {}
+    }
+    return safeJsonParse(localStorage.getItem(KEY_PAYLOAD) || "");
   }
 
-  function getDrill() {
-    const drillId = query("drill") || DEFAULT_DRILL_ID;
-    return window.TNS_getDrill(drillId);
+  function isB2B(payload) {
+    return String(payload?.drill?.mode || "").toLowerCase() === "b2b"
+      || String(payload?.sku || "").toLowerCase().includes("b2b")
+      || String(payload?.target?.key || "").toLowerCase() === "bkr-b2b";
   }
 
-  function createSessionFromUrl(drill) {
-    const hasHits = new URLSearchParams(window.location.search).has("hits");
-    const now = new Date();
-
-    return {
-      id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-      date:
-        query("date") ||
-        now.toLocaleDateString("en-US", {
-          month: "short",
-          day: "numeric"
-        }),
-      time:
-        query("time") ||
-        now.toLocaleTimeString("en-US", {
-          hour: "numeric",
-          minute: "2-digit"
-        }),
-      hits: parseCsvBits(query("hits"), drill.laneCount),
-      stars: parseCsvBits(query("stars"), drill.laneCount),
-      verified: true,
-      fromUrl: hasHits
-    };
+  function fmtDate(ts) {
+    const d = new Date(Number(ts || Date.now()));
+    return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
   }
 
-  function demoSession(drill) {
-    const hits = Array(drill.laneCount).fill(0);
-    const stars = Array(drill.laneCount).fill(0);
-
-    [1, 2, 3, 4, 5, 6, 7, 9, 10].forEach(n => {
-      hits[n - 1] = 1;
-    });
-
-    [4, 6].forEach(n => {
-      stars[n - 1] = 1;
-    });
-
-    const now = new Date();
-
-    return {
-      id: "demo-session",
-      date: now.toLocaleDateString("en-US", {
-        month: "short",
-        day: "numeric"
-      }),
-      time: now.toLocaleTimeString("en-US", {
-        hour: "numeric",
-        minute: "2-digit"
-      }),
-      hits,
-      stars,
-      verified: true,
-      fromUrl: false
-    };
+  function percent(score, maxScore) {
+    const s = Number(score || 0);
+    const m = Number(maxScore || 10) || 10;
+    return Math.round((s / m) * 100);
   }
 
-  function getHistory() {
+  function loadHistory() {
+    const arr = safeJsonParse(localStorage.getItem(KEY_B2B_DASH_HISTORY) || "[]");
+    return Array.isArray(arr) ? arr : [];
+  }
+
+  function saveHistory(arr) {
     try {
-      return JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
-    } catch {
-      return [];
-    }
+      localStorage.setItem(KEY_B2B_DASH_HISTORY, JSON.stringify(arr.slice(0, 25)));
+    } catch {}
   }
 
-  function saveHistory(history) {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(history));
-  }
+  function pushCurrentRun(payload) {
+    if (!isB2B(payload)) return loadHistory();
 
-  function sameSession(a, b) {
-    return JSON.stringify({
-      date: a.date,
-      time: a.time,
-      hits: a.hits,
-      stars: a.stars
-    }) === JSON.stringify({
-      date: b.date,
-      time: b.time,
-      hits: b.hits,
-      stars: b.stars
-    });
-  }
+    const hist = loadHistory();
+    const sessionId = String(payload?.sessionId || "");
+    if (!sessionId) return hist;
 
-  function addSession(history, session) {
-    const exists = history.some(item => sameSession(item, session));
+    const exists = hist.some(x => String(x.sessionId || "") === sessionId);
     if (!exists) {
-      history.unshift(session);
-      if (history.length > 25) history.length = 25;
-      saveHistory(history);
+      hist.unshift({
+        sessionId,
+        ts: Number(payload?.runCompletedAt || Date.now()),
+        score: Number(payload?.score || 0),
+        maxScore: Number(payload?.maxScore || 10),
+        distanceYds: Number(payload?.distanceYds || payload?.debug?.distanceYds || 0),
+        lanesHit: Array.isArray(payload?.drill?.lanesHit) ? payload.drill.lanesHit.slice().sort((a,b)=>a-b) : [],
+        taps: Number(payload?.taps || payload?.hits || payload?.shots || 0)
+      });
+      saveHistory(hist);
     }
-    return getHistory();
+    return loadHistory();
   }
 
-  function scoreSession(session) {
-    return window.TNS_scoreSession(session);
+  function getLevelState(history) {
+    const scores = history.map(x => Number(x.score || 0));
+
+    let level = 1;
+    if (scores.some(s => s >= 7)) level = 2;
+    if (scores.filter(s => s >= 8).length >= 2) level = 3;
+    if (scores.filter(s => s >= 9).length >= 2) level = 4;
+    if (scores.some(s => s === 10)) level = 5;
+
+    const starsMap = {
+      1: "★☆☆☆☆",
+      2: "★★☆☆☆",
+      3: "★★★☆☆",
+      4: "★★★★☆",
+      5: "★★★★★"
+    };
+
+    return {
+      level,
+      stars: starsMap[level] || "★☆☆☆☆"
+    };
   }
 
-  function bestScore(history) {
-    if (!history.length) return 0;
-    return Math.max(...history.map(scoreSession));
+  function renderSummary(history) {
+    const best = history.length ? Math.max(...history.map(x => Number(x.score || 0))) : 0;
+    bestScore.textContent = `${best}/10`;
+
+    const state = getLevelState(history);
+    levelChip.textContent = `LEVEL ${state.level}`;
+    levelStars.textContent = state.stars;
   }
 
-  function getProgressHint(drill, history) {
-    const currentLevel = window.TNS_getCurrentLevel(drill, history);
-    const scores = history.map(scoreSession);
-
-    if (currentLevel >= drill.progression.maxLevel) {
-      return "You’ve reached the top level on this drill.";
-    }
-
-    if (currentLevel === 1) {
-      return scores.some(s => s >= 7)
-        ? "You’re ready to unlock the next level."
-        : "Reach 7/10 once to level up.";
-    }
-
-    if (currentLevel === 2) {
-      const count8 = scores.filter(s => s >= 8).length;
-      return count8 === 1
-        ? "One more 8/10 session unlocks the next level."
-        : "Reach 8/10 twice to level up.";
-    }
-
-    if (currentLevel === 3) {
-      const count9 = scores.filter(s => s >= 9).length;
-      return count9 === 1
-        ? "One more 9/10 session unlocks the next level."
-        : "Reach 9/10 twice to level up.";
-    }
-
-    if (currentLevel === 4) {
-      return scores.some(s => s === 10)
-        ? "Clean run achieved."
-        : "Shoot a clean 10/10 to reach the top level.";
-    }
-
-    return "Keep shooting verified sessions to progress.";
+  function makeCell(cls, html) {
+    const d = document.createElement("div");
+    d.className = `cell ${cls}`;
+    d.innerHTML = html;
+    return d;
   }
 
-  function animateStars(starString) {
-    const starsEl = document.getElementById("levelStars");
-    if (!starsEl) return;
+  function renderMatrix(history) {
+    matrixGrid.innerHTML = "";
 
-    const filledCount = (starString.match(/★/g) || []).length;
-    let i = 0;
-    starsEl.textContent = "☆☆☆☆☆";
+    matrixGrid.appendChild(makeCell("cornerCell", "Lanes"));
 
-    function step() {
-      if (i > filledCount) {
-        starsEl.textContent = starString;
-        return;
-      }
-
-      starsEl.textContent = "★".repeat(i) + "☆".repeat(5 - i);
-      starsEl.classList.remove("starFlash");
-      void starsEl.offsetWidth;
-      starsEl.classList.add("starFlash");
-
-      i += 1;
-      setTimeout(step, 140);
-    }
-
-    step();
-  }
-
-  function renderHeader(drill, history, currentSession, previousBest, previousLevel) {
-    const currentLevel = window.TNS_getCurrentLevel(drill, history);
-    const starString = window.TNS_getLevelStars(drill, history);
-    const nextReq = window.TNS_getNextRequirementText(drill, history);
-    const nextHint = getProgressHint(drill, history);
-    const best = bestScore(history);
-    const currentScore = currentSession ? scoreSession(currentSession) : 0;
-    const isNewBest = currentSession && currentScore >= previousBest && currentScore > 0;
-
-    const drillTitle = document.getElementById("drillTitle");
-    const levelChip = document.getElementById("levelChip");
-    const levelLabel = document.getElementById("levelLabel");
-    const nextReqEl = document.getElementById("nextReq");
-    const nextHintEl = document.getElementById("nextHint");
-    const lifetimeBest = document.getElementById("lifetimeBest");
-    const timeStamp = document.getElementById("timeStamp");
-    const bestBadge = document.getElementById("bestBadge");
-
-    if (drillTitle) drillTitle.textContent = drill.title;
-    if (levelChip) levelChip.textContent = `LEVEL ${currentLevel}`;
-    if (levelLabel) levelLabel.textContent = `LEVEL ${currentLevel}`;
-    if (nextReqEl) nextReqEl.textContent = nextReq || "";
-    if (nextHintEl) nextHintEl.textContent = nextHint || "";
-    if (lifetimeBest) lifetimeBest.textContent = `${best}/10`;
-
-    if (timeStamp) {
-      timeStamp.textContent = currentSession
-        ? `${currentSession.date} • ${currentSession.time}`
-        : "—";
-    }
-
-    if (bestBadge) {
-      if (isNewBest) bestBadge.classList.remove("hidden");
-      else bestBadge.classList.add("hidden");
-    }
-
-    if (levelChip && currentLevel > previousLevel) {
-      levelChip.classList.remove("levelPulse");
-      void levelChip.offsetWidth;
-      levelChip.classList.add("levelPulse");
-    }
-
-    animateStars(starString);
-  }
-
-  function makeNodeIcon(shape, lane) {
-    return `
-      <div class="nodeIcon ${shape}">
-        <div class="nodeNum">${lane}</div>
-        <div class="nodeReticleH"></div>
-        <div class="nodeReticleV"></div>
-      </div>
-    `;
-  }
-
-  function renderMatrix(drill, history) {
-    const header = document.getElementById("matrixHeader");
-    const body = document.getElementById("matrixBody");
-    if (!header || !body) return;
-
-    const sessions = history.slice(0, 5);
-
-    header.innerHTML = "";
-    body.innerHTML = "";
-
-    const corner = document.createElement("div");
-    corner.className = "cornerHead";
-    corner.textContent = "Drill";
-    header.appendChild(corner);
-
-    sessions.forEach(session => {
-      const cell = document.createElement("div");
-      cell.className = "dateHead";
-      cell.innerHTML = `
-        <div class="date">${session.date}</div>
-        <div class="score">${scoreSession(session)}/10</div>
-      `;
-      header.appendChild(cell);
+    const runs = history.slice(0, KEEP_RUNS);
+    runs.forEach(run => {
+      matrixGrid.appendChild(
+        makeCell(
+          "headCell",
+          `<div>${fmtDate(run.ts)}</div>
+           <div class="scoreHead">${run.score}/10</div>
+           <div class="subHead">${percent(run.score, run.maxScore)}%</div>`
+        )
+      );
     });
 
-    for (let i = sessions.length; i < 5; i++) {
-      const cell = document.createElement("div");
-      cell.className = "dateHead";
-      cell.innerHTML = `<div class="date">—</div><div class="score">—</div>`;
-      header.appendChild(cell);
+    for (let i = runs.length; i < KEEP_RUNS; i++) {
+      matrixGrid.appendChild(
+        makeCell(
+          "headCell",
+          `<div>—</div><div class="scoreHead">—</div><div class="subHead">—</div>`
+        )
+      );
     }
 
-    for (let lane = 1; lane <= drill.laneCount; lane++) {
-      const row = document.createElement("div");
-      row.className = "matrixRow";
+    for (let lane = 1; lane <= 10; lane++) {
+      matrixGrid.appendChild(
+        makeCell(
+          "laneCell",
+          `<div class="laneBadge">${lane}</div><div class="laneNum">${lane}</div>`
+        )
+      );
 
-      const shape = drill.laneShapes[lane] === "square" ? "square" : "circle";
-      const laneText = window.TNS_getLaneText(drill, lane) || `${lane}`;
+      runs.forEach(run => {
+        const hit = Array.isArray(run.lanesHit) && run.lanesHit.includes(lane);
+        matrixGrid.appendChild(
+          makeCell(
+            "markCell",
+            `<div class="mark ${hit ? "hit" : "miss"}">${hit ? "✓" : "✕"}</div>`
+          )
+        );
+      });
 
-      const laneCell = document.createElement("div");
-      laneCell.className = "laneCell";
-      laneCell.innerHTML = `
-        ${makeNodeIcon(shape, lane)}
-        <div class="laneLabel" style="font-size:16px; line-height:1.15; min-width:auto;">${laneText}</div>
-      `;
-      row.appendChild(laneCell);
-
-      for (let col = 0; col < 5; col++) {
-        const session = sessions[col];
-        const cell = document.createElement("div");
-        cell.className = "cell";
-
-        if (!session) {
-          cell.innerHTML = `<div class="mark miss" style="opacity:.18">•</div>`;
-        } else {
-          const hit = session.hits[lane - 1] === 1;
-          const star = session.stars[lane - 1] === 1;
-
-          cell.innerHTML = `
-            <div class="mark ${hit ? "hit" : "miss"}">${hit ? "✓" : "✕"}</div>
-            ${star ? `<div class="star">★</div>` : ""}
-          `;
-        }
-
-        row.appendChild(cell);
+      for (let i = runs.length; i < KEEP_RUNS; i++) {
+        matrixGrid.appendChild(
+          makeCell("markCell", `<div class="mark empty">•</div>`)
+        );
       }
-
-      body.appendChild(row);
     }
   }
 
-  function wireButtons(drill) {
-    const backBtn = document.getElementById("backBtn");
-    const historyBtn = document.getElementById("historyBtn");
-    const newScanBtn = document.getElementById("newScanBtn");
-    const vendorBtn = document.getElementById("vendorBtn");
-    const surveyBtn = document.getElementById("surveyBtn");
-
-    if (backBtn) {
-      backBtn.onclick = () => history.back();
-    }
-
-    if (historyBtn) {
-      historyBtn.onclick = () => {
-        alert("History is shown in the grid.");
-      };
-    }
-
-    if (newScanBtn) {
-      newScanBtn.onclick = () => {
-        window.location.href = "/docs/index.html";
-      };
-    }
-
-    if (vendorBtn) {
-      vendorBtn.textContent = `🎯  ${drill.vendorLabel}`;
-      vendorBtn.onclick = () => {
-        window.open(drill.vendorUrl, "_blank", "noopener");
-      };
-    }
-
-    if (surveyBtn) {
-      surveyBtn.onclick = () => {
-        if (drill.surveyUrl) {
-          window.open(drill.surveyUrl, "_blank", "noopener");
-        } else {
-          alert("Survey link not set yet.");
-        }
-      };
-    }
+  function goHome() {
+    window.location.href = "./index.html?fresh=" + Date.now();
   }
 
-  function init() {
-    const drill = getDrill();
-    let history = getHistory();
-    const previousBest = bestScore(history);
-    const previousLevel = window.TNS_getCurrentLevel(drill, history);
+  function boot() {
+    const payload = loadPayload();
+    const history = payload && isB2B(payload) ? pushCurrentRun(payload) : loadHistory();
 
-    const urlSession = createSessionFromUrl(drill);
-    const hasHits = new URLSearchParams(window.location.search).has("hits");
-    let currentSession = null;
+    renderSummary(history);
+    renderMatrix(history);
 
-    if (hasHits) {
-      history = addSession(history, urlSession);
-      currentSession = urlSession;
-    } else if (!history.length) {
-      history = addSession(history, demoSession(drill));
-      currentSession = history[0];
-    } else {
-      currentSession = history[0];
-    }
+    backBtn?.addEventListener("click", () => {
+      history.length ? window.history.back() : goHome();
+    });
 
-    renderHeader(drill, history, currentSession, previousBest, previousLevel);
-    renderMatrix(drill, history);
-    wireButtons(drill);
+    newScanBtn?.addEventListener("click", goHome);
+
+    leaderboardBtn?.addEventListener("click", () => {
+      alert("Leaderboard build is next.");
+    });
+
+    historyBtn?.addEventListener("click", () => {
+      const el = document.querySelector(".matrixCard");
+      el?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
   }
 
-  init();
+  boot();
 })();
