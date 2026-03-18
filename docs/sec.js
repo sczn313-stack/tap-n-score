@@ -1,6 +1,6 @@
 /* ============================================================
    docs/sec.js — FULL REPLACEMENT
-   B2B LANE VISUAL BUILD + REPLAY LOOP
+   B2B LANE VISUAL BUILD + REPLAY LOOP + PROGRESS LADDER
 ============================================================ */
 
 (() => {
@@ -23,11 +23,19 @@
   const elevationDir = $("elevationDir");
   const goHomeBtn = $("goHomeBtn");
 
+  const ladderWrap = $("ladderWrap");
+  const ladderLevelChip = $("ladderLevelChip");
+  const ladderStars = $("ladderStars");
+  const ladderText = $("ladderText");
+  const ladderNext = $("ladderNext");
+
   const secCardImg = $("secCardImg");
   const vendorBtn = $("vendorBtn");
   const surveyBtn = $("surveyBtn");
 
   const KEY_PAYLOAD = "SCZN3_SEC_PAYLOAD_V1";
+  const KEY_B2B_LADDER = "SCZN3_B2B_LADDER_HISTORY_V1";
+  const KEY_B2B_LADDER_LAST = "SCZN3_B2B_LADDER_LAST_SESSION_V1";
   const DEFAULT_SURVEY_URL = "https://forms.gle/uCSDTk5BwT4euLYeA";
 
   function safeJsonParse(s) {
@@ -80,6 +88,103 @@
     viewReport.classList.add("viewOn");
   }
 
+  function loadLadderHistory() {
+    const arr = safeJsonParse(localStorage.getItem(KEY_B2B_LADDER) || "[]");
+    return Array.isArray(arr) ? arr : [];
+  }
+
+  function saveLadderHistory(arr) {
+    try {
+      localStorage.setItem(KEY_B2B_LADDER, JSON.stringify(arr.slice(0, 25)));
+    } catch {}
+  }
+
+  function pushB2BLadderResult(payload) {
+    if (!isB2B(payload)) return;
+
+    const sid = String(payload?.sessionId || "");
+    const lastSid = String(localStorage.getItem(KEY_B2B_LADDER_LAST) || "");
+    if (!sid || sid === lastSid) return;
+
+    const hist = loadLadderHistory();
+    hist.unshift({
+      sessionId: sid,
+      score: Number(payload?.score || 0),
+      ts: Date.now()
+    });
+
+    saveLadderHistory(hist);
+    try {
+      localStorage.setItem(KEY_B2B_LADDER_LAST, sid);
+    } catch {}
+  }
+
+  function getB2BLevelState() {
+    const hist = loadLadderHistory();
+    const scores = hist.map(x => Number(x.score || 0));
+
+    const defs = [
+      {
+        level: 1,
+        stars: "★☆☆☆☆",
+        text: "Complete one verified drill session.",
+        next: "Next: Score 7/10 or higher once."
+      },
+      {
+        level: 2,
+        stars: "★★☆☆☆",
+        text: "Unlocked: Score 7/10 or higher once.",
+        next: "Next: Score 8/10 or higher twice."
+      },
+      {
+        level: 3,
+        stars: "★★★☆☆",
+        text: "Unlocked: Score 8/10 or higher twice.",
+        next: "Next: Score 9/10 or higher twice."
+      },
+      {
+        level: 4,
+        stars: "★★★★☆",
+        text: "Unlocked: Score 9/10 or higher twice.",
+        next: "Next: Shoot one clean 10/10."
+      },
+      {
+        level: 5,
+        stars: "★★★★★",
+        text: "Unlocked: Clean 10/10 achieved.",
+        next: "Top ladder reached."
+      }
+    ];
+
+    let level = 0;
+    if (scores.length >= 1) level = 1;
+    if (scores.some(s => s >= 7)) level = 2;
+    if (scores.filter(s => s >= 8).length >= 2) level = 3;
+    if (scores.filter(s => s >= 9).length >= 2) level = 4;
+    if (scores.some(s => s === 10)) level = 5;
+
+    if (level === 0) level = 1;
+
+    const idx = Math.max(0, Math.min(defs.length - 1, level - 1));
+    return defs[idx];
+  }
+
+  function renderLadder(payload) {
+    if (!ladderWrap) return;
+
+    if (!isB2B(payload)) {
+      ladderWrap.hidden = true;
+      return;
+    }
+
+    const state = getB2BLevelState();
+    ladderWrap.hidden = false;
+    ladderLevelChip.textContent = `LEVEL ${state.level}`;
+    ladderStars.textContent = state.stars;
+    ladderText.textContent = state.text;
+    ladderNext.textContent = state.next;
+  }
+
   function renderPrecision(p) {
     const b2b = isB2B(p);
     const score = Number(p?.score || 0);
@@ -102,8 +207,12 @@
       runDistance.textContent = dist ? `${Math.round(dist)} yds` : "DRILL MODE";
       runHits.textContent = `${taps} taps`;
       runTime.textContent = nowStamp();
+
+      renderLadder(p);
       return;
     }
+
+    if (ladderWrap) ladderWrap.hidden = true;
 
     windageBig.textContent = fmt2(p?.windage?.clicks);
     windageDir.textContent = p?.windage?.dir || "—";
@@ -213,6 +322,7 @@
     return;
   }
 
+  pushB2BLadderResult(payload);
   renderPrecision(payload);
   showPrecision();
 
