@@ -1,6 +1,6 @@
 /* ============================================================
    docs/sec.css (FULL REPLACEMENT) — TWO-PAGE SEC
-   B2B-AWARE VERSION
+   B2B-AWARE VERSION + REPLAY BUTTON
 ============================================================ */
 
 :root{
@@ -36,14 +36,13 @@ body{
 .view{ display:none; }
 .view.viewOn{ display:block; }
 
-/* Header */
-.secHeader{
-  padding:8px 4px 10px;
-}
+/* =========================
+   HEADER
+========================= */
 
-.secHeader.secHeaderTight{
-  padding:4px 4px 6px;
-}
+.secHeader{ padding:8px 4px 10px; }
+
+.secHeader.secHeaderTight{ padding:4px 4px 6px; }
 
 .secHeaderTop{
   display:flex;
@@ -59,9 +58,7 @@ body{
   line-height:1;
 }
 
-.bigSEC{
-  font-size:46px;
-}
+.bigSEC{ font-size:46px; }
 
 .secRWB .r{ color:var(--red); }
 .secRWB .w{ color:var(--white); }
@@ -77,7 +74,10 @@ body{
   text-align:right;
 }
 
-/* Card */
+/* =========================
+   CARD
+========================= */
+
 .card{
   background:linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03));
   border:1px solid rgba(255,255,255,.10);
@@ -86,7 +86,10 @@ body{
   box-shadow:0 18px 40px var(--shadow);
 }
 
-/* Score block */
+/* =========================
+   SCORE BLOCK
+========================= */
+
 .scoreWrap{
   text-align:center;
   padding:10px 10px 12px;
@@ -133,24 +136,16 @@ body{
 .scoreBandGreen{
   background:rgba(72,255,139,.92);
   color:#031009;
-  border-color:rgba(255,255,255,.12);
 }
 
 .scoreBandYellow{
   background:rgba(255,232,90,.92);
   color:#191300;
-  border-color:rgba(255,255,255,.12);
 }
 
 .scoreBandRed{
   background:rgba(255,77,77,.92);
   color:#1b0000;
-  border-color:rgba(255,255,255,.12);
-}
-
-.scoreBandNeutral{
-  background:rgba(255,255,255,.06);
-  color:rgba(238,242,247,.82);
 }
 
 .scoreTip{
@@ -161,7 +156,10 @@ body{
   line-height:1.35;
 }
 
-/* Big boxes */
+/* =========================
+   BIG BOXES
+========================= */
+
 .clicksBig{
   display:grid;
   grid-template-columns:1fr 1fr;
@@ -186,11 +184,6 @@ body{
   letter-spacing:.12em;
   font-size:12px;
   color:rgba(238,242,247,.70);
-  min-height:30px;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  text-align:center;
 }
 
 .clickVal{
@@ -198,7 +191,6 @@ body{
   font-size:56px;
   line-height:1;
   margin-top:8px;
-  word-break:break-word;
 }
 
 .clickDir{
@@ -207,10 +199,12 @@ body{
   letter-spacing:.10em;
   font-size:14px;
   color:rgba(238,242,247,.86);
-  min-height:20px;
 }
 
-/* Run mini pills */
+/* =========================
+   MINI PILLS
+========================= */
+
 .miniLine{
   display:flex;
   gap:8px;
@@ -224,15 +218,15 @@ body{
   border-radius:999px;
   font-weight:900;
   font-size:12px;
-  letter-spacing:.05em;
   background:rgba(255,255,255,.05);
   border:1px solid rgba(255,255,255,.14);
   color:rgba(238,242,247,.78);
-  box-shadow:0 10px 26px rgba(0,0,0,.35);
-  text-align:center;
 }
 
-/* Actions */
+/* =========================
+   ACTION BUTTONS
+========================= */
+
 .primaryActions{
   margin-top:12px;
   display:flex;
@@ -244,58 +238,46 @@ body{
   width:100%;
   border:0;
   border-radius:18px;
-  padding:14px 14px;
+  padding:14px;
   font-weight:1000;
-  letter-spacing:.06em;
-  font-size:14px;
-  color:#071022;
   background:linear-gradient(180deg, rgba(47,102,255,.96), rgba(47,102,255,.72));
-  box-shadow:0 16px 36px rgba(0,0,0,.45);
-}
-
-.primaryBtn:active{
-  transform:translateY(1px);
+  color:#071022;
 }
 
 .secondaryGlowBtn{
   width:100%;
   border-radius:18px;
-  padding:13px 14px;
+  padding:13px;
   font-weight:1000;
-  letter-spacing:.06em;
-  font-size:14px;
   background:rgba(255,255,255,.05);
   border:1px solid rgba(255,255,255,.16);
   color:rgba(238,242,247,.88);
-  box-shadow:
-    0 0 0 1px rgba(255,255,255,.05) inset,
-    0 14px 34px rgba(0,0,0,.42);
 }
 
-.secondaryGlowBtn:active{
+/* 🔥 NEW: REPLAY BUTTON STYLE */
+
+.replayBtn{
+  width:100%;
+  border-radius:18px;
+  padding:14px;
+  font-weight:1000;
+  letter-spacing:.06em;
+  font-size:14px;
+  background:linear-gradient(180deg, rgba(72,255,139,.92), rgba(72,255,139,.65));
+  border:1px solid rgba(255,255,255,.12);
+  color:#02130b;
+  box-shadow:0 16px 36px rgba(0,0,0,.45);
+}
+
+.replayBtn:active{
   transform:translateY(1px);
 }
 
-.microNote{
-  text-align:center;
-  font-weight:800;
-  font-size:12px;
-  color:rgba(238,242,247,.60);
-  line-height:1.35;
-}
+/* =========================
+   REPORT PAGE
+========================= */
 
-/* Page 2 */
-.reportCard{
-  padding-top:12px;
-}
-
-.saveHint{
-  text-align:center;
-  font-weight:900;
-  font-size:12px;
-  color:rgba(238,242,247,.70);
-  margin-bottom:10px;
-}
+.reportCard{ padding-top:12px; }
 
 .cardImgShell{
   border-radius:18px;
@@ -323,7 +305,6 @@ body{
   border-radius:14px;
   padding:10px 14px;
   font-weight:1000;
-  letter-spacing:.05em;
   border:1px solid rgba(255,255,255,.14);
   background:rgba(255,255,255,.05);
   color:rgba(238,242,247,.92);
@@ -331,16 +312,10 @@ body{
   text-align:center;
 }
 
-.reportMicro{
-  margin-top:10px;
-  text-align:center;
-  font-weight:800;
-  font-size:12px;
-  color:rgba(238,242,247,.55);
-  line-height:1.35;
-}
+/* =========================
+   FOOTER
+========================= */
 
-/* Footer */
 .secFooter{
   padding:12px 4px 0;
   text-align:center;
@@ -353,40 +328,25 @@ body{
   color:rgba(238,242,247,.40);
 }
 
-/* Responsive */
+/* =========================
+   RESPONSIVE
+========================= */
+
 @media (max-width:680px){
-  .scoreValue{
-    font-size:72px;
-  }
 
-  .clicksBig{
-    grid-template-columns:1fr;
-  }
+  .scoreValue{ font-size:72px; }
 
-  .clickVal{
-    font-size:48px;
-  }
+  .clicksBig{ grid-template-columns:1fr; }
 
-  .secRWB{
-    font-size:38px;
-  }
+  .clickVal{ font-size:48px; }
 
-  .bigSEC{
-    font-size:40px;
-  }
+  .secRWB{ font-size:38px; }
 
-  .secSub{
-    font-size:11px;
-    margin-bottom:4px;
-  }
+  .bigSEC{ font-size:40px; }
 
-  .reportActions{
-    flex-direction:column;
-  }
+  .reportActions{ flex-direction:column; }
 
   .btnSecondary,
   .vendorBtn,
-  .surveyBtn{
-    width:100%;
-  }
-}
+  .surveyBtn{ width:100%; }
+} 
