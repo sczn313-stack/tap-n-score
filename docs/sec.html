@@ -12,15 +12,12 @@
 
   <title>SEC — Tap-n-Score™</title>
 
-  <link rel="stylesheet" href="./sec.css?v=SEC-2P-B2B-LADDER-2" />
+  <link rel="stylesheet" href="./sec.css?v=SEC-PROFILE-REV-1" />
 </head>
 
 <body>
   <main class="secPage">
 
-    <!-- =========================
-         PAGE 1 — PRECISION / DRILL
-    ========================== -->
     <section id="viewPrecision" class="view viewOn" aria-label="SEC Precision View">
       <header class="secHeader">
         <div class="secHeaderTop">
@@ -44,13 +41,13 @@
 
         <div class="clicksBig">
           <div class="clickBox">
-            <div class="clickHdr">WINDAGE / SCORE</div>
+            <div class="clickHdr">PRIMARY / SCORE</div>
             <div id="windageBig" class="clickVal">—</div>
             <div id="windageDir" class="clickDir">—</div>
           </div>
 
           <div class="clickBox">
-            <div class="clickHdr">ELEVATION / TAPS</div>
+            <div class="clickHdr">SECONDARY / TAPS</div>
             <div id="elevationBig" class="clickVal">—</div>
             <div id="elevationDir" class="clickDir">—</div>
           </div>
@@ -62,38 +59,24 @@
           <span id="runTime" class="miniPill">—</span>
         </div>
 
-        <!-- =========================
-             B2B LADDER
-        ========================== -->
         <div id="ladderWrap" class="ladderWrap" hidden>
           <div class="ladderTopRow">
-            <div class="ladderLabel">B2B PROGRESS LADDER</div>
+            <div class="ladderLabel">PROGRESS LADDER</div>
             <div id="ladderLevelChip" class="ladderLevelChip">LEVEL 1</div>
           </div>
 
           <div id="ladderStars" class="ladderStars">★☆☆☆☆</div>
-
-          <div id="ladderText" class="ladderText">
-            Complete one verified drill session.
-          </div>
-
-          <div id="ladderNext" class="ladderNext">
-            Next: Score 7/10 or higher once.
-          </div>
+          <div id="ladderText" class="ladderText">Complete one verified drill session.</div>
+          <div id="ladderNext" class="ladderNext">Next milestone.</div>
         </div>
 
         <div class="primaryActions">
           <button id="toReportBtn" class="primaryBtn" type="button">
-            Save SEC + Shooter History
+            Save SEC + Session History
           </button>
 
           <button id="goHomeBtn" class="secondaryGlowBtn" type="button">
             Zero another target / Score another
-          </button>
-
-          <!-- NEW: B2B dashboard bridge -->
-          <button id="b2bDashBtn" class="secondaryGlowBtn" type="button" hidden>
-            View B2B Dashboard
           </button>
 
           <div class="microNote">
@@ -107,9 +90,6 @@
       </footer>
     </section>
 
-    <!-- =========================
-         PAGE 2 — REPORT CARD
-    ========================== -->
     <section id="viewReport" class="view" aria-label="SEC Report Card View">
       <header class="secHeader secHeaderTight">
         <div class="secHeaderTop">
@@ -133,12 +113,7 @@
           <button id="backBtn" class="btnSecondary" type="button">Back</button>
 
           <button id="replayBtn" class="replayBtn" type="button">
-            Replay Drill / Score Again
-          </button>
-
-          <!-- NEW: B2B dashboard bridge -->
-          <button id="b2bDashBtn2" class="replayBtn" type="button" hidden>
-            View B2B Dashboard
+            Replay / Score Again
           </button>
 
           <a id="vendorBtn" class="vendorBtn" href="#" target="_blank" rel="noopener">
@@ -162,6 +137,6 @@
 
   </main>
 
-  <script defer src="./sec.js?v=SEC-2P-B2B-LADDER-2"></script>
+  <script defer src="./sec.js?v=SEC-PROFILE-REV-1"></script>
 </body>
 </html>
