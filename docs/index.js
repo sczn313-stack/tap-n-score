@@ -1,22 +1,13 @@
 /* ============================================================
-   docs/index.js — B2B Go-Live Router + Zone Scoring + Run Metadata
-   - Keeps printed QR URL permanent
-   - Routes Baker B2B into B2B tap scoring
-   - Uses zone-based lane detection
-   - FINAL FIX: lane 10 priority band / lane 8 cutoff
-   - Leaves normal targets on generic correction flow
-   - Adds distance + cleaner payload metadata
+   docs/index.js — PROFILE ENGINE (PART 1 OF 2)
 ============================================================ */
 
 (() => {
   const $ = (id) => document.getElementById(id);
 
   function getUrl() {
-    try {
-      return new URL(window.location.href);
-    } catch {
-      return null;
-    }
+    try { return new URL(window.location.href); }
+    catch { return null; }
   }
 
   function getParam(name) {
@@ -32,11 +23,8 @@
     return getParam("sku").toLowerCase();
   }
 
-  function isB2B() {
-    return getVendor() === "baker" && getSku() === "bkr-b2b";
-  }
-
-  const B2B_MODE = isB2B();
+  const vendor = getVendor();
+  const sku = getSku();
 
   const elPhotoBtn = $("photoBtn");
   const elFile = $("photoInput");
@@ -100,36 +88,120 @@
 
   const DEFAULTS = { MOA: 0.25, MRAD: 0.10 };
 
-  /* ============================================================
-     B2B ZONE SCORING
-     FINAL FIX:
-     - Lane 10 has its own priority band
-     - Lane 8 is tightened and cut off from lower region
-  ============================================================ */
-  const B2B_ZONES = [
-    { id: 1,  shape: "circle", cx: 0.16, cy: 0.22, r: 0.105 },
-    { id: 2,  shape: "square", cx: 0.50, cy: 0.22, hw: 0.105, hh: 0.105 },
-    { id: 3,  shape: "circle", cx: 0.84, cy: 0.22, r: 0.105 },
+  const TARGET_PROFILES = {
+    "b2b-original": {
+      profileId: "b2b-original",
+      name: "Back to Basics Original",
+      vendorDefault: "baker",
+      targetKind: "drill",
+      scoringMode: "occupancy",
+      maxScore: 10,
+      instructionsSummary: "Original Back to Basics drill target.",
+      displayLayout: {
+        1:  { x: 0.76, y: 0.12, shape: "circle" },
+        2:  { x: 0.18, y: 0.34, shape: "circle" },
+        3:  { x: 0.50, y: 0.34, shape: "square" },
+        4:  { x: 0.82, y: 0.34, shape: "circle" },
+        5:  { x: 0.18, y: 0.57, shape: "circle" },
+        6:  { x: 0.50, y: 0.57, shape: "square" },
+        7:  { x: 0.82, y: 0.57, shape: "circle" },
+        8:  { x: 0.18, y: 0.80, shape: "circle" },
+        9:  { x: 0.50, y: 0.80, shape: "square" },
+        10: { x: 0.82, y: 0.80, shape: "circle" }
+      },
+      zones: [
+        { id: 1,  shape: "circle", cx: 0.76, cy: 0.13, r: 0.080 },
+        { id: 2,  shape: "circle", cx: 0.18, cy: 0.36, r: 0.075 },
+        { id: 3,  shape: "square", cx: 0.50, cy: 0.36, hw: 0.083, hh: 0.083 },
+        { id: 4,  shape: "circle", cx: 0.82, cy: 0.36, r: 0.075 },
+        { id: 5,  shape: "circle", cx: 0.18, cy: 0.59, r: 0.075 },
+        { id: 6,  shape: "square", cx: 0.50, cy: 0.59, hw: 0.083, hh: 0.083 },
+        { id: 7,  shape: "circle", cx: 0.82, cy: 0.59, r: 0.075 },
+        { id: 8,  shape: "circle", cx: 0.18, cy: 0.82, r: 0.075 },
+        { id: 9,  shape: "square", cx: 0.50, cy: 0.82, hw: 0.083, hh: 0.083 },
+        { id: 10, shape: "circle", cx: 0.82, cy: 0.82, r: 0.075 }
+      ]
+    },
 
-    { id: 4,  shape: "circle", cx: 0.16, cy: 0.50, r: 0.105 },
-    { id: 5,  shape: "square", cx: 0.50, cy: 0.50, hw: 0.105, hh: 0.105 },
-    { id: 6,  shape: "circle", cx: 0.84, cy: 0.50, r: 0.105 },
+    "bkr-b2b": {
+      profileId: "bkr-b2b",
+      name: "Back to Basics Grid",
+      vendorDefault: "baker",
+      targetKind: "drill",
+      scoringMode: "occupancy",
+      maxScore: 10,
+      instructionsSummary: "Grid-style Back to Basics scoring target.",
+      displayLayout: {
+        1:  { x: 0.20, y: 0.16, shape: "circle" },
+        2:  { x: 0.50, y: 0.16, shape: "square" },
+        3:  { x: 0.80, y: 0.16, shape: "circle" },
+        4:  { x: 0.20, y: 0.40, shape: "circle" },
+        5:  { x: 0.50, y: 0.40, shape: "square" },
+        6:  { x: 0.80, y: 0.40, shape: "circle" },
+        7:  { x: 0.20, y: 0.64, shape: "circle" },
+        8:  { x: 0.50, y: 0.64, shape: "square" },
+        9:  { x: 0.80, y: 0.64, shape: "circle" },
+        10: { x: 0.50, y: 0.88, shape: "circle" }
+      },
+      zones: [
+        { id: 1,  shape: "circle", cx: 0.16, cy: 0.22, r: 0.105 },
+        { id: 2,  shape: "square", cx: 0.50, cy: 0.22, hw: 0.105, hh: 0.105 },
+        { id: 3,  shape: "circle", cx: 0.84, cy: 0.22, r: 0.105 },
+        { id: 4,  shape: "circle", cx: 0.16, cy: 0.50, r: 0.105 },
+        { id: 5,  shape: "square", cx: 0.50, cy: 0.50, hw: 0.105, hh: 0.105 },
+        { id: 6,  shape: "circle", cx: 0.84, cy: 0.50, r: 0.105 },
+        { id: 7,  shape: "circle", cx: 0.16, cy: 0.78, r: 0.098 },
+        { id: 8,  shape: "square", cx: 0.50, cy: 0.765, hw: 0.088, hh: 0.070 },
+        { id: 9,  shape: "circle", cx: 0.84, cy: 0.78, r: 0.098 },
+        { id: 10, shape: "circle", cx: 0.50, cy: 0.935, r: 0.105 }
+      ],
+      lane10Priority: { left: 0.32, right: 0.68, top: 0.86, bottom: 1.00 },
+      lane8MaxY: 0.83
+    },
 
-    { id: 7,  shape: "circle", cx: 0.16, cy: 0.78, r: 0.098 },
-    { id: 8,  shape: "square", cx: 0.50, cy: 0.765, hw: 0.088, hh: 0.070 },
-    { id: 9,  shape: "circle", cx: 0.84, cy: 0.78, r: 0.098 },
-
-    { id: 10, shape: "circle", cx: 0.50, cy: 0.935, r: 0.105 }
-  ];
-
-  const B2B_LANE10_PRIORITY = {
-    left: 0.32,
-    right: 0.68,
-    top: 0.86,
-    bottom: 1.00
+    "dot-torture": {
+      profileId: "dot-torture",
+      name: "Dot Torture",
+      vendorDefault: "",
+      targetKind: "drill",
+      scoringMode: "shot-count",
+      maxScore: 50,
+      instructionsSummary: "Dot Torture target foundation profile.",
+      displayLayout: {
+        1:  { x: 0.50, y: 0.10, shape: "circle" },
+        2:  { x: 0.22, y: 0.26, shape: "circle" },
+        3:  { x: 0.50, y: 0.26, shape: "circle" },
+        4:  { x: 0.78, y: 0.26, shape: "circle" },
+        5:  { x: 0.22, y: 0.46, shape: "circle" },
+        6:  { x: 0.50, y: 0.46, shape: "circle" },
+        7:  { x: 0.78, y: 0.46, shape: "circle" },
+        8:  { x: 0.22, y: 0.66, shape: "circle" },
+        9:  { x: 0.50, y: 0.66, shape: "circle" },
+        10: { x: 0.78, y: 0.66, shape: "circle" }
+      },
+      zones: [
+        { id: 1,  shape: "circle", cx: 0.50, cy: 0.12, r: 0.060 },
+        { id: 2,  shape: "circle", cx: 0.22, cy: 0.30, r: 0.060 },
+        { id: 3,  shape: "circle", cx: 0.50, cy: 0.30, r: 0.060 },
+        { id: 4,  shape: "circle", cx: 0.78, cy: 0.30, r: 0.060 },
+        { id: 5,  shape: "circle", cx: 0.22, cy: 0.50, r: 0.060 },
+        { id: 6,  shape: "circle", cx: 0.50, cy: 0.50, r: 0.060 },
+        { id: 7,  shape: "circle", cx: 0.78, cy: 0.50, r: 0.060 },
+        { id: 8,  shape: "circle", cx: 0.22, cy: 0.70, r: 0.060 },
+        { id: 9,  shape: "circle", cx: 0.50, cy: 0.70, r: 0.060 },
+        { id: 10, shape: "circle", cx: 0.78, cy: 0.70, r: 0.060 }
+      ]
+    }
   };
 
-  const B2B_LANE8_MAX_Y = 0.83;
+  function getProfileKey() {
+    if (TARGET_PROFILES[sku]) return sku;
+    return "";
+  }
+
+  const PROFILE_KEY = getProfileKey();
+  const ACTIVE_PROFILE = PROFILE_KEY ? TARGET_PROFILES[PROFILE_KEY] : null;
+  const DRILL_MODE = !!ACTIVE_PROFILE && ACTIVE_PROFILE.targetKind === "drill";
 
   try { history.scrollRestoration = "manual"; } catch {}
 
@@ -155,40 +227,6 @@
     return Math.max(0, Math.min(1, v));
   }
 
-  function setText(el, t) {
-    if (el) el.textContent = String(t ?? "");
-  }
-
-  function revealScoringUI() {
-    elScoreSection?.classList.remove("scoreHidden");
-    try {
-      elScoreSection?.scrollIntoView({ behavior: "smooth", block: "start" });
-    } catch {}
-  }
-
-  function setTapCount() {
-    if (elTapCount) elTapCount.textContent = String(hits.length);
-  }
-
-  function hideSticky() {
-    if (!elStickyBar) return;
-    elStickyBar.classList.add("stickyHidden");
-    elStickyBar.setAttribute("aria-hidden", "true");
-  }
-
-  function showSticky() {
-    if (!elStickyBar) return;
-    elStickyBar.classList.remove("stickyHidden");
-    elStickyBar.setAttribute("aria-hidden", "false");
-  }
-
-  function scheduleStickyMagic() {
-    clearTimeout(pauseTimer);
-    pauseTimer = setTimeout(() => {
-      if (hits.length >= 1) showSticky();
-    }, 650);
-  }
-
   function nowTs() {
     return Date.now();
   }
@@ -199,6 +237,10 @@
 
   function newSessionId() {
     return "S-" + nowTs() + "-" + Math.random().toString(36).slice(2, 8);
+  }
+
+  function setText(el, t) {
+    if (el) el.textContent = String(t ?? "");
   }
 
   function setInstruction(text, kind) {
@@ -228,7 +270,7 @@
       return;
     }
 
-    if (B2B_MODE) {
+    if (DRILL_MODE) {
       setInstruction("Tap each lane that has at least one hit.", "holes");
       return;
     }
@@ -239,6 +281,36 @@
     }
 
     setInstruction("Tap Bullet Holes.", "holes");
+  }
+
+  function revealScoringUI() {
+    elScoreSection?.classList.remove("scoreHidden");
+    try {
+      elScoreSection?.scrollIntoView({ behavior: "smooth", block: "start" });
+    } catch {}
+  }
+
+  function hideSticky() {
+    if (!elStickyBar) return;
+    elStickyBar.classList.add("stickyHidden");
+    elStickyBar.setAttribute("aria-hidden", "true");
+  }
+
+  function showSticky() {
+    if (!elStickyBar) return;
+    elStickyBar.classList.remove("stickyHidden");
+    elStickyBar.setAttribute("aria-hidden", "false");
+  }
+
+  function scheduleStickyMagic() {
+    clearTimeout(pauseTimer);
+    pauseTimer = setTimeout(() => {
+      if (hits.length >= 1) showSticky();
+    }, 650);
+  }
+
+  function setTapCount() {
+    if (elTapCount) elTapCount.textContent = String(hits.length);
   }
 
   function resetAll() {
@@ -253,7 +325,7 @@
     setText(
       elStatus,
       elImg?.src
-        ? (B2B_MODE ? "Tap each lane that was hit." : "Tap Aim Point.")
+        ? (DRILL_MODE ? "Tap each lane that was hit." : "Tap Aim Point.")
         : "Add a target photo to begin."
     );
     closeMatrix();
@@ -261,7 +333,7 @@
   }
 
   function isBakerMode() {
-    return getVendor() === "baker";
+    return vendor === "baker";
   }
 
   function closeVendorPanel() {
@@ -534,14 +606,17 @@
     }
 
     if (elLiveDial) {
-      elLiveDial.textContent = B2B_MODE
-        ? "DRILL MODE"
+      elLiveDial.textContent = DRILL_MODE
+        ? (ACTIVE_PROFILE ? ACTIVE_PROFILE.name.toUpperCase() : "DRILL MODE")
         : `${getClickValue().toFixed(2)} ${dialUnit}`;
     }
 
     if (elLiveTarget) {
-      const label = B2B_MODE ? "B2B" : (targetSizeKey || "").replace("x", "×");
-      elLiveTarget.textContent = label || "—";
+      if (DRILL_MODE && ACTIVE_PROFILE) {
+        elLiveTarget.textContent = ACTIVE_PROFILE.profileId;
+      } else {
+        elLiveTarget.textContent = (targetSizeKey || "").replace("x", "×") || "—";
+      }
     }
   }
 
@@ -584,402 +659,3 @@
       });
     });
   }
-
-  window.addEventListener("keydown", (e) => {
-    if (e.key === "Escape") closeMatrix();
-  });
-
-  document.addEventListener("click", (e) => {
-    if (!isMatrixOpen()) return;
-    if (!elMatrixPanel) return;
-    const inside = elMatrixPanel.contains(e.target);
-    const isBtn = (e.target === elMatrixBtn) || e.target.closest?.("#matrixBtn");
-    if (!inside && !isBtn) closeMatrix();
-  }, { capture: true });
-
-  function scoreFromRadiusInches(rIn) {
-    if (rIn <= 0.25) return 100;
-    if (rIn <= 0.50) return 95;
-    if (rIn <= 1.00) return 90;
-    if (rIn <= 1.50) return 85;
-    if (rIn <= 2.00) return 80;
-    if (rIn <= 2.50) return 75;
-    if (rIn <= 3.00) return 70;
-    if (rIn <= 3.50) return 65;
-    if (rIn <= 4.00) return 60;
-    return 50;
-  }
-
-  function computeCorrectionAndScore() {
-    if (!aim || hits.length < 1) return null;
-
-    const avg = hits.reduce((acc, p) => ({ x: acc.x + p.x01, y: acc.y + p.y01 }), { x: 0, y: 0 });
-    avg.x /= hits.length;
-    avg.y /= hits.length;
-
-    const dx = aim.x01 - avg.x;
-    const dy = aim.y01 - avg.y;
-
-    const squareIn = Math.min(targetWIn, targetHIn);
-    const inchesX = dx * squareIn;
-    const inchesY = dy * squareIn;
-    const rIn = Math.sqrt(inchesX * inchesX + inchesY * inchesY);
-
-    const dist = getDistanceYds();
-    const inchesPerUnit = (dialUnit === "MOA")
-      ? (dist / 100) * 1.047
-      : (dist / 100) * 3.6;
-
-    const unitX = inchesX / inchesPerUnit;
-    const unitY = inchesY / inchesPerUnit;
-    const clickVal = getClickValue();
-    const clicksX = unitX / clickVal;
-    const clicksY = unitY / clickVal;
-
-    return {
-      avgPoi: { x01: avg.x, y01: avg.y },
-      inches: { x: inchesX, y: inchesY, r: rIn },
-      score: scoreFromRadiusInches(rIn),
-      windage: { dir: clicksX >= 0 ? "RIGHT" : "LEFT", clicks: Math.abs(clicksX) },
-      elevation: { dir: clicksY >= 0 ? "DOWN" : "UP", clicks: Math.abs(clicksY) },
-      dial: { unit: dialUnit, clickValue: clickVal },
-      squareIn
-    };
-  }
-
-  function pointInB2BZone(hit, zone) {
-    const dx = hit.x01 - zone.cx;
-    const dy = hit.y01 - zone.cy;
-
-    if (zone.shape === "circle") {
-      return (dx * dx + dy * dy) <= (zone.r * zone.r);
-    }
-
-    if (zone.shape === "square") {
-      return Math.abs(dx) <= zone.hw && Math.abs(dy) <= zone.hh;
-    }
-
-    return false;
-  }
-
-  function zoneDistanceScore(hit, zone) {
-    const dx = hit.x01 - zone.cx;
-    const dy = hit.y01 - zone.cy;
-
-    if (zone.shape === "circle") {
-      const dist = Math.sqrt(dx * dx + dy * dy);
-      return zone.r > 0 ? dist / zone.r : 999;
-    }
-
-    if (zone.shape === "square") {
-      const nx = zone.hw > 0 ? Math.abs(dx) / zone.hw : 999;
-      const ny = zone.hh > 0 ? Math.abs(dy) / zone.hh : 999;
-      return Math.max(nx, ny);
-    }
-
-    return 999;
-  }
-
-  function inLane10PriorityBand(hit) {
-    return (
-      hit.x01 >= B2B_LANE10_PRIORITY.left &&
-      hit.x01 <= B2B_LANE10_PRIORITY.right &&
-      hit.y01 >= B2B_LANE10_PRIORITY.top &&
-      hit.y01 <= B2B_LANE10_PRIORITY.bottom
-    );
-  }
-
-  function scoreB2BFromHits(hitPoints) {
-    if (!hitPoints || hitPoints.length === 0) {
-      return { score: 0, lanes: [], laneCount: 0, missedTaps: 0 };
-    }
-
-    const hitLanes = new Set();
-    let missedTaps = 0;
-
-    for (const hit of hitPoints) {
-      if (inLane10PriorityBand(hit)) {
-        hitLanes.add(10);
-        continue;
-      }
-
-      let matching = B2B_ZONES.filter(zone => pointInB2BZone(hit, zone));
-
-      if (hit.y01 >= B2B_LANE8_MAX_Y) {
-        matching = matching.filter(zone => zone.id !== 8);
-      }
-
-      if (!matching.length) {
-        missedTaps += 1;
-        continue;
-      }
-
-      const chosen = matching
-        .map(zone => ({ zone, score: zoneDistanceScore(hit, zone) }))
-        .sort((a, b) => a.score - b.score)[0].zone;
-
-      hitLanes.add(chosen.id);
-    }
-
-    const lanes = Array.from(hitLanes).sort((a, b) => a - b);
-
-    return {
-      score: lanes.length,
-      lanes,
-      laneCount: lanes.length,
-      missedTaps
-    };
-  }
-
-  function buildBasePayload() {
-    return {
-      sessionId: newSessionId(),
-      vendor: getVendor(),
-      sku: getSku(),
-      vendorUrl: localStorage.getItem(KEY_VENDOR_URL) || "",
-      vendorName: localStorage.getItem(KEY_VENDOR_NAME) || "",
-      surveyUrl: "",
-      distanceYds: getDistanceYds(),
-      target: {
-        key: B2B_MODE ? "bkr-b2b" : targetSizeKey,
-        wIn: Number(targetWIn),
-        hIn: Number(targetHIn)
-      },
-      runStartedAt,
-      runCompletedAt: nowTs(),
-      runDurationSec: runStartedAt ? Math.max(0, Math.round((nowTs() - runStartedAt) / 1000)) : 0
-    };
-  }
-
-  function b64FromObj(obj) {
-    const json = JSON.stringify(obj);
-    return btoa(unescape(encodeURIComponent(json)));
-  }
-
-  function goToSEC(payload) {
-    try { localStorage.setItem(KEY_PAYLOAD, JSON.stringify(payload)); } catch {}
-    const b64 = b64FromObj(payload);
-    window.location.href = `./sec.html?from=target&payload=${encodeURIComponent(b64)}&fresh=${Date.now()}`;
-  }
-
-  function onShowResults() {
-    const base = buildBasePayload();
-
-    if (B2B_MODE) {
-      const b2b = scoreB2BFromHits(hits);
-
-      const payload = {
-        ...base,
-        mode: "drill",
-        drill: {
-          mode: "b2b",
-          name: "Back to Basics",
-          lanesHit: b2b.lanes,
-          maxScore: 10
-        },
-        score: b2b.score,
-        maxScore: 10,
-        taps: hits.length,
-        shots: hits.length,
-        hits: b2b.laneCount,
-        windage: { dir: "", clicks: 0 },
-        elevation: { dir: "", clicks: 0 },
-        dial: { unit: "B2B", clickValue: 0 },
-        debug: {
-          mode: "b2b",
-          distanceYds: getDistanceYds(),
-          lanesHit: b2b.lanes,
-          rawTapCount: hits.length,
-          missedTaps: b2b.missedTaps,
-          hits,
-          zones: B2B_ZONES,
-          lane10Priority: B2B_LANE10_PRIORITY,
-          lane8MaxY: B2B_LANE8_MAX_Y
-        }
-      };
-
-      goToSEC(payload);
-      return;
-    }
-
-    const out = computeCorrectionAndScore();
-    if (!out) {
-      alert("Tap Aim Point first, then tap at least one bullet hole.");
-      return;
-    }
-
-    const payload = {
-      ...base,
-      mode: "zero",
-      score: out.score,
-      taps: hits.length,
-      shots: hits.length,
-      windage: { dir: out.windage.dir, clicks: Number(out.windage.clicks.toFixed(2)) },
-      elevation: { dir: out.elevation.dir, clicks: Number(out.elevation.clicks.toFixed(2)) },
-      dial: { unit: out.dial.unit, clickValue: Number(out.dial.clickValue.toFixed(2)) },
-      debug: {
-        aim,
-        hits,
-        avgPoi: out.avgPoi,
-        distanceYds: getDistanceYds(),
-        inches: out.inches,
-        squareIn: out.squareIn
-      }
-    };
-
-    goToSEC(payload);
-  }
-
-  elPhotoBtn?.addEventListener("click", () => elFile?.click());
-
-  elFile?.addEventListener("change", async () => {
-    const f = elFile.files?.[0];
-    if (!f) return;
-
-    resetAll();
-
-    if (objectUrl) URL.revokeObjectURL(objectUrl);
-    objectUrl = URL.createObjectURL(f);
-
-    await storeTargetPhotoForSEC(f, objectUrl);
-
-    elImg.onload = () => {
-      runStartedAt = nowTs();
-      setText(elStatus, B2B_MODE ? "Tap each lane that has at least one hit." : "Tap Aim Point.");
-      syncInstruction();
-      revealScoringUI();
-    };
-
-    elImg.onerror = () => {
-      setText(elStatus, "Photo failed to load.");
-      setInstruction("Try again.", "");
-      revealScoringUI();
-    };
-
-    elImg.src = objectUrl;
-    elFile.value = "";
-  });
-
-  function acceptTap(clientX, clientY) {
-    if (!elImg?.src) return;
-    ensureRunStarted();
-
-    const { x01, y01 } = getRelative01(clientX, clientY);
-
-    if (!B2B_MODE) {
-      if (!aim) {
-        aim = { x01, y01 };
-        addDot(x01, y01, "aim");
-        setText(elStatus, "Tap Bullet Holes.");
-        hideSticky();
-        syncInstruction();
-        return;
-      }
-    }
-
-    hits.push({ x01, y01 });
-    addDot(x01, y01, "hit");
-    setTapCount();
-
-    hideSticky();
-    syncInstruction();
-    scheduleStickyMagic();
-  }
-
-  if (elWrap) {
-    elWrap.addEventListener("touchmove", (e) => {
-      if (e.touches && e.touches.length === 1) e.preventDefault();
-    }, { passive: false });
-
-    elWrap.addEventListener("touchstart", (e) => {
-      if (!e.touches || e.touches.length !== 1) {
-        touchStart = null;
-        return;
-      }
-      const t = e.touches[0];
-      touchStart = { x: t.clientX, y: t.clientY, t: Date.now() };
-    }, { passive: true });
-
-    elWrap.addEventListener("touchend", (e) => {
-      const t = e.changedTouches?.[0];
-      if (!t || !touchStart) return;
-
-      const dx = Math.abs(t.clientX - touchStart.x);
-      const dy = Math.abs(t.clientY - touchStart.y);
-      if (dx > 10 || dy > 10) {
-        touchStart = null;
-        return;
-      }
-
-      lastTouchTapAt = Date.now();
-      acceptTap(t.clientX, t.clientY);
-      touchStart = null;
-    }, { passive: true });
-
-    elWrap.addEventListener("click", (e) => {
-      const now = Date.now();
-      if (now - lastTouchTapAt < 800) return;
-      acceptTap(e.clientX, e.clientY);
-    }, { passive: true });
-  }
-
-  elClear?.addEventListener("click", () => {
-    resetAll();
-    if (elImg?.src) {
-      runStartedAt = nowTs();
-      setText(elStatus, B2B_MODE ? "Tap each lane that has at least one hit." : "Tap Aim Point.");
-    }
-  });
-
-  [elStickyBtn, $("showResultsBtn")].filter(Boolean).forEach((b) => {
-    b.addEventListener("click", (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      onShowResults();
-    });
-  });
-
-  elDistUp?.addEventListener("click", () => bumpRange(5));
-  elDistDown?.addEventListener("click", () => bumpRange(-5));
-
-  elDist?.addEventListener("change", syncInternalFromRangeInput);
-  elDist?.addEventListener("blur", syncInternalFromRangeInput);
-
-  elDistUnitYd?.addEventListener("click", () => setRangeUnit("YDS"));
-  elDistUnitM?.addEventListener("click", () => setRangeUnit("M"));
-
-  elUnitMoa?.addEventListener("click", () => setUnit("MOA"));
-  elUnitMrad?.addEventListener("click", () => setUnit("MRAD"));
-
-  elClickValue?.addEventListener("blur", () => { getClickValue(); syncLiveTop(); });
-  elClickValue?.addEventListener("change", () => { getClickValue(); syncLiveTop(); });
-
-  elMatrixBtn?.addEventListener("click", toggleMatrix);
-  elMatrixClose?.addEventListener("click", closeMatrix);
-
-  document.addEventListener("click", (e) => {
-    if (!elVendorPanel || !elVendorBox) return;
-    const inPanel = elVendorPanel.contains(e.target);
-    const inPill = elVendorBox.contains(e.target);
-    if (!inPanel && !inPill) closeVendorPanel();
-  }, { capture: true });
-
-  setUnit("MOA");
-  closeMatrix();
-  hideSticky();
-  resetAll();
-
-  hydrateVendorBox();
-  hydrateRange();
-  hydrateTargetSize();
-
-  wireMatrixPresets();
-  wireTargetSizeChips();
-  wireSwapSize();
-
-  highlightSizeChip();
-  syncLiveTop();
-
-  hardHideScoringUI();
-  forceTop();
-})();
