@@ -1,10 +1,14 @@
 /* ============================================================
-   docs/index.js — PROFILE ENGINE (PART 1 OF 2)
+   docs/index.js — PROFILE UI ENGINE + PROFILE SCORING
+   PART 1 OF 2
 ============================================================ */
 
 (() => {
   const $ = (id) => document.getElementById(id);
 
+  /* ============================================================
+     URL / ROUTING
+  ============================================================ */
   function getUrl() {
     try { return new URL(window.location.href); }
     catch { return null; }
@@ -26,6 +30,9 @@
   const vendor = getVendor();
   const sku = getSku();
 
+  /* ============================================================
+     DOM
+  ============================================================ */
   const elPhotoBtn = $("photoBtn");
   const elFile = $("photoInput");
   const elVendorBox = $("vendorBox");
@@ -42,9 +49,17 @@
   const elStatus = $("statusLine");
   const elStickyBar = $("stickyBar");
   const elStickyBtn = $("stickyResultsBtn");
+  const elShowResultsBtn = $("showResultsBtn");
+
   const elLiveDistance = $("liveDistance");
   const elLiveDial = $("liveDial");
   const elLiveTarget = $("liveTarget");
+  const elLiveProfile = $("liveProfile");
+
+  const elProfileBar = $("profileBar");
+  const elProfileTitle = $("profileTitle");
+  const elProfileSubtitle = $("profileSubtitle");
+
   const elMatrixBtn = $("matrixBtn");
   const elMatrixPanel = $("matrixPanel");
   const elMatrixClose = $("matrixCloseBtn");
@@ -61,6 +76,9 @@
   const elSizeChipRow = $("sizeChipRow");
   const elSwapSizeBtn = $("swapSizeBtn");
 
+  /* ============================================================
+     STORAGE
+  ============================================================ */
   const KEY_PAYLOAD = "SCZN3_SEC_PAYLOAD_V1";
   const KEY_TARGET_IMG_DATA = "SCZN3_TARGET_IMG_DATAURL_V1";
   const KEY_TARGET_IMG_BLOB = "SCZN3_TARGET_IMG_BLOBURL_V1";
@@ -72,6 +90,9 @@
   const KEY_TARGET_W = "SCZN3_TARGET_W_IN_V1";
   const KEY_TARGET_H = "SCZN3_TARGET_H_IN_V1";
 
+  /* ============================================================
+     STATE
+  ============================================================ */
   let objectUrl = null;
   let aim = null;
   let hits = [];
@@ -88,6 +109,9 @@
 
   const DEFAULTS = { MOA: 0.25, MRAD: 0.10 };
 
+  /* ============================================================
+     PROFILE REGISTRY
+  ============================================================ */
   const TARGET_PROFILES = {
     "b2b-original": {
       profileId: "b2b-original",
@@ -96,7 +120,12 @@
       targetKind: "drill",
       scoringMode: "occupancy",
       maxScore: 10,
-      instructionsSummary: "Original Back to Basics drill target.",
+      instructionsSummary: "Tap each lane that has at least one hit.",
+      ui: {
+        liveProfile: "B2B-ORG",
+        title: "Back to Basics Original",
+        subtitle: "Tap each lane that has at least one hit."
+      },
       displayLayout: {
         1:  { x: 0.76, y: 0.12, shape: "circle" },
         2:  { x: 0.18, y: 0.34, shape: "circle" },
@@ -130,7 +159,12 @@
       targetKind: "drill",
       scoringMode: "occupancy",
       maxScore: 10,
-      instructionsSummary: "Grid-style Back to Basics scoring target.",
+      instructionsSummary: "Tap each lane that has at least one hit.",
+      ui: {
+        liveProfile: "B2B",
+        title: "Back to Basics Grid",
+        subtitle: "Tap each lane that has at least one hit."
+      },
       displayLayout: {
         1:  { x: 0.20, y: 0.16, shape: "circle" },
         2:  { x: 0.50, y: 0.16, shape: "square" },
@@ -166,7 +200,12 @@
       targetKind: "drill",
       scoringMode: "shot-count",
       maxScore: 50,
-      instructionsSummary: "Dot Torture target foundation profile.",
+      instructionsSummary: "Tap each scoring dot that was hit.",
+      ui: {
+        liveProfile: "TORTURE",
+        title: "Dot Torture",
+        subtitle: "Tap each scoring dot that was hit."
+      },
       displayLayout: {
         1:  { x: 0.50, y: 0.10, shape: "circle" },
         2:  { x: 0.22, y: 0.26, shape: "circle" },
@@ -203,6 +242,9 @@
   const ACTIVE_PROFILE = PROFILE_KEY ? TARGET_PROFILES[PROFILE_KEY] : null;
   const DRILL_MODE = !!ACTIVE_PROFILE && ACTIVE_PROFILE.targetKind === "drill";
 
+  /* ============================================================
+     HELPERS
+  ============================================================ */
   try { history.scrollRestoration = "manual"; } catch {}
 
   function forceTop() {
@@ -271,7 +313,7 @@
     }
 
     if (DRILL_MODE) {
-      setInstruction("Tap each lane that has at least one hit.", "holes");
+      setInstruction(getProfileUi().subtitle, "holes");
       return;
     }
 
@@ -325,13 +367,35 @@
     setText(
       elStatus,
       elImg?.src
-        ? (DRILL_MODE ? "Tap each lane that was hit." : "Tap Aim Point.")
+        ? (DRILL_MODE ? getProfileUi().subtitle : "Tap Aim Point.")
         : "Add a target photo to begin."
     );
     closeMatrix();
     closeVendorPanel();
   }
 
+  /* ============================================================
+     PROFILE UI ENGINE
+  ============================================================ */
+  function getProfileUi() {
+    if (DRILL_MODE && ACTIVE_PROFILE) {
+      return {
+        liveProfile: ACTIVE_PROFILE.ui?.liveProfile || "DRILL",
+        title: ACTIVE_PROFILE.ui?.title || ACTIVE_PROFILE.name || "Drill Target",
+        subtitle: ACTIVE_PROFILE.ui?.subtitle || ACTIVE_PROFILE.instructionsSummary || "Tap each scoring area that was hit."
+      };
+    }
+
+    return {
+      liveProfile: "ZERO",
+      title: "Precision Zero",
+      subtitle: "Tap aim point, then impacts."
+    };
+  }
+
+  /* ============================================================
+     VENDOR
+  ============================================================ */
   function isBakerMode() {
     return vendor === "baker";
   }
@@ -393,6 +457,9 @@
     }
   }
 
+  /* ============================================================
+     IMAGE / TAPS
+  ============================================================ */
   async function storeTargetPhotoForSEC(file, blobUrl) {
     try { localStorage.setItem(KEY_TARGET_IMG_BLOB, blobUrl); } catch {}
 
@@ -432,6 +499,9 @@
     return { x01: clamp01(x), y01: clamp01(y) };
   }
 
+  /* ============================================================
+     RANGE / MATRIX
+  ============================================================ */
   function ydsToM(yds) { return yds * 0.9144; }
   function mToYds(m) { return m / 0.9144; }
 
@@ -599,6 +669,8 @@
   }
 
   function syncLiveTop() {
+    const ui = getProfileUi();
+
     if (elLiveDistance) {
       elLiveDistance.textContent = (rangeUnit === "M")
         ? `${Math.round(ydsToM(rangeYds))} m`
@@ -607,7 +679,7 @@
 
     if (elLiveDial) {
       elLiveDial.textContent = DRILL_MODE
-        ? (ACTIVE_PROFILE ? ACTIVE_PROFILE.name.toUpperCase() : "DRILL MODE")
+        ? "DRILL MODE"
         : `${getClickValue().toFixed(2)} ${dialUnit}`;
     }
 
@@ -617,6 +689,22 @@
       } else {
         elLiveTarget.textContent = (targetSizeKey || "").replace("x", "×") || "—";
       }
+    }
+
+    if (elLiveProfile) {
+      elLiveProfile.textContent = ui.liveProfile;
+    }
+
+    if (elProfileTitle) {
+      elProfileTitle.textContent = ui.title;
+    }
+
+    if (elProfileSubtitle) {
+      elProfileSubtitle.textContent = ui.subtitle;
+    }
+
+    if (elProfileBar) {
+      elProfileBar.style.display = "block";
     }
   }
 
@@ -659,260 +747,470 @@
       });
     });
   }
-  function zoneContains(z, x01, y01) {
-    if (z.shape === "circle") {
-      const dx = x01 - z.cx;
-      const dy = y01 - z.cy;
-      return (dx * dx + dy * dy) <= (z.r * z.r);
+
+  window.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") closeMatrix();
+  });
+
+  document.addEventListener("click", (e) => {
+    if (!isMatrixOpen()) return;
+    if (!elMatrixPanel) return;
+    const inside = elMatrixPanel.contains(e.target);
+    const isBtn = (e.target === elMatrixBtn) || e.target.closest?.("#matrixBtn");
+    if (!inside && !isBtn) closeMatrix();
+  }, { capture: true });
+     /* ============================================================
+     ZERO SCORING
+  ============================================================ */
+  function scoreFromRadiusInches(rIn) {
+    if (rIn <= 0.25) return 100;
+    if (rIn <= 0.50) return 95;
+    if (rIn <= 1.00) return 90;
+    if (rIn <= 1.50) return 85;
+    if (rIn <= 2.00) return 80;
+    if (rIn <= 2.50) return 75;
+    if (rIn <= 3.00) return 70;
+    if (rIn <= 3.50) return 65;
+    if (rIn <= 4.00) return 60;
+    return 50;
+  }
+
+  function computeCorrectionAndScore() {
+    if (!aim || hits.length < 1) return null;
+
+    const avg = hits.reduce((acc, p) => ({ x: acc.x + p.x01, y: acc.y + p.y01 }), { x: 0, y: 0 });
+    avg.x /= hits.length;
+    avg.y /= hits.length;
+
+    const dx = aim.x01 - avg.x;
+    const dy = aim.y01 - avg.y;
+
+    const squareIn = Math.min(targetWIn, targetHIn);
+    const inchesX = dx * squareIn;
+    const inchesY = dy * squareIn;
+    const rIn = Math.sqrt(inchesX * inchesX + inchesY * inchesY);
+
+    const dist = getDistanceYds();
+    const inchesPerUnit = (dialUnit === "MOA")
+      ? (dist / 100) * 1.047
+      : (dist / 100) * 3.6;
+
+    const unitX = inchesX / inchesPerUnit;
+    const unitY = inchesY / inchesPerUnit;
+    const clickVal = getClickValue();
+    const clicksX = unitX / clickVal;
+    const clicksY = unitY / clickVal;
+
+    return {
+      avgPoi: { x01: avg.x, y01: avg.y },
+      inches: { x: inchesX, y: inchesY, r: rIn },
+      score: scoreFromRadiusInches(rIn),
+      windage: { dir: clicksX >= 0 ? "RIGHT" : "LEFT", clicks: Math.abs(clicksX) },
+      elevation: { dir: clicksY >= 0 ? "DOWN" : "UP", clicks: Math.abs(clicksY) },
+      dial: { unit: dialUnit, clickValue: clickVal },
+      squareIn
+    };
+  }
+
+  /* ============================================================
+     PROFILE SCORING
+  ============================================================ */
+  function pointInZone(hit, zone) {
+    const dx = hit.x01 - zone.cx;
+    const dy = hit.y01 - zone.cy;
+
+    if (zone.shape === "circle") {
+      return (dx * dx + dy * dy) <= (zone.r * zone.r);
     }
 
-    if (z.shape === "square") {
-      return (
-        x01 >= (z.cx - z.hw) &&
-        x01 <= (z.cx + z.hw) &&
-        y01 >= (z.cy - z.hh) &&
-        y01 <= (z.cy + z.hh)
-      );
+    if (zone.shape === "square") {
+      return Math.abs(dx) <= zone.hw && Math.abs(dy) <= zone.hh;
     }
 
     return false;
   }
 
-  function detectLane(profile, x01, y01) {
-    if (!profile?.zones) return null;
+  function zoneDistanceScore(hit, zone) {
+    const dx = hit.x01 - zone.cx;
+    const dy = hit.y01 - zone.cy;
 
-    // ----- Special override for Baker B2B grid -----
-    if (profile.profileId === "bkr-b2b") {
-
-      // Force lane 10 if inside bottom center region
-      const p = profile.lane10Priority;
-      if (
-        p &&
-        x01 >= p.left &&
-        x01 <= p.right &&
-        y01 >= p.top &&
-        y01 <= p.bottom
-      ) {
-        return 10;
-      }
-
-      // Prevent lane 8 stealing bottom hits
-      if (profile.lane8MaxY && y01 > profile.lane8MaxY) {
-        return null;
-      }
+    if (zone.shape === "circle") {
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      return zone.r > 0 ? dist / zone.r : 999;
     }
 
-    for (const z of profile.zones) {
-      if (zoneContains(z, x01, y01)) return z.id;
+    if (zone.shape === "square") {
+      const nx = zone.hw > 0 ? Math.abs(dx) / zone.hw : 999;
+      const ny = zone.hh > 0 ? Math.abs(dy) / zone.hh : 999;
+      return Math.max(nx, ny);
     }
 
-    return null;
+    return 999;
   }
 
-  function computeDrillOccupancy(profile, taps) {
-    const laneSet = new Set();
+  function scoreOccupancyProfile(hitPoints, profile) {
+    if (!hitPoints || hitPoints.length === 0) {
+      return { score: 0, lanes: [], laneCount: 0, missedTaps: 0 };
+    }
 
-    taps.forEach((t) => {
-      const id = detectLane(profile, t.x01, t.y01);
-      if (id != null) laneSet.add(id);
-    });
+    const hitLanes = new Set();
+    let missedTaps = 0;
+
+    for (const hit of hitPoints) {
+      if (profile.lane10Priority) {
+        const p = profile.lane10Priority;
+        const inPriority =
+          hit.x01 >= p.left &&
+          hit.x01 <= p.right &&
+          hit.y01 >= p.top &&
+          hit.y01 <= p.bottom;
+
+        if (inPriority) {
+          hitLanes.add(10);
+          continue;
+        }
+      }
+
+      let matching = profile.zones.filter(zone => pointInZone(hit, zone));
+
+      if (typeof profile.lane8MaxY === "number" && hit.y01 >= profile.lane8MaxY) {
+        matching = matching.filter(zone => zone.id !== 8);
+      }
+
+      if (!matching.length) {
+        missedTaps += 1;
+        continue;
+      }
+
+      const chosen = matching
+        .map(zone => ({ zone, score: zoneDistanceScore(hit, zone) }))
+        .sort((a, b) => a.score - b.score)[0].zone;
+
+      hitLanes.add(chosen.id);
+    }
+
+    const lanes = Array.from(hitLanes).sort((a, b) => a - b);
 
     return {
-      score: laneSet.size,
-      lanesHit: Array.from(laneSet).sort((a, b) => a - b)
+      score: lanes.length,
+      lanes,
+      laneCount: lanes.length,
+      missedTaps
     };
   }
 
-  function buildDrillPayload() {
-    if (!ACTIVE_PROFILE) return null;
+  function scoreShotCountProfile(hitPoints, profile) {
+    if (!hitPoints || hitPoints.length === 0) {
+      return { score: 0, lanes: [], laneCount: 0, missedTaps: 0 };
+    }
 
-    const occ = computeDrillOccupancy(ACTIVE_PROFILE, hits);
+    let score = 0;
+    let missedTaps = 0;
+    const laneHits = [];
 
-    const sessionId = newSessionId();
+    for (const hit of hitPoints) {
+      const matching = profile.zones.filter(zone => pointInZone(hit, zone));
+      if (!matching.length) {
+        missedTaps += 1;
+        continue;
+      }
+
+      const chosen = matching
+        .map(zone => ({ zone, score: zoneDistanceScore(hit, zone) }))
+        .sort((a, b) => a.score - b.score)[0].zone;
+
+      laneHits.push(chosen.id);
+      score += 1;
+    }
+
+    const uniqueLanes = Array.from(new Set(laneHits)).sort((a, b) => a - b);
 
     return {
-      version: "SEC-2P",
-      sessionId,
-      ts: nowTs(),
-      vendor: localStorage.getItem(KEY_VENDOR_NAME) || "",
-      vendorUrl: localStorage.getItem(KEY_VENDOR_URL) || "",
-      surveyUrl: "",
-      drill: {
-        mode: "b2b",
-        profileId: ACTIVE_PROFILE.profileId,
-        lanesHit: occ.lanesHit
-      },
-      score: occ.score,
-      taps: hits.length,
-      distanceYds: getDistanceYds()
+      score: Math.min(score, profile.maxScore || score),
+      lanes: uniqueLanes,
+      laneCount: uniqueLanes.length,
+      missedTaps
     };
   }
 
-  function computePrecisionPayload() {
-    if (!aim || hits.length === 0) return null;
+  function scoreProfile(hitPoints, profile) {
+    if (!profile) return { score: 0, lanes: [], laneCount: 0, missedTaps: 0 };
 
-    const dxAvg =
-      hits.reduce((s, h) => s + (h.x01 - aim.x01), 0) / hits.length;
+    if (profile.scoringMode === "occupancy") {
+      return scoreOccupancyProfile(hitPoints, profile);
+    }
 
-    const dyAvg =
-      hits.reduce((s, h) => s + (h.y01 - aim.y01), 0) / hits.length;
+    if (profile.scoringMode === "shot-count") {
+      return scoreShotCountProfile(hitPoints, profile);
+    }
 
-    const dxIn = dxAvg * targetWIn;
-    const dyIn = dyAvg * targetHIn;
+    return { score: 0, lanes: [], laneCount: 0, missedTaps: 0 };
+  }
 
-    const range = getDistanceYds();
-    const click = getClickValue();
-
-    const perClickIn =
-      dialUnit === "MOA"
-        ? (1.047 * range / 100) * click
-        : (range / 100) * click * 3.6;
-
-    const windClicks = dxIn / perClickIn;
-    const elevClicks = dyIn / perClickIn;
-
+  /* ============================================================
+     PAYLOAD
+  ============================================================ */
+  function buildBasePayload() {
     return {
-      version: "SEC-2P",
       sessionId: newSessionId(),
-      ts: nowTs(),
-      vendor: localStorage.getItem(KEY_VENDOR_NAME) || "",
+      vendor,
+      sku,
       vendorUrl: localStorage.getItem(KEY_VENDOR_URL) || "",
+      vendorName: localStorage.getItem(KEY_VENDOR_NAME) || "",
       surveyUrl: "",
-      score: Math.round(Math.random() * 100), // placeholder
-      windage: {
-        clicks: Math.abs(windClicks),
-        dir: windClicks >= 0 ? "RIGHT" : "LEFT"
+      distanceYds: getDistanceYds(),
+      target: {
+        key: DRILL_MODE ? PROFILE_KEY : targetSizeKey,
+        wIn: Number(targetWIn),
+        hIn: Number(targetHIn)
       },
-      elevation: {
-        clicks: Math.abs(elevClicks),
-        dir: elevClicks >= 0 ? "UP" : "DOWN"
-      },
-      shots: hits.length,
-      distanceYds: range
+      runStartedAt,
+      runCompletedAt: nowTs(),
+      runDurationSec: runStartedAt ? Math.max(0, Math.round((nowTs() - runStartedAt) / 1000)) : 0
     };
   }
 
-  function buildPayload() {
-    if (DRILL_MODE) return buildDrillPayload();
-    return computePrecisionPayload();
+  function b64FromObj(obj) {
+    const json = JSON.stringify(obj);
+    return btoa(unescape(encodeURIComponent(json)));
   }
 
   function goToSEC(payload) {
-    try {
-      localStorage.setItem(KEY_PAYLOAD, JSON.stringify(payload));
-    } catch {}
-
-    const enc = btoa(unescape(encodeURIComponent(JSON.stringify(payload))));
-    window.location.href = `./sec.html?payload=${enc}`;
+    try { localStorage.setItem(KEY_PAYLOAD, JSON.stringify(payload)); } catch {}
+    const b64 = b64FromObj(payload);
+    window.location.href = `./sec.html?from=target&payload=${encodeURIComponent(b64)}&fresh=${Date.now()}`;
   }
 
-  function handleTap(x01, y01) {
-    ensureRunStarted();
+  function onShowResults() {
+    const base = buildBasePayload();
 
-    if (DRILL_MODE) {
-      hits.push({ x01, y01 });
-      addDot(x01, y01, "hit");
-      setTapCount();
-      scheduleStickyMagic();
+    if (DRILL_MODE && ACTIVE_PROFILE) {
+      const out = scoreProfile(hits, ACTIVE_PROFILE);
+
+      const payload = {
+        ...base,
+        mode: "drill",
+        profileId: ACTIVE_PROFILE.profileId,
+        profileName: ACTIVE_PROFILE.name,
+        drill: {
+          mode: ACTIVE_PROFILE.profileId,
+          name: ACTIVE_PROFILE.name,
+          lanesHit: out.lanes,
+          maxScore: ACTIVE_PROFILE.maxScore,
+          displayLayout: ACTIVE_PROFILE.displayLayout,
+          scoringMode: ACTIVE_PROFILE.scoringMode
+        },
+        score: out.score,
+        maxScore: ACTIVE_PROFILE.maxScore,
+        taps: hits.length,
+        shots: hits.length,
+        hits: out.laneCount,
+        windage: { dir: "", clicks: 0 },
+        elevation: { dir: "", clicks: 0 },
+        dial: { unit: "DRILL", clickValue: 0 },
+        debug: {
+          mode: ACTIVE_PROFILE.profileId,
+          distanceYds: getDistanceYds(),
+          lanesHit: out.lanes,
+          rawTapCount: hits.length,
+          missedTaps: out.missedTaps,
+          hits,
+          zones: ACTIVE_PROFILE.zones,
+          displayLayout: ACTIVE_PROFILE.displayLayout
+        }
+      };
+
+      goToSEC(payload);
       return;
     }
 
-    if (!aim) {
-      aim = { x01, y01 };
-      addDot(x01, y01, "aim");
-      syncInstruction();
+    const out = computeCorrectionAndScore();
+    if (!out) {
+      alert("Tap Aim Point first, then tap at least one bullet hole.");
       return;
+    }
+
+    const payload = {
+      ...base,
+      mode: "zero",
+      score: out.score,
+      taps: hits.length,
+      shots: hits.length,
+      windage: { dir: out.windage.dir, clicks: Number(out.windage.clicks.toFixed(2)) },
+      elevation: { dir: out.elevation.dir, clicks: Number(out.elevation.clicks.toFixed(2)) },
+      dial: { unit: out.dial.unit, clickValue: Number(out.dial.clickValue.toFixed(2)) },
+      debug: {
+        aim,
+        hits,
+        avgPoi: out.avgPoi,
+        distanceYds: getDistanceYds(),
+        inches: out.inches,
+        squareIn: out.squareIn
+      }
+    };
+
+    goToSEC(payload);
+  }
+
+  /* ============================================================
+     EVENTS
+  ============================================================ */
+  elPhotoBtn?.addEventListener("click", () => elFile?.click());
+
+  elFile?.addEventListener("change", async () => {
+    const f = elFile.files?.[0];
+    if (!f) return;
+
+    resetAll();
+
+    if (objectUrl) URL.revokeObjectURL(objectUrl);
+    objectUrl = URL.createObjectURL(f);
+
+    await storeTargetPhotoForSEC(f, objectUrl);
+
+    elImg.onload = () => {
+      runStartedAt = nowTs();
+      setText(elStatus, DRILL_MODE ? getProfileUi().subtitle : "Tap Aim Point.");
+      syncInstruction();
+      revealScoringUI();
+    };
+
+    elImg.onerror = () => {
+      setText(elStatus, "Photo failed to load.");
+      setInstruction("Try again.", "");
+      revealScoringUI();
+    };
+
+    elImg.src = objectUrl;
+    elFile.value = "";
+  });
+
+  function acceptTap(clientX, clientY) {
+    if (!elImg?.src) return;
+    ensureRunStarted();
+
+    const { x01, y01 } = getRelative01(clientX, clientY);
+
+    if (!DRILL_MODE) {
+      if (!aim) {
+        aim = { x01, y01 };
+        addDot(x01, y01, "aim");
+        setText(elStatus, "Tap Bullet Holes.");
+        hideSticky();
+        syncInstruction();
+        return;
+      }
     }
 
     hits.push({ x01, y01 });
     addDot(x01, y01, "hit");
     setTapCount();
+
+    hideSticky();
+    syncInstruction();
     scheduleStickyMagic();
   }
 
-  function wireImageTaps() {
-    if (!elWrap) return;
+  if (elWrap) {
+    elWrap.addEventListener("touchmove", (e) => {
+      if (e.touches && e.touches.length === 1) e.preventDefault();
+    }, { passive: false });
+
+    elWrap.addEventListener("touchstart", (e) => {
+      if (!e.touches || e.touches.length !== 1) {
+        touchStart = null;
+        return;
+      }
+      const t = e.touches[0];
+      touchStart = { x: t.clientX, y: t.clientY, t: Date.now() };
+    }, { passive: true });
+
+    elWrap.addEventListener("touchend", (e) => {
+      const t = e.changedTouches?.[0];
+      if (!t || !touchStart) return;
+
+      const dx = Math.abs(t.clientX - touchStart.x);
+      const dy = Math.abs(t.clientY - touchStart.y);
+      if (dx > 10 || dy > 10) {
+        touchStart = null;
+        return;
+      }
+
+      lastTouchTapAt = Date.now();
+      acceptTap(t.clientX, t.clientY);
+      touchStart = null;
+    }, { passive: true });
 
     elWrap.addEventListener("click", (e) => {
-      if (!elImg?.src) return;
+      const now = Date.now();
+      if (now - lastTouchTapAt < 800) return;
+      acceptTap(e.clientX, e.clientY);
+    }, { passive: true });
+  }
 
-      const { x01, y01 } = getRelative01(e.clientX, e.clientY);
-      handleTap(x01, y01);
+  elClear?.addEventListener("click", () => {
+    resetAll();
+    if (elImg?.src) {
+      runStartedAt = nowTs();
+      setText(elStatus, DRILL_MODE ? getProfileUi().subtitle : "Tap Aim Point.");
+    }
+  });
+
+  [elStickyBtn, elShowResultsBtn].filter(Boolean).forEach((b) => {
+    b.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      onShowResults();
     });
-  }
+  });
 
-  function wireStickyButton() {
-    if (!elStickyBtn) return;
+  /* ============================================================
+     MATRIX EVENTS
+  ============================================================ */
+  elDistUp?.addEventListener("click", () => bumpRange(5));
+  elDistDown?.addEventListener("click", () => bumpRange(-5));
 
-    elStickyBtn.addEventListener("click", () => {
-      const payload = buildPayload();
-      if (!payload) return;
-      goToSEC(payload);
-    });
-  }
+  elDist?.addEventListener("change", syncInternalFromRangeInput);
+  elDist?.addEventListener("blur", syncInternalFromRangeInput);
 
-  function wireClear() {
-    elClear?.addEventListener("click", resetAll);
-  }
+  elDistUnitYd?.addEventListener("click", () => setRangeUnit("YDS"));
+  elDistUnitM?.addEventListener("click", () => setRangeUnit("M"));
 
-  function wirePhotoInput() {
-    if (!elFile) return;
+  elUnitMoa?.addEventListener("click", () => setUnit("MOA"));
+  elUnitMrad?.addEventListener("click", () => setUnit("MRAD"));
 
-    elFile.addEventListener("change", async (e) => {
-      const file = e.target.files?.[0];
-      if (!file) return;
+  elClickValue?.addEventListener("blur", () => { getClickValue(); syncLiveTop(); });
+  elClickValue?.addEventListener("change", () => { getClickValue(); syncLiveTop(); });
 
-      if (objectUrl) URL.revokeObjectURL(objectUrl);
-      objectUrl = URL.createObjectURL(file);
+  elMatrixBtn?.addEventListener("click", toggleMatrix);
+  elMatrixClose?.addEventListener("click", closeMatrix);
 
-      elImg.src = objectUrl;
+  document.addEventListener("click", (e) => {
+    if (!elVendorPanel || !elVendorBox) return;
+    const inPanel = elVendorPanel.contains(e.target);
+    const inPill = elVendorBox.contains(e.target);
+    if (!inPanel && !inPill) closeVendorPanel();
+  }, { capture: true });
 
-      await storeTargetPhotoForSEC(file, objectUrl);
+  /* ============================================================
+     BOOT
+  ============================================================ */
+  setUnit("MOA");
+  closeMatrix();
+  hideSticky();
+  resetAll();
 
-      resetAll();
-      syncInstruction();
-      revealScoringUI();
-    });
-  }
+  hydrateVendorBox();
+  hydrateRange();
+  hydrateTargetSize();
 
-  function wirePhotoButton() {
-    elPhotoBtn?.addEventListener("click", () => {
-      elFile?.click();
-    });
-  }
+  wireMatrixPresets();
+  wireTargetSizeChips();
+  wireSwapSize();
 
-  function init() {
-    hydrateVendorBox();
-    hydrateRange();
-    hydrateTargetSize();
+  highlightSizeChip();
+  syncLiveTop();
 
-    wireTargetSizeChips();
-    wireSwapSize();
-
-    wireMatrixPresets();
-    elMatrixBtn?.addEventListener("click", toggleMatrix);
-    elMatrixClose?.addEventListener("click", closeMatrix);
-
-    elDist?.addEventListener("change", syncInternalFromRangeInput);
-    elDistUp?.addEventListener("click", () => bumpRange(1));
-    elDistDown?.addEventListener("click", () => bumpRange(-1));
-
-    elDistUnitYd?.addEventListener("click", () => setRangeUnit("YDS"));
-    elDistUnitM?.addEventListener("click", () => setRangeUnit("M"));
-
-    elUnitMoa?.addEventListener("click", () => setUnit("MOA"));
-    elUnitMrad?.addEventListener("click", () => setUnit("MRAD"));
-
-    wireImageTaps();
-    wireStickyButton();
-    wireClear();
-    wirePhotoInput();
-    wirePhotoButton();
-
-    syncInstruction();
-    syncLiveTop();
-  }
-
-  init();
-
+  hardHideScoringUI();
+  forceTop();
 })();
