@@ -1,8 +1,8 @@
 /* ============================================================
-   docs/sec.js — FULL REPLACEMENT
-   B2B LANE VISUAL BUILD + REPLAY LOOP + PROGRESS LADDER
-   + B2B DASHBOARD BRIDGE
-   + FIX: replay/home preserves B2B route params
+   docs/sec.js — PROFILE-LAYOUT SEC
+   - Supports drill profiles from index.js
+   - Uses payload.drill.displayLayout
+   - Renders profile-shaped lane map on report card
 ============================================================ */
 
 (() => {
@@ -13,8 +13,6 @@
   const toReportBtn = $("toReportBtn");
   const backBtn = $("backBtn");
   const replayBtn = $("replayBtn");
-  const b2bDashBtn = $("b2bDashBtn");
-  const b2bDashBtn2 = $("b2bDashBtn2");
 
   const scoreValue = $("scoreValue");
   const scoreBand = $("scoreBand");
@@ -27,19 +25,17 @@
   const elevationDir = $("elevationDir");
   const goHomeBtn = $("goHomeBtn");
 
+  const secCardImg = $("secCardImg");
+  const vendorBtn = $("vendorBtn");
+  const surveyBtn = $("surveyBtn");
+
   const ladderWrap = $("ladderWrap");
   const ladderLevelChip = $("ladderLevelChip");
   const ladderStars = $("ladderStars");
   const ladderText = $("ladderText");
   const ladderNext = $("ladderNext");
 
-  const secCardImg = $("secCardImg");
-  const vendorBtn = $("vendorBtn");
-  const surveyBtn = $("surveyBtn");
-
   const KEY_PAYLOAD = "SCZN3_SEC_PAYLOAD_V1";
-  const KEY_B2B_LADDER = "SCZN3_B2B_LADDER_HISTORY_V1";
-  const KEY_B2B_LADDER_LAST = "SCZN3_B2B_LADDER_LAST_SESSION_V1";
   const DEFAULT_SURVEY_URL = "https://forms.gle/uCSDTk5BwT4euLYeA";
 
   function safeJsonParse(s) {
@@ -47,30 +43,38 @@
   }
 
   function fmt2(n) {
-    return Number(n || 0).toFixed(2);
+    const x = Number(n);
+    return Number.isFinite(x) ? x.toFixed(2) : "0.00";
   }
 
   function nowStamp() {
     const d = new Date();
-    return `${d.getMonth() + 1}/${d.getDate()}/${d.getFullYear()} ${d.getHours()}:${String(d.getMinutes()).padStart(2, "0")}`;
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const dd = String(d.getDate()).padStart(2, "0");
+    const yy = d.getFullYear();
+    const hh = String(d.getHours()).padStart(2, "0");
+    const mi = String(d.getMinutes()).padStart(2, "0");
+    return `${mm}/${dd}/${yy} ${hh}:${mi}`;
   }
 
-  function isB2B(payload) {
-    return String(payload?.drill?.mode || "").toLowerCase() === "b2b"
-      || String(payload?.sku || "").toLowerCase().includes("b2b")
-      || String(payload?.target?.key || "").toLowerCase() === "bkr-b2b";
+  function isDrill(payload) {
+    return payload?.mode === "drill" || !!payload?.drill;
   }
 
-  function scoreBandInfo(score, b2b) {
+  function scoreBandInfo(score, drill, maxScore) {
     const s = Number(score) || 0;
-    if (b2b) {
-      if (s >= 9) return { cls: "scoreBandGreen", text: "STRONG / EXCELLENT" };
-      if (s >= 6) return { cls: "scoreBandYellow", text: "IMPROVING / SOLID" };
-      return { cls: "scoreBandRed", text: "NEEDS WORK" };
+
+    if (drill) {
+      const max = Number(maxScore) || 10;
+      const pct = max > 0 ? (s / max) * 100 : 0;
+      if (pct >= 90) return { cls: "scoreBandGreen", text: "STRONG / EXCELLENT", scoreCls: "scoreGood" };
+      if (pct >= 60) return { cls: "scoreBandYellow", text: "IMPROVING / SOLID", scoreCls: "scoreMid" };
+      return { cls: "scoreBandRed", text: "NEEDS WORK", scoreCls: "scoreLow" };
     }
-    if (s >= 90) return { cls: "scoreBandGreen", text: "STRONG / EXCELLENT" };
-    if (s >= 60) return { cls: "scoreBandYellow", text: "IMPROVING / SOLID" };
-    return { cls: "scoreBandRed", text: "NEEDS WORK" };
+
+    if (s >= 90) return { cls: "scoreBandGreen", text: "STRONG / EXCELLENT", scoreCls: "scoreGood" };
+    if (s >= 60) return { cls: "scoreBandYellow", text: "IMPROVING / SOLID", scoreCls: "scoreMid" };
+    return { cls: "scoreBandRed", text: "NEEDS WORK", scoreCls: "scoreLow" };
   }
 
   function loadPayload() {
@@ -83,186 +87,124 @@
     return safeJsonParse(localStorage.getItem(KEY_PAYLOAD) || "");
   }
 
-  function payloadToB64(obj) {
-    return btoa(unescape(encodeURIComponent(JSON.stringify(obj))));
-  }
-
-  function goToB2BDashboard(payload) {
-    const b64 = payloadToB64(payload);
-    location.href = `./b2b.html?payload=${encodeURIComponent(b64)}&fresh=${Date.now()}`;
-  }
-
-  function getReturnToIndexUrl(payload) {
-    const fresh = Date.now();
-
-    if (isB2B(payload)) {
-      const vendor = String(payload?.vendor || "baker").toLowerCase() || "baker";
-      const sku = String(payload?.sku || payload?.target?.key || "bkr-b2b").toLowerCase() || "bkr-b2b";
-      return `./index.html?v=${encodeURIComponent(vendor)}&sku=${encodeURIComponent(sku)}&fresh=${fresh}`;
-    }
-
-    return `./index.html?fresh=${fresh}`;
-  }
-
   function showPrecision() {
-    viewPrecision.classList.add("viewOn");
-    viewReport.classList.remove("viewOn");
+    viewPrecision?.classList.add("viewOn");
+    viewReport?.classList.remove("viewOn");
+    try { window.scrollTo(0, 0); } catch {}
   }
 
   function showReport() {
-    viewPrecision.classList.remove("viewOn");
-    viewReport.classList.add("viewOn");
-  }
-
-  function loadLadderHistory() {
-    const arr = safeJsonParse(localStorage.getItem(KEY_B2B_LADDER) || "[]");
-    return Array.isArray(arr) ? arr : [];
-  }
-
-  function saveLadderHistory(arr) {
-    try {
-      localStorage.setItem(KEY_B2B_LADDER, JSON.stringify(arr.slice(0, 25)));
-    } catch {}
-  }
-
-  function pushB2BLadderResult(payload) {
-    if (!isB2B(payload)) return;
-
-    const sid = String(payload?.sessionId || "");
-    const lastSid = String(localStorage.getItem(KEY_B2B_LADDER_LAST) || "");
-    if (!sid || sid === lastSid) return;
-
-    const hist = loadLadderHistory();
-    hist.unshift({
-      sessionId: sid,
-      score: Number(payload?.score || 0),
-      ts: Date.now()
-    });
-
-    saveLadderHistory(hist);
-    try {
-      localStorage.setItem(KEY_B2B_LADDER_LAST, sid);
-    } catch {}
-  }
-
-  function getB2BLevelState() {
-    const hist = loadLadderHistory();
-    const scores = hist.map(x => Number(x.score || 0));
-
-    const defs = [
-      {
-        level: 1,
-        stars: "★☆☆☆☆",
-        text: "Complete one verified drill session.",
-        next: "Next: Score 7/10 or higher once."
-      },
-      {
-        level: 2,
-        stars: "★★☆☆☆",
-        text: "Unlocked: Score 7/10 or higher once.",
-        next: "Next: Score 8/10 or higher twice."
-      },
-      {
-        level: 3,
-        stars: "★★★☆☆",
-        text: "Unlocked: Score 8/10 or higher twice.",
-        next: "Next: Score 9/10 or higher twice."
-      },
-      {
-        level: 4,
-        stars: "★★★★☆",
-        text: "Unlocked: Score 9/10 or higher twice.",
-        next: "Next: Shoot one clean 10/10."
-      },
-      {
-        level: 5,
-        stars: "★★★★★",
-        text: "Unlocked: Clean 10/10 achieved.",
-        next: "Top ladder reached."
-      }
-    ];
-
-    let level = 0;
-    if (scores.length >= 1) level = 1;
-    if (scores.some(s => s >= 7)) level = 2;
-    if (scores.filter(s => s >= 8).length >= 2) level = 3;
-    if (scores.filter(s => s >= 9).length >= 2) level = 4;
-    if (scores.some(s => s === 10)) level = 5;
-
-    if (level === 0) level = 1;
-
-    const idx = Math.max(0, Math.min(defs.length - 1, level - 1));
-    return defs[idx];
+    viewPrecision?.classList.remove("viewOn");
+    viewReport?.classList.add("viewOn");
+    try { window.scrollTo(0, 0); } catch {}
   }
 
   function renderLadder(payload) {
     if (!ladderWrap) return;
 
-    if (!isB2B(payload)) {
+    const profileId = String(payload?.profileId || payload?.drill?.mode || "");
+    const drill = isDrill(payload);
+
+    if (!drill || !profileId.includes("b2b")) {
       ladderWrap.hidden = true;
       return;
     }
 
-    const state = getB2BLevelState();
+    const score = Number(payload?.score || 0);
+    const maxScore = Number(payload?.maxScore || payload?.drill?.maxScore || 10);
+
     ladderWrap.hidden = false;
-    ladderLevelChip.textContent = `LEVEL ${state.level}`;
-    ladderStars.textContent = state.stars;
-    ladderText.textContent = state.text;
-    ladderNext.textContent = state.next;
+
+    if (score >= maxScore) {
+      ladderLevelChip.textContent = "LEVEL MAX";
+      ladderStars.textContent = "★★★★★";
+      ladderText.textContent = "Clean run achieved.";
+      ladderNext.textContent = "Next: Repeat and confirm consistency.";
+      return;
+    }
+
+    if (score >= Math.ceil(maxScore * 0.8)) {
+      ladderLevelChip.textContent = "LEVEL 4";
+      ladderStars.textContent = "★★★★☆";
+      ladderText.textContent = "Strong drill performance.";
+      ladderNext.textContent = `Next: Reach ${maxScore}/${maxScore}.`;
+      return;
+    }
+
+    if (score >= Math.ceil(maxScore * 0.6)) {
+      ladderLevelChip.textContent = "LEVEL 3";
+      ladderStars.textContent = "★★★☆☆";
+      ladderText.textContent = "Solid progress.";
+      ladderNext.textContent = `Next: Reach ${Math.ceil(maxScore * 0.8)}/${maxScore}.`;
+      return;
+    }
+
+    if (score >= Math.ceil(maxScore * 0.4)) {
+      ladderLevelChip.textContent = "LEVEL 2";
+      ladderStars.textContent = "★★☆☆☆";
+      ladderText.textContent = "Foundational progress.";
+      ladderNext.textContent = `Next: Reach ${Math.ceil(maxScore * 0.6)}/${maxScore}.`;
+      return;
+    }
+
+    ladderLevelChip.textContent = "LEVEL 1";
+    ladderStars.textContent = "★☆☆☆☆";
+    ladderText.textContent = "Complete one verified drill session.";
+    ladderNext.textContent = `Next: Reach ${Math.ceil(maxScore * 0.4)}/${maxScore}.`;
   }
 
-  function renderB2BButtons(payload) {
-    const b2b = isB2B(payload);
+  function renderPrecision(payload) {
+    const drill = isDrill(payload);
+    const score = Number(payload?.score || 0);
+    const maxScore = Number(payload?.maxScore || payload?.drill?.maxScore || 10);
+    const band = scoreBandInfo(score, drill, maxScore);
 
-    if (b2bDashBtn) b2bDashBtn.hidden = !b2b;
-    if (b2bDashBtn2) b2bDashBtn2.hidden = !b2b;
-  }
+    if (scoreValue) scoreValue.textContent = String(Math.round(score));
+    if (scoreBand) {
+      scoreBand.textContent = band.text;
+      scoreBand.className = "scoreBand " + band.cls;
+    }
 
-  function renderPrecision(p) {
-    const b2b = isB2B(p);
-    const score = Number(p?.score || 0);
-    const band = scoreBandInfo(score, b2b);
+    if (scoreValue) {
+      scoreValue.classList.remove("scoreGood", "scoreMid", "scoreLow");
+      if (band.scoreCls) scoreValue.classList.add(band.scoreCls);
+    }
 
-    scoreValue.textContent = Math.round(score);
-    scoreBand.textContent = band.text;
-    scoreBand.className = "scoreBand " + band.cls;
+    if (drill) {
+      const taps = Number(payload?.taps ?? payload?.hits ?? payload?.shots ?? 0);
+      const dist = Number(payload?.distanceYds ?? 0);
 
-    if (b2b) {
-      const taps = Number(p?.taps ?? p?.hits ?? p?.shots ?? 0);
-      const dist = Number(p?.distanceYds ?? p?.debug?.distanceYds ?? 0);
+      if (windageBig) windageBig.textContent = `${Math.round(score)}`;
+      if (windageDir) windageDir.textContent = `/${maxScore}`;
 
-      windageBig.textContent = Math.round(score);
-      windageDir.textContent = "/10";
+      if (elevationBig) elevationBig.textContent = `${taps}`;
+      if (elevationDir) elevationDir.textContent = "TAPS";
 
-      elevationBig.textContent = taps;
-      elevationDir.textContent = "TAPS";
+      if (runDistance) runDistance.textContent = dist ? `${Math.round(dist)} yds` : "DRILL MODE";
+      if (runHits) runHits.textContent = `${taps} taps`;
+      if (runTime) runTime.textContent = nowStamp();
 
-      runDistance.textContent = dist ? `${Math.round(dist)} yds` : "DRILL MODE";
-      runHits.textContent = `${taps} taps`;
-      runTime.textContent = nowStamp();
-
-      renderLadder(p);
-      renderB2BButtons(p);
+      renderLadder(payload);
       return;
     }
 
     if (ladderWrap) ladderWrap.hidden = true;
-    renderB2BButtons(p);
 
-    windageBig.textContent = fmt2(p?.windage?.clicks);
-    windageDir.textContent = p?.windage?.dir || "—";
-    elevationBig.textContent = fmt2(p?.elevation?.clicks);
-    elevationDir.textContent = p?.elevation?.dir || "—";
+    if (windageBig) windageBig.textContent = fmt2(payload?.windage?.clicks);
+    if (windageDir) windageDir.textContent = payload?.windage?.dir || "—";
+    if (elevationBig) elevationBig.textContent = fmt2(payload?.elevation?.clicks);
+    if (elevationDir) elevationDir.textContent = payload?.elevation?.dir || "—";
 
-    runDistance.textContent = `${Math.round(p?.distanceYds || 100)} yds`;
-    runHits.textContent = `${p?.shots || 0} hits`;
-    runTime.textContent = nowStamp();
+    if (runDistance) runDistance.textContent = `${Math.round(payload?.distanceYds || 100)} yds`;
+    if (runHits) runHits.textContent = `${payload?.shots || 0} hits`;
+    if (runTime) runTime.textContent = nowStamp();
   }
 
-  async function drawReport(p) {
-    const b2b = isB2B(p);
+  async function drawReport(payload) {
+    const drill = isDrill(payload);
 
-    const W = 1080, H = 1920;
+    const W = 1080;
+    const H = 1920;
     const c = document.createElement("canvas");
     c.width = W;
     c.height = H;
@@ -271,86 +213,159 @@
     ctx.fillStyle = "#06070a";
     ctx.fillRect(0, 0, W, H);
 
-    ctx.fillStyle = "#fff";
-    ctx.font = "900 120px system-ui";
+    const score = Number(payload?.score || 0);
+    const maxScore = Number(payload?.maxScore || payload?.drill?.maxScore || 10);
+
+    // Header score
     ctx.textAlign = "center";
-    ctx.fillText(Math.round(p.score || 0), W / 2, 380);
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "900 120px system-ui";
+    ctx.fillText(String(Math.round(score)), W / 2, 250);
 
-    ctx.font = "700 26px system-ui";
-    ctx.fillStyle = "rgba(255,255,255,.75)";
+    ctx.font = "700 32px system-ui";
+    ctx.fillStyle = "rgba(255,255,255,.72)";
 
-    if (b2b) {
-      const taps = Number(p?.taps ?? p?.hits ?? p?.shots ?? 0);
-      const dist = Number(p?.distanceYds ?? p?.debug?.distanceYds ?? 0);
-      const lanesHit = Array.isArray(p?.drill?.lanesHit) ? p.drill.lanesHit : [];
+    if (drill) {
+      const taps = Number(payload?.taps ?? payload?.hits ?? payload?.shots ?? 0);
+      const dist = Number(payload?.distanceYds ?? 0);
+      const profileName = String(payload?.profileName || payload?.drill?.name || "DRILL");
+      const prefix = dist ? `${Math.round(dist)} yds | ` : "";
+      ctx.fillText(`${prefix}${profileName} | ${taps} taps | SCORE ${Math.round(score)}/${maxScore}`, W / 2, 320);
+    } else {
+      const dist = Number(payload?.distanceYds ?? 0);
+      const shots = Number(payload?.shots ?? 0);
+      ctx.fillText(`${dist || 100} yds | ${shots} hits`, W / 2, 320);
+    }
+
+    if (drill) {
+      const lanesHit = Array.isArray(payload?.drill?.lanesHit) ? payload.drill.lanesHit : [];
+      const displayLayout = payload?.drill?.displayLayout || {};
       const laneSet = new Set(lanesHit);
 
-      ctx.fillText(
-        `${dist ? Math.round(dist) + " yds | " : ""}DRILL MODE | ${taps} taps | SCORE ${Math.round(p.score)}/10`,
-        W / 2,
-        460
-      );
+      const centerX = W / 2;
+      const boxTop = 420;
+      const boxSize = 620;
 
-      const total = 10;
-      const cols = 5;
-      const rows = 2;
-      const size = 110;
-      const gap = 36;
+      // panel
+      ctx.fillStyle = "rgba(255,255,255,.05)";
+      roundRect(ctx, centerX - boxSize / 2, boxTop, boxSize, boxSize, 28, true, false);
 
-      const gridW = cols * size + (cols - 1) * gap;
-      const startX = (W - gridW) / 2;
-      const startY = 560;
+      ctx.strokeStyle = "rgba(255,255,255,.12)";
+      ctx.lineWidth = 2;
+      roundRect(ctx, centerX - boxSize / 2, boxTop, boxSize, boxSize, 28, false, true);
 
-      for (let i = 0; i < total; i++) {
-        const laneId = i + 1;
-        const r = Math.floor(i / cols);
-        const col = i % cols;
+      // title
+      ctx.fillStyle = "rgba(255,255,255,.82)";
+      ctx.font = "900 28px system-ui";
+      ctx.fillText("PROFILE LANE MAP", centerX, boxTop - 22);
 
-        const x = startX + col * (size + gap);
-        const y = startY + r * (size + gap);
+      const mapX = centerX - boxSize / 2;
+      const mapY = boxTop;
 
-        let color = "rgba(255,255,255,.25)";
-        if (laneSet.has(laneId)) color = "#48ff8b";
-        else color = "#ff4d4d";
+      const ids = Object.keys(displayLayout)
+        .map(Number)
+        .sort((a, b) => a - b);
+
+      ids.forEach((id) => {
+        const item = displayLayout[id];
+        const x = mapX + item.x * boxSize;
+        const y = mapY + item.y * boxSize;
+        const hit = laneSet.has(id);
+        const isSquare = item.shape === "square";
+        const size = 42;
 
         ctx.beginPath();
-        ctx.arc(x + size / 2, y + size / 2, size / 2, 0, Math.PI * 2);
-        ctx.fillStyle = color;
+        if (isSquare) {
+          ctx.rect(x - size, y - size, size * 2, size * 2);
+        } else {
+          ctx.arc(x, y, size, 0, Math.PI * 2);
+        }
+
+        ctx.fillStyle = hit ? "#48ff8b" : "#ff4d4d";
         ctx.fill();
 
         ctx.lineWidth = 4;
         ctx.strokeStyle = "rgba(0,0,0,.5)";
         ctx.stroke();
 
-        ctx.fillStyle = "rgba(0,0,0,.75)";
-        ctx.font = "900 40px system-ui";
-        ctx.fillText(String(laneId), x + size / 2, y + size / 2 + 14);
-      }
+        ctx.fillStyle = "rgba(0,0,0,.82)";
+        ctx.font = "900 34px system-ui";
+        ctx.fillText(String(id), x, y + 12);
+      });
 
-      ctx.fillStyle = "rgba(255,255,255,.8)";
-      ctx.font = "900 28px system-ui";
-      ctx.fillText("COUNTED LANES", W / 2, startY + rows * (size + gap) + 40);
+      ctx.fillStyle = "rgba(255,255,255,.82)";
+      ctx.font = "900 26px system-ui";
+      ctx.fillText(`COUNTED LANES: ${lanesHit.join(", ") || "NONE"}`, centerX, 1120);
+
+      // summary block
+      const sumTop = 1190;
+      ctx.fillStyle = "rgba(255,255,255,.05)";
+      roundRect(ctx, 120, sumTop, 840, 220, 24, true, false);
+      ctx.strokeStyle = "rgba(255,255,255,.12)";
+      ctx.lineWidth = 2;
+      roundRect(ctx, 120, sumTop, 840, 220, 24, false, true);
+
+      ctx.fillStyle = "#ffffff";
+      ctx.font = "900 40px system-ui";
+      ctx.fillText(`PROFILE: ${String(payload?.profileName || "").toUpperCase()}`, centerX, sumTop + 58);
+
+      ctx.font = "800 30px system-ui";
+      ctx.fillStyle = "rgba(255,255,255,.80)";
+      ctx.fillText(`SCORE ${Math.round(score)}/${maxScore}`, centerX, sumTop + 112);
+      ctx.fillText(`TAPS ${Number(payload?.taps ?? 0)}`, centerX, sumTop + 158);
+
+      ctx.fillStyle = "rgba(255,255,255,.55)";
+      ctx.font = "800 22px system-ui";
+      ctx.fillText(`Generated ${nowStamp()}`, centerX, 1840);
+
+      return c.toDataURL("image/png");
     }
+
+    // zero-mode fallback
+    ctx.fillStyle = "rgba(255,255,255,.82)";
+    ctx.font = "900 36px system-ui";
+    ctx.fillText("PRECISION REPORT", W / 2, 520);
+
+    ctx.font = "800 34px system-ui";
+    ctx.fillText(`Windage ${fmt2(payload?.windage?.clicks)} ${payload?.windage?.dir || ""}`, W / 2, 620);
+    ctx.fillText(`Elevation ${fmt2(payload?.elevation?.clicks)} ${payload?.elevation?.dir || ""}`, W / 2, 690);
+
+    ctx.fillStyle = "rgba(255,255,255,.55)";
+    ctx.font = "800 22px system-ui";
+    ctx.fillText(`Generated ${nowStamp()}`, W / 2, 1840);
 
     return c.toDataURL("image/png");
   }
 
-  async function renderReport(p) {
-    const img = await drawReport(p);
-    secCardImg.src = img;
-
-    const v = p.vendorUrl || "#";
-    vendorBtn.href = v;
-    vendorBtn.textContent = "Visit Vendor";
-
-    const s = p.surveyUrl || DEFAULT_SURVEY_URL;
-    surveyBtn.href = s;
-
-    renderB2BButtons(p);
+  function roundRect(ctx, x, y, w, h, r, fill, stroke) {
+    const rr = Math.min(r, w / 2, h / 2);
+    ctx.beginPath();
+    ctx.moveTo(x + rr, y);
+    ctx.arcTo(x + w, y, x + w, y + h, rr);
+    ctx.arcTo(x + w, y + h, x, y + h, rr);
+    ctx.arcTo(x, y + h, x, y, rr);
+    ctx.arcTo(x, y, x + w, y, rr);
+    ctx.closePath();
+    if (fill) ctx.fill();
+    if (stroke) ctx.stroke();
   }
 
-  function goBackToLanding(payload) {
-    location.href = getReturnToIndexUrl(payload);
+  async function renderReport(payload) {
+    const img = await drawReport(payload);
+    if (secCardImg) secCardImg.src = img;
+
+    const v = payload?.vendorUrl || "#";
+    if (vendorBtn) {
+      vendorBtn.href = v;
+      vendorBtn.textContent = "Visit Vendor";
+    }
+
+    const s = payload?.surveyUrl || DEFAULT_SURVEY_URL;
+    if (surveyBtn) surveyBtn.href = s;
+  }
+
+  function goBackToLanding() {
+    location.href = "./index.html?fresh=" + Date.now();
   }
 
   const payload = loadPayload();
@@ -359,30 +374,17 @@
     return;
   }
 
-  pushB2BLadderResult(payload);
   renderPrecision(payload);
   showPrecision();
 
-  toReportBtn.onclick = async () => {
-    showReport();
-    await renderReport(payload);
-  };
-
-  backBtn.onclick = showPrecision;
-
-  if (replayBtn) {
-    replayBtn.onclick = () => goBackToLanding(payload);
+  if (toReportBtn) {
+    toReportBtn.onclick = async () => {
+      showReport();
+      await renderReport(payload);
+    };
   }
 
-  if (goHomeBtn) {
-    goHomeBtn.onclick = () => goBackToLanding(payload);
-  }
-
-  if (b2bDashBtn) {
-    b2bDashBtn.onclick = () => goToB2BDashboard(payload);
-  }
-
-  if (b2bDashBtn2) {
-    b2bDashBtn2.onclick = () => goToB2BDashboard(payload);
-  }
+  if (backBtn) backBtn.onclick = showPrecision;
+  if (replayBtn) replayBtn.onclick = goBackToLanding;
+  if (goHomeBtn) goHomeBtn.onclick = goBackToLanding;
 })();
