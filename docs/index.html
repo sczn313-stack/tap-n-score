@@ -6,7 +6,7 @@
   <meta name="color-scheme" content="dark" />
   <meta name="theme-color" content="#06070a" />
 
-  <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0" />
+  <meta http-equiv="Cache-Control" contents="no-store, no-cache, must-revalidate, max-age=0" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
 
@@ -98,3 +98,34 @@
             <div class="liveLinePrimary" id="liveDistance">100 yds</div>
             <div class="liveSep">•</div>
             <
+<!-- LIVE BAR -->
+<div class="liveBar">
+  <div class="liveRow">
+    <div class="liveLine" aria-label="Live settings">
+      <div class="liveLinePrimary" id="liveDistance">100 yds</div>
+      <div class="liveSep">•</div>
+      <div class="liveLinePrimary" id="liveDial">0.25 MOA</div>
+      <div class="liveSep">•</div>
+      <div class="liveLinePrimary" id="liveTarget">23×35</div>
+      <div class="liveSep">•</div>
+      <div class="liveLinePrimary" id="liveProfile">STANDARD</div>
+    </div>
+
+    <button id="matrixBtn" class="matrixBtn matrixBtnTight" type="button" aria-label="Open matrix">
+      MATRIX
+    </button>
+  </div>
+
+  <!-- PROFILE UI STRIP -->
+  <div class="profileBar" id="profileBar" aria-label="Active profile">
+    <div class="profileTitleWrap">
+      <div class="profileTitle" id="profileTitle">Precision Zero</div>
+      <div class="profileSubtitle" id="profileSubtitle">Tap aim point, then impacts</div>
+    </div>
+
+    <div class="profileMeta">
+      <span class="profilePill" id="profilePrimaryLabel">PRIMARY: WINDAGE</span>
+      <span class="profilePill" id="profileSecondaryLabel">SECONDARY: ELEVATION</span>
+    </div>
+  </div>
+</div>
