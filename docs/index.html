@@ -1,3 +1,4 @@
+<!-- docs/index.html (FULL REPLACEMENT) -->
 <!doctype html>
 <html lang="en">
 <head>
@@ -6,15 +7,15 @@
   <meta name="color-scheme" content="dark" />
   <meta name="theme-color" content="#06070a" />
 
-  <meta http-equiv="Cache-Control" contents="no-store, no-cache, must-revalidate, max-age=0" />
+  <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
 
   <title>Tap-n-Score™</title>
 
-  <link rel="stylesheet" href="./styles.css?v=PROFILE-UI-1" />
-  <link rel="stylesheet" href="./sizechips.css?v=PROFILE-UI-1" />
-  <link rel="stylesheet" href="./livebar_fix.css?v=PROFILE-UI-1" />
+  <link rel="stylesheet" href="./styles.css?v=PROFILE-UI-REV-1" />
+  <link rel="stylesheet" href="./sizechips.css?v=PROFILE-UI-REV-1" />
+  <link rel="stylesheet" href="./livebar_fix.css?v=PROFILE-UI-REV-1" />
 </head>
 
 <body>
@@ -41,12 +42,6 @@
         </div>
       </div>
 
-      <!-- PROFILE HEADER -->
-      <div class="heroProfileBlock" aria-label="Target profile identity">
-        <div id="profileHeroTitle" class="heroProfileTitle">Universal Scoring Mode</div>
-        <div id="profileHeroSub" class="heroProfileSub">Profile-aware training and correction engine</div>
-      </div>
-
       <div class="heroMid">
         <button id="photoBtn" class="heroBtn" type="button">📷 TAP TO ADD TARGET PHOTO</button>
 
@@ -62,9 +57,9 @@
 
           <div id="vendorPanel" class="vendorPanel vendorHidden" aria-hidden="true">
             <div class="vendorPanelInner">
-              <div class="vendorPanelTitle">SMART TARGET™ PARTNER</div>
+              <div class="vendorPanelTitle">BAKER • SMART TARGET™</div>
               <div class="vendorPanelSub">You’re still in the Tap-n-Score™ flow.</div>
-              <a id="vendorPanelLink" class="vendorPanelBtn" href="#" target="_blank" rel="noopener">Visit Vendor</a>
+              <a id="vendorPanelLink" class="vendorPanelBtn" href="#" target="_blank" rel="noopener">Visit Baker</a>
             </div>
           </div>
         </div>
@@ -77,17 +72,14 @@
     <section id="scoreSection" class="card scoreHidden" aria-label="Scoring">
       <div class="cardTitle cardTitleSEC">
         <div class="secTitle">
-          <span id="profileCardTitle">PROFILE SCORING</span>
+          <span class="r">S</span><span class="w">HOOTER</span>
+          <span class="w"> </span>
+          <span class="b">EXPERIENCE</span>
+          <span class="w"> </span>
+          <span class="r">CARD</span>
         </div>
         <div class="secTag">
           <span class="r">S</span><span class="w">E</span><span class="b">C</span>
-        </div>
-      </div>
-
-      <div id="profileInstructionPanel" class="profileInstructionPanel">
-        <div id="profileInstructionTitle" class="profileInstructionTitle">Tap-n-Score Mode</div>
-        <div id="profileInstructionText" class="profileInstructionText">
-          Add a target image to begin.
         </div>
       </div>
 
@@ -97,35 +89,114 @@
           <div class="liveLine" aria-label="Live settings">
             <div class="liveLinePrimary" id="liveDistance">100 yds</div>
             <div class="liveSep">•</div>
-            <
-<!-- LIVE BAR -->
-<div class="liveBar">
-  <div class="liveRow">
-    <div class="liveLine" aria-label="Live settings">
-      <div class="liveLinePrimary" id="liveDistance">100 yds</div>
-      <div class="liveSep">•</div>
-      <div class="liveLinePrimary" id="liveDial">0.25 MOA</div>
-      <div class="liveSep">•</div>
-      <div class="liveLinePrimary" id="liveTarget">23×35</div>
-      <div class="liveSep">•</div>
-      <div class="liveLinePrimary" id="liveProfile">STANDARD</div>
+            <div class="liveLinePrimary" id="liveDial">0.25 MOA</div>
+            <div class="liveSep">•</div>
+            <div class="liveLinePrimary" id="liveTarget">23×35</div>
+            <div class="liveSep">•</div>
+            <div class="liveLinePrimary" id="liveProfile">ZERO</div>
+          </div>
+
+          <button id="matrixBtn" class="matrixBtn matrixBtnTight" type="button" aria-label="Open matrix">
+            MATRIX
+          </button>
+        </div>
+
+        <div class="profileBar" id="profileBar" aria-label="Active profile">
+          <div class="profileTitle" id="profileTitle">Precision Zero</div>
+          <div class="profileSubtitle" id="profileSubtitle">Tap aim point, then impacts.</div>
+        </div>
+      </div>
+
+      <!-- MATRIX PANEL -->
+      <div id="matrixPanel" class="matrixPanel matrixHidden" aria-hidden="true">
+        <div class="matrixTitle">SETTINGS MATRIX</div>
+
+        <div class="matrixGroup">
+          <div class="matrixLabel">DISTANCE</div>
+          <div class="matrixRow">
+            <button id="distDown" class="miniBtn" type="button" aria-label="Distance down">−</button>
+            <input id="distanceYds" class="miniInput" inputmode="numeric" value="100" aria-label="Distance value"/>
+            <button id="distUp" class="miniBtn" type="button" aria-label="Distance up">+</button>
+
+            <div class="unitToggle">
+              <button id="distUnitYd" class="segBtn segBtnTiny segOn" type="button">YDS</button>
+              <button id="distUnitM" class="segBtn segBtnTiny" type="button">M</button>
+              <span id="distUnitLabel" class="miniUnit">yds</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="matrixGroup">
+          <div class="matrixLabel">DIAL</div>
+          <div class="matrixRow">
+            <button id="unitMoa" class="segBtn segOn" type="button">MOA</button>
+            <button id="unitMrad" class="segBtn" type="button">MRAD</button>
+
+            <input id="clickValue" class="miniInputWide" inputmode="decimal" value="0.25" aria-label="Click value"/>
+            <span id="clickUnitLabel" class="miniUnit">MOA/click</span>
+          </div>
+
+          <div class="chipRow chipRowTight mt12" id="presetChipRow" aria-label="Presets">
+            <button class="chip" type="button" data-unit="MOA" data-click="0.25">.25</button>
+            <button class="chip" type="button" data-unit="MOA" data-click="0.50">.50</button>
+            <button class="chip" type="button" data-unit="MRAD" data-click="0.10">.10</button>
+            <button class="chip" type="button" data-unit="MRAD" data-click="0.20">.20</button>
+            <button class="chip" type="button" data-unit="MOA" data-click="0.125">.125</button>
+            <button class="chip" type="button" data-unit="MRAD" data-click="0.05">.05</button>
+          </div>
+        </div>
+
+        <div class="matrixGroup">
+          <div class="matrixLabel">TARGET SIZE</div>
+
+          <div id="sizeChipRow" class="chipRow" aria-label="Target size chips">
+            <button class="chip" type="button" data-size="8.5x11" data-w="8.5" data-h="11">8.5×11</button>
+            <button class="chip" type="button" data-size="11x17" data-w="11" data-h="17">11×17</button>
+            <button class="chip" type="button" data-size="12x18" data-w="12" data-h="18">12×18</button>
+            <button class="chip" type="button" data-size="18x24" data-w="18" data-h="24">18×24</button>
+            <button class="chip" type="button" data-size="23x35" data-w="23" data-h="35">23×35</button>
+            <button class="chip" type="button" data-size="24x36" data-w="24" data-h="36">24×36</button>
+            <button class="chip" type="button" data-size="custom">CUSTOM</button>
+          </div>
+
+          <div class="matrixRow mt12">
+            <button id="swapSizeBtn" class="segBtn segBtnTiny" type="button">SWAP W/H</button>
+          </div>
+        </div>
+
+        <div class="matrixFoot">
+          <button id="matrixCloseBtn" class="matrixCloseBtn" type="button">CLOSE</button>
+        </div>
+      </div>
+
+      <!-- TARGET IMAGE + DOTS -->
+      <div id="targetWrap" class="targetWrap" aria-label="Target image area">
+        <img id="targetImg" alt="Target" draggable="false" />
+        <div id="dotsLayer" class="dotsLayer" aria-hidden="true"></div>
+      </div>
+
+      <!-- Controls -->
+      <div class="row rowTight">
+        <div class="pill">Taps: <span id="tapCount">0</span></div>
+        <button id="clearTapsBtn" class="btnSecondary" type="button">Clear</button>
+        <button id="showResultsBtn" class="btnSecondary" type="button">Show results</button>
+      </div>
+
+      <p id="instructionLine" class="instructionLine"></p>
+      <p id="statusLine" class="hint">Add a target photo to begin.</p>
+    </section>
+
+    <!-- Sticky Results Bar -->
+    <div id="stickyBar" class="stickyBar stickyHidden" aria-hidden="true">
+      <button id="stickyResultsBtn" class="stickyBtn" type="button">SHOW RESULTS</button>
     </div>
 
-    <button id="matrixBtn" class="matrixBtn matrixBtnTight" type="button" aria-label="Open matrix">
-      MATRIX
-    </button>
-  </div>
-
-  <!-- PROFILE UI STRIP -->
-  <div class="profileBar" id="profileBar" aria-label="Active profile">
-    <div class="profileTitleWrap">
-      <div class="profileTitle" id="profileTitle">Precision Zero</div>
-      <div class="profileSubtitle" id="profileSubtitle">Tap aim point, then impacts</div>
+    <div class="footer">
+      <div class="footerMark">Faith • Order • Precision</div>
     </div>
 
-    <div class="profileMeta">
-      <span class="profilePill" id="profilePrimaryLabel">PRIMARY: WINDAGE</span>
-      <span class="profilePill" id="profileSecondaryLabel">SECONDARY: ELEVATION</span>
-    </div>
-  </div>
-</div>
+  </main>
+
+  <script src="./index.js?v=PROFILE-UI-REV-1"></script>
+</body>
+</html>
