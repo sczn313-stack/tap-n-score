@@ -659,3 +659,260 @@
       });
     });
   }
+  function zoneContains(z, x01, y01) {
+    if (z.shape === "circle") {
+      const dx = x01 - z.cx;
+      const dy = y01 - z.cy;
+      return (dx * dx + dy * dy) <= (z.r * z.r);
+    }
+
+    if (z.shape === "square") {
+      return (
+        x01 >= (z.cx - z.hw) &&
+        x01 <= (z.cx + z.hw) &&
+        y01 >= (z.cy - z.hh) &&
+        y01 <= (z.cy + z.hh)
+      );
+    }
+
+    return false;
+  }
+
+  function detectLane(profile, x01, y01) {
+    if (!profile?.zones) return null;
+
+    // ----- Special override for Baker B2B grid -----
+    if (profile.profileId === "bkr-b2b") {
+
+      // Force lane 10 if inside bottom center region
+      const p = profile.lane10Priority;
+      if (
+        p &&
+        x01 >= p.left &&
+        x01 <= p.right &&
+        y01 >= p.top &&
+        y01 <= p.bottom
+      ) {
+        return 10;
+      }
+
+      // Prevent lane 8 stealing bottom hits
+      if (profile.lane8MaxY && y01 > profile.lane8MaxY) {
+        return null;
+      }
+    }
+
+    for (const z of profile.zones) {
+      if (zoneContains(z, x01, y01)) return z.id;
+    }
+
+    return null;
+  }
+
+  function computeDrillOccupancy(profile, taps) {
+    const laneSet = new Set();
+
+    taps.forEach((t) => {
+      const id = detectLane(profile, t.x01, t.y01);
+      if (id != null) laneSet.add(id);
+    });
+
+    return {
+      score: laneSet.size,
+      lanesHit: Array.from(laneSet).sort((a, b) => a - b)
+    };
+  }
+
+  function buildDrillPayload() {
+    if (!ACTIVE_PROFILE) return null;
+
+    const occ = computeDrillOccupancy(ACTIVE_PROFILE, hits);
+
+    const sessionId = newSessionId();
+
+    return {
+      version: "SEC-2P",
+      sessionId,
+      ts: nowTs(),
+      vendor: localStorage.getItem(KEY_VENDOR_NAME) || "",
+      vendorUrl: localStorage.getItem(KEY_VENDOR_URL) || "",
+      surveyUrl: "",
+      drill: {
+        mode: "b2b",
+        profileId: ACTIVE_PROFILE.profileId,
+        lanesHit: occ.lanesHit
+      },
+      score: occ.score,
+      taps: hits.length,
+      distanceYds: getDistanceYds()
+    };
+  }
+
+  function computePrecisionPayload() {
+    if (!aim || hits.length === 0) return null;
+
+    const dxAvg =
+      hits.reduce((s, h) => s + (h.x01 - aim.x01), 0) / hits.length;
+
+    const dyAvg =
+      hits.reduce((s, h) => s + (h.y01 - aim.y01), 0) / hits.length;
+
+    const dxIn = dxAvg * targetWIn;
+    const dyIn = dyAvg * targetHIn;
+
+    const range = getDistanceYds();
+    const click = getClickValue();
+
+    const perClickIn =
+      dialUnit === "MOA"
+        ? (1.047 * range / 100) * click
+        : (range / 100) * click * 3.6;
+
+    const windClicks = dxIn / perClickIn;
+    const elevClicks = dyIn / perClickIn;
+
+    return {
+      version: "SEC-2P",
+      sessionId: newSessionId(),
+      ts: nowTs(),
+      vendor: localStorage.getItem(KEY_VENDOR_NAME) || "",
+      vendorUrl: localStorage.getItem(KEY_VENDOR_URL) || "",
+      surveyUrl: "",
+      score: Math.round(Math.random() * 100), // placeholder
+      windage: {
+        clicks: Math.abs(windClicks),
+        dir: windClicks >= 0 ? "RIGHT" : "LEFT"
+      },
+      elevation: {
+        clicks: Math.abs(elevClicks),
+        dir: elevClicks >= 0 ? "UP" : "DOWN"
+      },
+      shots: hits.length,
+      distanceYds: range
+    };
+  }
+
+  function buildPayload() {
+    if (DRILL_MODE) return buildDrillPayload();
+    return computePrecisionPayload();
+  }
+
+  function goToSEC(payload) {
+    try {
+      localStorage.setItem(KEY_PAYLOAD, JSON.stringify(payload));
+    } catch {}
+
+    const enc = btoa(unescape(encodeURIComponent(JSON.stringify(payload))));
+    window.location.href = `./sec.html?payload=${enc}`;
+  }
+
+  function handleTap(x01, y01) {
+    ensureRunStarted();
+
+    if (DRILL_MODE) {
+      hits.push({ x01, y01 });
+      addDot(x01, y01, "hit");
+      setTapCount();
+      scheduleStickyMagic();
+      return;
+    }
+
+    if (!aim) {
+      aim = { x01, y01 };
+      addDot(x01, y01, "aim");
+      syncInstruction();
+      return;
+    }
+
+    hits.push({ x01, y01 });
+    addDot(x01, y01, "hit");
+    setTapCount();
+    scheduleStickyMagic();
+  }
+
+  function wireImageTaps() {
+    if (!elWrap) return;
+
+    elWrap.addEventListener("click", (e) => {
+      if (!elImg?.src) return;
+
+      const { x01, y01 } = getRelative01(e.clientX, e.clientY);
+      handleTap(x01, y01);
+    });
+  }
+
+  function wireStickyButton() {
+    if (!elStickyBtn) return;
+
+    elStickyBtn.addEventListener("click", () => {
+      const payload = buildPayload();
+      if (!payload) return;
+      goToSEC(payload);
+    });
+  }
+
+  function wireClear() {
+    elClear?.addEventListener("click", resetAll);
+  }
+
+  function wirePhotoInput() {
+    if (!elFile) return;
+
+    elFile.addEventListener("change", async (e) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+      objectUrl = URL.createObjectURL(file);
+
+      elImg.src = objectUrl;
+
+      await storeTargetPhotoForSEC(file, objectUrl);
+
+      resetAll();
+      syncInstruction();
+      revealScoringUI();
+    });
+  }
+
+  function wirePhotoButton() {
+    elPhotoBtn?.addEventListener("click", () => {
+      elFile?.click();
+    });
+  }
+
+  function init() {
+    hydrateVendorBox();
+    hydrateRange();
+    hydrateTargetSize();
+
+    wireTargetSizeChips();
+    wireSwapSize();
+
+    wireMatrixPresets();
+    elMatrixBtn?.addEventListener("click", toggleMatrix);
+    elMatrixClose?.addEventListener("click", closeMatrix);
+
+    elDist?.addEventListener("change", syncInternalFromRangeInput);
+    elDistUp?.addEventListener("click", () => bumpRange(1));
+    elDistDown?.addEventListener("click", () => bumpRange(-1));
+
+    elDistUnitYd?.addEventListener("click", () => setRangeUnit("YDS"));
+    elDistUnitM?.addEventListener("click", () => setRangeUnit("M"));
+
+    elUnitMoa?.addEventListener("click", () => setUnit("MOA"));
+    elUnitMrad?.addEventListener("click", () => setUnit("MRAD"));
+
+    wireImageTaps();
+    wireStickyButton();
+    wireClear();
+    wirePhotoInput();
+    wirePhotoButton();
+
+    syncInstruction();
+    syncLiveTop();
+  }
+
+  init();
+
+})();
