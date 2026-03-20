@@ -3,149 +3,33 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="color-scheme" content="dark" />
-  <meta name="theme-color" content="#06070a" />
   <title>Tap-n-Score™</title>
-
-  <link rel="stylesheet" href="./styles.css?v=landing-reset-1" />
+  <meta name="theme-color" content="#06070a" />
+  <link rel="stylesheet" href="./styles.css?v=stable-1" />
 </head>
 <body>
   <main class="page">
-
-    <!-- HERO -->
     <section class="heroShell">
-      <header class="brandBlock">
-        <div class="brandTitle">
-          <span class="r">TAP</span><span class="w">-N-</span><span class="b">SCORE</span><span class="w">™</span>
+      <div class="brandBlock">
+        <div class="eyebrow">Tap-n-Score™</div>
+        <h1>Stable Landing Page</h1>
+        <p class="heroText">
+          This is the locked stable entry point for the platform.
+        </p>
+        <div class="ctaRow">
+          <button id="photoBtn" class="primaryBtn" type="button">Start</button>
         </div>
-
-        <div class="brandSub">After-Shot Intelligence</div>
-
-        <div class="secSeal">
-          <span class="r">S</span><span class="w">E</span><span class="b">C</span>
-        </div>
-
-        <div class="secSub">Shooter Experience Card</div>
-      </header>
-
-      <div class="ctaStack">
-        <button id="photoBtn" class="heroBtn primaryBtn" type="button">
-          📷 TAP TO ADD TARGET PHOTO
-        </button>
-
-        <a id="vendorBox" class="heroBtn vendorBtn" href="#">
-          <span id="vendorLabel">BUY MORE TARGETS LIKE THIS</span>
-        </a>
       </div>
-
-      <div id="vendorPanel" class="vendorPanel" aria-hidden="true">
-        <div class="vendorPanelTitle">BAKER • SMART TARGET™</div>
-        <div class="vendorPanelSub">You’re still in the Tap-n-Score™ flow.</div>
-        <a id="vendorPanelLink" class="vendorPanelLink" href="#" target="_blank" rel="noopener">Visit Baker</a>
-      </div>
-
-      <input id="photoInput" class="fileHidden" type="file" accept="image/*" />
     </section>
 
-    <!-- SCORE SECTION -->
-    <section id="scoreSection" class="card scoreHidden" aria-label="Scoring">
-      <div class="cardHeader">
-        <div class="cardTitle">SHOOTER EXPERIENCE CARD</div>
-        <div class="cardSec">
-          <span class="r">S</span><span class="w">E</span><span class="b">C</span>
-        </div>
+    <section id="scoreSection" class="scoreShell hidden">
+      <div class="panel">
+        <h2>Scoring section placeholder</h2>
+        <p>This confirms the stable page is loading correctly.</p>
       </div>
-
-      <div class="liveBar">
-        <div class="liveMeta">
-          <span id="liveDistance">100 yds</span>
-          <span class="dot">•</span>
-          <span id="liveDial">0.25 MOA</span>
-          <span class="dot">•</span>
-          <span id="liveTarget">23×35</span>
-          <span class="dot">•</span>
-          <span id="liveProfile">ZERO</span>
-        </div>
-
-        <button id="matrixBtn" class="matrixBtn" type="button">MATRIX</button>
-      </div>
-
-      <div id="profileBar" class="profileBar">
-        <div id="profileTitle" class="profileTitle">Precision Zero</div>
-        <div id="profileSubtitle" class="profileSubtitle">Tap aim point, then impacts.</div>
-      </div>
-
-      <div id="matrixPanel" class="matrixPanel matrixHidden" aria-hidden="true">
-        <div class="matrixTitle">SETTINGS MATRIX</div>
-
-        <div class="matrixGroup">
-          <div class="matrixLabel">DISTANCE</div>
-          <div class="matrixRow">
-            <button id="distDown" class="miniBtn" type="button">−</button>
-            <input id="distanceYds" class="miniInput" value="100" inputmode="numeric" />
-            <button id="distUp" class="miniBtn" type="button">+</button>
-
-            <button id="distUnitYd" class="segBtn segOn" type="button">YDS</button>
-            <button id="distUnitM" class="segBtn" type="button">M</button>
-            <span id="distUnitLabel" class="miniUnit">yds</span>
-          </div>
-        </div>
-
-        <div class="matrixGroup">
-          <div class="matrixLabel">DIAL</div>
-          <div class="matrixRow">
-            <button id="unitMoa" class="segBtn segOn" type="button">MOA</button>
-            <button id="unitMrad" class="segBtn" type="button">MRAD</button>
-
-            <input id="clickValue" class="miniInputWide" value="0.25" inputmode="decimal" />
-            <span id="clickUnitLabel" class="miniUnit">MOA/click</span>
-          </div>
-        </div>
-        <div class="matrixGroup">
-          <div class="matrixLabel">TARGET SIZE</div>
-
-          <div id="sizeChipRow" class="chipRow">
-            <button class="chip chipOn" type="button" data-size="23x35" data-w="23" data-h="35">23×35</button>
-            <button class="chip" type="button" data-size="24x36" data-w="24" data-h="36">24×36</button>
-            <button class="chip" type="button" data-size="18x24" data-w="18" data-h="24">18×24</button>
-            <button class="chip" type="button" data-size="12x18" data-w="12" data-h="18">12×18</button>
-            <button class="chip" type="button" data-size="11x17" data-w="11" data-h="17">11×17</button>
-            <button class="chip" type="button" data-size="8.5x11" data-w="8.5" data-h="11">8.5×11</button>
-            <button class="chip" type="button" data-size="custom">CUSTOM</button>
-          </div>
-
-          <div class="matrixRow matrixRowTop">
-            <button id="swapSizeBtn" class="segBtn" type="button">SWAP W/H</button>
-          </div>
-        </div>
-
-        <div class="matrixFoot">
-          <button id="matrixCloseBtn" class="closeBtn" type="button">CLOSE</button>
-        </div>
-      </div>
-
-      <div id="targetWrap" class="targetWrap">
-        <img id="targetImg" alt="Target" draggable="false" />
-        <div id="dotsLayer" class="dotsLayer" aria-hidden="true"></div>
-      </div>
-
-      <div class="controlRow">
-        <div class="pill">Taps: <span id="tapCount">0</span></div>
-        <button id="clearTapsBtn" class="softBtn" type="button">Clear</button>
-        <button id="showResultsBtn" class="softBtn" type="button">Show results</button>
-      </div>
-
-      <p id="instructionLine" class="instructionLine"></p>
-      <p id="statusLine" class="hint">Add a target photo to begin.</p>
     </section>
-
-    <div id="stickyBar" class="stickyBar stickyHidden" aria-hidden="true">
-      <button id="stickyResultsBtn" class="stickyBtn" type="button">SHOW RESULTS</button>
-    </div>
-
-    <footer class="footer">Faith • Order • Precision</footer>
   </main>
 
-  <script src="./index.js?v=landing-reset-1"></script>
+  <script src="./index.js?v=stable-1"></script>
 </body>
 </html>
