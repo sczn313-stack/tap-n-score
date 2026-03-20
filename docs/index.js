@@ -121,10 +121,14 @@
 
   const DEFAULTS = { MOA: 0.25, MRAD: 0.10 };
 
-  try { history.scrollRestoration = "manual"; } catch {}
+  try {
+    history.scrollRestoration = "manual";
+  } catch {}
 
   function forceTop() {
-    try { window.scrollTo(0, 0); } catch {}
+    try {
+      window.scrollTo(0, 0);
+    } catch {}
   }
 
   function hardHideScoringUI() {
@@ -283,7 +287,10 @@
   }
 
   async function storeTargetPhotoForSEC(file, blobUrl) {
-    try { localStorage.setItem(KEY_TARGET_IMG_BLOB, blobUrl); } catch {}
+    try {
+      localStorage.setItem(KEY_TARGET_IMG_BLOB, blobUrl);
+    } catch {}
+
     try {
       const dataUrl = await new Promise((resolve, reject) => {
         const r = new FileReader();
@@ -291,6 +298,7 @@
         r.onerror = reject;
         r.readAsDataURL(file);
       });
+
       if (dataUrl && dataUrl.startsWith("data:image/")) {
         localStorage.setItem(KEY_TARGET_IMG_DATA, dataUrl);
       }
@@ -317,8 +325,13 @@
     return { x01: clamp01(x), y01: clamp01(y) };
   }
 
-  function ydsToM(yds) { return yds * 0.9144; }
-  function mToYds(m) { return m / 0.9144; }
+  function ydsToM(yds) {
+    return yds * 0.9144;
+  }
+
+  function mToYds(m) {
+    return m / 0.9144;
+  }
 
   function clampRangeYds(v) {
     let n = Number(v);
@@ -334,7 +347,9 @@
 
   function setRangeUnit(u) {
     rangeUnit = (u === "M") ? "M" : "YDS";
-    try { localStorage.setItem(KEY_DIST_UNIT, rangeUnit); } catch {}
+    try {
+      localStorage.setItem(KEY_DIST_UNIT, rangeUnit);
+    } catch {}
 
     elDistUnitYd?.classList.toggle("segOn", rangeUnit === "YDS");
     elDistUnitM?.classList.toggle("segOn", rangeUnit === "M");
@@ -361,14 +376,19 @@
 
     rangeYds = (rangeUnit === "M") ? clampRangeYds(mToYds(n)) : clampRangeYds(n);
 
-    try { localStorage.setItem(KEY_DIST_YDS, String(rangeYds)); } catch {}
+    try {
+      localStorage.setItem(KEY_DIST_YDS, String(rangeYds));
+    } catch {}
+
     syncRangeInputFromInternal();
     syncLiveTop();
   }
 
   function bumpRange(stepYds) {
     rangeYds = clampRangeYds(rangeYds + stepYds);
-    try { localStorage.setItem(KEY_DIST_YDS, String(rangeYds)); } catch {}
+    try {
+      localStorage.setItem(KEY_DIST_YDS, String(rangeYds));
+    } catch {}
     syncRangeInputFromInternal();
     syncLiveTop();
   }
@@ -424,9 +444,15 @@
     targetWIn = clampInches(wIn, 23);
     targetHIn = clampInches(hIn, 35);
 
-    try { localStorage.setItem(KEY_TARGET_SIZE, targetSizeKey); } catch {}
-    try { localStorage.setItem(KEY_TARGET_W, String(targetWIn)); } catch {}
-    try { localStorage.setItem(KEY_TARGET_H, String(targetHIn)); } catch {}
+    try {
+      localStorage.setItem(KEY_TARGET_SIZE, targetSizeKey);
+    } catch {}
+    try {
+      localStorage.setItem(KEY_TARGET_W, String(targetWIn));
+    } catch {}
+    try {
+      localStorage.setItem(KEY_TARGET_H, String(targetHIn));
+    } catch {}
 
     highlightSizeChip();
     syncLiveTop();
@@ -566,17 +592,23 @@
   function computeCorrectionAndScore() {
     if (!aim || hits.length < 1) return null;
 
-    const avg = hits.reduce((acc, p) => ({ x: acc.x + p.x01, y: acc.y + p.y01 }), { x: 0, y: 0 });
+    const avg = hits.reduce(
+      (acc, p) => ({ x: acc.x + p.x01, y: acc.y + p.y01 }),
+      { x: 0, y: 0 }
+    );
+
     avg.x /= hits.length;
     avg.y /= hits.length;
 
-    const dx = aim.x01 - avg.x;
-    const dy = aim.y01 - avg.y;
+    const dx01 = aim.x01 - avg.x;
+    const dy01 = aim.y01 - avg.y;
 
-    const squareIn = Math.min(targetWIn, targetHIn);
-    const inchesX = dx * squareIn;
-    const inchesY = dy * squareIn;
-    const rIn = Math.sqrt(inchesX * inchesX + inchesY * inchesY);
+    // IMPORTANT:
+    // Horizontal movement scales by target width.
+    // Vertical movement scales by target height.
+    const inchesX = dx01 * targetWIn;
+    const inchesY = dy01 * targetHIn;
+    const rIn = Math.sqrt((inchesX * inchesX) + (inchesY * inchesY));
 
     const dist = getDistanceYds();
     const inchesPerUnit = (dialUnit === "MOA")
@@ -596,7 +628,11 @@
       windage: { dir: clicksX >= 0 ? "RIGHT" : "LEFT", clicks: Math.abs(clicksX) },
       elevation: { dir: clicksY >= 0 ? "DOWN" : "UP", clicks: Math.abs(clicksY) },
       dial: { unit: dialUnit, clickValue: clickVal },
-      squareIn
+      target: {
+        key: targetSizeKey,
+        wIn: targetWIn,
+        hIn: targetHIn
+      }
     };
   }
 
@@ -606,7 +642,10 @@
   }
 
   function goToSEC(payload) {
-    try { localStorage.setItem(KEY_PAYLOAD, JSON.stringify(payload)); } catch {}
+    try {
+      localStorage.setItem(KEY_PAYLOAD, JSON.stringify(payload));
+    } catch {}
+
     const b64 = b64FromObj(payload);
     window.location.href = `./sec.html?from=target&payload=${encodeURIComponent(b64)}&fresh=${Date.now()}`;
   }
@@ -634,8 +673,7 @@
         hits,
         avgPoi: out.avgPoi,
         distanceYds: getDistanceYds(),
-        inches: out.inches,
-        squareIn: out.squareIn
+        inches: out.inches
       }
     };
 
@@ -754,8 +792,14 @@
   elUnitMoa?.addEventListener("click", () => setUnit("MOA"));
   elUnitMrad?.addEventListener("click", () => setUnit("MRAD"));
 
-  elClickValue?.addEventListener("blur", () => { getClickValue(); syncLiveTop(); });
-  elClickValue?.addEventListener("change", () => { getClickValue(); syncLiveTop(); });
+  elClickValue?.addEventListener("blur", () => {
+    getClickValue();
+    syncLiveTop();
+  });
+  elClickValue?.addEventListener("change", () => {
+    getClickValue();
+    syncLiveTop();
+  });
 
   elMatrixBtn?.addEventListener("click", toggleMatrix);
   elMatrixClose?.addEventListener("click", closeMatrix);
