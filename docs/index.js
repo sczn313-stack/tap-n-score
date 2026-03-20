@@ -1,4 +1,41 @@
-/* ============================================================
+const APP_BUILD_ID = "2026-03-20-LOCKED-1";
+
+(async function poisonPillVersionCheck() {
+  try {
+    const lastBuild = localStorage.getItem("tap_n_score_build_id");
+
+    if (lastBuild !== APP_BUILD_ID) {
+      localStorage.setItem("tap_n_score_build_id", APP_BUILD_ID);
+
+      if ("serviceWorker" in navigator) {
+        const regs = await navigator.serviceWorker.getRegistrations();
+        await Promise.all(regs.map((r) => r.unregister()));
+      }
+
+      if ("caches" in window) {
+        const keys = await caches.keys();
+        await Promise.all(keys.map((key) => caches.delete(key)));
+      }
+
+      const url = new URL(window.location.href);
+      url.searchParams.set("v", APP_BUILD_ID);
+      window.location.replace(url.toString());
+      return;
+    }
+
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.addEventListener("message", (event) => {
+        if (event.data && event.data.type === "POISON_PILL") {
+          const url = new URL(window.location.href);
+          url.searchParams.set("v", APP_BUILD_ID);
+          window.location.replace(url.toString());
+        }
+      });
+    }
+  } catch (err) {
+    console.warn("Poison pill check failed:", err);
+  }
+})();/* ============================================================
    docs/index.js — B2B Go-Live Router v1
    Purpose:
    - Keep printed QR URL permanent
