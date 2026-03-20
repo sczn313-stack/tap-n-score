@@ -1,4 +1,5 @@
-const BUILD_ID = "2026-03-20-LOCKED-1";
+// TAP-N-SCORE — GLOBAL POISON PILL
+// Forces ALL old cached versions to die
 
 self.addEventListener("install", (event) => {
   self.skipWaiting();
@@ -6,46 +7,30 @@ self.addEventListener("install", (event) => {
 
 self.addEventListener("activate", (event) => {
   event.waitUntil((async () => {
-    try {
-      const keys = await caches.keys();
-      await Promise.all(keys.map((key) => caches.delete(key)));
-    } catch (err) {
-      console.warn("SW cache clear failed:", err);
-    }
 
-    try {
-      const clients = await self.clients.matchAll({
-        type: "window",
-        includeUncontrolled: true
-      });
+    // Delete ALL caches from any prior builds
+    const keys = await caches.keys();
+    await Promise.all(keys.map((key) => caches.delete(key)));
 
-      for (const client of clients) {
-        client.postMessage({
-          type: "POISON_PILL",
-          build: BUILD_ID
-        });
-      }
-    } catch (err) {
-      console.warn("SW client notify failed:", err);
-    }
-
-    try {
-      await self.registration.unregister();
-    } catch (err) {
-      console.warn("SW unregister failed:", err);
-    }
-
+    // Take control immediately
     await self.clients.claim();
+
+    // Reload every open page using this service worker
+    const clients = await self.clients.matchAll({
+      type: "window",
+      includeUncontrolled: true
+    });
+
+    for (const client of clients) {
+      client.navigate(client.url);
+    }
+
+    // Remove this worker so it doesn't stick around
+    await self.registration.unregister();
+
   })());
 });
 
 self.addEventListener("fetch", (event) => {
-  event.respondWith(
-    fetch(event.request, { cache: "no-store" }).catch(() => {
-      return new Response("Offline", {
-        status: 503,
-        statusText: "Offline"
-      });
-    })
-  );
+  event.respondWith(fetch(event.request));
 });
