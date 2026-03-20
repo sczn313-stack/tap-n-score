@@ -1,74 +1,4 @@
-// TAP-N-SCORE — BUILD LOCK + CACHE KILL
-// Prevents Safari / home-screen / PWA from showing old versions
-
-const APP_BUILD_ID = "LOCKED-STABLE-2026-03-20";
-
-(async function forceFreshBuild() {
-  try {
-    const last = localStorage.getItem("tap_n_score_build_id");
-
-    if (last !== APP_BUILD_ID) {
-      localStorage.setItem("tap_n_score_build_id", APP_BUILD_ID);
-
-      // Unregister ALL service workers
-      if ("serviceWorker" in navigator) {
-        const regs = await navigator.serviceWorker.getRegistrations();
-        for (const r of regs) await r.unregister();
-      }
-
-      // Delete ALL caches
-      if ("caches" in window) {
-        const keys = await caches.keys();
-        await Promise.all(keys.map((k) => caches.delete(k)));
-      }
-
-      // Force hard reload with version param
-      const url = new URL(window.location.href);
-      url.searchParams.set("build", APP_BUILD_ID);
-      window.location.replace(url.toString());
-      return;
-    }
-  } catch (e) {
-    console.warn("Build reset failed:", e);
-  }
-})();const APP_BUILD_ID = "2026-03-20-LOCKED-1";
-
-(async function poisonPillVersionCheck() {
-  try {
-    const lastBuild = localStorage.getItem("tap_n_score_build_id");
-
-    if (lastBuild !== APP_BUILD_ID) {
-      localStorage.setItem("tap_n_score_build_id", APP_BUILD_ID);
-
-      if ("serviceWorker" in navigator) {
-        const regs = await navigator.serviceWorker.getRegistrations();
-        await Promise.all(regs.map((r) => r.unregister()));
-      }
-
-      if ("caches" in window) {
-        const keys = await caches.keys();
-        await Promise.all(keys.map((key) => caches.delete(key)));
-      }
-
-      const url = new URL(window.location.href);
-      url.searchParams.set("v", APP_BUILD_ID);
-      window.location.replace(url.toString());
-      return;
-    }
-
-    if ("serviceWorker" in navigator) {
-      navigator.serviceWorker.addEventListener("message", (event) => {
-        if (event.data && event.data.type === "POISON_PILL") {
-          const url = new URL(window.location.href);
-          url.searchParams.set("v", APP_BUILD_ID);
-          window.location.replace(url.toString());
-        }
-      });
-    }
-  } catch (err) {
-    console.warn("Poison pill check failed:", err);
-  }
-})();/* ============================================================
+/* ============================================================
    docs/index.js — B2B Go-Live Router v1
    Purpose:
    - Keep printed QR URL permanent
@@ -673,7 +603,6 @@ const APP_BUILD_ID = "LOCKED-STABLE-2026-03-20";
     const dx01 = aim.x01 - avg.x;
     const dy01 = aim.y01 - avg.y;
 
-    // IMPORTANT:
     // Horizontal movement scales by target width.
     // Vertical movement scales by target height.
     const inchesX = dx01 * targetWIn;
