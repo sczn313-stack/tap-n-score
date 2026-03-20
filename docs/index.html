@@ -101,3 +101,51 @@
             <span id="clickUnitLabel" class="miniUnit">MOA/click</span>
           </div>
         </div>
+        <div class="matrixGroup">
+          <div class="matrixLabel">TARGET SIZE</div>
+
+          <div id="sizeChipRow" class="chipRow">
+            <button class="chip chipOn" type="button" data-size="23x35" data-w="23" data-h="35">23×35</button>
+            <button class="chip" type="button" data-size="24x36" data-w="24" data-h="36">24×36</button>
+            <button class="chip" type="button" data-size="18x24" data-w="18" data-h="24">18×24</button>
+            <button class="chip" type="button" data-size="12x18" data-w="12" data-h="18">12×18</button>
+            <button class="chip" type="button" data-size="11x17" data-w="11" data-h="17">11×17</button>
+            <button class="chip" type="button" data-size="8.5x11" data-w="8.5" data-h="11">8.5×11</button>
+            <button class="chip" type="button" data-size="custom">CUSTOM</button>
+          </div>
+
+          <div class="matrixRow matrixRowTop">
+            <button id="swapSizeBtn" class="segBtn" type="button">SWAP W/H</button>
+          </div>
+        </div>
+
+        <div class="matrixFoot">
+          <button id="matrixCloseBtn" class="closeBtn" type="button">CLOSE</button>
+        </div>
+      </div>
+
+      <div id="targetWrap" class="targetWrap">
+        <img id="targetImg" alt="Target" draggable="false" />
+        <div id="dotsLayer" class="dotsLayer" aria-hidden="true"></div>
+      </div>
+
+      <div class="controlRow">
+        <div class="pill">Taps: <span id="tapCount">0</span></div>
+        <button id="clearTapsBtn" class="softBtn" type="button">Clear</button>
+        <button id="showResultsBtn" class="softBtn" type="button">Show results</button>
+      </div>
+
+      <p id="instructionLine" class="instructionLine"></p>
+      <p id="statusLine" class="hint">Add a target photo to begin.</p>
+    </section>
+
+    <div id="stickyBar" class="stickyBar stickyHidden" aria-hidden="true">
+      <button id="stickyResultsBtn" class="stickyBtn" type="button">SHOW RESULTS</button>
+    </div>
+
+    <footer class="footer">Faith • Order • Precision</footer>
+  </main>
+
+  <script src="./index.js?v=landing-reset-1"></script>
+</body>
+</html>
