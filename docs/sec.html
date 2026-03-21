@@ -1,3 +1,4 @@
+<!-- docs/sec.html (FULL REPLACEMENT) — TWO-PAGE SEC FLOW (NO “TROPHY”) -->
 <!doctype html>
 <html lang="en">
 <head>
@@ -12,12 +13,15 @@
 
   <title>SEC — Tap-n-Score™</title>
 
-  <link rel="stylesheet" href="./sec.css?v=SEC-PROFILE-REV-1" />
+  <link rel="stylesheet" href="./sec.css?v=SEC-2P-REV-A" />
 </head>
 
 <body>
   <main class="secPage">
 
+    <!-- =========================
+         PAGE 1 — PRECISION (SEC)
+    ========================== -->
     <section id="viewPrecision" class="view viewOn" aria-label="SEC Precision View">
       <header class="secHeader">
         <div class="secHeaderTop">
@@ -41,13 +45,13 @@
 
         <div class="clicksBig">
           <div class="clickBox">
-            <div class="clickHdr">PRIMARY / SCORE</div>
+            <div class="clickHdr">WINDAGE</div>
             <div id="windageBig" class="clickVal">—</div>
             <div id="windageDir" class="clickDir">—</div>
           </div>
 
           <div class="clickBox">
-            <div class="clickHdr">SECONDARY / TAPS</div>
+            <div class="clickHdr">ELEVATION</div>
             <div id="elevationBig" class="clickVal">—</div>
             <div id="elevationDir" class="clickDir">—</div>
           </div>
@@ -59,28 +63,18 @@
           <span id="runTime" class="miniPill">—</span>
         </div>
 
-        <div id="ladderWrap" class="ladderWrap" hidden>
-          <div class="ladderTopRow">
-            <div class="ladderLabel">PROGRESS LADDER</div>
-            <div id="ladderLevelChip" class="ladderLevelChip">LEVEL 1</div>
-          </div>
-
-          <div id="ladderStars" class="ladderStars">★☆☆☆☆</div>
-          <div id="ladderText" class="ladderText">Complete one verified drill session.</div>
-          <div id="ladderNext" class="ladderNext">Next milestone.</div>
-        </div>
-
         <div class="primaryActions">
           <button id="toReportBtn" class="primaryBtn" type="button">
-            Save SEC + Session History
+            Save SEC + Shooter History
           </button>
 
+          <!-- ✅ NEW: Exit back to landing -->
           <button id="goHomeBtn" class="secondaryGlowBtn" type="button">
             Zero another target / Score another
           </button>
 
           <div class="microNote">
-            Next screen creates a report card image you can save to Photos.
+            Next screen creates a “Report Card” image you can save to Photos.
           </div>
         </div>
       </section>
@@ -90,6 +84,9 @@
       </footer>
     </section>
 
+    <!-- =========================
+         PAGE 2 — REPORT CARD (SAVE)
+    ========================== -->
     <section id="viewReport" class="view" aria-label="SEC Report Card View">
       <header class="secHeader secHeaderTight">
         <div class="secHeaderTop">
@@ -112,10 +109,6 @@
         <div class="reportActions">
           <button id="backBtn" class="btnSecondary" type="button">Back</button>
 
-          <button id="replayBtn" class="replayBtn" type="button">
-            Replay / Score Again
-          </button>
-
           <a id="vendorBtn" class="vendorBtn" href="#" target="_blank" rel="noopener">
             Visit Vendor
           </a>
@@ -126,7 +119,7 @@
         </div>
 
         <div class="reportMicro">
-          Vendor link is only live here after the scoring loop is complete.
+          Vendor link is only live here (after you complete the loop).
         </div>
       </section>
 
@@ -137,6 +130,6 @@
 
   </main>
 
-  <script defer src="./sec.js?v=SEC-PROFILE-REV-1"></script>
+  <script defer src="./sec.js?v=SEC-2P-REV-A"></script>
 </body>
 </html>

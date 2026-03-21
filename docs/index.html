@@ -1,474 +1,203 @@
+<!-- docs/index.html (FULL REPLACEMENT) -->
 <!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta
-    name="viewport"
-    content="width=device-width, initial-scale=1, viewport-fit=cover"
-  />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="color-scheme" content="dark" />
+  <meta name="theme-color" content="#06070a" />
+
   <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
-  <meta name="theme-color" content="#06070a" />
-  <title>Tap-n-Score™ — Emergency Zero Mode</title>
-  <style>
-    :root {
-      --bg: #06070a;
-      --panel: #10131a;
-      --line: #222834;
-      --text: #eef2f7;
-      --muted: #aeb7c5;
-      --accent: #ffffff;
-      --danger: #ff6b6b;
-    }
 
-    * { box-sizing: border-box; }
+  <title>Tap-n-Score™</title>
 
-    html, body {
-      margin: 0;
-      padding: 0;
-      background: var(--bg);
-      color: var(--text);
-      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-      min-height: 100%;
-    }
-
-    body {
-      padding: 16px;
-    }
-
-    .app {
-      width: 100%;
-      max-width: 980px;
-      margin: 0 auto;
-      display: grid;
-      gap: 16px;
-    }
-
-    .card {
-      background: var(--panel);
-      border: 1px solid var(--line);
-      border-radius: 18px;
-      padding: 16px;
-    }
-
-    .eyebrow {
-      font-size: 14px;
-      font-weight: 700;
-      letter-spacing: 0.02em;
-      opacity: 0.9;
-      margin-bottom: 10px;
-    }
-
-    h1, h2, h3, p {
-      margin: 0 0 12px 0;
-    }
-
-    h1 {
-      font-size: clamp(34px, 7vw, 60px);
-      line-height: 0.98;
-      font-weight: 900;
-    }
-
-    h2 {
-      font-size: 22px;
-      font-weight: 800;
-    }
-
-    .sub {
-      font-size: 18px;
-      color: var(--muted);
-    }
-
-    .row {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      align-items: center;
-    }
-
-    .btn, .fileLabel {
-      appearance: none;
-      border: 1px solid var(--line);
-      background: var(--accent);
-      color: #000;
-      border-radius: 999px;
-      padding: 12px 18px;
-      font-size: 16px;
-      font-weight: 800;
-      cursor: pointer;
-      text-decoration: none;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      min-height: 46px;
-    }
-
-    .btn.secondary {
-      background: transparent;
-      color: var(--text);
-    }
-
-    .btn.danger {
-      background: transparent;
-      color: var(--danger);
-      border-color: rgba(255, 107, 107, 0.5);
-    }
-
-    .hint {
-      color: var(--muted);
-      font-size: 14px;
-      line-height: 1.4;
-    }
-
-    #fileInput {
-      display: none;
-    }
-
-    .stageWrap {
-      display: none;
-      gap: 12px;
-    }
-
-    .stageWrap.active {
-      display: grid;
-    }
-
-    .stageHeader {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      align-items: center;
-      justify-content: space-between;
-    }
-
-    .viewer {
-      position: relative;
-      width: 100%;
-      background: #000;
-      border-radius: 16px;
-      overflow: hidden;
-      border: 1px solid var(--line);
-      min-height: 300px;
-      touch-action: manipulation;
-    }
-
-    .viewer img {
-      display: block;
-      width: 100%;
-      height: auto;
-      user-select: none;
-      -webkit-user-drag: none;
-      pointer-events: none;
-    }
-
-    .tapLayer {
-      position: absolute;
-      inset: 0;
-      cursor: crosshair;
-    }
-
-    .tapDot {
-      position: absolute;
-      width: 18px;
-      height: 18px;
-      margin-left: -9px;
-      margin-top: -9px;
-      border: 2px solid #fff;
-      border-radius: 999px;
-      background: rgba(255,255,255,0.2);
-      box-shadow: 0 0 0 2px rgba(0,0,0,0.45);
-      pointer-events: none;
-    }
-
-    .tapDot::after {
-      content: "";
-      position: absolute;
-      inset: 4px;
-      border-radius: 999px;
-      background: #fff;
-    }
-
-    .grid {
-      display: grid;
-      gap: 12px;
-    }
-
-    @media (min-width: 820px) {
-      .grid.two {
-        grid-template-columns: 1.4fr 0.9fr;
-      }
-    }
-
-    .stat {
-      display: flex;
-      justify-content: space-between;
-      gap: 10px;
-      padding: 10px 0;
-      border-bottom: 1px solid var(--line);
-      font-size: 15px;
-    }
-
-    .stat:last-child {
-      border-bottom: 0;
-    }
-
-    .mono {
-      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-      word-break: break-word;
-    }
-
-    .shotList {
-      margin: 0;
-      padding-left: 18px;
-      display: grid;
-      gap: 6px;
-      color: var(--muted);
-      font-size: 14px;
-      max-height: 240px;
-      overflow: auto;
-    }
-
-    .secBox {
-      display: none;
-    }
-
-    .secBox.active {
-      display: block;
-    }
-
-    .secTitle {
-      font-size: 20px;
-      font-weight: 900;
-      margin-bottom: 8px;
-    }
-
-    .banner {
-      display: inline-block;
-      padding: 6px 10px;
-      border-radius: 999px;
-      border: 1px solid var(--line);
-      font-size: 12px;
-      font-weight: 800;
-      margin-bottom: 12px;
-    }
-  </style>
+  <link rel="stylesheet" href="./styles.css?v=SEC-LOCK-2" />
+  <link rel="stylesheet" href="./sizechips.css?v=SEC-LOCK-2" />
+  <link rel="stylesheet" href="./livebar_fix.css?v=SEC-LOCK-2" />
 </head>
+
 <body>
-  <main class="app">
-    <section class="card">
-      <div class="eyebrow">Tap-n-Score™</div>
-      <h1>Emergency Zero Mode</h1>
-      <p class="sub">Upload target photo. Tap impacts. Generate a clean field card for tomorrow.</p>
+  <main class="page">
 
-      <div class="row" style="margin-top:14px;">
-        <label class="fileLabel" for="fileInput">Choose Target Photo</label>
-        <input id="fileInput" type="file" accept="image/*" />
-        <button id="resetAllBtn" class="btn secondary" type="button">Reset</button>
+    <!-- HERO -->
+    <section class="hero" aria-label="Tap-n-Score landing">
+      <div class="brandRow">
+        <div class="brandTitle">
+          <span class="r">TAP</span><span class="w">-N-</span><span class="b">SCORE</span><span class="w">™</span>
+        </div>
+        <div class="brandSub">After-Shot Intelligence</div>
       </div>
 
-      <p class="hint" style="margin-top:12px;">
-        This bypasses the locked flow. It gives you a working on-ramp now. It does not calculate optic corrections by itself.
-      </p>
-    </section>
+      <!-- SEC SEAL -->
+      <div class="heroSECSeal">
+        <div class="heroSEC">
+          <span class="r">S</span><span class="w">E</span><span class="b">C</span>
+        </div>
+        <div class="heroSECSub">
+          <span><span class="r">S</span>hooter</span>
+          <span><span class="w">E</span>xperience</span>
+          <span><span class="b">C</span>ard</span>
+        </div>
+      </div>
 
-    <section id="stageWrap" class="stageWrap active">
-      <div class="grid two">
-        <section class="card">
-          <div class="stageHeader">
-            <div>
-              <h2>Target Photo</h2>
-              <p class="hint">Tap each bullet impact on the image.</p>
+      <div class="heroMid">
+        <button id="photoBtn" class="heroBtn" type="button">📷 TAP TO ADD TARGET PHOTO</button>
+
+        <div class="vendorCenterRow" aria-label="Vendor / Buy more targets">
+          <!-- Vendor Pill -->
+          <a id="vendorBox" class="vendorBox vendorBoxFlow" href="#" aria-label="Vendor">
+            <span id="vendorLabel" class="vendorPillText">BUY MORE TARGETS LIKE THIS</span>
+          </a>
+
+          <!-- Smile wire -->
+          <svg class="vendorWireFlow" viewBox="0 0 220 36" aria-hidden="true">
+            <path d="M10 10 C 58 33, 162 33, 210 10" fill="none" stroke="rgba(255,255,255,.26)" stroke-width="3" stroke-linecap="round"/>
+            <path d="M10 16 C 68 35, 152 35, 210 16" fill="none" stroke="rgba(47,102,255,.18)" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+
+          <!-- Slide-down panel -->
+          <div id="vendorPanel" class="vendorPanel vendorHidden" aria-hidden="true">
+            <div class="vendorPanelInner">
+              <div class="vendorPanelTitle">BAKER • SMART TARGET™</div>
+              <div class="vendorPanelSub">You’re still in the Tap-n-Score™ flow.</div>
+              <a id="vendorPanelLink" class="vendorPanelBtn" href="#" target="_blank" rel="noopener">Visit Baker</a>
             </div>
-            <div class="row">
-              <button id="undoBtn" class="btn secondary" type="button">Undo Last</button>
-              <button id="clearTapsBtn" class="btn danger" type="button">Clear Taps</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- iOS safe file input -->
+      <input id="photoInput" class="fileHidden" type="file" accept="image/*" />
+    </section>
+
+    <!-- SCORE SECTION (JS hides this on hard landing until photo loads) -->
+    <section id="scoreSection" class="card scoreHidden" aria-label="Scoring">
+      <div class="cardTitle cardTitleSEC">
+        <div class="secTitle">
+          <span class="r">S</span><span class="w">HOOTER</span>
+          <span class="w"> </span>
+          <span class="b">EXPERIENCE</span>
+          <span class="w"> </span>
+          <span class="r">CARD</span>
+        </div>
+        <div class="secTag">
+          <span class="r">S</span><span class="w">E</span><span class="b">C</span>
+        </div>
+      </div>
+
+      <!-- LIVE BAR -->
+      <div class="liveBar">
+        <div class="liveRow">
+          <div class="liveLine" aria-label="Live settings">
+            <div class="liveLinePrimary" id="liveDistance">100 yds</div>
+            <div class="liveSep">•</div>
+            <div class="liveLinePrimary" id="liveDial">0.25 MOA</div>
+            <div class="liveSep">•</div>
+            <div class="liveLinePrimary" id="liveTarget">23×35</div>
+          </div>
+
+          <button id="matrixBtn" class="matrixBtn matrixBtnTight" type="button" aria-label="Open matrix">
+            MATRIX
+          </button>
+        </div>
+      </div>
+
+      <!-- MATRIX PANEL -->
+      <div id="matrixPanel" class="matrixPanel matrixHidden" aria-hidden="true">
+        <div class="matrixTitle">SETTINGS MATRIX</div>
+
+        <!-- Distance -->
+        <div class="matrixGroup">
+          <div class="matrixLabel">DISTANCE</div>
+          <div class="matrixRow">
+            <button id="distDown" class="miniBtn" type="button" aria-label="Distance down">−</button>
+            <input id="distanceYds" class="miniInput" inputmode="numeric" value="100" aria-label="Distance value"/>
+            <button id="distUp" class="miniBtn" type="button" aria-label="Distance up">+</button>
+
+            <div class="unitToggle">
+              <button id="distUnitYd" class="segBtn segBtnTiny segOn" type="button">YDS</button>
+              <button id="distUnitM" class="segBtn segBtnTiny" type="button">M</button>
+              <span id="distUnitLabel" class="miniUnit">yds</span>
             </div>
           </div>
+        </div>
 
-          <div id="viewer" class="viewer" aria-label="Target viewer">
-            <img id="targetImg" alt="Uploaded target" />
-            <div id="tapLayer" class="tapLayer" aria-hidden="true"></div>
-          </div>
-        </section>
+        <!-- Dial -->
+        <div class="matrixGroup">
+          <div class="matrixLabel">DIAL</div>
+          <div class="matrixRow">
+            <button id="unitMoa" class="segBtn segOn" type="button">MOA</button>
+            <button id="unitMrad" class="segBtn" type="button">MRAD</button>
 
-        <section class="card">
-          <h2>Session Summary</h2>
-
-          <div class="stat">
-            <span>Mode</span>
-            <strong>Emergency Zero</strong>
-          </div>
-          <div class="stat">
-            <span>Photo loaded</span>
-            <strong id="photoState">No</strong>
-          </div>
-          <div class="stat">
-            <span>Impacts marked</span>
-            <strong id="shotCount">0</strong>
-          </div>
-          <div class="stat">
-            <span>Status</span>
-            <strong id="statusText">Waiting for photo</strong>
+            <input id="clickValue" class="miniInputWide" inputmode="decimal" value="0.25" aria-label="Click value"/>
+            <span id="clickUnitLabel" class="miniUnit">MOA/click</span>
           </div>
 
-          <div class="row" style="margin-top:14px;">
-            <button id="buildSecBtn" class="btn" type="button">Build SEC</button>
+          <div class="chipRow chipRowTight mt12" id="presetChipRow" aria-label="Presets">
+            <button class="chip" type="button" data-unit="MOA" data-click="0.25">.25</button>
+            <button class="chip" type="button" data-unit="MOA" data-click="0.50">.50</button>
+            <button class="chip" type="button" data-unit="MRAD" data-click="0.10">.10</button>
+            <button class="chip" type="button" data-unit="MRAD" data-click="0.20">.20</button>
+            <button class="chip" type="button" data-unit="MOA" data-click="0.125">.125</button>
+            <button class="chip" type="button" data-unit="MRAD" data-click="0.05">.05</button>
+          </div>
+        </div>
+
+        <!-- Target size -->
+        <div class="matrixGroup">
+          <div class="matrixLabel">TARGET SIZE</div>
+
+          <div id="sizeChipRow" class="chipRow" aria-label="Target size chips">
+            <button class="chip" type="button" data-size="8.5x11" data-w="8.5" data-h="11">8.5×11</button>
+            <button class="chip" type="button" data-size="11x17" data-w="11" data-h="17">11×17</button>
+            <button class="chip" type="button" data-size="12x18" data-w="12" data-h="18">12×18</button>
+            <button class="chip" type="button" data-size="18x24" data-w="18" data-h="24">18×24</button>
+            <button class="chip" type="button" data-size="23x35" data-w="23" data-h="35">23×35</button>
+            <button class="chip" type="button" data-size="24x36" data-w="24" data-h="36">24×36</button>
+            <button class="chip" type="button" data-size="custom">CUSTOM</button>
           </div>
 
-          <h3 style="margin-top:16px;">Tap Log</h3>
-          <ol id="shotList" class="shotList"></ol>
-        </section>
+          <div class="matrixRow mt12">
+            <button id="swapSizeBtn" class="segBtn segBtnTiny" type="button">SWAP W/H</button>
+          </div>
+        </div>
+
+        <div class="matrixFoot">
+          <button id="matrixCloseBtn" class="matrixCloseBtn" type="button">CLOSE</button>
+        </div>
       </div>
+
+      <!-- TARGET IMAGE + DOTS -->
+      <div id="targetWrap" class="targetWrap" aria-label="Target image area">
+        <!-- IMPORTANT: keep pointer events on wrapper, not img -->
+        <img id="targetImg" alt="Target" draggable="false" />
+        <div id="dotsLayer" class="dotsLayer" aria-hidden="true"></div>
+      </div>
+
+      <!-- Controls -->
+      <div class="row rowTight">
+        <div class="pill">Taps: <span id="tapCount">0</span></div>
+        <button id="clearTapsBtn" class="btnSecondary" type="button">Clear</button>
+        <button id="showResultsBtn" class="btnSecondary" type="button">Show results</button>
+      </div>
+
+      <p id="instructionLine" class="instructionLine"></p>
+      <p id="statusLine" class="hint">Add a target photo to begin.</p>
     </section>
 
-    <section id="secBox" class="card secBox">
-      <div class="banner">Shooter Experience Card</div>
-      <div class="secTitle">Emergency Zero Session Card</div>
-      <div class="stat">
-        <span>Recorded impacts</span>
-        <strong id="secShotCount">0</strong>
-      </div>
-      <div class="stat">
-        <span>Interpretation</span>
-        <strong>Field-ready tap record</strong>
-      </div>
-      <div class="stat">
-        <span>Next action</span>
-        <strong>Use this with your zero workflow</strong>
-      </div>
-      <p id="secSummary" class="hint" style="margin-top:12px;"></p>
-      <p class="hint">
-        This card is a temporary live fallback so the site is usable tomorrow while the full scoring path is restored.
-      </p>
-    </section>
+    <!-- Sticky Results Bar -->
+    <div id="stickyBar" class="stickyBar stickyHidden" aria-hidden="true">
+      <button id="stickyResultsBtn" class="stickyBtn" type="button">SHOW RESULTS</button>
+    </div>
+
+    <div class="footer">
+      <div class="footerMark">Faith • Order • Precision</div>
+    </div>
+
   </main>
 
-  <script>
-    const fileInput = document.getElementById("fileInput");
-    const targetImg = document.getElementById("targetImg");
-    const tapLayer = document.getElementById("tapLayer");
-    const viewer = document.getElementById("viewer");
-
-    const photoState = document.getElementById("photoState");
-    const shotCount = document.getElementById("shotCount");
-    const statusText = document.getElementById("statusText");
-    const shotList = document.getElementById("shotList");
-
-    const undoBtn = document.getElementById("undoBtn");
-    const clearTapsBtn = document.getElementById("clearTapsBtn");
-    const resetAllBtn = document.getElementById("resetAllBtn");
-    const buildSecBtn = document.getElementById("buildSecBtn");
-
-    const secBox = document.getElementById("secBox");
-    const secShotCount = document.getElementById("secShotCount");
-    const secSummary = document.getElementById("secSummary");
-
-    let taps = [];
-    let imageLoaded = false;
-
-    function renderTaps() {
-      tapLayer.innerHTML = "";
-      shotList.innerHTML = "";
-
-      taps.forEach((tap, idx) => {
-        const dot = document.createElement("div");
-        dot.className = "tapDot";
-        dot.style.left = tap.xPct + "%";
-        dot.style.top = tap.yPct + "%";
-        tapLayer.appendChild(dot);
-
-        const li = document.createElement("li");
-        li.className = "mono";
-        li.textContent = `Shot ${idx + 1}: x=${tap.xPct.toFixed(2)}%, y=${tap.yPct.toFixed(2)}%`;
-        shotList.appendChild(li);
-      });
-
-      shotCount.textContent = String(taps.length);
-      statusText.textContent = imageLoaded
-        ? (taps.length ? "Capturing impacts" : "Photo ready for tap entry")
-        : "Waiting for photo";
-    }
-
-    function clearEverything() {
-      taps = [];
-      imageLoaded = false;
-      targetImg.removeAttribute("src");
-      photoState.textContent = "No";
-      secBox.classList.remove("active");
-      secShotCount.textContent = "0";
-      secSummary.textContent = "";
-      renderTaps();
-      fileInput.value = "";
-    }
-
-    fileInput.addEventListener("change", (e) => {
-      const file = e.target.files && e.target.files[0];
-      if (!file) return;
-
-      const url = URL.createObjectURL(file);
-      targetImg.onload = () => {
-        imageLoaded = true;
-        photoState.textContent = "Yes";
-        statusText.textContent = "Photo ready for tap entry";
-        taps = [];
-        secBox.classList.remove("active");
-        renderTaps();
-      };
-      targetImg.src = url;
-    });
-
-    tapLayer.addEventListener("click", (e) => {
-      if (!imageLoaded) return;
-
-      const rect = tapLayer.getBoundingClientRect();
-      const x = e.clientX - rect.left;
-      const y = e.clientY - rect.top;
-
-      const xPct = (x / rect.width) * 100;
-      const yPct = (y / rect.height) * 100;
-
-      taps.push({ xPct, yPct });
-      renderTaps();
-    });
-
-    undoBtn.addEventListener("click", () => {
-      if (!taps.length) return;
-      taps.pop();
-      renderTaps();
-    });
-
-    clearTapsBtn.addEventListener("click", () => {
-      taps = [];
-      secBox.classList.remove("active");
-      renderTaps();
-    });
-
-    resetAllBtn.addEventListener("click", clearEverything);
-
-    buildSecBtn.addEventListener("click", () => {
-      if (!imageLoaded) {
-        alert("Load a target photo first.");
-        return;
-      }
-
-      secBox.classList.add("active");
-      secShotCount.textContent = String(taps.length);
-
-      if (!taps.length) {
-        secSummary.textContent = "Photo loaded, but no impacts have been marked yet.";
-        return;
-      }
-
-      const avgX = taps.reduce((sum, t) => sum + t.xPct, 0) / taps.length;
-      const avgY = taps.reduce((sum, t) => sum + t.yPct, 0) / taps.length;
-
-      secSummary.textContent =
-        `Session recorded with ${taps.length} marked impacts. ` +
-        `Average tap position: x=${avgX.toFixed(2)}%, y=${avgY.toFixed(2)}%.`;
-    });
-
-    renderTaps();
-  </script>
+  <script src="./index.js?v=SEC-LOCK-2"></script>
 </body>
 </html>
