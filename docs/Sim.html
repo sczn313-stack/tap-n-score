@@ -17,8 +17,8 @@
     </header>
 
     <main class="layout">
-      <section class="panel controls">
-        <h2>Simulator Setup</h2>
+      <section id="controlsPanel" class="panel controls">
+        <h2 id="controlsHeading">Simulator Setup</h2>
 
         <label>
           Distance
@@ -74,6 +74,12 @@
       </section>
 
       <section class="panel simulator-panel">
+        <div class="sim-intro">
+          <div id="demoModeTag" class="demo-mode-tag" hidden>Demo Mode</div>
+          <div id="simInstructionTop" class="sim-instruction-top">Tap Aim Point</div>
+          <div id="simInstructionSub" class="sim-instruction-sub">Start by tapping the bull.</div>
+        </div>
+
         <div id="targetWrap" class="target-wrap">
           <div id="targetSurface" class="target-surface" aria-label="Back to basics target simulator">
             <svg id="targetSvg" class="target-svg" viewBox="0 0 800 800" preserveAspectRatio="xMidYMid meet">
@@ -86,6 +92,17 @@
               <g id="overlayLayer"></g>
             </svg>
           </div>
+        </div>
+
+        <div class="demo-actions">
+          <button id="inlineUndoBtn" type="button">Undo</button>
+          <button id="inlineResetBtn" type="button">Reset</button>
+          <button id="inlineResultsBtn" type="button" class="primary hidden-until-ready">Show Results</button>
+        </div>
+
+        <div id="afterResultsPanel" class="after-results-panel" hidden>
+          <div class="after-results-heading">Adjust Setup for Another Run</div>
+          <div class="after-results-sub">Your results are locked in. Change setup and run it again if you want.</div>
         </div>
       </section>
 
