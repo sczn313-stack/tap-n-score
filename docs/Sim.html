@@ -2,66 +2,79 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+  />
   <title>Tap-n-Score — Back-to-Basics Simulator</title>
   <link rel="stylesheet" href="Sim.css" />
 </head>
 <body>
   <div class="app-shell">
     <header class="topbar">
-      <div>
+      <div class="topbar-copy">
         <h1>Tap-n-Score™ Back-to-Basics Simulator</h1>
-        <p class="sub">Tap aim point → tap 3–5 impacts → show POIB and scope correction.</p>
+        <p class="sub">
+          Tap aim point → tap 3–5 impacts → show POIB and scope correction.
+        </p>
       </div>
       <div class="badge">The Smart Target™ · Powered by SCZN3 Precision</div>
     </header>
 
-    <main class="layout">
-      <section id="controlsPanel" class="panel controls">
-        <h2 id="controlsHeading">Simulator Setup</h2>
+    <main class="layout" id="simLayout">
+      <!-- LEFT: controls -->
+      <section id="controlsPanel" class="panel controls" aria-labelledby="controlsHeading">
+        <div class="panel-head">
+          <h2 id="controlsHeading">Simulator Setup</h2>
+          <p id="controlsSubhead" class="panel-subhead">
+            Set your session inputs, then run the target.
+          </p>
+        </div>
 
-        <label>
-          Distance
-          <select id="distanceYards">
-            <option value="25">25 yd</option>
-            <option value="50">50 yd</option>
-            <option value="100" selected>100 yd</option>
-          </select>
-        </label>
+        <div id="setupFields" class="setup-fields">
+          <label>
+            <span>Distance</span>
+            <select id="distanceYards">
+              <option value="25">25 yd</option>
+              <option value="50">50 yd</option>
+              <option value="100" selected>100 yd</option>
+            </select>
+          </label>
 
-        <label>
-          Click Value
-          <select id="clickValueMOA">
-            <option value="0.125">1/8 MOA</option>
-            <option value="0.25" selected>1/4 MOA</option>
-            <option value="0.5">1/2 MOA</option>
-          </select>
-        </label>
+          <label>
+            <span>Click Value</span>
+            <select id="clickValueMOA">
+              <option value="0.125">1/8 MOA</option>
+              <option value="0.25" selected>1/4 MOA</option>
+              <option value="0.5">1/2 MOA</option>
+            </select>
+          </label>
 
-        <label>
-          Shot Count Goal
-          <select id="shotGoal">
-            <option value="3">3 shots</option>
-            <option value="4">4 shots</option>
-            <option value="5" selected>5 shots</option>
-          </select>
-        </label>
+          <label>
+            <span>Shot Count Goal</span>
+            <select id="shotGoal">
+              <option value="3">3 shots</option>
+              <option value="4">4 shots</option>
+              <option value="5" selected>5 shots</option>
+            </select>
+          </label>
 
-        <label>
-          Inches per ring
-          <select id="ringSpacingInches">
-            <option value="0.5">0.50"</option>
-            <option value="1" selected>1.00"</option>
-            <option value="2">2.00"</option>
-          </select>
-        </label>
+          <label>
+            <span>Inches per ring</span>
+            <select id="ringSpacingInches">
+              <option value="0.5">0.50"</option>
+              <option value="1" selected>1.00"</option>
+              <option value="2">2.00"</option>
+            </select>
+          </label>
+        </div>
 
-        <div class="status-wrap">
+        <div class="status-wrap" aria-live="polite">
           <div id="modePill" class="mode-pill">Mode: Select aim point</div>
           <div id="statusText" class="status-text">Tap the bull to place the aim point.</div>
         </div>
 
-        <div class="button-row">
+        <div class="button-row desktop-actions">
           <button id="undoBtn" type="button">Undo Last Tap</button>
           <button id="resetBtn" type="button">Reset</button>
           <button id="resultsBtn" type="button" class="primary">Show Results</button>
@@ -69,48 +82,118 @@
 
         <details class="notes" open>
           <summary>What this version does</summary>
-          <p>Uses inches-only math, computes POIB from shot taps, calculates group size, converts offset to MOA, and returns scope clicks.</p>
+          <p>
+            Uses inches-only math, computes POIB from shot taps, calculates group
+            size, converts offset to MOA, and returns scope clicks.
+          </p>
         </details>
       </section>
 
-      <section class="panel simulator-panel">
+      <!-- CENTER: simulator -->
+      <section class="panel simulator-panel" aria-labelledby="simInstructionTop">
         <div class="sim-intro">
           <div id="demoModeTag" class="demo-mode-tag" hidden>Demo Mode</div>
-          <div id="simInstructionTop" class="sim-instruction-top">Tap Aim Point</div>
-          <div id="simInstructionSub" class="sim-instruction-sub">Start by tapping the bull.</div>
-        </div>
 
-        <div id="targetWrap" class="target-wrap">
-          <div id="targetSurface" class="target-surface" aria-label="Back to basics target simulator">
-            <svg id="targetSvg" class="target-svg" viewBox="0 0 800 800" preserveAspectRatio="xMidYMid meet">
-              <rect x="0" y="0" width="800" height="800" fill="#f8f8f8"></rect>
-              <g id="ringLayer"></g>
-              <line x1="400" y1="40" x2="400" y2="760" stroke="#b8b8b8" stroke-width="1" stroke-dasharray="8 10"></line>
-              <line x1="40" y1="400" x2="760" y2="400" stroke="#b8b8b8" stroke-width="1" stroke-dasharray="8 10"></line>
-              <circle cx="400" cy="400" r="9" fill="#111"></circle>
-              <circle cx="400" cy="400" r="2" fill="#fafafa"></circle>
-              <g id="overlayLayer"></g>
-            </svg>
+          <div class="instruction-stack">
+            <div
+              id="simInstructionTop"
+              class="sim-instruction-top"
+              aria-live="polite"
+            >
+              TAP AIM POINT
+            </div>
+
+            <div
+              id="simInstructionSub"
+              class="sim-instruction-sub"
+              aria-live="polite"
+            >
+              Start by tapping the bull.
+            </div>
           </div>
         </div>
 
-        <div class="demo-actions">
+        <div id="targetWrap" class="target-wrap">
+          <div
+            id="targetSurface"
+            class="target-surface"
+            aria-label="Back to basics target simulator"
+            role="img"
+          >
+            <div id="floatingInstructionTop" class="floating-instruction floating-top">
+              TAP AIM POINT
+            </div>
+
+            <svg
+              id="targetSvg"
+              class="target-svg"
+              viewBox="0 0 800 800"
+              preserveAspectRatio="xMidYMid meet"
+            >
+              <rect x="0" y="0" width="800" height="800" fill="#f8f8f8"></rect>
+
+              <g id="ringLayer"></g>
+
+              <line
+                x1="400"
+                y1="40"
+                x2="400"
+                y2="760"
+                stroke="#b8b8b8"
+                stroke-width="1"
+                stroke-dasharray="8 10"
+              ></line>
+              <line
+                x1="40"
+                y1="400"
+                x2="760"
+                y2="400"
+                stroke="#b8b8b8"
+                stroke-width="1"
+                stroke-dasharray="8 10"
+              ></line>
+
+              <circle cx="400" cy="400" r="9" fill="#111"></circle>
+              <circle cx="400" cy="400" r="2" fill="#fafafa"></circle>
+
+              <g id="overlayLayer"></g>
+            </svg>
+
+            <div id="floatingInstructionBottom" class="floating-instruction floating-bottom">
+              Tap Bullet Holes
+            </div>
+          </div>
+        </div>
+
+        <div class="demo-actions mobile-actions">
           <button id="inlineUndoBtn" type="button">Undo</button>
           <button id="inlineResetBtn" type="button">Reset</button>
-          <button id="inlineResultsBtn" type="button" class="primary hidden-until-ready">Show Results</button>
+          <button
+            id="inlineResultsBtn"
+            type="button"
+            class="primary hidden-until-ready"
+          >
+            Show Results
+          </button>
         </div>
 
         <div id="afterResultsPanel" class="after-results-panel" hidden>
           <div class="after-results-heading">Adjust Setup for Another Run</div>
-          <div class="after-results-sub">Your results are locked in. Change setup and run it again if you want.</div>
+          <div class="after-results-sub">
+            Your results are locked in. Change setup and run it again if you want.
+          </div>
         </div>
       </section>
 
-      <aside class="panel results-panel">
-        <h2>SEC Preview</h2>
+      <!-- RIGHT: SEC -->
+      <aside class="panel results-panel" aria-labelledby="secPreviewHeading">
+        <h2 id="secPreviewHeading">SEC Preview</h2>
+
         <div id="secCard" class="sec-card empty">
           <div class="sec-brand">Shooter Experience Card</div>
-          <div class="sec-empty">Results will appear after you set an aim point and tap your shots.</div>
+          <div class="sec-empty">
+            Results will appear after you set an aim point and tap your shots.
+          </div>
         </div>
       </aside>
     </main>
