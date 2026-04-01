@@ -5,9 +5,12 @@
   --text: #19202a;
   --muted: #586474;
   --shadow: 0 10px 30px rgba(0,0,0,0.08);
+  --accent: #111827;
+  --green: #136f3a;
 }
 
 * { box-sizing: border-box; }
+
 body {
   margin: 0;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
@@ -28,11 +31,17 @@ body {
   align-items: flex-start;
   margin-bottom: 18px;
 }
+
 .topbar h1 {
   margin: 0 0 6px;
   font-size: 1.6rem;
 }
-.sub { margin: 0; color: var(--muted); }
+
+.sub {
+  margin: 0;
+  color: var(--muted);
+}
+
 .badge {
   background: var(--panel);
   border: 1px solid var(--line);
@@ -57,11 +66,16 @@ body {
   box-shadow: var(--shadow);
 }
 
+/* ======================
+   CONTROLS PANEL
+====================== */
+
 .controls label {
   display: block;
   margin-bottom: 14px;
   font-weight: 600;
 }
+
 .controls select {
   margin-top: 6px;
   width: 100%;
@@ -71,6 +85,7 @@ body {
   background: #fff;
   font-size: 1rem;
 }
+
 .status-wrap {
   border: 1px solid var(--line);
   border-radius: 14px;
@@ -78,6 +93,7 @@ body {
   background: #fafbfd;
   margin: 14px 0;
 }
+
 .mode-pill {
   display: inline-block;
   padding: 6px 10px;
@@ -86,13 +102,18 @@ body {
   font-size: 0.9rem;
   margin-bottom: 8px;
 }
-.status-text { color: var(--muted); }
+
+.status-text {
+  color: var(--muted);
+}
+
 .button-row {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;
   gap: 10px;
   margin: 14px 0;
 }
+
 button {
   border: 1px solid var(--line);
   border-radius: 12px;
@@ -101,13 +122,24 @@ button {
   font-weight: 700;
   cursor: pointer;
 }
+
 button.primary {
   background: #111827;
   color: white;
 }
-button:hover { transform: translateY(-1px); }
-.notes summary { cursor: pointer; font-weight: 700; }
-.notes p { color: var(--muted); line-height: 1.45; }
+
+button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+button:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+/* ======================
+   TARGET
+====================== */
 
 .target-wrap {
   width: 100%;
@@ -117,19 +149,105 @@ button:hover { transform: translateY(-1px); }
   border: 1px solid var(--line);
   background: #fbfbfb;
 }
+
 .target-surface {
   width: 100%;
   height: 100%;
   touch-action: manipulation;
   cursor: crosshair;
 }
+
 .target-svg {
   width: 100%;
   height: 100%;
   display: block;
 }
 
-.results-panel h2 { margin-top: 0; }
+/* ======================
+   INSTRUCTION SYSTEM (NEW)
+====================== */
+
+.sim-intro {
+  margin-bottom: 14px;
+}
+
+.sim-instruction-top {
+  font-size: 1.2rem;
+  font-weight: 900;
+  margin-bottom: 6px;
+}
+
+.sim-instruction-sub {
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+/* Demo badge */
+
+.demo-mode-tag {
+  display: inline-block;
+  margin-bottom: 10px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: #e9f6ee;
+  color: var(--green);
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+/* ======================
+   INLINE BUTTONS
+====================== */
+
+.demo-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.hidden-until-ready {
+  opacity: 0.45;
+}
+
+/* ======================
+   AFTER RESULTS PANEL (NEW)
+====================== */
+
+.after-results-panel {
+  margin-top: 16px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 14px;
+  background: #fafbfd;
+}
+
+.after-results-heading {
+  font-weight: 800;
+  margin-bottom: 6px;
+}
+
+.after-results-sub {
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+/* ======================
+   DEMO MODE CONTROL HIDE (CRITICAL)
+====================== */
+
+.demo-hidden {
+  display: none !important;
+}
+
+/* ======================
+   RESULTS PANEL
+====================== */
+
+.results-panel h2 {
+  margin-top: 0;
+}
+
 .sec-card {
   min-height: 360px;
   border: 1px solid var(--line);
@@ -137,6 +255,7 @@ button:hover { transform: translateY(-1px); }
   padding: 18px;
   background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
 }
+
 .sec-brand {
   font-size: 0.8rem;
   text-transform: uppercase;
@@ -144,27 +263,35 @@ button:hover { transform: translateY(-1px); }
   color: var(--muted);
   margin-bottom: 16px;
 }
-.sec-empty { color: var(--muted); }
+
+.sec-empty {
+  color: var(--muted);
+}
+
 .metric-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 10px;
 }
+
 .metric {
   border: 1px solid var(--line);
   border-radius: 14px;
   padding: 12px;
   background: #fff;
 }
+
 .metric-label {
   color: var(--muted);
   font-size: 0.84rem;
   margin-bottom: 6px;
 }
+
 .metric-value {
   font-size: 1.15rem;
   font-weight: 800;
 }
+
 .sec-callout {
   margin-top: 14px;
   border: 1px dashed #c7d1e0;
@@ -173,14 +300,43 @@ button:hover { transform: translateY(-1px); }
   background: #f8fbff;
   line-height: 1.4;
 }
+
 .sec-footer {
   margin-top: 18px;
   color: var(--muted);
   font-size: 0.88rem;
 }
 
+/* ======================
+   MOBILE OPTIMIZATION (IMPORTANT)
+====================== */
+
 @media (max-width: 1200px) {
   .layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 700px) {
+  .app-shell {
+    padding: 14px;
+  }
+
+  .topbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .badge {
+    white-space: normal;
+  }
+
+  .button-row,
+  .demo-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .metric-grid {
     grid-template-columns: 1fr;
   }
 }
