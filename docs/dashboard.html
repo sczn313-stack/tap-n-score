@@ -1,1 +1,149 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>SCZN3 Dashboard</title>
 
+  <style>
+    body {
+      font-family: system-ui;
+      background: #06070a;
+      color: #eaeef3;
+      margin: 0;
+      padding: 20px;
+    }
+
+    h1 {
+      margin-bottom: 20px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 12px;
+    }
+
+    .card {
+      background: #111318;
+      padding: 16px;
+      border-radius: 10px;
+      border: 1px solid #1c1f26;
+    }
+
+    .label {
+      font-size: 12px;
+      opacity: 0.7;
+    }
+
+    .value {
+      font-size: 24px;
+      margin-top: 6px;
+      font-weight: bold;
+    }
+
+    .section {
+      margin-top: 28px;
+    }
+
+    .json {
+      font-size: 12px;
+      background: #0d0f14;
+      padding: 12px;
+      border-radius: 8px;
+      overflow-x: auto;
+    }
+
+    .refresh {
+      margin-top: 20px;
+      padding: 10px 14px;
+      background: #2f66ff;
+      border: none;
+      border-radius: 6px;
+      color: white;
+      cursor: pointer;
+    }
+  </style>
+</head>
+
+<body>
+
+  <h1>📊 SCZN3 Live Dashboard</h1>
+
+  <div class="grid">
+    <div class="card">
+      <div class="label">Total Events</div>
+      <div id="events" class="value">—</div>
+    </div>
+
+    <div class="card">
+      <div class="label">Scans</div>
+      <div id="scans" class="value">—</div>
+    </div>
+
+    <div class="card">
+      <div class="label">Results Ready</div>
+      <div id="results" class="value">—</div>
+    </div>
+
+    <div class="card">
+      <div class="label">Vendor Clicks</div>
+      <div id="clicks" class="value">—</div>
+    </div>
+
+    <div class="card">
+      <div class="label">Scan → Results</div>
+      <div id="scanToResults" class="value">—</div>
+    </div>
+
+    <div class="card">
+      <div class="label">Results → Vendor</div>
+      <div id="resultsToVendor" class="value">—</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <h3>Breakdown</h3>
+    <div id="json" class="json">Loading...</div>
+  </div>
+
+  <button class="refresh" onclick="load()">Refresh</button>
+
+  <script>
+    const API = "https://tap-n-score-backend.onrender.com/api/analytics/summary";
+
+    async function load() {
+      try {
+        const res = await fetch(API);
+        const data = await res.json();
+
+        const t = data.totals || {};
+        const c = data.conversion || {};
+
+        document.getElementById("events").textContent = t.events ?? 0;
+        document.getElementById("scans").textContent = t.scans ?? 0;
+        document.getElementById("results").textContent = t.results_ready ?? 0;
+        document.getElementById("clicks").textContent = t.vendor_click ?? 0;
+
+        document.getElementById("scanToResults").textContent =
+          (c.scan_to_results_pct ?? 0) + "%";
+
+        document.getElementById("resultsToVendor").textContent =
+          (c.results_to_vendor_pct ?? 0) + "%";
+
+        document.getElementById("json").textContent =
+          JSON.stringify(data.breakdown, null, 2);
+
+      } catch (e) {
+        document.getElementById("json").textContent = "Error loading data";
+      }
+    }
+
+    load();
+
+    // Auto refresh every 10 sec
+    setInterval(load, 10000);
+  </script>
+
+</body>
+</html>
