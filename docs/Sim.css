@@ -2,16 +2,13 @@
   --bg: #eef1f5;
   --panel: #ffffff;
   --line: #d9dde4;
-  --line-strong: #c7cfda;
   --text: #19202a;
   --muted: #586474;
   --shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
-  --accent: #111827;
   --green: #16a34a;
   --green-soft: #e9f7ee;
   --blue-soft: #e9eef8;
   --surface-soft: #fafbfd;
-  --target-bg: #fbfbfb;
   --instruction-bg: rgba(255, 255, 255, 0.92);
   --instruction-border: rgba(25, 32, 42, 0.08);
   --radius-xl: 20px;
@@ -48,9 +45,7 @@ select {
   padding: 20px;
 }
 
-/* ======================
-   TOPBAR
-====================== */
+/* top */
 
 .topbar {
   display: flex;
@@ -76,6 +71,11 @@ select {
   line-height: 1.45;
 }
 
+.copy-accent {
+  color: var(--green);
+  font-weight: 900;
+}
+
 .badge {
   background: var(--panel);
   border: 1px solid var(--line);
@@ -87,13 +87,11 @@ select {
   flex-shrink: 0;
 }
 
-/* ======================
-   MAIN LAYOUT
-====================== */
+/* layout */
 
 .layout {
   display: grid;
-  grid-template-columns: 320px minmax(420px, 1fr) 360px;
+  grid-template-columns: minmax(420px, 1fr) 320px 360px;
   gap: 18px;
   align-items: start;
 }
@@ -120,17 +118,7 @@ select {
   line-height: 1.45;
 }
 
-/* ======================
-   CONTROLS PANEL
-====================== */
-
-.controls {
-  position: relative;
-}
-
-.setup-fields {
-  display: block;
-}
+/* controls */
 
 .controls label {
   display: block;
@@ -152,13 +140,6 @@ select {
   color: var(--text);
   font-size: 1rem;
   min-height: 48px;
-  appearance: auto;
-}
-
-.controls select:focus,
-button:focus {
-  outline: 2px solid rgba(17, 24, 39, 0.18);
-  outline-offset: 1px;
 }
 
 .status-wrap {
@@ -194,14 +175,6 @@ button:focus {
 
 .button-row {
   margin: 14px 0;
-}
-
-.desktop-actions {
-  display: grid;
-}
-
-.mobile-actions {
-  margin-top: 14px;
 }
 
 button {
@@ -241,25 +214,7 @@ button:hover:not(:disabled) {
   opacity: 0.45;
 }
 
-.notes {
-  margin-top: 8px;
-  color: var(--text);
-}
-
-.notes summary {
-  cursor: pointer;
-  font-weight: 700;
-}
-
-.notes p {
-  color: var(--muted);
-  line-height: 1.45;
-  margin-bottom: 0;
-}
-
-/* ======================
-   SIMULATOR PANEL
-====================== */
+/* simulator */
 
 .simulator-panel {
   position: relative;
@@ -268,10 +223,6 @@ button:hover:not(:disabled) {
 
 .sim-intro {
   margin-bottom: 14px;
-}
-
-.instruction-stack {
-  min-height: 52px;
 }
 
 .sim-instruction-top {
@@ -287,6 +238,7 @@ button:hover:not(:disabled) {
 .sim-instruction-sub {
   color: var(--muted);
   line-height: 1.4;
+  min-height: 1px;
 }
 
 .demo-mode-tag {
@@ -317,37 +269,39 @@ button:hover:not(:disabled) {
   animation: none;
 }
 
-.copy-pulse {
-  color: var(--green);
-  font-weight: 900;
-}
-
-/* ======================
-   TARGET
-====================== */
+/* target */
 
 .target-wrap {
   width: 100%;
   border-radius: var(--radius-xl);
   overflow: hidden;
   border: 1px solid var(--line);
-  background: var(--target-bg);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.35);
+  background: #f4f5f7;
 }
 
 .target-surface {
   position: relative;
   width: 100%;
-  aspect-ratio: 1 / 1;
-  touch-action: manipulation;
-  cursor: crosshair;
-  background: var(--target-bg);
+  aspect-ratio: 768 / 1207;
+  background: #f4f5f7;
+  overflow: hidden;
 }
 
-.target-svg {
+.target-image {
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
-  display: block;
+  object-fit: contain;
+  user-select: none;
+  -webkit-user-drag: none;
+  pointer-events: none;
+}
+
+.tap-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
 }
 
 .floating-instruction {
@@ -373,42 +327,79 @@ button:hover:not(:disabled) {
 }
 
 .floating-top {
-  top: 12px;
+  top: 34%;
 }
 
 .floating-bottom {
-  bottom: 12px;
+  bottom: 8%;
   color: var(--muted);
   font-weight: 800;
   text-transform: none;
   letter-spacing: 0;
 }
 
-/* ======================
-   AFTER RESULTS
-====================== */
+/* interactive markers */
 
-.after-results-panel {
-  margin-top: 16px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius-md);
-  padding: 14px;
-  background: var(--surface-soft);
+.marker {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  z-index: 5;
+  pointer-events: none;
 }
 
-.after-results-heading {
-  font-weight: 800;
-  margin-bottom: 6px;
+.marker.aim {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #111111;
+  box-shadow: 0 0 0 1px rgba(255,255,255,0.3);
 }
 
-.after-results-sub {
-  color: var(--muted);
-  line-height: 1.4;
+.marker.hit {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #111111;
+  box-shadow:
+    0 0 0 2px rgba(51, 43, 41, 0.18),
+    0 0 0 4px rgba(42, 42, 42, 0.08);
 }
 
-/* ======================
-   RESULTS PANEL
-====================== */
+.marker.group-center-halo {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: rgba(22, 163, 74, 0.18);
+  animation: resultHalo 1s ease-out 2;
+}
+
+.marker.group-center-core {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #16a34a;
+  box-shadow: 0 0 0 1px rgba(255,255,255,0.4);
+  animation: resultPulse 1s ease-out 2;
+}
+
+/* qr activation region on the real image */
+
+.qr-hotspot {
+  position: absolute;
+  z-index: 2;
+  pointer-events: auto;
+  border-radius: 8px;
+  cursor: default;
+  background: transparent;
+  transition: box-shadow 0.2s ease, background 0.2s ease;
+}
+
+.qr-hotspot.qr-live {
+  cursor: pointer;
+  animation: qrPulse 1.6s ease-in-out infinite;
+}
+
+/* results */
 
 .results-panel h2 {
   margin: 0 0 12px;
@@ -481,45 +472,7 @@ button:hover:not(:disabled) {
   font-size: 0.88rem;
 }
 
-/* ======================
-   MARKER POLISH
-====================== */
-
-.group-center-core {
-  animation: resultPulse 1s ease-out 2;
-}
-
-.group-center-halo {
-  animation: resultHalo 1s ease-out 2;
-}
-
-/* ======================
-   QR POLISH
-====================== */
-
-.mock-qr-group {
-  opacity: 0.93;
-  filter: contrast(0.96) brightness(0.985);
-  transform-box: fill-box;
-  transform-origin: center;
-  transition: filter 0.25s ease, opacity 0.25s ease;
-}
-
-.mock-qr-group.qr-live {
-  animation: qrPulse 1.6s ease-in-out infinite;
-}
-
-/* ======================
-   UTILITIES
-====================== */
-
-.demo-hidden {
-  display: none !important;
-}
-
-/* ======================
-   ANIMATION
-====================== */
+/* animation */
 
 @keyframes sczn3Pulse {
   0%, 100% { opacity: 1; }
@@ -527,32 +480,33 @@ button:hover:not(:disabled) {
 }
 
 @keyframes resultPulse {
-  0% { transform: scale(0.9); opacity: 0.9; transform-origin: center; }
-  50% { transform: scale(1.08); opacity: 1; transform-origin: center; }
-  100% { transform: scale(1); opacity: 1; transform-origin: center; }
+  0% { transform: translate(-50%, -50%) scale(0.9); opacity: 0.9; }
+  50% { transform: translate(-50%, -50%) scale(1.08); opacity: 1; }
+  100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
 }
 
 @keyframes resultHalo {
-  0% { opacity: 0.12; }
-  50% { opacity: 0.28; }
-  100% { opacity: 0.18; }
+  0% { transform: translate(-50%, -50%) scale(0.95); opacity: 0.12; }
+  50% { transform: translate(-50%, -50%) scale(1.08); opacity: 0.28; }
+  100% { transform: translate(-50%, -50%) scale(1); opacity: 0.18; }
 }
 
 @keyframes qrPulse {
   0% {
-    filter: contrast(0.96) brightness(0.985) drop-shadow(0 0 0px rgba(34, 197, 94, 0));
+    box-shadow: 0 0 0 rgba(34, 197, 94, 0);
+    background: rgba(34, 197, 94, 0);
   }
   50% {
-    filter: contrast(1) brightness(1) drop-shadow(0 0 10px rgba(34, 197, 94, 0.45));
+    box-shadow: 0 0 18px rgba(34, 197, 94, 0.5);
+    background: rgba(34, 197, 94, 0.08);
   }
   100% {
-    filter: contrast(0.96) brightness(0.985) drop-shadow(0 0 0px rgba(34, 197, 94, 0));
+    box-shadow: 0 0 0 rgba(34, 197, 94, 0);
+    background: rgba(34, 197, 94, 0);
   }
 }
 
-/* ======================
-   RESPONSIVE
-====================== */
+/* responsive */
 
 @media (max-width: 1200px) {
   .layout {
@@ -593,34 +547,9 @@ button:hover:not(:disabled) {
     border-radius: 16px;
   }
 
-  .panel-head {
-    margin-bottom: 12px;
-  }
-
-  .controls label {
-    margin-bottom: 12px;
-  }
-
   .controls select,
   button {
     min-height: 50px;
-  }
-
-  .desktop-actions {
-    display: none;
-  }
-
-  .mobile-actions {
-    position: sticky;
-    bottom: max(10px, env(safe-area-inset-bottom));
-    z-index: 8;
-    background: linear-gradient(
-      180deg,
-      rgba(238, 241, 245, 0) 0%,
-      rgba(238, 241, 245, 0.82) 24%,
-      rgba(238, 241, 245, 1) 100%
-    );
-    padding-top: 12px;
   }
 
   .button-row,
@@ -629,46 +558,14 @@ button:hover:not(:disabled) {
     grid-template-columns: 1fr;
   }
 
-  .sim-intro {
-    margin-bottom: 10px;
-  }
-
-  .instruction-stack {
-    min-height: auto;
-  }
-
-  .sim-instruction-top {
-    font-size: 1.05rem;
-  }
-
-  .sim-instruction-sub {
-    font-size: 0.96rem;
-  }
-
   .floating-instruction {
     max-width: calc(100% - 20px);
     padding: 7px 12px;
     font-size: 0.78rem;
   }
 
-  .floating-top {
-    top: 10px;
-  }
-
-  .floating-bottom {
-    bottom: 10px;
-  }
-
-  .target-wrap {
-    border-radius: 16px;
-  }
-
   .sec-card {
     min-height: 260px;
-  }
-
-  .notes {
-    margin-top: 12px;
   }
 }
 
@@ -699,10 +596,5 @@ button:hover:not(:disabled) {
 
   .sim-instruction-sub {
     font-size: 0.92rem;
-  }
-
-  .status-wrap,
-  .after-results-panel {
-    padding: 12px;
   }
 }
