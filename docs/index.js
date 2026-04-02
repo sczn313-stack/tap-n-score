@@ -875,6 +875,4 @@
     source: "target_landing"
   });
 })();
-Looks like its a full replacement
 
-For the moment are we gathering too much.  Do we need to pull back if  and just have it in place and only turn on certain variables or do we go for it now so that we have the architecture in place
