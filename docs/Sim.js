@@ -21,19 +21,16 @@
   const inlineUndoBtn = document.getElementById('inlineUndoBtn');
   const inlineResetBtn = document.getElementById('inlineResetBtn');
 
-  const floatingTop = document.getElementById('floatingInstructionTop');
-  const floatingBottom = document.getElementById('floatingInstructionBottom');
-
   const demoModeTag = document.getElementById('demoModeTag');
   const controlsHeading = document.getElementById('controlsHeading');
   const controlsSubhead = document.getElementById('controlsSubhead');
   const setupFields = document.getElementById('setupFields');
 
   const simInstructionTop = document.getElementById('simInstructionTop');
-  const simInstructionSub = document.getElementById('simInstructionSub');
 
-  const topbarTitle = document.querySelector('.topbar h1');
-  const topbarSub = document.querySelector('.topbar .sub');
+  const stepAimBar = document.getElementById('stepAimBar');
+  const stepShotsBar = document.getElementById('stepShotsBar');
+  const stepResultsBar = document.getElementById('stepResultsBar');
 
   const distanceYardsEl = document.getElementById('distanceYards');
   const clickValueMOAEl = document.getElementById('clickValueMOA');
@@ -42,30 +39,13 @@
   const state = {
     aim: null,
     shots: [],
-    mode: 'aim', // aim | shots | ready | results
+    mode: 'aim',
     groupCenter: null,
     qrLive: false
   };
 
   let qrHotspot = null;
 
-  // ============================================================
-  // DIRECTION TRUTH LOCK
-  // ============================================================
-  // Screen-space truth:
-  // X increases to the RIGHT
-  // Y increases DOWNWARD
-  //
-  // Error definition:
-  // dx = groupCenter.x - aim.x
-  // dy = groupCenter.y - aim.y
-  //
-  // Therefore:
-  // dx > 0 => impacts RIGHT => correction LEFT
-  // dx < 0 => impacts LEFT  => correction RIGHT
-  //
-  // dy > 0 => impacts LOW   => correction UP
-  // dy < 0 => impacts HIGH  => correction DOWN
   function deriveDirectionTruth(aim, groupCenter) {
     const dx = groupCenter.xPct - aim.xPct;
     const dy = groupCenter.yPct - aim.yPct;
@@ -81,34 +61,14 @@
   }
 
   function setPageCopy() {
-    document.title = 'Tap-n-Score — Zero Target';
-
-    if (topbarTitle) {
-      topbarTitle.textContent = 'Tap-n-Score™ Zero Target';
-    }
-
-    if (topbarSub) {
-      topbarSub.innerHTML = `
-        <span class="copy-accent">Tap Aim Point</span>
-        &nbsp;&rarr;&nbsp;
-        Tap 3–5 Impacts
-        &nbsp;&rarr;&nbsp;
-        Tap Results
-      `;
-    }
+    document.title = 'Tap-n-Score™ Optic Zero Trainer';
 
     if (controlsHeading) {
-      controlsHeading.textContent = 'Zero Target';
+      controlsHeading.textContent = 'Optic Zero Trainer';
     }
 
     if (controlsSubhead) {
-      controlsSubhead.innerHTML = `
-        <span class="copy-accent">Tap Aim Point</span>
-        &nbsp;&rarr;&nbsp;
-        Tap 3–5 Impacts
-        &nbsp;&rarr;&nbsp;
-        Tap Results
-      `;
+      controlsSubhead.textContent = 'Tap Aim Point • Tap 3–5 Shots • Get Scope Adjustments';
     }
 
     if (isDemoMode && demoModeTag) {
@@ -120,72 +80,63 @@
     }
   }
 
-  function setInstruction(text, mode = 'pulse') {
-    if (simInstructionTop) {
-      simInstructionTop.textContent = text;
-      simInstructionTop.classList.remove('instruction-pulse', 'instruction-steady');
-      simInstructionTop.classList.add(mode === 'pulse' ? 'instruction-pulse' : 'instruction-steady');
-    }
+  function setInstruction(text, stateClass) {
+    simInstructionTop.textContent = text;
+    simInstructionTop.classList.remove('state-aim', 'state-shots', 'state-results');
+    simInstructionTop.classList.add(stateClass, 'state-bump');
 
-    if (simInstructionSub) {
-      simInstructionSub.textContent = '';
-    }
+    window.setTimeout(() => {
+      simInstructionTop.classList.remove('state-bump');
+    }, 240);
+  }
 
-    if (floatingTop) {
-      floatingTop.textContent = text;
-      floatingTop.classList.remove('instruction-pulse', 'instruction-steady', 'instruction-hidden');
-      floatingTop.classList.add(mode === 'pulse' ? 'instruction-pulse' : 'instruction-steady');
-    }
+  function setStepBar(active) {
+    stepAimBar.className = 'step-chip aim';
+    stepShotsBar.className = 'step-chip shots';
+    stepResultsBar.className = 'step-chip results';
 
-    if (floatingBottom) {
-      floatingBottom.textContent = '';
-      floatingBottom.classList.add('instruction-hidden');
-    }
+    if (active === 'aim') stepAimBar.classList.add('is-active');
+    if (active === 'shots') stepShotsBar.classList.add('is-active');
+    if (active === 'results') stepResultsBar.classList.add('is-active');
   }
 
   function enableResultsButtons(enable) {
     resultsBtn.disabled = !enable;
     inlineResultsBtn.disabled = !enable;
-
-    if (enable) {
-      resultsBtn.classList.add('results-live');
-      inlineResultsBtn.classList.remove('hidden-until-ready');
-      inlineResultsBtn.classList.add('results-live');
-    } else {
-      resultsBtn.classList.remove('results-live');
-      inlineResultsBtn.classList.add('hidden-until-ready');
-      inlineResultsBtn.classList.remove('results-live');
-    }
   }
 
   function syncModeUI() {
     if (state.mode === 'aim') {
       modePill.textContent = 'Mode: Aim Point';
       statusText.textContent = 'Tap Aim Point';
-      setInstruction('TAP AIM POINT', 'pulse');
+      setInstruction('TAP AIM POINT', 'state-aim');
+      setStepBar('aim');
       enableResultsButtons(false);
       return;
     }
 
     if (state.mode === 'shots') {
-      modePill.textContent = 'Mode: Impacts';
-      statusText.textContent = `Tap 3–5 Impacts (${state.shots.length}/${getShotGoal()})`;
-      setInstruction('TAP 3–5 IMPACTS', 'pulse');
+      modePill.textContent = 'Mode: Shots';
+      statusText.textContent = `Tap 3–5 Shots (${state.shots.length}/${getShotGoal()})`;
+      setInstruction('TAP 3–5 SHOTS', 'state-shots');
+      setStepBar('shots');
       enableResultsButtons(false);
       return;
     }
 
     if (state.mode === 'ready') {
-      modePill.textContent = 'Mode: Results';
-      statusText.textContent = `Tap Results (${state.shots.length}/${getShotGoal()} impacts set)`;
-      setInstruction('TAP RESULTS', 'pulse');
+      modePill.textContent = 'Mode: Ready';
+      statusText.textContent = `Get Scope Adjustments (${state.shots.length}/${getShotGoal()} shots set)`;
+      setInstruction('GET SCOPE ADJUSTMENTS', 'state-results');
+      setStepBar('results');
       enableResultsButtons(true);
       return;
     }
 
-    modePill.textContent = 'Mode: Results Ready';
-    statusText.textContent = 'Results Ready';
-    setInstruction('RESULTS READY', 'steady');
+    modePill.textContent = 'Mode: Adjustments Ready';
+    statusText.textContent = 'Scope adjustments ready';
+    setInstruction('SCOPE ADJUSTMENTS READY', 'state-results');
+    setStepBar('results');
     enableResultsButtons(true);
   }
 
@@ -200,6 +151,19 @@
 
   function getClickValueMOA() {
     return Number(clickValueMOAEl?.value || 0.25);
+  }
+
+  function createAimMarker(xPct, yPct) {
+    const node = document.createElement('div');
+    node.className = 'marker aim';
+    node.style.left = `${xPct}%`;
+    node.style.top = `${yPct}%`;
+
+    const center = document.createElement('div');
+    center.className = 'aim-center';
+    node.appendChild(center);
+
+    tapLayer.appendChild(node);
   }
 
   function createMarker(xPct, yPct, className) {
@@ -219,7 +183,7 @@
     clearMarkers();
 
     if (state.aim) {
-      createMarker(state.aim.xPct, state.aim.yPct, 'aim');
+      createAimMarker(state.aim.xPct, state.aim.yPct);
     }
 
     state.shots.forEach((shot) => {
@@ -253,9 +217,7 @@
   function handleQrClick(e) {
     e.stopPropagation();
     if (!state.qrLive) return;
-
-    // Placeholder destination. Swap later.
-    window.open('https://tap-n-score.com/', '_blank', 'noopener,noreferrer');
+    window.open('https://baker-targets.com/', '_blank', 'noopener,noreferrer');
   }
 
   function addQrHotspot() {
@@ -264,8 +226,6 @@
     qrHotspot = document.createElement('div');
     qrHotspot.className = 'qr-hotspot';
 
-    // Locked to the printed QR on IMG_4174.jpeg
-    // Adjusted to cover the visible QR + words around it.
     qrHotspot.style.left = '78.8%';
     qrHotspot.style.top = '1.6%';
     qrHotspot.style.width = '16.2%';
@@ -280,7 +240,8 @@
     secCard.innerHTML = `
       <div class="sec-brand">Shooter Experience Card</div>
       <div class="sec-empty">
-        Results will appear after you tap an aim point, tap 3–5 impacts, and tap Results.
+        Results will appear after you tap an aim point,
+        tap 3–5 shots, and get scope adjustments.
       </div>
     `;
   }
@@ -377,23 +338,54 @@
     return { xPct: avgX, yPct: avgY };
   }
 
-  function buildPositionText(verticalPosition, horizontalPosition) {
-    const vertical = verticalPosition === 'centered' ? '' : verticalPosition;
-    const horizontal = horizontalPosition === 'centered' ? '' : horizontalPosition;
-
-    if (!vertical && !horizontal) return 'Your impacts are centered';
-    if (vertical && horizontal) return `Your impacts are ${vertical}-${horizontal}`;
-    if (vertical) return `Your impacts are ${vertical}`;
-    return `Your impacts are ${horizontal}`;
-  }
-
   function inchesPerMOAAtDistance(distanceYards) {
     return TRUE_MOA_INCHES_AT_100 * (distanceYards / 100);
   }
 
-  function clickText(rawValue, direction) {
+  function calculateGroupSizeInches(scaleInchesPerPercent) {
+    if (state.shots.length < 2) return 0;
+
+    let maxDistance = 0;
+
+    for (let i = 0; i < state.shots.length; i++) {
+      for (let j = i + 1; j < state.shots.length; j++) {
+        const dx = (state.shots[j].xPct - state.shots[i].xPct) * scaleInchesPerPercent;
+        const dy = (state.shots[j].yPct - state.shots[i].yPct) * scaleInchesPerPercent;
+        const d = Math.hypot(dx, dy);
+        if (d > maxDistance) maxDistance = d;
+      }
+    }
+
+    return maxDistance;
+  }
+
+  function round1(v) {
+    return Number(v).toFixed(1);
+  }
+
+  function round2(v) {
+    return Number(v).toFixed(2);
+  }
+
+  function moveArrow(verticalDir, horizontalDir) {
+    if (verticalDir !== 'NONE' && horizontalDir !== 'NONE') {
+      if (verticalDir === 'UP' && horizontalDir === 'LEFT') return '↖';
+      if (verticalDir === 'UP' && horizontalDir === 'RIGHT') return '↗';
+      if (verticalDir === 'DOWN' && horizontalDir === 'LEFT') return '↙';
+      return '↘';
+    }
+
+    if (verticalDir !== 'NONE') return verticalDir === 'UP' ? '↑' : '↓';
+    if (horizontalDir !== 'NONE') return horizontalDir === 'LEFT' ? '←' : '→';
+    return '•';
+  }
+
+  function metricText(direction, moa, clicks) {
     if (direction === 'NONE') return 'No change';
-    return `${rawValue.toFixed(1)} clicks ${direction}`;
+    return `
+      ${direction} ${round2(moa)} MOA
+      <span class="clicks">(${round1(clicks)} clicks)</span>
+    `;
   }
 
   function calculateResults() {
@@ -403,9 +395,7 @@
     state.mode = 'results';
 
     const truth = deriveDirectionTruth(state.aim, state.groupCenter);
-    const positionText = buildPositionText(truth.verticalPosition, truth.horizontalPosition);
 
-    // Demo scaling from percent-of-image space into inch-like behavior
     const scaleInchesPerPercent = 0.75;
     const dxInches = truth.dx * scaleInchesPerPercent;
     const dyInches = truth.dy * scaleInchesPerPercent;
@@ -420,6 +410,9 @@
     const clicksX = windageMOA / clickValue;
     const clicksY = elevationMOA / clickValue;
 
+    const groupSizeInches = calculateGroupSizeInches(scaleInchesPerPercent);
+    const arrow = moveArrow(truth.elevationDirection, truth.windageDirection);
+
     redrawAll();
     syncModeUI();
     setQrLive(true);
@@ -427,31 +420,55 @@
     secCard.innerHTML = `
       <div class="sec-brand">Shooter Experience Card</div>
 
-      <div class="metric sec-highlight" style="margin-bottom: 12px;">
-        <div class="metric-label">Pattern Read</div>
-        <div class="metric-value">${positionText}</div>
+      <div class="sec-title">Scope Adjustments</div>
+      <div class="sec-sub">Based on your ${state.shots.length}-shot group</div>
+
+      <div class="sec-visual">
+        <div class="move-label">Move Group</div>
+        <div class="move-graphic">
+          <div class="group-dot"></div>
+          <div class="move-arrow">${arrow}</div>
+          <div class="bull-dot"></div>
+        </div>
       </div>
 
       <div class="metric-grid">
         <div class="metric">
-          <div class="metric-label">Windage</div>
-          <div class="metric-value">${clickText(clicksX, truth.windageDirection)}</div>
+          <div class="metric-label">Elevation</div>
+          <div class="metric-value">${metricText(truth.elevationDirection, elevationMOA, clicksY)}</div>
         </div>
 
         <div class="metric">
-          <div class="metric-label">Elevation</div>
-          <div class="metric-value">${clickText(clicksY, truth.elevationDirection)}</div>
+          <div class="metric-label">Windage</div>
+          <div class="metric-value">${metricText(truth.windageDirection, windageMOA, clicksX)}</div>
         </div>
       </div>
 
-      <div class="sec-callout">
-        Understand and act on your performance
+      <div class="sec-support">
+        Group size: ${round2(groupSizeInches)}"<br>
+        Distance: ${distance} yd • ${clickValue} MOA/click
       </div>
 
-      <div class="sec-footer">
-        Scan the Smart Target QR to continue.
+      <div class="sec-actions">
+        <button type="button" class="primary" id="secTryAgainBtn">Try Again</button>
+        <button type="button" id="secBuyMoreBtn">Buy More Targets</button>
       </div>
+
+      <div class="sec-footer">Powered by SCZN3 Precision</div>
     `;
+
+    const secTryAgainBtn = document.getElementById('secTryAgainBtn');
+    const secBuyMoreBtn = document.getElementById('secBuyMoreBtn');
+
+    if (secTryAgainBtn) {
+      secTryAgainBtn.addEventListener('click', resetSimulator);
+    }
+
+    if (secBuyMoreBtn) {
+      secBuyMoreBtn.addEventListener('click', () => {
+        window.open('https://baker-targets.com/', '_blank', 'noopener,noreferrer');
+      });
+    }
 
     secCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
   }
