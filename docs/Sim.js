@@ -1,6 +1,11 @@
 (() => {
   const NS = 'http://www.w3.org/2000/svg';
   const VIEWBOX = 800;
+  const MIN_SHOTS = 3;
+  const MAX_SHOTS = 5;
+
+  const params = new URLSearchParams(window.location.search);
+  const isDemoMode = params.get('mode') === 'demo';
 
   const targetSurface = document.getElementById('targetSurface');
   const overlayLayer = document.getElementById('overlayLayer');
@@ -24,111 +29,165 @@
   const controlsHeading = document.getElementById('controlsHeading');
   const controlsSubhead = document.getElementById('controlsSubhead');
   const setupFields = document.getElementById('setupFields');
+  const simInstructionTop = document.getElementById('simInstructionTop');
+  const simInstructionSub = document.getElementById('simInstructionSub');
 
-  const params = new URLSearchParams(window.location.search);
-  const isDemoMode = params.get('mode') === 'demo';
+  const topbarTitle = document.querySelector('.topbar h1');
+  const topbarSub = document.querySelector('.topbar .sub');
 
   const state = {
     aim: null,
     shots: [],
-    mode: 'aim',
-    resultShown: false,
-    groupCenter: null,
+    mode: 'aim', // aim | shots | ready | results
+    groupCenter: null
   };
 
-  /**
-   * ============================================================
-   * DIRECTION TRUTH LOCK
-   * ============================================================
-   *
-   * Screen-space truth:
-   * - X increases to the RIGHT
-   * - Y increases DOWNWARD
-   *
-   * Error definition:
-   * - dx = impactCenter.x - aim.x
-   * - dy = impactCenter.y - aim.y
-   *
-   * Therefore:
-   * - dx > 0  => impacts are RIGHT  => correction is LEFT
-   * - dx < 0  => impacts are LEFT   => correction is RIGHT
-   *
-   * - dy > 0  => impacts are LOW    => correction is UP
-   * - dy < 0  => impacts are HIGH   => correction is DOWN
-   *
-   * Never infer direction anywhere else.
-   * Always derive from signed deltas here.
-   */
+  // ============================================================
+  // DIRECTION TRUTH LOCK
+  // ============================================================
+  // Screen-space truth:
+  // X increases to the RIGHT
+  // Y increases DOWNWARD
+  //
+  // Error definition:
+  // dx = groupCenter.x - aim.x
+  // dy = groupCenter.y - aim.y
+  //
+  // Therefore:
+  // dx > 0 => impacts RIGHT => correction LEFT
+  // dx < 0 => impacts LEFT  => correction RIGHT
+  //
+  // dy > 0 => impacts LOW   => correction UP
+  // dy < 0 => impacts HIGH  => correction DOWN
+  //
+  // Never derive direction anywhere else.
   function deriveDirectionTruth(aim, groupCenter) {
     const dx = groupCenter.x - aim.x;
     const dy = groupCenter.y - aim.y;
 
-    const horizontalPosition =
-      dx > 0 ? 'right' : dx < 0 ? 'left' : 'centered';
-
-    const verticalPosition =
-      dy > 0 ? 'low' : dy < 0 ? 'high' : 'centered';
-
-    const windageDirection =
-      dx > 0 ? 'LEFT' : dx < 0 ? 'RIGHT' : 'NONE';
-
-    const elevationDirection =
-      dy > 0 ? 'UP' : dy < 0 ? 'DOWN' : 'NONE';
-
     return {
       dx,
       dy,
-      horizontalPosition,
-      verticalPosition,
-      windageDirection,
-      elevationDirection,
+      horizontalPosition: dx > 0 ? 'right' : dx < 0 ? 'left' : 'centered',
+      verticalPosition: dy > 0 ? 'low' : dy < 0 ? 'high' : 'centered',
+      windageDirection: dx > 0 ? 'LEFT' : dx < 0 ? 'RIGHT' : 'NONE',
+      elevationDirection: dy > 0 ? 'UP' : dy < 0 ? 'DOWN' : 'NONE'
     };
   }
 
-  function setDemoModeUI() {
+  function setPageCopy() {
+    document.title = 'Tap-n-Score — Zero Target';
+
+    if (topbarTitle) {
+      topbarTitle.textContent = 'Tap-n-Score™ Zero Target';
+    }
+
+    if (topbarSub) {
+      topbarSub.innerHTML = `
+        <span class="copy-pulse">Tap Aim Point</span>
+        &nbsp;&rarr;&nbsp;
+        Tap 3–5 Impacts
+        &nbsp;&rarr;&nbsp;
+        Tap Results
+      `;
+    }
+
     if (controlsHeading) {
       controlsHeading.textContent = 'Zero Target';
     }
 
     if (controlsSubhead) {
       controlsSubhead.innerHTML = `
-        <span style="color:#16a34a;font-weight:900;animation:sczn3Pulse 1.2s ease-in-out infinite;">Tap Aim Point</span>
-        &nbsp;→&nbsp;
+        <span class="copy-pulse">Tap Aim Point</span>
+        &nbsp;&rarr;&nbsp;
         Tap 3–5 Impacts
-        &nbsp;→&nbsp;
+        &nbsp;&rarr;&nbsp;
         Tap Results
       `;
     }
 
-    if (isDemoMode) {
-      if (demoModeTag) demoModeTag.hidden = false;
-      if (setupFields) setupFields.classList.add('demo-hidden');
+    if (isDemoMode && demoModeTag) {
+      demoModeTag.hidden = false;
+    }
+
+    if (isDemoMode && setupFields) {
+      setupFields.classList.add('demo-hidden');
     }
   }
 
-  function setMode(mode) {
-    state.mode = mode;
+  function setInstruction(text, mode = 'pulse', subtext = '') {
+    if (simInstructionTop) {
+      simInstructionTop.textContent = text;
+      simInstructionTop.classList.remove('instruction-pulse', 'instruction-steady', 'instruction-hidden');
+      simInstructionTop.classList.add(mode === 'pulse' ? 'instruction-pulse' : 'instruction-steady');
+    }
 
-    if (mode === 'aim') {
+    if (simInstructionSub) {
+      if (subtext) {
+        simInstructionSub.textContent = subtext;
+        simInstructionSub.classList.remove('instruction-hidden');
+      } else {
+        simInstructionSub.textContent = '';
+        simInstructionSub.classList.add('instruction-hidden');
+      }
+    }
+
+    if (floatingTop) {
+      floatingTop.textContent = text;
+      floatingTop.classList.remove('instruction-pulse', 'instruction-steady', 'instruction-hidden');
+      floatingTop.classList.add(mode === 'pulse' ? 'instruction-pulse' : 'instruction-steady');
+    }
+
+    if (floatingBottom) {
+      floatingBottom.textContent = '';
+      floatingBottom.classList.add('instruction-hidden');
+    }
+  }
+
+  function enableResultsButtons(enable) {
+    resultsBtn.disabled = !enable;
+    inlineResultsBtn.disabled = !enable;
+
+    if (enable) {
+      inlineResultsBtn.classList.remove('hidden-until-ready');
+      inlineResultsBtn.classList.add('results-live');
+      resultsBtn.classList.add('results-live');
+    } else {
+      inlineResultsBtn.classList.add('hidden-until-ready');
+      inlineResultsBtn.classList.remove('results-live');
+      resultsBtn.classList.remove('results-live');
+    }
+  }
+
+  function syncModeUI() {
+    if (state.mode === 'aim') {
       modePill.textContent = 'Mode: Aim Point';
       statusText.textContent = 'Tap Aim Point';
-      if (floatingTop) floatingTop.textContent = 'TAP AIM POINT';
-      if (floatingBottom) floatingBottom.textContent = 'Tap 3–5 Impacts';
+      setInstruction('TAP AIM POINT', 'pulse');
+      enableResultsButtons(false);
       return;
     }
 
-    if (mode === 'shots') {
+    if (state.mode === 'shots') {
       modePill.textContent = 'Mode: Impacts';
-      statusText.textContent = 'Tap 3–5 Impacts';
-      if (floatingTop) floatingTop.textContent = 'TAP 3–5 IMPACTS';
-      if (floatingBottom) floatingBottom.textContent = 'Tap Results';
+      statusText.textContent = `Tap 3–5 Impacts (${state.shots.length}/${MAX_SHOTS})`;
+      setInstruction('TAP 3–5 IMPACTS', 'pulse');
+      enableResultsButtons(false);
       return;
     }
 
-    modePill.textContent = 'Mode: Results';
-    statusText.textContent = 'Tap Results';
-    if (floatingTop) floatingTop.textContent = 'TAP RESULTS';
-    if (floatingBottom) floatingBottom.textContent = 'Review Your SEC';
+    if (state.mode === 'ready') {
+      modePill.textContent = 'Mode: Results';
+      statusText.textContent = `Tap Results (${state.shots.length}/${MAX_SHOTS} impacts set)`;
+      setInstruction('TAP RESULTS', 'pulse');
+      enableResultsButtons(true);
+      return;
+    }
+
+    modePill.textContent = 'Mode: Results Ready';
+    statusText.textContent = 'Results Ready';
+    setInstruction('RESULTS READY', 'steady');
+    enableResultsButtons(true);
   }
 
   function clearOverlay() {
@@ -136,18 +195,18 @@
   }
 
   function drawCircle(x, y, radius, fill, opacity = 1) {
-    const c = document.createElementNS(NS, 'circle');
-    c.setAttribute('cx', x);
-    c.setAttribute('cy', y);
-    c.setAttribute('r', radius);
-    c.setAttribute('fill', fill);
-    c.setAttribute('opacity', opacity);
-    overlayLayer.appendChild(c);
-    return c;
+    const node = document.createElementNS(NS, 'circle');
+    node.setAttribute('cx', x);
+    node.setAttribute('cy', y);
+    node.setAttribute('r', radius);
+    node.setAttribute('fill', fill);
+    node.setAttribute('opacity', opacity);
+    overlayLayer.appendChild(node);
+    return node;
   }
 
   function drawAimPoint(x, y) {
-    drawCircle(x, y, 7, '#111');
+    drawCircle(x, y, 7, '#111111', 1);
   }
 
   function drawFrayedHit(x, y) {
@@ -155,18 +214,18 @@
     g.setAttribute('transform', `translate(${x} ${y})`);
 
     const outer = document.createElementNS(NS, 'circle');
-    outer.setAttribute('r', '4.8');
+    outer.setAttribute('r', '4.6');
     outer.setAttribute('fill', '#2a2a2a');
     outer.setAttribute('opacity', '0.16');
 
     const ring = document.createElementNS(NS, 'circle');
-    ring.setAttribute('r', '3.5');
-    ring.setAttribute('fill', '#352d2b');
-    ring.setAttribute('opacity', '0.95');
+    ring.setAttribute('r', '3.3');
+    ring.setAttribute('fill', '#332b29');
+    ring.setAttribute('opacity', '0.96');
 
     const core = document.createElementNS(NS, 'circle');
-    core.setAttribute('r', '2.2');
-    core.setAttribute('fill', '#111');
+    core.setAttribute('r', '2.1');
+    core.setAttribute('fill', '#111111');
 
     g.appendChild(outer);
     g.appendChild(ring);
@@ -176,27 +235,11 @@
   }
 
   function drawGroupCenter(x, y) {
-    drawCircle(x, y, 10, '#16a34a', 0.18);
-    drawCircle(x, y, 5.5, '#16a34a', 1);
-  }
+    const halo = drawCircle(x, y, 10, '#16a34a', 0.18);
+    halo.classList.add('group-center-halo');
 
-  function getCoords(e) {
-    const rect = targetSurface.getBoundingClientRect();
-    return {
-      x: ((e.clientX - rect.left) / rect.width) * VIEWBOX,
-      y: ((e.clientY - rect.top) / rect.height) * VIEWBOX,
-    };
-  }
-
-  function enableResultsButtons(enable) {
-    resultsBtn.disabled = !enable;
-    inlineResultsBtn.disabled = !enable;
-
-    if (enable) {
-      inlineResultsBtn.classList.remove('hidden-until-ready');
-    } else {
-      inlineResultsBtn.classList.add('hidden-until-ready');
-    }
+    const core = drawCircle(x, y, 5.5, '#16a34a', 1);
+    core.classList.add('group-center-core');
   }
 
   function redrawAll() {
@@ -210,15 +253,25 @@
       drawFrayedHit(shot.x, shot.y);
     });
 
-    if (state.resultShown && state.groupCenter) {
+    if (state.groupCenter) {
       drawGroupCenter(state.groupCenter.x, state.groupCenter.y);
     }
+  }
+
+  function getCoords(e) {
+    const rect = targetSurface.getBoundingClientRect();
+    return {
+      x: ((e.clientX - rect.left) / rect.width) * VIEWBOX,
+      y: ((e.clientY - rect.top) / rect.height) * VIEWBOX
+    };
   }
 
   function resetSEC() {
     secCard.innerHTML = `
       <div class="sec-brand">Shooter Experience Card</div>
-      <div class="sec-empty">Results will appear after you tap an aim point, tap 3–5 impacts, and tap Results.</div>
+      <div class="sec-empty">
+        Results will appear after you tap an aim point, tap 3–5 impacts, and tap Results.
+      </div>
     `;
   }
 
@@ -226,78 +279,97 @@
     state.aim = null;
     state.shots = [];
     state.mode = 'aim';
-    state.resultShown = false;
     state.groupCenter = null;
 
     clearOverlay();
-    enableResultsButtons(false);
-    setMode('aim');
     resetSEC();
+    syncModeUI();
+  }
+
+  function recomputeModeFromState() {
+    if (!state.aim) {
+      state.mode = 'aim';
+      return;
+    }
+
+    if (state.groupCenter) {
+      state.mode = 'results';
+      return;
+    }
+
+    if (state.shots.length >= MIN_SHOTS) {
+      state.mode = 'ready';
+      return;
+    }
+
+    state.mode = 'shots';
   }
 
   function handleTap(e) {
     const { x, y } = getCoords(e);
 
-    if (state.mode === 'aim') {
+    if (state.mode === 'results') {
+      return;
+    }
+
+    if (!state.aim) {
       state.aim = { x, y };
-      state.resultShown = false;
       state.groupCenter = null;
+      recomputeModeFromState();
       redrawAll();
-      setMode('shots');
+      syncModeUI();
+      return;
+    }
+
+    if (state.shots.length >= MAX_SHOTS) {
       return;
     }
 
     state.shots.push({ x, y });
-    state.resultShown = false;
     state.groupCenter = null;
+    recomputeModeFromState();
     redrawAll();
-
-    if (state.shots.length >= 1) {
-      enableResultsButtons(true);
-    }
+    syncModeUI();
   }
 
   function undoLast() {
-    if (state.resultShown) {
-      state.resultShown = false;
+    if (state.mode === 'results') {
       state.groupCenter = null;
+      recomputeModeFromState();
       redrawAll();
       resetSEC();
-      setMode(state.aim ? 'shots' : 'aim');
-      enableResultsButtons(state.shots.length > 0);
+      syncModeUI();
       return;
     }
 
-    if (state.mode === 'shots' && state.shots.length > 0) {
+    if (state.shots.length > 0) {
       state.shots.pop();
+      state.groupCenter = null;
+      recomputeModeFromState();
       redrawAll();
-      enableResultsButtons(state.shots.length > 0);
+      syncModeUI();
       return;
     }
 
-    if (state.mode === 'shots' && state.aim) {
+    if (state.aim) {
       state.aim = null;
-      setMode('aim');
+      state.groupCenter = null;
+      recomputeModeFromState();
       redrawAll();
-      enableResultsButtons(false);
       resetSEC();
+      syncModeUI();
     }
   }
 
   function computeGroupCenter() {
-    const avgX =
-      state.shots.reduce((sum, shot) => sum + shot.x, 0) / state.shots.length;
-    const avgY =
-      state.shots.reduce((sum, shot) => sum + shot.y, 0) / state.shots.length;
-
+    const avgX = state.shots.reduce((sum, shot) => sum + shot.x, 0) / state.shots.length;
+    const avgY = state.shots.reduce((sum, shot) => sum + shot.y, 0) / state.shots.length;
     return { x: avgX, y: avgY };
   }
 
   function buildPositionText(verticalPosition, horizontalPosition) {
-    const vertical =
-      verticalPosition === 'centered' ? '' : verticalPosition;
-    const horizontal =
-      horizontalPosition === 'centered' ? '' : horizontalPosition;
+    const vertical = verticalPosition === 'centered' ? '' : verticalPosition;
+    const horizontal = horizontalPosition === 'centered' ? '' : horizontalPosition;
 
     if (!vertical && !horizontal) return 'Your impacts are centered';
     if (vertical && horizontal) return `Your impacts are ${vertical}-${horizontal}`;
@@ -311,29 +383,25 @@
   }
 
   function calculateResults() {
-    if (!state.aim || state.shots.length === 0) return;
+    if (!state.aim || state.shots.length < MIN_SHOTS) return;
 
-    const groupCenter = computeGroupCenter();
-    state.groupCenter = groupCenter;
-    state.resultShown = true;
+    state.groupCenter = computeGroupCenter();
+    state.mode = 'results';
 
-    const truth = deriveDirectionTruth(state.aim, groupCenter);
+    const truth = deriveDirectionTruth(state.aim, state.groupCenter);
+    const positionText = buildPositionText(truth.verticalPosition, truth.horizontalPosition);
 
-    redrawAll();
-    setMode('results');
-
-    const positionText = buildPositionText(
-      truth.verticalPosition,
-      truth.horizontalPosition
-    );
-
+    // Demo scaling only — visual training flow, not final ballistics scaling
     const clicksX = Math.abs(truth.dx / 10);
     const clicksY = Math.abs(truth.dy / 10);
+
+    redrawAll();
+    syncModeUI();
 
     secCard.innerHTML = `
       <div class="sec-brand">Shooter Experience Card</div>
 
-      <div class="metric" style="margin-bottom: 12px;">
+      <div class="metric sec-highlight" style="margin-bottom: 12px;">
         <div class="metric-label">Pattern Read</div>
         <div class="metric-value">${positionText}</div>
       </div>
@@ -358,20 +426,6 @@
     secCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
   }
 
-  function injectPulseKeyframes() {
-    if (document.getElementById('sczn3-pulse-style')) return;
-
-    const style = document.createElement('style');
-    style.id = 'sczn3-pulse-style';
-    style.textContent = `
-      @keyframes sczn3Pulse {
-        0%, 100% { opacity: 1; }
-        50% { opacity: 0.45; }
-      }
-    `;
-    document.head.appendChild(style);
-  }
-
   targetSurface.addEventListener('click', handleTap);
 
   undoBtn.addEventListener('click', undoLast);
@@ -383,7 +437,6 @@
   resultsBtn.addEventListener('click', calculateResults);
   inlineResultsBtn.addEventListener('click', calculateResults);
 
-  injectPulseKeyframes();
-  setDemoModeUI();
+  setPageCopy();
   resetSimulator();
 })();
