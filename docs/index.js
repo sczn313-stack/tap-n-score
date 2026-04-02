@@ -1,10 +1,10 @@
 /* ============================================================
-   docs/index.js — B2B Go-Live Router v1 + Tracking
+   docs/index.js — B2B Go-Live Router v1 + Scan Tracking Only
    Purpose:
    - Keep printed QR URL permanent
    - Route B2B target into B2B engine
    - Leave all other targets on normal landing flow
-   - Send analytics to live backend
+   - Send scan-only analytics to live backend
 ============================================================ */
 
 (() => {
@@ -64,15 +64,13 @@
   if (routeTargetIfNeeded()) return;
 
   // ------------------------------------------------------------
-  // TRACKING
+  // SCAN-ONLY TRACKING
   // ------------------------------------------------------------
   const TRACK_ENDPOINT = "https://tap-n-score-backend.onrender.com/api/track";
 
   const vendor = getVendor() || "unknown";
   const sku = getSku() || "unknown";
   const batch = getBatch() || "";
-  const pageMode = "landing";
-
   const sessionId = (() => {
     const key = "SCZN3_TRACK_SESSION_ID_V1";
     let value = sessionStorage.getItem(key);
@@ -90,7 +88,6 @@
       sku,
       batch,
       page: "docs/index",
-      mode: pageMode,
       session_id: sessionId,
       ts: new Date().toISOString(),
       ...extra
@@ -311,16 +308,6 @@
         elVendorPanelLink.style.pointerEvents = "none";
         elVendorPanelLink.style.opacity = ".65";
       }
-
-      elVendorPanelLink.addEventListener("click", () => {
-        const href = elVendorPanelLink.href || "";
-        if (href && href !== "#") {
-          trackEvent("vendor_click", {
-            source: "vendor_panel_link",
-            destination: href
-          });
-        }
-      });
     }
 
     if (elVendorBox) {
@@ -695,17 +682,6 @@
       }
     };
 
-    trackEvent("results_ready", {
-      shots: hits.length,
-      distance_yards: getDistanceYds(),
-      dial_unit: dialUnit,
-      click_value: Number(getClickValue().toFixed(2)),
-      target_key: targetSizeKey,
-      target_w_in: Number(targetWIn),
-      target_h_in: Number(targetHIn),
-      score: out.score
-    });
-
     goToSEC(payload);
   }
 
@@ -721,11 +697,6 @@
     objectUrl = URL.createObjectURL(f);
 
     await storeTargetPhotoForSEC(f, objectUrl);
-
-    trackEvent("photo_added", {
-      file_name: f.name || "",
-      file_type: f.type || ""
-    });
 
     elImg.onload = () => {
       setText(elStatus, "Tap Aim Point.");
@@ -750,15 +721,9 @@
     if (!aim) {
       aim = { x01, y01 };
       addDot(x01, y01, "aim");
-      setText(elStatus, "Tap Bullet Holes.");
+      setText(elStatus, "Tap Aim Point.");
       hideSticky();
       syncInstruction();
-
-      trackEvent("aim_point_set", {
-        x01: Number(x01.toFixed(4)),
-        y01: Number(y01.toFixed(4))
-      });
-
       return;
     }
 
@@ -768,12 +733,6 @@
     hideSticky();
     syncInstruction();
     scheduleStickyMagic();
-
-    trackEvent("hit_added", {
-      hit_count: hits.length,
-      x01: Number(x01.toFixed(4)),
-      y01: Number(y01.toFixed(4))
-    });
   }
 
   if (elWrap) {
@@ -816,7 +775,6 @@
   elClear?.addEventListener("click", () => {
     resetAll();
     if (elImg?.src) setText(elStatus, "Tap Aim Point.");
-    trackEvent("clear_taps");
   });
 
   [elStickyBtn, $("showResultsBtn")].filter(Boolean).forEach((b) => {
@@ -870,9 +828,4 @@
 
   hardHideScoringUI();
   forceTop();
-
-  trackEvent("scan", {
-    source: "target_landing"
-  });
 })();
-
