@@ -6,6 +6,22 @@
   const params = new URLSearchParams(window.location.search);
   const isDemoMode = params.get('mode') === 'demo';
 
+  const vendor = params.get('v') || 'unknown';
+  const sku = params.get('sku') || 'unknown';
+  const mode = params.get('mode') || 'live';
+
+  const TRACK_ENDPOINT = '/api/track';
+
+  const sessionId = (() => {
+    const key = 'sczn3_sim_session_id';
+    let value = sessionStorage.getItem(key);
+    if (!value) {
+      value = 'sim_' + Math.random().toString(36).slice(2) + Date.now().toString(36);
+      sessionStorage.setItem(key, value);
+    }
+    return value;
+  })();
+
   const targetSurface = document.getElementById('targetSurface');
   const tapLayer = document.getElementById('tapLayer');
   const secCard = document.getElementById('secCard');
@@ -45,6 +61,47 @@
   };
 
   let qrHotspot = null;
+
+  const vendorMap = {
+    baker: {
+      base: 'https://baker-targets.com/',
+      sku: {
+        st100: 'https://baker-targets.com/',
+        default: 'https://baker-targets.com/'
+      }
+    }
+  };
+
+  function getVendorUrl() {
+    if (!vendor || !vendorMap[vendor]) return 'https://baker-targets.com/';
+    const vendorObj = vendorMap[vendor];
+    if (sku && vendorObj.sku[sku]) return vendorObj.sku[sku];
+    return vendorObj.sku.default || vendorObj.base;
+  }
+
+  function buildTrackPayload(eventName, extra = {}) {
+    return {
+      event: eventName,
+      vendor,
+      sku,
+      mode,
+      session_id: sessionId,
+      page: 'Sim',
+      ts: new Date().toISOString(),
+      ...extra
+    };
+  }
+
+  function trackEvent(eventName, extra = {}) {
+    const payload = buildTrackPayload(eventName, extra);
+
+    fetch(TRACK_ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+      keepalive: true
+    }).catch(() => {});
+  }
 
   function deriveDirectionTruth(aim, groupCenter) {
     const dx = groupCenter.xPct - aim.xPct;
@@ -217,7 +274,15 @@
   function handleQrClick(e) {
     e.stopPropagation();
     if (!state.qrLive) return;
-    window.open('https://baker-targets.com/', '_blank', 'noopener,noreferrer');
+
+    const destination = getVendorUrl();
+
+    trackEvent('vendor_click', {
+      source: 'qr_hotspot',
+      destination
+    });
+
+    window.open(destination, '_blank', 'noopener,noreferrer');
   }
 
   function addQrHotspot() {
@@ -417,6 +482,12 @@
     syncModeUI();
     setQrLive(true);
 
+    trackEvent('results_ready', {
+      shots: state.shots.length,
+      distance_yards: distance,
+      click_value_moa: clickValue
+    });
+
     secCard.innerHTML = `
       <div class="sec-brand">Shooter Experience Card</div>
 
@@ -451,7 +522,7 @@
 
       <div class="sec-actions">
         <button type="button" class="primary" id="secTryAgainBtn">Try Again</button>
-        <button type="button" id="secBuyMoreBtn">Buy More Targets</button>
+        <button type="button" id="secBuyMoreBtn">Buy More Targets Like This</button>
       </div>
 
       <div class="sec-footer">Powered by SCZN3 Precision</div>
@@ -466,7 +537,14 @@
 
     if (secBuyMoreBtn) {
       secBuyMoreBtn.addEventListener('click', () => {
-        window.open('https://baker-targets.com/', '_blank', 'noopener,noreferrer');
+        const destination = getVendorUrl();
+
+        trackEvent('vendor_click', {
+          source: 'buy_more_button',
+          destination
+        });
+
+        window.open(destination, '_blank', 'noopener,noreferrer');
       });
     }
 
@@ -487,4 +565,5 @@
   setPageCopy();
   addQrHotspot();
   resetSimulator();
+  trackEvent('scan', { source: 'sim' });
 })();
