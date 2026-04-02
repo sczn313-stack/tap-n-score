@@ -1,10 +1,10 @@
 /* ============================================================
    server.js — Tap-n-Score Backend
-   Phase 3:
+   Revenue Mode:
    - Health endpoint
    - Poster endpoint
    - Analytics tracking endpoint
-   - Analytics summary endpoint
+   - Analytics summary endpoint with revenue calculations
    - Existing correction math endpoint
 ============================================================ */
 
@@ -20,6 +20,13 @@ const app = express();
 // ------------------------------------------------------------
 const PORT = Number(process.env.PORT) || 10000;
 const TRACK_LOG = path.join(__dirname, "track-events.ndjson");
+
+// Revenue rates (easy to change later)
+const REVENUE_RATES = {
+  scan: 0.05,
+  results_ready: 0.10,
+  vendor_click: 0.25
+};
 
 // ------------------------------------------------------------
 // MIDDLEWARE
@@ -55,6 +62,11 @@ function safeString(v, fallback = "") {
   return String(v ?? fallback).trim();
 }
 
+function safeKey(v, fallback = "unknown") {
+  const s = safeString(v, fallback);
+  return s || fallback;
+}
+
 function getClientIp(req) {
   const xfwd = req.headers["x-forwarded-for"];
   if (typeof xfwd === "string" && xfwd.trim()) {
@@ -85,8 +97,13 @@ function readTrackEvents() {
 }
 
 function bucketCount(map, key) {
-  const k = safeString(key || "unknown", "unknown") || "unknown";
+  const k = safeKey(key);
   map[k] = (map[k] || 0) + 1;
+}
+
+function addRevenue(map, key, amount) {
+  const k = safeKey(key);
+  map[k] = round2((map[k] || 0) + amount);
 }
 
 function hourBucket(isoString) {
@@ -106,6 +123,11 @@ function dayBucket(isoString) {
   const m = String(d.getUTCMonth() + 1).padStart(2, "0");
   const day = String(d.getUTCDate()).padStart(2, "0");
   return `${y}-${m}-${day}`;
+}
+
+function getRevenueAmountForEvent(eventName) {
+  const key = safeLower(eventName, "unknown");
+  return REVENUE_RATES[key] || 0;
 }
 
 // Inches per MOA at a given distance (yards)
@@ -282,14 +304,37 @@ app.get("/api/analytics/summary", (req, res) => {
     const byDay = {};
     const byHour = {};
 
+    const revenueByEvent = {};
+    const revenueByVendor = {};
+    const revenueBySku = {};
+    const revenueByBatch = {};
+    let totalRevenue = 0;
+
     for (const e of filtered) {
-      bucketCount(byEvent, e.event || "unknown");
-      bucketCount(byVendor, e.vendor || "unknown");
-      bucketCount(bySku, e.sku || "unknown");
-      bucketCount(byBatch, e.batch || "unknown");
+      const eventName = safeLower(e.event, "unknown");
+      const vendorName = safeLower(e.vendor, "unknown");
+      const skuName = safeLower(e.sku, "unknown");
+      const batchName = safeLower(e.batch, "") || "unknown";
+
+      bucketCount(byEvent, eventName);
+      bucketCount(byVendor, vendorName);
+      bucketCount(bySku, skuName);
+      bucketCount(byBatch, batchName);
       bucketCount(byDay, dayBucket(e.ts || e.received_at));
       bucketCount(byHour, hourBucket(e.ts || e.received_at));
+
+      const revenueAmount = getRevenueAmountForEvent(eventName);
+      totalRevenue += revenueAmount;
+
+      if (revenueAmount > 0) {
+        addRevenue(revenueByEvent, eventName, revenueAmount);
+        addRevenue(revenueByVendor, vendorName, revenueAmount);
+        addRevenue(revenueBySku, skuName, revenueAmount);
+        addRevenue(revenueByBatch, batchName, revenueAmount);
+      }
     }
+
+    totalRevenue = round2(totalRevenue);
 
     const scans = byEvent.scan || 0;
     const resultsReady = byEvent.results_ready || 0;
@@ -317,6 +362,20 @@ app.get("/api/analytics/summary", (req, res) => {
         scan_to_results_pct: scanToResultsPct,
         results_to_vendor_pct: resultsToVendorPct,
         scan_to_vendor_pct: scanToVendorPct
+      },
+      pricing: {
+        current_rates: {
+          scan: REVENUE_RATES.scan,
+          results_ready: REVENUE_RATES.results_ready,
+          vendor_click: REVENUE_RATES.vendor_click
+        }
+      },
+      revenue: {
+        total: totalRevenue,
+        by_event: revenueByEvent,
+        by_vendor: revenueByVendor,
+        by_sku: revenueBySku,
+        by_batch: revenueByBatch
       },
       breakdown: {
         by_event: byEvent,
