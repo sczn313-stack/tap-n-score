@@ -1,6 +1,7 @@
 (() => {
   const MIN_SHOTS = 3;
   const MAX_SHOTS = 5;
+  const TRUE_MOA_INCHES_AT_100 = 1.047;
 
   const params = new URLSearchParams(window.location.search);
   const isDemoMode = params.get('mode') === 'demo';
@@ -41,7 +42,7 @@
   const state = {
     aim: null,
     shots: [],
-    mode: 'aim',
+    mode: 'aim', // aim | shots | ready | results
     groupCenter: null,
     qrLive: false
   };
@@ -65,11 +66,9 @@
   //
   // dy > 0 => impacts LOW   => correction UP
   // dy < 0 => impacts HIGH  => correction DOWN
-  //
-  // Never derive direction anywhere else.
   function deriveDirectionTruth(aim, groupCenter) {
-    const dx = groupCenter.x - aim.x;
-    const dy = groupCenter.y - aim.y;
+    const dx = groupCenter.xPct - aim.xPct;
+    const dy = groupCenter.yPct - aim.yPct;
 
     return {
       dx,
@@ -251,8 +250,11 @@
     qrHotspot.style.cursor = isLive ? 'pointer' : 'default';
   }
 
-  function handleQrClick() {
+  function handleQrClick(e) {
+    e.stopPropagation();
     if (!state.qrLive) return;
+
+    // Placeholder destination. Swap later.
     window.open('https://tap-n-score.com/', '_blank', 'noopener,noreferrer');
   }
 
@@ -262,11 +264,12 @@
     qrHotspot = document.createElement('div');
     qrHotspot.className = 'qr-hotspot';
 
-    // These values match the printed QR location on the real target image.
-    qrHotspot.style.left = '79.5%';
-    qrHotspot.style.top = '3.3%';
-    qrHotspot.style.width = '13%';
-    qrHotspot.style.height = '9.2%';
+    // Locked to the printed QR on IMG_4174.jpeg
+    // Adjusted to cover the visible QR + words around it.
+    qrHotspot.style.left = '78.8%';
+    qrHotspot.style.top = '1.6%';
+    qrHotspot.style.width = '16.2%';
+    qrHotspot.style.height = '11.6%';
 
     qrHotspot.addEventListener('click', handleQrClick);
     targetSurface.appendChild(qrHotspot);
@@ -385,7 +388,7 @@
   }
 
   function inchesPerMOAAtDistance(distanceYards) {
-    return 1.047 * (distanceYards / 100);
+    return TRUE_MOA_INCHES_AT_100 * (distanceYards / 100);
   }
 
   function clickText(rawValue, direction) {
@@ -402,7 +405,7 @@
     const truth = deriveDirectionTruth(state.aim, state.groupCenter);
     const positionText = buildPositionText(truth.verticalPosition, truth.horizontalPosition);
 
-    // Demo scaling from percent-of-image space into inch-like behavior.
+    // Demo scaling from percent-of-image space into inch-like behavior
     const scaleInchesPerPercent = 0.75;
     const dxInches = truth.dx * scaleInchesPerPercent;
     const dyInches = truth.dy * scaleInchesPerPercent;
