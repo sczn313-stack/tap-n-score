@@ -1,162 +1,470 @@
-let aim = null;
-let hits = [];
+(() => {
+  const MIN_SHOTS = 3;
+  const MAX_SHOTS = 5;
 
-const PIXELS_PER_INCH = 100;
-const DISTANCE_YARDS = 100;
-const TRUE_MOA_INCHES_AT_100 = 1.047;
-const CLICK_VALUE_MOA = 0.25;
+  const params = new URLSearchParams(window.location.search);
+  const isDemoMode = params.get('mode') === 'demo';
 
-const target = document.getElementById("target");
-const result = document.getElementById("result");
+  const targetSurface = document.getElementById('targetSurface');
+  const tapLayer = document.getElementById('tapLayer');
+  const secCard = document.getElementById('secCard');
 
-// ==============================
-// INIT
-// ==============================
-init();
+  const modePill = document.getElementById('modePill');
+  const statusText = document.getElementById('statusText');
 
-function init() {
-  drawQR();
-}
+  const resultsBtn = document.getElementById('resultsBtn');
+  const inlineResultsBtn = document.getElementById('inlineResultsBtn');
 
-// ==============================
-// TARGET INTERACTION
-// ==============================
-target.addEventListener("click", (e) => {
-  const rect = target.getBoundingClientRect();
-  const x = e.clientX - rect.left;
-  const y = e.clientY - rect.top;
+  const undoBtn = document.getElementById('undoBtn');
+  const resetBtn = document.getElementById('resetBtn');
+  const inlineUndoBtn = document.getElementById('inlineUndoBtn');
+  const inlineResetBtn = document.getElementById('inlineResetBtn');
 
-  if (!aim) {
-    aim = { x, y };
-    drawDot(x, y, "aim");
-    setResult("Aim set → Tap impacts");
-    return;
-  }
+  const floatingTop = document.getElementById('floatingInstructionTop');
+  const floatingBottom = document.getElementById('floatingInstructionBottom');
 
-  hits.push({ x, y });
-  drawDot(x, y, "hit");
-});
+  const demoModeTag = document.getElementById('demoModeTag');
+  const controlsHeading = document.getElementById('controlsHeading');
+  const controlsSubhead = document.getElementById('controlsSubhead');
+  const setupFields = document.getElementById('setupFields');
 
-// ==============================
-// DRAW FUNCTIONS
-// ==============================
-function drawDot(x, y, type) {
-  const dot = document.createElement("div");
-  dot.className = "dot " + type;
-  dot.style.left = x + "px";
-  dot.style.top = y + "px";
-  target.appendChild(dot);
-}
+  const simInstructionTop = document.getElementById('simInstructionTop');
+  const simInstructionSub = document.getElementById('simInstructionSub');
 
-// ==============================
-// QR CODE (TOP RIGHT CLEAN ZONE)
-// ==============================
-function drawQR() {
-  const qr = document.createElement("div");
-  qr.className = "mock-qr";
+  const topbarTitle = document.querySelector('.topbar h1');
+  const topbarSub = document.querySelector('.topbar .sub');
 
-  // POSITION — upper right clean zone
-  qr.style.position = "absolute";
-  qr.style.right = "20px";
-  qr.style.top = "20px";
+  const distanceYardsEl = document.getElementById('distanceYards');
+  const clickValueMOAEl = document.getElementById('clickValueMOA');
+  const shotGoalEl = document.getElementById('shotGoal');
 
-  // SIZE — smaller, not dominant
-  qr.style.width = "110px";
-  qr.style.height = "110px";
-
-  // STYLE
-  qr.style.border = "3px solid #111";
-  qr.style.borderRadius = "10px";
-  qr.style.background = "#fff";
-  qr.style.boxShadow = "0 0 12px rgba(0,255,150,0.6)";
-  qr.style.cursor = "pointer";
-
-  // PULSE GLOW
-  qr.style.animation = "qrGlow 1.6s infinite";
-
-  // INNER TEXT (mock branding)
-  qr.innerHTML = `
-    <div style="
-      font-size:10px;
-      text-align:center;
-      font-weight:bold;
-      margin-top:6px;
-    ">SCAN</div>
-
-    <div style="
-      font-size:12px;
-      text-align:center;
-      margin-top:18px;
-      font-weight:bold;
-    ">SMART TARGET</div>
-
-    <div style="
-      position:absolute;
-      bottom:6px;
-      width:100%;
-      text-align:center;
-      font-size:8px;
-    ">SHOOT • SCAN • IMPROVE • SAVE</div>
-  `;
-
-  // CLICK BEHAVIOR
-  qr.onclick = () => {
-    alert("QR CLICKED → This will drive real scan flow later");
+  const state = {
+    aim: null,
+    shots: [],
+    mode: 'aim',
+    groupCenter: null,
+    qrLive: false
   };
 
-  target.appendChild(qr);
-}
+  let qrHotspot = null;
 
-// ==============================
-// CALCULATE (TRUTH LOCKED)
-// ==============================
-function calculate() {
-  if (!aim || hits.length === 0) return;
+  // ============================================================
+  // DIRECTION TRUTH LOCK
+  // ============================================================
+  // Screen-space truth:
+  // X increases to the RIGHT
+  // Y increases DOWNWARD
+  //
+  // Error definition:
+  // dx = groupCenter.x - aim.x
+  // dy = groupCenter.y - aim.y
+  //
+  // Therefore:
+  // dx > 0 => impacts RIGHT => correction LEFT
+  // dx < 0 => impacts LEFT  => correction RIGHT
+  //
+  // dy > 0 => impacts LOW   => correction UP
+  // dy < 0 => impacts HIGH  => correction DOWN
+  //
+  // Never derive direction anywhere else.
+  function deriveDirectionTruth(aim, groupCenter) {
+    const dx = groupCenter.x - aim.x;
+    const dy = groupCenter.y - aim.y;
 
-  let sumX = 0;
-  let sumY = 0;
+    return {
+      dx,
+      dy,
+      horizontalPosition: dx > 0 ? 'right' : dx < 0 ? 'left' : 'centered',
+      verticalPosition: dy > 0 ? 'low' : dy < 0 ? 'high' : 'centered',
+      windageDirection: dx > 0 ? 'LEFT' : dx < 0 ? 'RIGHT' : 'NONE',
+      elevationDirection: dy > 0 ? 'UP' : dy < 0 ? 'DOWN' : 'NONE'
+    };
+  }
 
-  hits.forEach((h) => {
-    sumX += h.x;
-    sumY += h.y;
-  });
+  function setPageCopy() {
+    document.title = 'Tap-n-Score — Zero Target';
 
-  const poibX = sumX / hits.length;
-  const poibY = sumY / hits.length;
+    if (topbarTitle) {
+      topbarTitle.textContent = 'Tap-n-Score™ Zero Target';
+    }
 
-  const dxPx = poibX - aim.x;
-  const dyPx = poibY - aim.y;
+    if (topbarSub) {
+      topbarSub.innerHTML = `
+        <span class="copy-accent">Tap Aim Point</span>
+        &nbsp;&rarr;&nbsp;
+        Tap 3–5 Impacts
+        &nbsp;&rarr;&nbsp;
+        Tap Results
+      `;
+    }
 
-  const dxIn = dxPx / PIXELS_PER_INCH;
-  const dyIn = dyPx / PIXELS_PER_INCH;
+    if (controlsHeading) {
+      controlsHeading.textContent = 'Zero Target';
+    }
 
-  const moaScale = TRUE_MOA_INCHES_AT_100 * (DISTANCE_YARDS / 100);
+    if (controlsSubhead) {
+      controlsSubhead.innerHTML = `
+        <span class="copy-accent">Tap Aim Point</span>
+        &nbsp;&rarr;&nbsp;
+        Tap 3–5 Impacts
+        &nbsp;&rarr;&nbsp;
+        Tap Results
+      `;
+    }
 
-  const windageMOA = dxIn / moaScale;
-  const elevationMOA = dyIn / moaScale;
+    if (isDemoMode && demoModeTag) {
+      demoModeTag.hidden = false;
+    }
 
-  // LOCKED TRUTH
-  const windageDir = dxIn > 0 ? "LEFT" : dxIn < 0 ? "RIGHT" : "NONE";
-  const elevationDir = dyIn > 0 ? "UP" : dyIn < 0 ? "DOWN" : "NONE";
+    if (isDemoMode && setupFields) {
+      setupFields.classList.add('demo-hidden');
+    }
+  }
 
-  setResult(`
-Windage: ${Math.abs(windageMOA).toFixed(2)} MOA ${windageDir}
-Elevation: ${Math.abs(elevationMOA).toFixed(2)} MOA ${elevationDir}
-`);
-}
+  function setInstruction(text, mode = 'pulse') {
+    if (simInstructionTop) {
+      simInstructionTop.textContent = text;
+      simInstructionTop.classList.remove('instruction-pulse', 'instruction-steady');
+      simInstructionTop.classList.add(mode === 'pulse' ? 'instruction-pulse' : 'instruction-steady');
+    }
 
-// ==============================
-// RESET
-// ==============================
-function resetSim() {
-  aim = null;
-  hits = [];
-  target.innerHTML = "";
-  drawQR(); // re-add QR
-  setResult("");
-}
+    if (simInstructionSub) {
+      simInstructionSub.textContent = '';
+    }
 
-// ==============================
-function setResult(text) {
-  result.textContent = text;
-}
+    if (floatingTop) {
+      floatingTop.textContent = text;
+      floatingTop.classList.remove('instruction-pulse', 'instruction-steady', 'instruction-hidden');
+      floatingTop.classList.add(mode === 'pulse' ? 'instruction-pulse' : 'instruction-steady');
+    }
+
+    if (floatingBottom) {
+      floatingBottom.textContent = '';
+      floatingBottom.classList.add('instruction-hidden');
+    }
+  }
+
+  function enableResultsButtons(enable) {
+    resultsBtn.disabled = !enable;
+    inlineResultsBtn.disabled = !enable;
+
+    if (enable) {
+      resultsBtn.classList.add('results-live');
+      inlineResultsBtn.classList.remove('hidden-until-ready');
+      inlineResultsBtn.classList.add('results-live');
+    } else {
+      resultsBtn.classList.remove('results-live');
+      inlineResultsBtn.classList.add('hidden-until-ready');
+      inlineResultsBtn.classList.remove('results-live');
+    }
+  }
+
+  function syncModeUI() {
+    if (state.mode === 'aim') {
+      modePill.textContent = 'Mode: Aim Point';
+      statusText.textContent = 'Tap Aim Point';
+      setInstruction('TAP AIM POINT', 'pulse');
+      enableResultsButtons(false);
+      return;
+    }
+
+    if (state.mode === 'shots') {
+      modePill.textContent = 'Mode: Impacts';
+      statusText.textContent = `Tap 3–5 Impacts (${state.shots.length}/${getShotGoal()})`;
+      setInstruction('TAP 3–5 IMPACTS', 'pulse');
+      enableResultsButtons(false);
+      return;
+    }
+
+    if (state.mode === 'ready') {
+      modePill.textContent = 'Mode: Results';
+      statusText.textContent = `Tap Results (${state.shots.length}/${getShotGoal()} impacts set)`;
+      setInstruction('TAP RESULTS', 'pulse');
+      enableResultsButtons(true);
+      return;
+    }
+
+    modePill.textContent = 'Mode: Results Ready';
+    statusText.textContent = 'Results Ready';
+    setInstruction('RESULTS READY', 'steady');
+    enableResultsButtons(true);
+  }
+
+  function getShotGoal() {
+    const raw = Number(shotGoalEl?.value || 5);
+    return Math.min(Math.max(raw, MIN_SHOTS), MAX_SHOTS);
+  }
+
+  function getDistanceYards() {
+    return Number(distanceYardsEl?.value || 100);
+  }
+
+  function getClickValueMOA() {
+    return Number(clickValueMOAEl?.value || 0.25);
+  }
+
+  function createMarker(xPct, yPct, className) {
+    const node = document.createElement('div');
+    node.className = `marker ${className}`;
+    node.style.left = `${xPct}%`;
+    node.style.top = `${yPct}%`;
+    tapLayer.appendChild(node);
+    return node;
+  }
+
+  function clearMarkers() {
+    tapLayer.querySelectorAll('.marker').forEach((node) => node.remove());
+  }
+
+  function redrawAll() {
+    clearMarkers();
+
+    if (state.aim) {
+      createMarker(state.aim.xPct, state.aim.yPct, 'aim');
+    }
+
+    state.shots.forEach((shot) => {
+      createMarker(shot.xPct, shot.yPct, 'hit');
+    });
+
+    if (state.groupCenter) {
+      createMarker(state.groupCenter.xPct, state.groupCenter.yPct, 'group-center-halo');
+      createMarker(state.groupCenter.xPct, state.groupCenter.yPct, 'group-center-core');
+    }
+  }
+
+  function getRelativeCoords(e) {
+    const rect = targetSurface.getBoundingClientRect();
+    const x = ((e.clientX - rect.left) / rect.width) * 100;
+    const y = ((e.clientY - rect.top) / rect.height) * 100;
+
+    return {
+      xPct: Math.max(0, Math.min(100, x)),
+      yPct: Math.max(0, Math.min(100, y))
+    };
+  }
+
+  function setQrLive(isLive) {
+    state.qrLive = isLive;
+    if (!qrHotspot) return;
+    qrHotspot.classList.toggle('qr-live', isLive);
+    qrHotspot.style.cursor = isLive ? 'pointer' : 'default';
+  }
+
+  function handleQrClick() {
+    if (!state.qrLive) return;
+    window.open('https://tap-n-score.com/', '_blank', 'noopener,noreferrer');
+  }
+
+  function addQrHotspot() {
+    if (qrHotspot) return;
+
+    qrHotspot = document.createElement('div');
+    qrHotspot.className = 'qr-hotspot';
+
+    // These values match the printed QR location on the real target image.
+    qrHotspot.style.left = '79.5%';
+    qrHotspot.style.top = '3.3%';
+    qrHotspot.style.width = '13%';
+    qrHotspot.style.height = '9.2%';
+
+    qrHotspot.addEventListener('click', handleQrClick);
+    targetSurface.appendChild(qrHotspot);
+    setQrLive(false);
+  }
+
+  function resetSEC() {
+    secCard.innerHTML = `
+      <div class="sec-brand">Shooter Experience Card</div>
+      <div class="sec-empty">
+        Results will appear after you tap an aim point, tap 3–5 impacts, and tap Results.
+      </div>
+    `;
+  }
+
+  function resetSimulator() {
+    state.aim = null;
+    state.shots = [];
+    state.mode = 'aim';
+    state.groupCenter = null;
+
+    clearMarkers();
+    resetSEC();
+    setQrLive(false);
+    syncModeUI();
+  }
+
+  function recomputeModeFromState() {
+    if (!state.aim) {
+      state.mode = 'aim';
+      return;
+    }
+
+    if (state.groupCenter) {
+      state.mode = 'results';
+      return;
+    }
+
+    if (state.shots.length >= Math.min(getShotGoal(), MAX_SHOTS)) {
+      state.mode = 'ready';
+      return;
+    }
+
+    state.mode = 'shots';
+  }
+
+  function handleTap(e) {
+    if (state.mode === 'results') return;
+
+    const pos = getRelativeCoords(e);
+
+    if (!state.aim) {
+      state.aim = pos;
+      state.groupCenter = null;
+      recomputeModeFromState();
+      redrawAll();
+      syncModeUI();
+      return;
+    }
+
+    if (state.shots.length >= Math.min(getShotGoal(), MAX_SHOTS)) return;
+
+    state.shots.push(pos);
+    state.groupCenter = null;
+    recomputeModeFromState();
+    redrawAll();
+    syncModeUI();
+  }
+
+  function undoLast() {
+    if (state.mode === 'results') {
+      state.groupCenter = null;
+      setQrLive(false);
+      recomputeModeFromState();
+      redrawAll();
+      resetSEC();
+      syncModeUI();
+      return;
+    }
+
+    if (state.shots.length > 0) {
+      state.shots.pop();
+      state.groupCenter = null;
+      setQrLive(false);
+      recomputeModeFromState();
+      redrawAll();
+      syncModeUI();
+      return;
+    }
+
+    if (state.aim) {
+      state.aim = null;
+      state.groupCenter = null;
+      setQrLive(false);
+      recomputeModeFromState();
+      redrawAll();
+      resetSEC();
+      syncModeUI();
+    }
+  }
+
+  function computeGroupCenter() {
+    const avgX = state.shots.reduce((sum, shot) => sum + shot.xPct, 0) / state.shots.length;
+    const avgY = state.shots.reduce((sum, shot) => sum + shot.yPct, 0) / state.shots.length;
+    return { xPct: avgX, yPct: avgY };
+  }
+
+  function buildPositionText(verticalPosition, horizontalPosition) {
+    const vertical = verticalPosition === 'centered' ? '' : verticalPosition;
+    const horizontal = horizontalPosition === 'centered' ? '' : horizontalPosition;
+
+    if (!vertical && !horizontal) return 'Your impacts are centered';
+    if (vertical && horizontal) return `Your impacts are ${vertical}-${horizontal}`;
+    if (vertical) return `Your impacts are ${vertical}`;
+    return `Your impacts are ${horizontal}`;
+  }
+
+  function inchesPerMOAAtDistance(distanceYards) {
+    return 1.047 * (distanceYards / 100);
+  }
+
+  function clickText(rawValue, direction) {
+    if (direction === 'NONE') return 'No change';
+    return `${rawValue.toFixed(1)} clicks ${direction}`;
+  }
+
+  function calculateResults() {
+    if (!state.aim || state.shots.length < MIN_SHOTS) return;
+
+    state.groupCenter = computeGroupCenter();
+    state.mode = 'results';
+
+    const truth = deriveDirectionTruth(state.aim, state.groupCenter);
+    const positionText = buildPositionText(truth.verticalPosition, truth.horizontalPosition);
+
+    // Demo scaling from percent-of-image space into inch-like behavior.
+    const scaleInchesPerPercent = 0.75;
+    const dxInches = truth.dx * scaleInchesPerPercent;
+    const dyInches = truth.dy * scaleInchesPerPercent;
+
+    const distance = getDistanceYards();
+    const clickValue = getClickValueMOA();
+    const moaScale = inchesPerMOAAtDistance(distance);
+
+    const windageMOA = Math.abs(dxInches / moaScale);
+    const elevationMOA = Math.abs(dyInches / moaScale);
+
+    const clicksX = windageMOA / clickValue;
+    const clicksY = elevationMOA / clickValue;
+
+    redrawAll();
+    syncModeUI();
+    setQrLive(true);
+
+    secCard.innerHTML = `
+      <div class="sec-brand">Shooter Experience Card</div>
+
+      <div class="metric sec-highlight" style="margin-bottom: 12px;">
+        <div class="metric-label">Pattern Read</div>
+        <div class="metric-value">${positionText}</div>
+      </div>
+
+      <div class="metric-grid">
+        <div class="metric">
+          <div class="metric-label">Windage</div>
+          <div class="metric-value">${clickText(clicksX, truth.windageDirection)}</div>
+        </div>
+
+        <div class="metric">
+          <div class="metric-label">Elevation</div>
+          <div class="metric-value">${clickText(clicksY, truth.elevationDirection)}</div>
+        </div>
+      </div>
+
+      <div class="sec-callout">
+        Understand and act on your performance
+      </div>
+
+      <div class="sec-footer">
+        Scan the Smart Target QR to continue.
+      </div>
+    `;
+
+    secCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+
+  tapLayer.addEventListener('click', handleTap);
+
+  undoBtn.addEventListener('click', undoLast);
+  inlineUndoBtn.addEventListener('click', undoLast);
+
+  resetBtn.addEventListener('click', resetSimulator);
+  inlineResetBtn.addEventListener('click', resetSimulator);
+
+  resultsBtn.addEventListener('click', calculateResults);
+  inlineResultsBtn.addEventListener('click', calculateResults);
+
+  setPageCopy();
+  addQrHotspot();
+  resetSimulator();
+})();
