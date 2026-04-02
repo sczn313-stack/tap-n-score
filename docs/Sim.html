@@ -6,8 +6,11 @@
   <title>Tap-n-Score — Zero Target</title>
   <link rel="stylesheet" href="Sim.css" />
 </head>
+
 <body>
   <div class="app-shell">
+
+    <!-- TOP -->
     <header class="topbar">
       <div class="topbar-copy">
         <h1>Tap-n-Score™ Zero Target</h1>
@@ -23,38 +26,65 @@
     </header>
 
     <main class="layout">
+
+      <!-- SIMULATOR -->
       <section class="panel simulator-panel">
+
         <div class="sim-intro">
           <div id="demoModeTag" class="demo-mode-tag" hidden>Demo Mode</div>
-          <div id="simInstructionTop" class="sim-instruction-top">TAP AIM POINT</div>
+
+          <div id="simInstructionTop" class="sim-instruction-top instruction-pulse">
+            TAP AIM POINT
+          </div>
+
           <div id="simInstructionSub" class="sim-instruction-sub"></div>
         </div>
 
+        <!-- TARGET -->
         <div class="target-wrap">
-          <div id="targetSurface" class="target-surface" aria-label="Zero target demo surface">
+          <div id="targetSurface" class="target-surface">
+
+            <!-- 🔥 REAL TARGET IMAGE -->
             <img
               id="targetImage"
               class="target-image"
-              src="assets/zero-target-baker.png"
+              src="./assets/IMG_4174.jpeg"
               alt="Zero target"
             />
+
+            <!-- TAP LAYER -->
             <div id="tapLayer" class="tap-layer"></div>
-            <div id="floatingInstructionTop" class="floating-instruction floating-top">TAP AIM POINT</div>
-            <div id="floatingInstructionBottom" class="floating-instruction floating-bottom instruction-hidden"></div>
+
+            <!-- FLOATING INSTRUCTIONS -->
+            <div id="floatingInstructionTop"
+                 class="floating-instruction floating-top instruction-pulse">
+              TAP AIM POINT
+            </div>
+
+            <div id="floatingInstructionBottom"
+                 class="floating-instruction floating-bottom instruction-hidden">
+            </div>
+
           </div>
         </div>
 
+        <!-- MOBILE ACTIONS -->
         <div class="demo-actions mobile-actions">
           <button id="inlineUndoBtn" type="button">Undo</button>
           <button id="inlineResetBtn" type="button">Reset</button>
-          <button id="inlineResultsBtn" type="button" class="primary hidden-until-ready" disabled>Show Results</button>
+          <button id="inlineResultsBtn" type="button" class="primary hidden-until-ready" disabled>
+            Show Results
+          </button>
         </div>
+
       </section>
 
+      <!-- CONTROLS -->
       <section id="controlsPanel" class="panel controls">
+
         <div class="panel-head">
-          <h2 id="controlsHeading">Zero Target</h2>
-          <p id="controlsSubhead" class="panel-subhead">
+          <h2>Zero Target</h2>
+          <p class="panel-subhead">
             <span class="copy-accent">Tap Aim Point</span>
             &nbsp;&rarr;&nbsp;
             Tap 3–5 Impacts
@@ -63,7 +93,8 @@
           </p>
         </div>
 
-        <div id="setupFields" class="setup-fields">
+        <div class="setup-fields">
+
           <label>
             <span>Distance</span>
             <select id="distanceYards">
@@ -93,6 +124,7 @@
               <option value="5" selected>5 shots</option>
             </select>
           </label>
+
         </div>
 
         <div class="status-wrap">
@@ -100,22 +132,32 @@
           <div id="statusText" class="status-text">Tap Aim Point</div>
         </div>
 
+        <!-- DESKTOP BUTTONS -->
         <div class="button-row desktop-actions">
           <button id="undoBtn" type="button">Undo</button>
           <button id="resetBtn" type="button">Reset</button>
-          <button id="resultsBtn" type="button" class="primary" disabled>Show Results</button>
+          <button id="resultsBtn" type="button" class="primary" disabled>
+            Show Results
+          </button>
         </div>
+
       </section>
 
+      <!-- RESULTS -->
       <aside class="panel results-panel">
         <h2>SEC Preview</h2>
+
         <div id="secCard" class="sec-card">
           <div class="sec-brand">Shooter Experience Card</div>
+
           <div class="sec-empty">
-            Results will appear after you tap an aim point, tap 3–5 impacts, and tap Results.
+            Results will appear after you tap an aim point,
+            tap 3–5 impacts, and tap Results.
           </div>
         </div>
+
       </aside>
+
     </main>
   </div>
 
