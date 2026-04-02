@@ -1,9 +1,10 @@
 /* ============================================================
-   docs/index.js — B2B Go-Live Router v1
+   docs/index.js — B2B Go-Live Router v1 + Tracking
    Purpose:
    - Keep printed QR URL permanent
    - Route B2B target into B2B engine
    - Leave all other targets on normal landing flow
+   - Send analytics to live backend
 ============================================================ */
 
 (() => {
@@ -28,6 +29,10 @@
 
   function getSku() {
     return getParam("sku").toLowerCase();
+  }
+
+  function getBatch() {
+    return getParam("b").toLowerCase();
   }
 
   function isB2B() {
@@ -57,6 +62,47 @@
   // HARD ROUTE B2B BEFORE ANY OTHER LOGIC RUNS
   // ------------------------------------------------------------
   if (routeTargetIfNeeded()) return;
+
+  // ------------------------------------------------------------
+  // TRACKING
+  // ------------------------------------------------------------
+  const TRACK_ENDPOINT = "https://tap-n-score-backend.onrender.com/api/track";
+
+  const vendor = getVendor() || "unknown";
+  const sku = getSku() || "unknown";
+  const batch = getBatch() || "";
+  const pageMode = "landing";
+
+  const sessionId = (() => {
+    const key = "SCZN3_TRACK_SESSION_ID_V1";
+    let value = sessionStorage.getItem(key);
+    if (!value) {
+      value = "sess_" + Math.random().toString(36).slice(2) + Date.now().toString(36);
+      sessionStorage.setItem(key, value);
+    }
+    return value;
+  })();
+
+  function trackEvent(eventName, extra = {}) {
+    const payload = {
+      event: eventName,
+      vendor,
+      sku,
+      batch,
+      page: "docs/index",
+      mode: pageMode,
+      session_id: sessionId,
+      ts: new Date().toISOString(),
+      ...extra
+    };
+
+    fetch(TRACK_ENDPOINT, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+      keepalive: true
+    }).catch(() => {});
+  }
 
   // ------------------------------------------------------------
   // EXISTING NORMAL PAGE LOGIC
@@ -265,6 +311,16 @@
         elVendorPanelLink.style.pointerEvents = "none";
         elVendorPanelLink.style.opacity = ".65";
       }
+
+      elVendorPanelLink.addEventListener("click", () => {
+        const href = elVendorPanelLink.href || "";
+        if (href && href !== "#") {
+          trackEvent("vendor_click", {
+            source: "vendor_panel_link",
+            destination: href
+          });
+        }
+      });
     }
 
     if (elVendorBox) {
@@ -639,6 +695,17 @@
       }
     };
 
+    trackEvent("results_ready", {
+      shots: hits.length,
+      distance_yards: getDistanceYds(),
+      dial_unit: dialUnit,
+      click_value: Number(getClickValue().toFixed(2)),
+      target_key: targetSizeKey,
+      target_w_in: Number(targetWIn),
+      target_h_in: Number(targetHIn),
+      score: out.score
+    });
+
     goToSEC(payload);
   }
 
@@ -654,6 +721,11 @@
     objectUrl = URL.createObjectURL(f);
 
     await storeTargetPhotoForSEC(f, objectUrl);
+
+    trackEvent("photo_added", {
+      file_name: f.name || "",
+      file_type: f.type || ""
+    });
 
     elImg.onload = () => {
       setText(elStatus, "Tap Aim Point.");
@@ -681,6 +753,12 @@
       setText(elStatus, "Tap Bullet Holes.");
       hideSticky();
       syncInstruction();
+
+      trackEvent("aim_point_set", {
+        x01: Number(x01.toFixed(4)),
+        y01: Number(y01.toFixed(4))
+      });
+
       return;
     }
 
@@ -690,6 +768,12 @@
     hideSticky();
     syncInstruction();
     scheduleStickyMagic();
+
+    trackEvent("hit_added", {
+      hit_count: hits.length,
+      x01: Number(x01.toFixed(4)),
+      y01: Number(y01.toFixed(4))
+    });
   }
 
   if (elWrap) {
@@ -732,6 +816,7 @@
   elClear?.addEventListener("click", () => {
     resetAll();
     if (elImg?.src) setText(elStatus, "Tap Aim Point.");
+    trackEvent("clear_taps");
   });
 
   [elStickyBtn, $("showResultsBtn")].filter(Boolean).forEach((b) => {
@@ -785,4 +870,11 @@
 
   hardHideScoringUI();
   forceTop();
+
+  trackEvent("scan", {
+    source: "target_landing"
+  });
 })();
+Looks like its a full replacement
+
+For the moment are we gathering too much.  Do we need to pull back if  and just have it in place and only turn on certain variables or do we go for it now so that we have the architecture in place
