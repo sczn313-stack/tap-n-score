@@ -5,7 +5,7 @@
    - Always-available health check: GET /api/health
    - Fix "Cannot GET /api/poster": GET /api/poster
    - Authoritative math endpoint: POST /api/calc
-     Backend becomes the authority for movement math.
+   - Analytics endpoint: POST /api/track
 
    IMPORTANT:
    - Backward compatible:
@@ -16,7 +16,7 @@
         {
           aim:{x01,y01},
           hits:[{x01,y01}, ...],
-          target:{ wIn, hIn },   // inches
+          target:{ wIn, hIn },
           distanceYds,
           dialUnit: "MOA" | "MRAD",
           clickValue
@@ -30,12 +30,17 @@
 
 const express = require("express");
 const cors = require("cors");
+const fs = require("fs");
+const path = require("path");
 
 const app = express();
 
 // ---- Middleware
 app.use(cors({ origin: true }));
 app.use(express.json({ limit: "2mb" }));
+
+// ---- Analytics log path
+const TRACK_LOG = path.join(__dirname, "track-events.ndjson");
 
 // ---- Helpers
 function clampNum(n, fallback = 0) {
@@ -58,11 +63,10 @@ function round2(n) {
 // Inches per MOA at a given distance (yards)
 function inchesPerMoa(distanceYds) {
   const d = clampNum(distanceYds, 0);
-  return 1.047 * (d / 100); // 1 MOA ≈ 1.047" at 100y
+  return 1.047 * (d / 100);
 }
 
 // Inches per MRAD at a given distance (yards)
-// Using your pilot approximation (keeps behavior consistent with your UI)
 function inchesPerMrad(distanceYds) {
   const d = clampNum(distanceYds, 0);
   return 3.6 * (d / 100);
@@ -105,12 +109,10 @@ function meanPoint01(points) {
 }
 
 // Square-based conversion: normalized deltas -> inches deltas
-// This is the fix that removes rectangle bias.
 function delta01ToInches(dx01, dy01, targetWIn, targetHIn) {
   const w = Math.max(1, clampNum(targetWIn, 23));
   const h = Math.max(1, clampNum(targetHIn, 35));
 
-  // SCZN3 rule: grid is square; movement uses ONE physical scale for both axes
   const scaleIn = Math.min(w, h);
 
   return {
@@ -145,6 +147,32 @@ app.get("/api/poster", (req, res) => {
   });
 });
 
+// ---- Analytics Tracking Endpoint
+app.post("/api/track", (req, res) => {
+  try {
+    const payload = {
+      ...req.body,
+      ip:
+        req.headers["x-forwarded-for"] ||
+        req.socket.remoteAddress ||
+        null,
+      ua: req.headers["user-agent"] || null,
+      received_at: new Date().toISOString()
+    };
+
+    const line = JSON.stringify(payload) + "\n";
+
+    fs.appendFile(TRACK_LOG, line, (err) => {
+      if (err) console.error("Track write error:", err);
+    });
+
+    res.json({ ok: true });
+  } catch (err) {
+    console.error("Track endpoint error:", err);
+    res.status(500).json({ ok: false });
+  }
+});
+
 /**
  * POST /api/calc
  *
@@ -172,14 +200,19 @@ app.post("/api/calc", (req, res) => {
   try {
     const body = req.body || {};
 
-    // ---------- Detect mode
     const hasNormalized =
-      body?.aim && Number.isFinite(Number(body?.aim?.x01)) && Number.isFinite(Number(body?.aim?.y01)) &&
-      Array.isArray(body?.hits) && body.hits.length > 0;
+      body?.aim &&
+      Number.isFinite(Number(body?.aim?.x01)) &&
+      Number.isFinite(Number(body?.aim?.y01)) &&
+      Array.isArray(body?.hits) &&
+      body.hits.length > 0;
 
     const hasInches =
-      body?.bull && Number.isFinite(Number(body?.bull?.x)) && Number.isFinite(Number(body?.bull?.y)) &&
-      Array.isArray(body?.shots) && body.shots.length > 0;
+      body?.bull &&
+      Number.isFinite(Number(body?.bull?.x)) &&
+      Number.isFinite(Number(body?.bull?.y)) &&
+      Array.isArray(body?.shots) &&
+      body.shots.length > 0;
 
     if (!hasNormalized && !hasInches) {
       return res.status(400).json({
@@ -189,40 +222,41 @@ app.post("/api/calc", (req, res) => {
       });
     }
 
-    // ---------- Shared settings
     const distanceYds = clampNum(body?.distanceYds, 100);
     if (!(distanceYds > 0)) {
       return res.status(400).json({ ok: false, error: "distanceYds must be > 0." });
     }
 
-    // ---------- NORMALIZED MODE (NEW TRUTH)
     if (hasNormalized) {
       const aim = { x01: clamp01(body.aim.x01), y01: clamp01(body.aim.y01) };
       const avgHit = meanPoint01(body.hits);
+
       if (!avgHit) {
-        return res.status(400).json({ ok: false, error: "hits must be a non-empty array of {x01,y01}." });
+        return res.status(400).json({
+          ok: false,
+          error: "hits must be a non-empty array of {x01,y01}."
+        });
       }
 
-      // delta01 = bull - poib (still normalized)
       const dx01 = aim.x01 - avgHit.x01;
       const dy01 = aim.y01 - avgHit.y01;
 
-      // target inches
       const wIn = clampNum(body?.target?.wIn, 23);
       const hIn = clampNum(body?.target?.hIn, 35);
 
-      // FIX: square scaling
       const { inchesX, inchesY, scaleIn } = delta01ToInches(dx01, dy01, wIn, hIn);
 
       const { windage, elevation } = directionFromDelta(inchesX, inchesY);
 
-      const dialUnit = (String(body?.dialUnit || "MOA").toUpperCase() === "MRAD") ? "MRAD" : "MOA";
-      const clickValue = clampNum(body?.clickValue, dialUnit === "MRAD" ? 0.10 : 0.25);
+      const dialUnit =
+        String(body?.dialUnit || "MOA").toUpperCase() === "MRAD" ? "MRAD" : "MOA";
+
+      const clickValue = clampNum(body?.clickValue, dialUnit === "MRAD" ? 0.1 : 0.25);
       if (!(clickValue > 0)) {
         return res.status(400).json({ ok: false, error: "clickValue must be > 0." });
       }
 
-      const ipu = (dialUnit === "MOA") ? inchesPerMoa(distanceYds) : inchesPerMrad(distanceYds);
+      const ipu = dialUnit === "MOA" ? inchesPerMoa(distanceYds) : inchesPerMrad(distanceYds);
       if (!(ipu > 0)) {
         return res.status(400).json({ ok: false, error: "Invalid distanceYds." });
       }
@@ -254,11 +288,14 @@ app.post("/api/calc", (req, res) => {
       });
     }
 
-    // ---------- INCHES MODE (BACKWARD COMPATIBLE)
     const bullX = clampNum(body?.bull?.x, NaN);
     const bullY = clampNum(body?.bull?.y, NaN);
+
     if (!Number.isFinite(bullX) || !Number.isFinite(bullY)) {
-      return res.status(400).json({ ok: false, error: "bull.x and bull.y are required numbers (in inches)." });
+      return res.status(400).json({
+        ok: false,
+        error: "bull.x and bull.y are required numbers (in inches)."
+      });
     }
 
     const poib = meanPoint(body?.shots);
@@ -271,11 +308,14 @@ app.post("/api/calc", (req, res) => {
 
     const clickMoa = clampNum(body?.clickMoa, 0.25);
     const ipm = inchesPerMoa(distanceYds);
+
     if (!(ipm > 0) || !(clickMoa > 0)) {
-      return res.status(400).json({ ok: false, error: "distanceYds and clickMoa must be > 0." });
+      return res.status(400).json({
+        ok: false,
+        error: "distanceYds and clickMoa must be > 0."
+      });
     }
 
-    // delta = bull - poib (inches)
     const deltaX = bullX - poib.x;
     const deltaY = bullY - poib.y;
 
