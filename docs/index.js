@@ -164,6 +164,7 @@
   let targetSizeKey = "23x35";
   let targetWIn = 23;
   let targetHIn = 35;
+  let vendorPanelOpenTracked = false;
 
   const DEFAULTS = { MOA: 0.25, MRAD: 0.10 };
 
@@ -278,11 +279,39 @@
   function closeVendorPanel() {
     if (!elVendorPanel) return;
     elVendorPanel.classList.remove("vendorOpen");
+    vendorPanelOpenTracked = false;
+  }
+
+  function openVendorPanel() {
+    if (!elVendorPanel) return;
+    elVendorPanel.classList.add("vendorOpen");
+
+    if (!vendorPanelOpenTracked) {
+      trackEvent("vendor_click", {
+        source: "vendor_pill",
+        destination: "vendor_panel_open"
+      });
+      vendorPanelOpenTracked = true;
+    }
   }
 
   function toggleVendorPanel() {
     if (!elVendorPanel) return;
+
+    const willOpen = !elVendorPanel.classList.contains("vendorOpen");
     elVendorPanel.classList.toggle("vendorOpen");
+
+    if (willOpen && !vendorPanelOpenTracked) {
+      trackEvent("vendor_click", {
+        source: "vendor_pill",
+        destination: "vendor_panel_open"
+      });
+      vendorPanelOpenTracked = true;
+    }
+
+    if (!willOpen) {
+      vendorPanelOpenTracked = false;
+    }
   }
 
   function hydrateVendorBox() {
@@ -705,6 +734,10 @@
       target_h_in: Number(targetHIn),
       score: out.score
     });
+
+    if (vendorUrl) {
+      openVendorPanel();
+    }
 
     goToSEC(payload);
   }
