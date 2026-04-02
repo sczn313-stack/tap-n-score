@@ -3,98 +3,64 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Tap-n-Score — Zero Target</title>
+  <title>Tap-n-Score™ Optic Zero Trainer</title>
   <link rel="stylesheet" href="Sim.css" />
 </head>
-
 <body>
   <div class="app-shell">
 
-    <!-- TOP -->
     <header class="topbar">
-      <div class="topbar-copy">
-        <h1>Tap-n-Score™ Zero Target</h1>
-        <p class="sub">
-          <span class="copy-accent">Tap Aim Point</span>
-          &nbsp;&rarr;&nbsp;
-          Tap 3–5 Impacts
-          &nbsp;&rarr;&nbsp;
-          Tap Results
-        </p>
-      </div>
-      <div class="badge">The Smart Target™ · Powered by SCZN3 Precision</div>
+      <h1>Tap-n-Score™ Optic Zero Trainer</h1>
+      <p class="instruction-bar">
+        <span id="stepAimBar" class="step-chip is-active">1. Tap Aim Point</span>
+        <span id="stepShotsBar" class="step-chip">2. Tap 3–5 Shots</span>
+        <span id="stepResultsBar" class="step-chip">3. Get Scope Adjustments</span>
+      </p>
     </header>
 
     <main class="layout">
 
-      <!-- SIMULATOR -->
       <section class="panel simulator-panel">
-
-        <div class="sim-intro">
-          <div id="demoModeTag" class="demo-mode-tag" hidden>Demo Mode</div>
-
-          <div id="simInstructionTop" class="sim-instruction-top instruction-pulse">
-            TAP AIM POINT
-          </div>
-
-          <div id="simInstructionSub" class="sim-instruction-sub"></div>
+        <div class="sim-header-row">
+          <div id="demoModeTag" class="demo-mode-tag" hidden>DEMO MODE</div>
+          <div id="targetNameTag" class="target-name-tag">Baker ST100 Smart Target</div>
         </div>
 
-        <!-- TARGET -->
+        <div id="simInstructionTop" class="sim-instruction-top state-aim">
+          TAP AIM POINT
+        </div>
+
         <div class="target-wrap">
           <div id="targetSurface" class="target-surface">
-
-            <!-- 🔥 REAL TARGET IMAGE -->
             <img
               id="targetImage"
               class="target-image"
               src="./assets/IMG_4174.jpeg"
-              alt="Zero target"
+              alt="Baker ST100 Smart Target"
             />
 
-            <!-- TAP LAYER -->
             <div id="tapLayer" class="tap-layer"></div>
-
-            <!-- FLOATING INSTRUCTIONS -->
-            <div id="floatingInstructionTop"
-                 class="floating-instruction floating-top instruction-pulse">
-              TAP AIM POINT
-            </div>
-
-            <div id="floatingInstructionBottom"
-                 class="floating-instruction floating-bottom instruction-hidden">
-            </div>
-
           </div>
         </div>
 
-        <!-- MOBILE ACTIONS -->
         <div class="demo-actions mobile-actions">
           <button id="inlineUndoBtn" type="button">Undo</button>
           <button id="inlineResetBtn" type="button">Reset</button>
-          <button id="inlineResultsBtn" type="button" class="primary hidden-until-ready" disabled>
-            Show Results
+          <button id="inlineResultsBtn" type="button" class="primary" disabled>
+            Get Scope Adjustments
           </button>
         </div>
-
       </section>
 
-      <!-- CONTROLS -->
       <section id="controlsPanel" class="panel controls">
-
         <div class="panel-head">
-          <h2>Zero Target</h2>
-          <p class="panel-subhead">
-            <span class="copy-accent">Tap Aim Point</span>
-            &nbsp;&rarr;&nbsp;
-            Tap 3–5 Impacts
-            &nbsp;&rarr;&nbsp;
-            Tap Results
+          <h2 id="controlsHeading">Optic Zero Trainer</h2>
+          <p id="controlsSubhead" class="panel-subhead">
+            Tap Aim Point • Tap 3–5 Shots • Get Scope Adjustments
           </p>
         </div>
 
-        <div class="setup-fields">
-
+        <div id="setupFields" class="setup-fields">
           <label>
             <span>Distance</span>
             <select id="distanceYards">
@@ -124,7 +90,6 @@
               <option value="5" selected>5 shots</option>
             </select>
           </label>
-
         </div>
 
         <div class="status-wrap">
@@ -132,30 +97,25 @@
           <div id="statusText" class="status-text">Tap Aim Point</div>
         </div>
 
-        <!-- DESKTOP BUTTONS -->
         <div class="button-row desktop-actions">
           <button id="undoBtn" type="button">Undo</button>
           <button id="resetBtn" type="button">Reset</button>
           <button id="resultsBtn" type="button" class="primary" disabled>
-            Show Results
+            Get Scope Adjustments
           </button>
         </div>
-
       </section>
 
-      <!-- RESULTS -->
       <aside class="panel results-panel">
-        <h2>SEC Preview</h2>
+        <h2>Scope Adjustments</h2>
 
         <div id="secCard" class="sec-card">
           <div class="sec-brand">Shooter Experience Card</div>
-
           <div class="sec-empty">
             Results will appear after you tap an aim point,
-            tap 3–5 impacts, and tap Results.
+            tap 3–5 shots, and get scope adjustments.
           </div>
         </div>
-
       </aside>
 
     </main>
