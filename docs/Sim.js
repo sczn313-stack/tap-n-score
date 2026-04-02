@@ -44,6 +44,10 @@
     groupCenter: null
   };
 
+  let qrGroup = null;
+  let qrHitArea = null;
+  let qrLive = false;
+
   // ============================================================
   // DIRECTION TRUTH LOCK
   // ============================================================
@@ -244,10 +248,33 @@
     core.classList.add('group-center-core');
   }
 
-  function drawMockQR() {
-    const qrGroup = document.createElementNS(NS, 'g');
+  function setQrLive(isLive) {
+    qrLive = isLive;
+    if (!qrGroup || !qrHitArea) return;
+
+    if (isLive) {
+      qrGroup.classList.add('qr-live');
+      qrHitArea.style.cursor = 'pointer';
+    } else {
+      qrGroup.classList.remove('qr-live');
+      qrHitArea.style.cursor = 'default';
+    }
+  }
+
+  function handleQrClick() {
+    if (!qrLive) return;
+
+    // Placeholder destination — swap this later for your real logistics / matrix demo path.
+    const destination = 'https://tap-n-score.com/';
+    window.open(destination, '_blank', 'noopener,noreferrer');
+  }
+
+  function drawMockQRAboveTarget() {
+    if (qrGroup) return;
+
+    qrGroup = document.createElementNS(NS, 'g');
     qrGroup.setAttribute('class', 'mock-qr-group');
-    qrGroup.setAttribute('transform', 'translate(590 70)');
+    qrGroup.setAttribute('transform', 'translate(620 22) scale(0.78)');
 
     const outer = document.createElementNS(NS, 'rect');
     outer.setAttribute('x', '0');
@@ -257,27 +284,27 @@
     outer.setAttribute('rx', '12');
     outer.setAttribute('fill', '#ffffff');
     outer.setAttribute('stroke', '#1f2937');
-    outer.setAttribute('stroke-width', '4');
+    outer.setAttribute('stroke-width', '3');
 
     const topBand = document.createElementNS(NS, 'rect');
-    topBand.setAttribute('x', '4');
-    topBand.setAttribute('y', '4');
-    topBand.setAttribute('width', '142');
-    topBand.setAttribute('height', '20');
-    topBand.setAttribute('rx', '7');
+    topBand.setAttribute('x', '6');
+    topBand.setAttribute('y', '6');
+    topBand.setAttribute('width', '138');
+    topBand.setAttribute('height', '18');
+    topBand.setAttribute('rx', '6');
     topBand.setAttribute('fill', '#dc2626');
 
     const bottomBand = document.createElementNS(NS, 'rect');
-    bottomBand.setAttribute('x', '4');
+    bottomBand.setAttribute('x', '6');
     bottomBand.setAttribute('y', '126');
-    bottomBand.setAttribute('width', '142');
-    bottomBand.setAttribute('height', '20');
-    bottomBand.setAttribute('rx', '7');
+    bottomBand.setAttribute('width', '138');
+    bottomBand.setAttribute('height', '18');
+    bottomBand.setAttribute('rx', '6');
     bottomBand.setAttribute('fill', '#2563eb');
 
     const topText = document.createElementNS(NS, 'text');
     topText.setAttribute('x', '75');
-    topText.setAttribute('y', '18');
+    topText.setAttribute('y', '19');
     topText.setAttribute('text-anchor', 'middle');
     topText.setAttribute('font-size', '10');
     topText.setAttribute('font-weight', '900');
@@ -288,15 +315,15 @@
     bottomText.setAttribute('x', '75');
     bottomText.setAttribute('y', '139');
     bottomText.setAttribute('text-anchor', 'middle');
-    bottomText.setAttribute('font-size', '8');
+    bottomText.setAttribute('font-size', '7.2');
     bottomText.setAttribute('font-weight', '800');
     bottomText.setAttribute('fill', '#ffffff');
     bottomText.textContent = 'SHOOT • SCAN • IMPROVE • SAVE';
 
     const qrBg = document.createElementNS(NS, 'rect');
-    qrBg.setAttribute('x', '10');
+    qrBg.setAttribute('x', '12');
     qrBg.setAttribute('y', '28');
-    qrBg.setAttribute('width', '130');
+    qrBg.setAttribute('width', '126');
     qrBg.setAttribute('height', '94');
     qrBg.setAttribute('rx', '8');
     qrBg.setAttribute('fill', '#ffffff');
@@ -360,6 +387,17 @@
     smart3.setAttribute('fill', '#2563eb');
     smart3.textContent = 'TARGET';
 
+    qrHitArea = document.createElementNS(NS, 'rect');
+    qrHitArea.setAttribute('x', '0');
+    qrHitArea.setAttribute('y', '0');
+    qrHitArea.setAttribute('width', '150');
+    qrHitArea.setAttribute('height', '150');
+    qrHitArea.setAttribute('rx', '12');
+    qrHitArea.setAttribute('fill', 'transparent');
+    qrHitArea.style.pointerEvents = 'all';
+    qrHitArea.style.cursor = 'default';
+    qrHitArea.addEventListener('click', handleQrClick);
+
     qrGroup.appendChild(outer);
     qrGroup.appendChild(topBand);
     qrGroup.appendChild(bottomBand);
@@ -370,8 +408,10 @@
     qrGroup.appendChild(smart1);
     qrGroup.appendChild(smart2);
     qrGroup.appendChild(smart3);
+    qrGroup.appendChild(qrHitArea);
 
     ringLayer.appendChild(qrGroup);
+    setQrLive(false);
   }
 
   function redrawAll() {
@@ -415,6 +455,7 @@
 
     clearOverlay();
     resetSEC();
+    setQrLive(false);
     syncModeUI();
   }
 
@@ -463,6 +504,7 @@
   function undoLast() {
     if (state.mode === 'results') {
       state.groupCenter = null;
+      setQrLive(false);
       recomputeModeFromState();
       redrawAll();
       resetSEC();
@@ -473,6 +515,7 @@
     if (state.shots.length > 0) {
       state.shots.pop();
       state.groupCenter = null;
+      setQrLive(false);
       recomputeModeFromState();
       redrawAll();
       syncModeUI();
@@ -482,6 +525,7 @@
     if (state.aim) {
       state.aim = null;
       state.groupCenter = null;
+      setQrLive(false);
       recomputeModeFromState();
       redrawAll();
       resetSEC();
@@ -524,6 +568,7 @@
 
     redrawAll();
     syncModeUI();
+    setQrLive(true);
 
     secCard.innerHTML = `
       <div class="sec-brand">Shooter Experience Card</div>
@@ -548,9 +593,39 @@
       <div class="sec-callout">
         Understand and act on your performance
       </div>
+
+      <div class="sec-footer">
+        Scan the Smart Target QR to continue.
+      </div>
     `;
 
     secCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+
+  function injectQrStyles() {
+    if (document.getElementById('sczn3-qr-style')) return;
+
+    const style = document.createElement('style');
+    style.id = 'sczn3-qr-style';
+    style.textContent = `
+      .mock-qr-group {
+        opacity: 0.92;
+        filter: contrast(0.95) brightness(0.98);
+        transform-box: fill-box;
+        transform-origin: center;
+      }
+
+      .mock-qr-group.qr-live {
+        animation: qrPulse 1.6s ease-in-out infinite;
+      }
+
+      @keyframes qrPulse {
+        0%   { filter: contrast(0.95) brightness(0.98) drop-shadow(0 0 0px rgba(34,197,94,0)); }
+        50%  { filter: contrast(0.98) brightness(1) drop-shadow(0 0 10px rgba(34,197,94,0.45)); }
+        100% { filter: contrast(0.95) brightness(0.98) drop-shadow(0 0 0px rgba(34,197,94,0)); }
+      }
+    `;
+    document.head.appendChild(style);
   }
 
   targetSurface.addEventListener('click', handleTap);
@@ -565,6 +640,7 @@
   inlineResultsBtn.addEventListener('click', calculateResults);
 
   setPageCopy();
-  drawMockQR();
+  injectQrStyles();
+  drawMockQRAboveTarget();
   resetSimulator();
 })();
