@@ -320,7 +320,6 @@ button:hover:not(:disabled) {
 .copy-pulse {
   color: var(--green);
   font-weight: 900;
-  animation: sczn3Pulse 1.1s ease-in-out infinite;
 }
 
 /* ======================
@@ -495,6 +494,22 @@ button:hover:not(:disabled) {
 }
 
 /* ======================
+   QR POLISH
+====================== */
+
+.mock-qr-group {
+  opacity: 0.93;
+  filter: contrast(0.96) brightness(0.985);
+  transform-box: fill-box;
+  transform-origin: center;
+  transition: filter 0.25s ease, opacity 0.25s ease;
+}
+
+.mock-qr-group.qr-live {
+  animation: qrPulse 1.6s ease-in-out infinite;
+}
+
+/* ======================
    UTILITIES
 ====================== */
 
@@ -521,6 +536,18 @@ button:hover:not(:disabled) {
   0% { opacity: 0.12; }
   50% { opacity: 0.28; }
   100% { opacity: 0.18; }
+}
+
+@keyframes qrPulse {
+  0% {
+    filter: contrast(0.96) brightness(0.985) drop-shadow(0 0 0px rgba(34, 197, 94, 0));
+  }
+  50% {
+    filter: contrast(1) brightness(1) drop-shadow(0 0 10px rgba(34, 197, 94, 0.45));
+  }
+  100% {
+    filter: contrast(0.96) brightness(0.985) drop-shadow(0 0 0px rgba(34, 197, 94, 0));
+  }
 }
 
 /* ======================
