@@ -1,10 +1,10 @@
 /* ============================================================
-   docs/index.js — B2B Go-Live Router v1 + Scan Tracking Only
+   docs/index.js — B2B Go-Live Router v1 + Phase 2 Tracking
    Purpose:
    - Keep printed QR URL permanent
    - Route B2B target into B2B engine
    - Leave all other targets on normal landing flow
-   - Send scan-only analytics to live backend
+   - Send scan + results_ready + vendor_click analytics
 ============================================================ */
 
 (() => {
@@ -64,13 +64,15 @@
   if (routeTargetIfNeeded()) return;
 
   // ------------------------------------------------------------
-  // SCAN-ONLY TRACKING
+  // TRACKING
   // ------------------------------------------------------------
   const TRACK_ENDPOINT = "https://tap-n-score-backend.onrender.com/api/track";
 
   const vendor = getVendor() || "unknown";
   const sku = getSku() || "unknown";
   const batch = getBatch() || "";
+  const pageMode = "landing";
+
   const sessionId = (() => {
     const key = "SCZN3_TRACK_SESSION_ID_V1";
     let value = sessionStorage.getItem(key);
@@ -88,6 +90,7 @@
       sku,
       batch,
       page: "docs/index",
+      mode: pageMode,
       session_id: sessionId,
       ts: new Date().toISOString(),
       ...extra
@@ -308,6 +311,16 @@
         elVendorPanelLink.style.pointerEvents = "none";
         elVendorPanelLink.style.opacity = ".65";
       }
+
+      elVendorPanelLink.addEventListener("click", () => {
+        const href = elVendorPanelLink.href || "";
+        if (href && href !== "#") {
+          trackEvent("vendor_click", {
+            source: "vendor_panel_link",
+            destination: href
+          });
+        }
+      });
     }
 
     if (elVendorBox) {
@@ -682,6 +695,17 @@
       }
     };
 
+    trackEvent("results_ready", {
+      shots: hits.length,
+      distance_yards: getDistanceYds(),
+      dial_unit: dialUnit,
+      click_value: Number(getClickValue().toFixed(2)),
+      target_key: targetSizeKey,
+      target_w_in: Number(targetWIn),
+      target_h_in: Number(targetHIn),
+      score: out.score
+    });
+
     goToSEC(payload);
   }
 
@@ -721,7 +745,7 @@
     if (!aim) {
       aim = { x01, y01 };
       addDot(x01, y01, "aim");
-      setText(elStatus, "Tap Aim Point.");
+      setText(elStatus, "Tap Bullet Holes.");
       hideSticky();
       syncInstruction();
       return;
@@ -828,4 +852,8 @@
 
   hardHideScoringUI();
   forceTop();
+
+  trackEvent("scan", {
+    source: "target_landing"
+  });
 })();
