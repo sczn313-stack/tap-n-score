@@ -9,6 +9,7 @@
 
   const targetSurface = document.getElementById('targetSurface');
   const overlayLayer = document.getElementById('overlayLayer');
+  const ringLayer = document.getElementById('ringLayer');
   const secCard = document.getElementById('secCard');
 
   const modePill = document.getElementById('modePill');
@@ -29,6 +30,7 @@
   const controlsHeading = document.getElementById('controlsHeading');
   const controlsSubhead = document.getElementById('controlsSubhead');
   const setupFields = document.getElementById('setupFields');
+
   const simInstructionTop = document.getElementById('simInstructionTop');
   const simInstructionSub = document.getElementById('simInstructionSub');
 
@@ -242,6 +244,136 @@
     core.classList.add('group-center-core');
   }
 
+  function drawMockQR() {
+    const qrGroup = document.createElementNS(NS, 'g');
+    qrGroup.setAttribute('class', 'mock-qr-group');
+    qrGroup.setAttribute('transform', 'translate(590 70)');
+
+    const outer = document.createElementNS(NS, 'rect');
+    outer.setAttribute('x', '0');
+    outer.setAttribute('y', '0');
+    outer.setAttribute('width', '150');
+    outer.setAttribute('height', '150');
+    outer.setAttribute('rx', '12');
+    outer.setAttribute('fill', '#ffffff');
+    outer.setAttribute('stroke', '#1f2937');
+    outer.setAttribute('stroke-width', '4');
+
+    const topBand = document.createElementNS(NS, 'rect');
+    topBand.setAttribute('x', '4');
+    topBand.setAttribute('y', '4');
+    topBand.setAttribute('width', '142');
+    topBand.setAttribute('height', '20');
+    topBand.setAttribute('rx', '7');
+    topBand.setAttribute('fill', '#dc2626');
+
+    const bottomBand = document.createElementNS(NS, 'rect');
+    bottomBand.setAttribute('x', '4');
+    bottomBand.setAttribute('y', '126');
+    bottomBand.setAttribute('width', '142');
+    bottomBand.setAttribute('height', '20');
+    bottomBand.setAttribute('rx', '7');
+    bottomBand.setAttribute('fill', '#2563eb');
+
+    const topText = document.createElementNS(NS, 'text');
+    topText.setAttribute('x', '75');
+    topText.setAttribute('y', '18');
+    topText.setAttribute('text-anchor', 'middle');
+    topText.setAttribute('font-size', '10');
+    topText.setAttribute('font-weight', '900');
+    topText.setAttribute('fill', '#ffffff');
+    topText.textContent = 'SCAN';
+
+    const bottomText = document.createElementNS(NS, 'text');
+    bottomText.setAttribute('x', '75');
+    bottomText.setAttribute('y', '139');
+    bottomText.setAttribute('text-anchor', 'middle');
+    bottomText.setAttribute('font-size', '8');
+    bottomText.setAttribute('font-weight', '800');
+    bottomText.setAttribute('fill', '#ffffff');
+    bottomText.textContent = 'SHOOT • SCAN • IMPROVE • SAVE';
+
+    const qrBg = document.createElementNS(NS, 'rect');
+    qrBg.setAttribute('x', '10');
+    qrBg.setAttribute('y', '28');
+    qrBg.setAttribute('width', '130');
+    qrBg.setAttribute('height', '94');
+    qrBg.setAttribute('rx', '8');
+    qrBg.setAttribute('fill', '#ffffff');
+
+    const modules = [
+      [18, 36, 22, 22], [110, 36, 22, 22], [18, 92, 22, 22],
+      [48, 36, 8, 8], [58, 36, 8, 8], [68, 36, 8, 8], [88, 36, 8, 8],
+      [48, 46, 8, 8], [68, 46, 8, 8], [78, 46, 8, 8], [98, 46, 8, 8],
+      [38, 56, 8, 8], [48, 56, 8, 8], [58, 56, 8, 8], [78, 56, 8, 8], [88, 56, 8, 8],
+      [38, 66, 8, 8], [58, 66, 8, 8], [68, 66, 8, 8], [88, 66, 8, 8], [98, 66, 8, 8],
+      [48, 76, 8, 8], [68, 76, 8, 8], [78, 76, 8, 8], [98, 76, 8, 8],
+      [48, 86, 8, 8], [58, 86, 8, 8], [78, 86, 8, 8], [88, 86, 8, 8],
+      [68, 96, 8, 8], [88, 96, 8, 8], [98, 96, 8, 8], [108, 96, 8, 8]
+    ];
+
+    modules.forEach(([x, y, w, h]) => {
+      const r = document.createElementNS(NS, 'rect');
+      r.setAttribute('x', String(x));
+      r.setAttribute('y', String(y));
+      r.setAttribute('width', String(w));
+      r.setAttribute('height', String(h));
+      r.setAttribute('rx', '2');
+      r.setAttribute('fill', '#111827');
+      qrGroup.appendChild(r);
+    });
+
+    const badge = document.createElementNS(NS, 'rect');
+    badge.setAttribute('x', '44');
+    badge.setAttribute('y', '58');
+    badge.setAttribute('width', '62');
+    badge.setAttribute('height', '34');
+    badge.setAttribute('rx', '6');
+    badge.setAttribute('fill', '#111827');
+    badge.setAttribute('stroke', '#374151');
+    badge.setAttribute('stroke-width', '2');
+
+    const smart1 = document.createElementNS(NS, 'text');
+    smart1.setAttribute('x', '75');
+    smart1.setAttribute('y', '71');
+    smart1.setAttribute('text-anchor', 'middle');
+    smart1.setAttribute('font-size', '7');
+    smart1.setAttribute('font-weight', '900');
+    smart1.setAttribute('fill', '#ef4444');
+    smart1.textContent = 'THE';
+
+    const smart2 = document.createElementNS(NS, 'text');
+    smart2.setAttribute('x', '75');
+    smart2.setAttribute('y', '81');
+    smart2.setAttribute('text-anchor', 'middle');
+    smart2.setAttribute('font-size', '8');
+    smart2.setAttribute('font-weight', '900');
+    smart2.setAttribute('fill', '#ffffff');
+    smart2.textContent = 'SMART';
+
+    const smart3 = document.createElementNS(NS, 'text');
+    smart3.setAttribute('x', '75');
+    smart3.setAttribute('y', '91');
+    smart3.setAttribute('text-anchor', 'middle');
+    smart3.setAttribute('font-size', '8');
+    smart3.setAttribute('font-weight', '900');
+    smart3.setAttribute('fill', '#2563eb');
+    smart3.textContent = 'TARGET';
+
+    qrGroup.appendChild(outer);
+    qrGroup.appendChild(topBand);
+    qrGroup.appendChild(bottomBand);
+    qrGroup.appendChild(qrBg);
+    qrGroup.appendChild(badge);
+    qrGroup.appendChild(topText);
+    qrGroup.appendChild(bottomText);
+    qrGroup.appendChild(smart1);
+    qrGroup.appendChild(smart2);
+    qrGroup.appendChild(smart3);
+
+    ringLayer.appendChild(qrGroup);
+  }
+
   function redrawAll() {
     clearOverlay();
 
@@ -308,9 +440,7 @@
   function handleTap(e) {
     const { x, y } = getCoords(e);
 
-    if (state.mode === 'results') {
-      return;
-    }
+    if (state.mode === 'results') return;
 
     if (!state.aim) {
       state.aim = { x, y };
@@ -321,9 +451,7 @@
       return;
     }
 
-    if (state.shots.length >= MAX_SHOTS) {
-      return;
-    }
+    if (state.shots.length >= MAX_SHOTS) return;
 
     state.shots.push({ x, y });
     state.groupCenter = null;
@@ -391,7 +519,6 @@
     const truth = deriveDirectionTruth(state.aim, state.groupCenter);
     const positionText = buildPositionText(truth.verticalPosition, truth.horizontalPosition);
 
-    // Demo scaling only — visual training flow, not final ballistics scaling
     const clicksX = Math.abs(truth.dx / 10);
     const clicksY = Math.abs(truth.dy / 10);
 
@@ -438,5 +565,6 @@
   inlineResultsBtn.addEventListener('click', calculateResults);
 
   setPageCopy();
+  drawMockQR();
   resetSimulator();
 })();
