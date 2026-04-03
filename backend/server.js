@@ -1,10 +1,16 @@
 /* ============================================================
    server.js — Tap-n-Score Backend
-   Revenue Mode:
+   Layer 3:
    - Health endpoint
    - Poster endpoint
    - Analytics tracking endpoint
-   - Analytics summary endpoint with revenue calculations
+   - Analytics summary endpoint with:
+     * revenue
+     * growth/session intelligence
+     * leaderboards
+     * time heatmap data
+     * per-SKU funnel
+     * per-vendor billing totals
    - Existing correction math endpoint
 ============================================================ */
 
@@ -21,7 +27,6 @@ const app = express();
 const PORT = Number(process.env.PORT) || 10000;
 const TRACK_LOG = path.join(__dirname, "track-events.ndjson");
 
-// Revenue rates (easy to change later)
 const REVENUE_RATES = {
   scan: 0.05,
   results_ready: 0.10,
@@ -86,8 +91,7 @@ function readTrackEvents() {
 
   for (const line of lines) {
     try {
-      const obj = JSON.parse(line);
-      out.push(obj);
+      out.push(JSON.parse(line));
     } catch {
       // ignore malformed lines
     }
@@ -125,9 +129,35 @@ function dayBucket(isoString) {
   return `${y}-${m}-${day}`;
 }
 
+function dayOfWeekBucket(isoString) {
+  const d = new Date(isoString);
+  if (Number.isNaN(d.getTime())) return "unknown";
+  const names = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  return names[d.getUTCDay()];
+}
+
+function hourOfDayBucket(isoString) {
+  const d = new Date(isoString);
+  if (Number.isNaN(d.getTime())) return "unknown";
+  return String(d.getUTCHours()).padStart(2, "0");
+}
+
 function getRevenueAmountForEvent(eventName) {
   const key = safeLower(eventName, "unknown");
   return REVENUE_RATES[key] || 0;
+}
+
+function topNFromMap(map, n = 3) {
+  return Object.entries(map || {})
+    .map(([key, value]) => [key, Number(value || 0)])
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, n)
+    .map(([key, value]) => ({ key, value: round2(value) }));
+}
+
+function calcPct(num, den) {
+  if (!den || den <= 0) return 0;
+  return round2((num / den) * 100);
 }
 
 // Inches per MOA at a given distance (yards)
@@ -258,9 +288,7 @@ app.post("/api/track", (req, res) => {
 
     const line = JSON.stringify(payload) + "\n";
     fs.appendFile(TRACK_LOG, line, (err) => {
-      if (err) {
-        console.error("Track write error:", err);
-      }
+      if (err) console.error("Track write error:", err);
     });
 
     res.json({
@@ -303,11 +331,21 @@ app.get("/api/analytics/summary", (req, res) => {
     const byBatch = {};
     const byDay = {};
     const byHour = {};
+    const byDayOfWeek = {};
+    const byHourOfDay = {};
 
     const revenueByEvent = {};
     const revenueByVendor = {};
     const revenueBySku = {};
     const revenueByBatch = {};
+
+    const sessionSeen = {};
+    const sessionEventCount = {};
+
+    const skuPerformance = {};
+    const vendorPerformance = {};
+    const batchPerformance = {};
+
     let totalRevenue = 0;
 
     for (const e of filtered) {
@@ -315,13 +353,17 @@ app.get("/api/analytics/summary", (req, res) => {
       const vendorName = safeLower(e.vendor, "unknown");
       const skuName = safeLower(e.sku, "unknown");
       const batchName = safeLower(e.batch, "") || "unknown";
+      const sid = safeString(e.session_id, "unknown");
+      const eventTs = e.ts || e.received_at;
 
       bucketCount(byEvent, eventName);
       bucketCount(byVendor, vendorName);
       bucketCount(bySku, skuName);
       bucketCount(byBatch, batchName);
-      bucketCount(byDay, dayBucket(e.ts || e.received_at));
-      bucketCount(byHour, hourBucket(e.ts || e.received_at));
+      bucketCount(byDay, dayBucket(eventTs));
+      bucketCount(byHour, hourBucket(eventTs));
+      bucketCount(byDayOfWeek, dayOfWeekBucket(eventTs));
+      bucketCount(byHourOfDay, hourOfDayBucket(eventTs));
 
       const revenueAmount = getRevenueAmountForEvent(eventName);
       totalRevenue += revenueAmount;
@@ -332,6 +374,54 @@ app.get("/api/analytics/summary", (req, res) => {
         addRevenue(revenueBySku, skuName, revenueAmount);
         addRevenue(revenueByBatch, batchName, revenueAmount);
       }
+
+      // Session intelligence
+      sessionSeen[sid] = true;
+      sessionEventCount[sid] = (sessionEventCount[sid] || 0) + 1;
+
+      // SKU performance
+      if (!skuPerformance[skuName]) {
+        skuPerformance[skuName] = {
+          scans: 0,
+          results: 0,
+          clicks: 0,
+          revenue: 0
+        };
+      }
+      if (eventName === "scan") skuPerformance[skuName].scans++;
+      if (eventName === "results_ready") skuPerformance[skuName].results++;
+      if (eventName === "vendor_click") skuPerformance[skuName].clicks++;
+      skuPerformance[skuName].revenue = round2(skuPerformance[skuName].revenue + revenueAmount);
+
+      // Vendor performance / billing
+      if (!vendorPerformance[vendorName]) {
+        vendorPerformance[vendorName] = {
+          scans: 0,
+          results: 0,
+          clicks: 0,
+          revenue: 0,
+          amount_due: 0
+        };
+      }
+      if (eventName === "scan") vendorPerformance[vendorName].scans++;
+      if (eventName === "results_ready") vendorPerformance[vendorName].results++;
+      if (eventName === "vendor_click") vendorPerformance[vendorName].clicks++;
+      vendorPerformance[vendorName].revenue = round2(vendorPerformance[vendorName].revenue + revenueAmount);
+      vendorPerformance[vendorName].amount_due = vendorPerformance[vendorName].revenue;
+
+      // Batch performance
+      if (!batchPerformance[batchName]) {
+        batchPerformance[batchName] = {
+          scans: 0,
+          results: 0,
+          clicks: 0,
+          revenue: 0
+        };
+      }
+      if (eventName === "scan") batchPerformance[batchName].scans++;
+      if (eventName === "results_ready") batchPerformance[batchName].results++;
+      if (eventName === "vendor_click") batchPerformance[batchName].clicks++;
+      batchPerformance[batchName].revenue = round2(batchPerformance[batchName].revenue + revenueAmount);
     }
 
     totalRevenue = round2(totalRevenue);
@@ -340,9 +430,72 @@ app.get("/api/analytics/summary", (req, res) => {
     const resultsReady = byEvent.results_ready || 0;
     const vendorClicks = byEvent.vendor_click || 0;
 
-    const scanToResultsPct = scans > 0 ? round2((resultsReady / scans) * 100) : 0;
-    const resultsToVendorPct = resultsReady > 0 ? round2((vendorClicks / resultsReady) * 100) : 0;
-    const scanToVendorPct = scans > 0 ? round2((vendorClicks / scans) * 100) : 0;
+    const scanToResultsPct = calcPct(resultsReady, scans);
+    const resultsToVendorPct = calcPct(vendorClicks, resultsReady);
+    const scanToVendorPct = calcPct(vendorClicks, scans);
+
+    // Growth
+    const totalSessions = Object.keys(sessionSeen).length;
+    const totalEventsPerSession = Object.values(sessionEventCount).reduce((a, b) => a + b, 0);
+    const avgEventsPerSession = totalSessions > 0 ? round2(totalEventsPerSession / totalSessions) : 0;
+
+    // Add funnel metrics to sku performance
+    Object.keys(skuPerformance).forEach((skuKey) => {
+      const item = skuPerformance[skuKey];
+      item.scan_to_results_pct = calcPct(item.results, item.scans);
+      item.results_to_click_pct = calcPct(item.clicks, item.results);
+      item.scan_to_click_pct = calcPct(item.clicks, item.scans);
+      item.revenue = round2(item.revenue);
+    });
+
+    // Add billing / conversion metrics to vendor performance
+    Object.keys(vendorPerformance).forEach((vendorKey) => {
+      const item = vendorPerformance[vendorKey];
+      item.scan_to_results_pct = calcPct(item.results, item.scans);
+      item.results_to_click_pct = calcPct(item.clicks, item.results);
+      item.scan_to_click_pct = calcPct(item.clicks, item.scans);
+      item.revenue = round2(item.revenue);
+      item.amount_due = round2(item.amount_due);
+    });
+
+    // Add funnel metrics to batch performance
+    Object.keys(batchPerformance).forEach((batchKey) => {
+      const item = batchPerformance[batchKey];
+      item.scan_to_results_pct = calcPct(item.results, item.scans);
+      item.results_to_click_pct = calcPct(item.clicks, item.results);
+      item.scan_to_click_pct = calcPct(item.clicks, item.scans);
+      item.revenue = round2(item.revenue);
+    });
+
+    // Leaderboards
+    const vendorRevenueMap = {};
+    const skuRevenueMap = {};
+    const batchRevenueMap = {};
+    const skuScanMap = {};
+    const skuResultsConvMap = {};
+    const batchClickMap = {};
+
+    Object.entries(vendorPerformance).forEach(([k, v]) => {
+      vendorRevenueMap[k] = v.revenue;
+    });
+
+    Object.entries(skuPerformance).forEach(([k, v]) => {
+      skuRevenueMap[k] = v.revenue;
+      skuScanMap[k] = v.scans;
+      skuResultsConvMap[k] = v.scan_to_results_pct;
+    });
+
+    Object.entries(batchPerformance).forEach(([k, v]) => {
+      batchRevenueMap[k] = v.revenue;
+      batchClickMap[k] = v.clicks;
+    });
+
+    // Predictive revenue
+    const revenuePerScan = scans > 0 ? round2(totalRevenue / scans) : 0;
+    const revenuePerResult = resultsReady > 0 ? round2(totalRevenue / resultsReady) : 0;
+    const projectedPer100Scans = round2(revenuePerScan * 100);
+    const projectedPer1000Scans = round2(revenuePerScan * 1000);
+    const projectedMonthly = round2(totalRevenue * 30);
 
     res.json({
       ok: true,
@@ -377,13 +530,44 @@ app.get("/api/analytics/summary", (req, res) => {
         by_sku: revenueBySku,
         by_batch: revenueByBatch
       },
+      growth: {
+        sessions: totalSessions,
+        avg_events_per_session: avgEventsPerSession,
+        sku_performance: skuPerformance,
+        vendor_performance: vendorPerformance
+      },
+      leaderboards: {
+        top_vendor_by_revenue: topNFromMap(vendorRevenueMap, 3),
+        top_sku_by_revenue: topNFromMap(skuRevenueMap, 3),
+        top_sku_by_scans: topNFromMap(skuScanMap, 3),
+        top_sku_by_results_conversion: topNFromMap(skuResultsConvMap, 3),
+        top_batch_by_vendor_clicks: topNFromMap(batchClickMap, 3),
+        top_batch_by_revenue: topNFromMap(batchRevenueMap, 3)
+      },
+      heatmap: {
+        by_day: byDay,
+        by_hour: byHour,
+        by_day_of_week: byDayOfWeek,
+        by_hour_of_day: byHourOfDay
+      },
+      funnel: {
+        by_sku: skuPerformance
+      },
+      billing: {
+        by_vendor: vendorPerformance
+      },
+      projections: {
+        revenue_per_scan: revenuePerScan,
+        revenue_per_result: revenuePerResult,
+        revenue_per_100_scans: projectedPer100Scans,
+        revenue_per_1000_scans: projectedPer1000Scans,
+        projected_monthly: projectedMonthly
+      },
       breakdown: {
         by_event: byEvent,
         by_vendor: byVendor,
         by_sku: bySku,
-        by_batch: byBatch,
-        by_day: byDay,
-        by_hour: byHour
+        by_batch: byBatch
       },
       generated_at: new Date().toISOString()
     });
@@ -398,9 +582,6 @@ app.get("/api/analytics/summary", (req, res) => {
 
 // ------------------------------------------------------------
 // CORRECTION MATH ENDPOINT
-// Supports:
-// 1) Inches mode legacy
-// 2) Normalized mode truth
 // ------------------------------------------------------------
 app.post("/api/calc", (req, res) => {
   try {
@@ -435,7 +616,6 @@ app.post("/api/calc", (req, res) => {
       });
     }
 
-    // ---------------- NORMALIZED MODE ----------------
     if (hasNormalized) {
       const aim = {
         x01: clamp01(body.aim.x01),
@@ -515,7 +695,6 @@ app.post("/api/calc", (req, res) => {
       });
     }
 
-    // ---------------- LEGACY INCHES MODE ----------------
     const bullX = clampNum(body?.bull?.x, NaN);
     const bullY = clampNum(body?.bull?.y, NaN);
 
