@@ -1,6 +1,6 @@
 /* ============================================================
    server.js — Tap-n-Score Backend
-   Layer 3:
+   Layer 3 + Intelligence Layer:
    - Health endpoint
    - Poster endpoint
    - Analytics tracking endpoint
@@ -11,6 +11,7 @@
      * time heatmap data
      * per-SKU funnel
      * per-vendor billing totals
+     * interpreted intelligence layer
    - Existing correction math endpoint
 ============================================================ */
 
@@ -29,7 +30,14 @@ const TRACK_LOG = path.join(__dirname, "track-events.ndjson");
 
 const REVENUE_RATES = {
   scan: 0.05,
+  demo_start: 0.00,
+  aim_set: 0.00,
+  shot_added: 0.00,
+  results_clicked: 0.00,
   results_ready: 0.10,
+  try_again: 0.00,
+  reset: 0.00,
+  undo: 0.00,
   vendor_click: 0.25
 };
 
@@ -274,12 +282,27 @@ app.post("/api/track", (req, res) => {
       session_id: safeString(body.session_id, ""),
       score: Number.isFinite(Number(body.score)) ? Number(body.score) : null,
       shots: Number.isFinite(Number(body.shots)) ? Number(body.shots) : null,
+      has_aim: typeof body.has_aim === "boolean" ? body.has_aim : null,
+      results_viewed: typeof body.results_viewed === "boolean" ? body.results_viewed : null,
       distance_yards: Number.isFinite(Number(body.distance_yards)) ? Number(body.distance_yards) : null,
+      click_value_moa: Number.isFinite(Number(body.click_value_moa)) ? Number(body.click_value_moa) : null,
       dial_unit: safeString(body.dial_unit, ""),
       click_value: Number.isFinite(Number(body.click_value)) ? Number(body.click_value) : null,
       target_key: safeString(body.target_key, ""),
       target_w_in: Number.isFinite(Number(body.target_w_in)) ? Number(body.target_w_in) : null,
       target_h_in: Number.isFinite(Number(body.target_h_in)) ? Number(body.target_h_in) : null,
+      aim_x_pct: Number.isFinite(Number(body.aim_x_pct)) ? Number(body.aim_x_pct) : null,
+      aim_y_pct: Number.isFinite(Number(body.aim_y_pct)) ? Number(body.aim_y_pct) : null,
+      shot_index: Number.isFinite(Number(body.shot_index)) ? Number(body.shot_index) : null,
+      shot_x_pct: Number.isFinite(Number(body.shot_x_pct)) ? Number(body.shot_x_pct) : null,
+      shot_y_pct: Number.isFinite(Number(body.shot_y_pct)) ? Number(body.shot_y_pct) : null,
+      shot_goal: Number.isFinite(Number(body.shot_goal)) ? Number(body.shot_goal) : null,
+      group_size_inches: Number.isFinite(Number(body.group_size_inches)) ? Number(body.group_size_inches) : null,
+      windage_direction: safeString(body.windage_direction, ""),
+      elevation_direction: safeString(body.elevation_direction, ""),
+      reset_from: safeString(body.reset_from, ""),
+      undo_type: safeString(body.undo_type, ""),
+      remaining_shots: Number.isFinite(Number(body.remaining_shots)) ? Number(body.remaining_shots) : null,
       ts: safeString(body.ts, new Date().toISOString()) || new Date().toISOString(),
       ip: getClientIp(req),
       ua: req.headers["user-agent"] || null,
@@ -375,11 +398,9 @@ app.get("/api/analytics/summary", (req, res) => {
         addRevenue(revenueByBatch, batchName, revenueAmount);
       }
 
-      // Session intelligence
       sessionSeen[sid] = true;
       sessionEventCount[sid] = (sessionEventCount[sid] || 0) + 1;
 
-      // SKU performance
       if (!skuPerformance[skuName]) {
         skuPerformance[skuName] = {
           scans: 0,
@@ -393,7 +414,6 @@ app.get("/api/analytics/summary", (req, res) => {
       if (eventName === "vendor_click") skuPerformance[skuName].clicks++;
       skuPerformance[skuName].revenue = round2(skuPerformance[skuName].revenue + revenueAmount);
 
-      // Vendor performance / billing
       if (!vendorPerformance[vendorName]) {
         vendorPerformance[vendorName] = {
           scans: 0,
@@ -409,7 +429,6 @@ app.get("/api/analytics/summary", (req, res) => {
       vendorPerformance[vendorName].revenue = round2(vendorPerformance[vendorName].revenue + revenueAmount);
       vendorPerformance[vendorName].amount_due = vendorPerformance[vendorName].revenue;
 
-      // Batch performance
       if (!batchPerformance[batchName]) {
         batchPerformance[batchName] = {
           scans: 0,
@@ -434,12 +453,10 @@ app.get("/api/analytics/summary", (req, res) => {
     const resultsToVendorPct = calcPct(vendorClicks, resultsReady);
     const scanToVendorPct = calcPct(vendorClicks, scans);
 
-    // Growth
     const totalSessions = Object.keys(sessionSeen).length;
     const totalEventsPerSession = Object.values(sessionEventCount).reduce((a, b) => a + b, 0);
     const avgEventsPerSession = totalSessions > 0 ? round2(totalEventsPerSession / totalSessions) : 0;
 
-    // Add funnel metrics to sku performance
     Object.keys(skuPerformance).forEach((skuKey) => {
       const item = skuPerformance[skuKey];
       item.scan_to_results_pct = calcPct(item.results, item.scans);
@@ -448,7 +465,6 @@ app.get("/api/analytics/summary", (req, res) => {
       item.revenue = round2(item.revenue);
     });
 
-    // Add billing / conversion metrics to vendor performance
     Object.keys(vendorPerformance).forEach((vendorKey) => {
       const item = vendorPerformance[vendorKey];
       item.scan_to_results_pct = calcPct(item.results, item.scans);
@@ -458,7 +474,6 @@ app.get("/api/analytics/summary", (req, res) => {
       item.amount_due = round2(item.amount_due);
     });
 
-    // Add funnel metrics to batch performance
     Object.keys(batchPerformance).forEach((batchKey) => {
       const item = batchPerformance[batchKey];
       item.scan_to_results_pct = calcPct(item.results, item.scans);
@@ -467,7 +482,6 @@ app.get("/api/analytics/summary", (req, res) => {
       item.revenue = round2(item.revenue);
     });
 
-    // Leaderboards
     const vendorRevenueMap = {};
     const skuRevenueMap = {};
     const batchRevenueMap = {};
@@ -490,12 +504,162 @@ app.get("/api/analytics/summary", (req, res) => {
       batchClickMap[k] = v.clicks;
     });
 
-    // Predictive revenue
     const revenuePerScan = scans > 0 ? round2(totalRevenue / scans) : 0;
     const revenuePerResult = resultsReady > 0 ? round2(totalRevenue / resultsReady) : 0;
     const projectedPer100Scans = round2(revenuePerScan * 100);
     const projectedPer1000Scans = round2(revenuePerScan * 1000);
     const projectedMonthly = round2(totalRevenue * 30);
+
+    // ------------------------------------------------------------
+    // INTELLIGENCE LAYER
+    // ------------------------------------------------------------
+    const sessionProfiles = {};
+
+    for (const e of filtered) {
+      const sid = safeString(e.session_id, "unknown");
+
+      if (!sessionProfiles[sid]) {
+        sessionProfiles[sid] = {
+          events: [],
+          scans: 0,
+          demo_starts: 0,
+          aims: 0,
+          shots_added: 0,
+          results_clicked: 0,
+          results: 0,
+          clicks: 0,
+          resets: 0,
+          tries_again: 0,
+          undos: 0,
+          mode: safeString(e.mode, ""),
+          source: safeString(e.source, "")
+        };
+      }
+
+      const p = sessionProfiles[sid];
+      const eventName = safeLower(e.event, "unknown");
+
+      p.events.push(eventName);
+
+      if (eventName === "scan") p.scans++;
+      if (eventName === "demo_start") p.demo_starts++;
+      if (eventName === "aim_set") p.aims++;
+      if (eventName === "shot_added") p.shots_added++;
+      if (eventName === "results_clicked") p.results_clicked++;
+      if (eventName === "results_ready") p.results++;
+      if (eventName === "vendor_click") p.clicks++;
+      if (eventName === "reset") p.resets++;
+      if (eventName === "try_again") p.tries_again++;
+      if (eventName === "undo") p.undos++;
+    }
+
+    const intelligence = {
+      sessions: {
+        total: 0,
+        scan_only: 0,
+        started: 0,
+        aimed: 0,
+        partial_build: 0,
+        reached_results: 0,
+        clicked_vendor: 0,
+        repeated: 0
+      },
+      user_stages: {
+        curious: 0,
+        engaged: 0,
+        understood: 0,
+        returning: 0,
+        high_intent: 0
+      },
+      behavior_signals: {
+        avg_shots_added_per_session: 0,
+        avg_results_per_session: 0,
+        repeat_rate_pct: 0,
+        vendor_click_rate_pct: 0
+      }
+    };
+
+    let totalShotsAddedAcrossSessions = 0;
+    let totalResultsAcrossSessions = 0;
+
+    Object.values(sessionProfiles).forEach((p) => {
+      intelligence.sessions.total += 1;
+      totalShotsAddedAcrossSessions += p.shots_added;
+      totalResultsAcrossSessions += p.results;
+
+      const repeated = p.tries_again > 0 || p.results > 1 || p.events.length >= 8;
+      const highIntent = p.results > 0 && p.clicks > 0;
+      const engaged = p.aims > 0 || p.shots_added > 0;
+      const understood = p.results > 0;
+
+      if (p.scans > 0 && p.demo_starts === 0 && p.aims === 0 && p.results === 0) {
+        intelligence.sessions.scan_only += 1;
+      }
+
+      if (p.demo_starts > 0) {
+        intelligence.sessions.started += 1;
+      }
+
+      if (p.aims > 0) {
+        intelligence.sessions.aimed += 1;
+      }
+
+      if (p.shots_added > 0 && p.results === 0) {
+        intelligence.sessions.partial_build += 1;
+      }
+
+      if (p.results > 0) {
+        intelligence.sessions.reached_results += 1;
+      }
+
+      if (p.clicks > 0) {
+        intelligence.sessions.clicked_vendor += 1;
+      }
+
+      if (repeated) {
+        intelligence.sessions.repeated += 1;
+      }
+
+      if (!engaged && !understood) {
+        intelligence.user_stages.curious += 1;
+      }
+
+      if (engaged && !understood) {
+        intelligence.user_stages.engaged += 1;
+      }
+
+      if (understood) {
+        intelligence.user_stages.understood += 1;
+      }
+
+      if (repeated) {
+        intelligence.user_stages.returning += 1;
+      }
+
+      if (highIntent) {
+        intelligence.user_stages.high_intent += 1;
+      }
+    });
+
+    if (intelligence.sessions.total > 0) {
+      intelligence.behavior_signals.avg_shots_added_per_session = round2(
+        totalShotsAddedAcrossSessions / intelligence.sessions.total
+      );
+
+      intelligence.behavior_signals.avg_results_per_session = round2(
+        totalResultsAcrossSessions / intelligence.sessions.total
+      );
+
+      intelligence.behavior_signals.repeat_rate_pct = calcPct(
+        intelligence.sessions.repeated,
+        intelligence.sessions.total
+      );
+
+      intelligence.behavior_signals.vendor_click_rate_pct = calcPct(
+        intelligence.sessions.clicked_vendor,
+        intelligence.sessions.reached_results
+      );
+    }
 
     res.json({
       ok: true,
@@ -519,7 +683,14 @@ app.get("/api/analytics/summary", (req, res) => {
       pricing: {
         current_rates: {
           scan: REVENUE_RATES.scan,
+          demo_start: REVENUE_RATES.demo_start,
+          aim_set: REVENUE_RATES.aim_set,
+          shot_added: REVENUE_RATES.shot_added,
+          results_clicked: REVENUE_RATES.results_clicked,
           results_ready: REVENUE_RATES.results_ready,
+          try_again: REVENUE_RATES.try_again,
+          reset: REVENUE_RATES.reset,
+          undo: REVENUE_RATES.undo,
           vendor_click: REVENUE_RATES.vendor_click
         }
       },
@@ -536,6 +707,7 @@ app.get("/api/analytics/summary", (req, res) => {
         sku_performance: skuPerformance,
         vendor_performance: vendorPerformance
       },
+      intelligence,
       leaderboards: {
         top_vendor_by_revenue: topNFromMap(vendorRevenueMap, 3),
         top_sku_by_revenue: topNFromMap(skuRevenueMap, 3),
