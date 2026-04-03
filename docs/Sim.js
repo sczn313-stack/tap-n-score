@@ -57,7 +57,9 @@
     shots: [],
     mode: 'aim',
     groupCenter: null,
-    qrLive: false
+    qrLive: false,
+    resultsViewed: false,
+    sessionStarted: false
   };
 
   let qrHotspot = null;
@@ -88,6 +90,9 @@
       session_id: sessionId,
       page: 'Sim',
       ts: new Date().toISOString(),
+      shots: state.shots.length,
+      has_aim: !!state.aim,
+      results_viewed: !!state.resultsViewed,
       ...extra
     };
   }
@@ -138,6 +143,7 @@
   }
 
   function setInstruction(text, stateClass) {
+    if (!simInstructionTop) return;
     simInstructionTop.textContent = text;
     simInstructionTop.classList.remove('state-aim', 'state-shots', 'state-results');
     simInstructionTop.classList.add(stateClass, 'state-bump');
@@ -148,6 +154,8 @@
   }
 
   function setStepBar(active) {
+    if (!stepAimBar || !stepShotsBar || !stepResultsBar) return;
+
     stepAimBar.className = 'step-chip aim';
     stepShotsBar.className = 'step-chip shots';
     stepResultsBar.className = 'step-chip results';
@@ -158,11 +166,13 @@
   }
 
   function enableResultsButtons(enable) {
-    resultsBtn.disabled = !enable;
-    inlineResultsBtn.disabled = !enable;
+    if (resultsBtn) resultsBtn.disabled = !enable;
+    if (inlineResultsBtn) inlineResultsBtn.disabled = !enable;
   }
 
   function syncModeUI() {
+    if (!modePill || !statusText) return;
+
     if (state.mode === 'aim') {
       modePill.textContent = 'Mode: Aim Point';
       statusText.textContent = 'Tap Aim Point';
@@ -286,7 +296,7 @@
   }
 
   function addQrHotspot() {
-    if (qrHotspot) return;
+    if (qrHotspot || !targetSurface) return;
 
     qrHotspot = document.createElement('div');
     qrHotspot.className = 'qr-hotspot';
@@ -302,6 +312,7 @@
   }
 
   function resetSEC() {
+    if (!secCard) return;
     secCard.innerHTML = `
       <div class="sec-brand">Shooter Experience Card</div>
       <div class="sec-empty">
@@ -311,11 +322,20 @@
     `;
   }
 
-  function resetSimulator() {
+  function resetSimulator(track = true) {
+    if (track) {
+      trackEvent('reset', {
+        reset_from: state.resultsViewed ? 'results' : state.aim ? 'in_progress' : 'empty'
+      });
+    }
+
     state.aim = null;
     state.shots = [];
     state.mode = 'aim';
     state.groupCenter = null;
+    state.qrLive = false;
+    state.resultsViewed = false;
+    state.sessionStarted = false;
 
     clearMarkers();
     resetSEC();
@@ -347,9 +367,22 @@
 
     const pos = getRelativeCoords(e);
 
+    if (!state.sessionStarted) {
+      state.sessionStarted = true;
+      trackEvent('demo_start', {
+        source: isDemoMode ? 'demo' : 'sim'
+      });
+    }
+
     if (!state.aim) {
       state.aim = pos;
       state.groupCenter = null;
+
+      trackEvent('aim_set', {
+        aim_x_pct: Number(pos.xPct.toFixed(2)),
+        aim_y_pct: Number(pos.yPct.toFixed(2))
+      });
+
       recomputeModeFromState();
       redrawAll();
       syncModeUI();
@@ -360,6 +393,14 @@
 
     state.shots.push(pos);
     state.groupCenter = null;
+
+    trackEvent('shot_added', {
+      shot_index: state.shots.length,
+      shot_x_pct: Number(pos.xPct.toFixed(2)),
+      shot_y_pct: Number(pos.yPct.toFixed(2)),
+      shot_goal: getShotGoal()
+    });
+
     recomputeModeFromState();
     redrawAll();
     syncModeUI();
@@ -367,7 +408,12 @@
 
   function undoLast() {
     if (state.mode === 'results') {
+      trackEvent('undo', {
+        undo_type: 'results'
+      });
+
       state.groupCenter = null;
+      state.resultsViewed = false;
       setQrLive(false);
       recomputeModeFromState();
       redrawAll();
@@ -377,6 +423,11 @@
     }
 
     if (state.shots.length > 0) {
+      trackEvent('undo', {
+        undo_type: 'shot',
+        remaining_shots: state.shots.length - 1
+      });
+
       state.shots.pop();
       state.groupCenter = null;
       setQrLive(false);
@@ -387,6 +438,10 @@
     }
 
     if (state.aim) {
+      trackEvent('undo', {
+        undo_type: 'aim'
+      });
+
       state.aim = null;
       state.groupCenter = null;
       setQrLive(false);
@@ -456,8 +511,15 @@
   function calculateResults() {
     if (!state.aim || state.shots.length < MIN_SHOTS) return;
 
+    trackEvent('results_clicked', {
+      shots: state.shots.length,
+      distance_yards: getDistanceYards(),
+      click_value_moa: getClickValueMOA()
+    });
+
     state.groupCenter = computeGroupCenter();
     state.mode = 'results';
+    state.resultsViewed = true;
 
     const truth = deriveDirectionTruth(state.aim, state.groupCenter);
 
@@ -485,7 +547,10 @@
     trackEvent('results_ready', {
       shots: state.shots.length,
       distance_yards: distance,
-      click_value_moa: clickValue
+      click_value_moa: clickValue,
+      group_size_inches: Number(round2(groupSizeInches)),
+      windage_direction: truth.windageDirection,
+      elevation_direction: truth.elevationDirection
     });
 
     secCard.innerHTML = `
@@ -532,7 +597,12 @@
     const secBuyMoreBtn = document.getElementById('secBuyMoreBtn');
 
     if (secTryAgainBtn) {
-      secTryAgainBtn.addEventListener('click', resetSimulator);
+      secTryAgainBtn.addEventListener('click', () => {
+        trackEvent('try_again', {
+          source: 'sec'
+        });
+        resetSimulator(false);
+      });
     }
 
     if (secBuyMoreBtn) {
@@ -553,17 +623,20 @@
 
   tapLayer.addEventListener('click', handleTap);
 
-  undoBtn.addEventListener('click', undoLast);
-  inlineUndoBtn.addEventListener('click', undoLast);
+  if (undoBtn) undoBtn.addEventListener('click', undoLast);
+  if (inlineUndoBtn) inlineUndoBtn.addEventListener('click', undoLast);
 
-  resetBtn.addEventListener('click', resetSimulator);
-  inlineResetBtn.addEventListener('click', resetSimulator);
+  if (resetBtn) resetBtn.addEventListener('click', () => resetSimulator(true));
+  if (inlineResetBtn) inlineResetBtn.addEventListener('click', () => resetSimulator(true));
 
-  resultsBtn.addEventListener('click', calculateResults);
-  inlineResultsBtn.addEventListener('click', calculateResults);
+  if (resultsBtn) resultsBtn.addEventListener('click', calculateResults);
+  if (inlineResultsBtn) inlineResultsBtn.addEventListener('click', calculateResults);
 
   setPageCopy();
   addQrHotspot();
-  resetSimulator();
-  trackEvent('scan', { source: 'sim' });
+  resetSimulator(false);
+
+  trackEvent('scan', {
+    source: isDemoMode ? 'demo' : 'sim'
+  });
 })();
