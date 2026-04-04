@@ -4,6 +4,7 @@
   const TRUE_MOA_INCHES_AT_100 = 1.047;
   const TRACK_ENDPOINT = "https://tap-n-score-backend.onrender.com/api/track";
   const DEBUG_ANALYTICS = true;
+
   const params = new URLSearchParams(window.location.search);
   const isDemoMode = params.get("mode") === "demo";
 
@@ -78,9 +79,103 @@
   };
 
   let qrHotspot = null;
-    let debugOverlay = null;
+  let debugOverlay = null;
   let debugBody = null;
   let debugCount = 0;
+
+  const vendorMap = {
+    baker: {
+      base: "https://baker-targets.com/",
+      sku: {
+        st100: "https://baker-targets.com/",
+        default: "https://baker-targets.com/"
+      }
+    }
+  };
+
+  function round1(v) {
+    return Number(v).toFixed(1);
+  }
+
+  function round2(v) {
+    return Number(v).toFixed(2);
+  }
+
+  function nowIso() {
+    return new Date().toISOString();
+  }
+
+  function markActivity() {
+    analytics.lastActivityAtMs = Date.now();
+    if (!analytics.firstInteractionAtMs) {
+      analytics.firstInteractionAtMs = analytics.lastActivityAtMs;
+    }
+  }
+
+  function msSince(startMs) {
+    if (!startMs) return null;
+    const diff = Date.now() - startMs;
+    return Number.isFinite(diff) && diff >= 0 ? diff : null;
+  }
+
+  function getShotGoal() {
+    const raw = Number(shotGoalEl?.value || 5);
+    return Math.min(Math.max(raw, MIN_SHOTS), MAX_SHOTS);
+  }
+
+  function getDistanceYards() {
+    return Number(distanceYardsEl?.value || 100);
+  }
+
+  function getClickValueMOA() {
+    return Number(clickValueMOAEl?.value || 0.25);
+  }
+
+  function getDialUnit() {
+    return "MOA";
+  }
+
+  function getTargetWidthIn() {
+    const candidate =
+      Number(targetSurface?.dataset?.targetWidthIn) ||
+      Number(targetSurface?.dataset?.wIn) ||
+      Number(params.get("wIn")) ||
+      Number(params.get("target_w_in")) ||
+      23;
+
+    return Number.isFinite(candidate) && candidate > 0 ? candidate : 23;
+  }
+
+  function getTargetHeightIn() {
+    const candidate =
+      Number(targetSurface?.dataset?.targetHeightIn) ||
+      Number(targetSurface?.dataset?.hIn) ||
+      Number(params.get("hIn")) ||
+      Number(params.get("target_h_in")) ||
+      35;
+
+    return Number.isFinite(candidate) && candidate > 0 ? candidate : 35;
+  }
+
+  function getSettingsSnapshot() {
+    return {
+      distance_yards: getDistanceYards(),
+      click_value_moa: getClickValueMOA(),
+      click_value: getClickValueMOA(),
+      dial_unit: getDialUnit(),
+      shot_goal: getShotGoal(),
+      target_key: targetKey,
+      target_w_in: getTargetWidthIn(),
+      target_h_in: getTargetHeightIn()
+    };
+  }
+
+  function getVendorUrl() {
+    if (!vendor || !vendorMap[vendor]) return "https://baker-targets.com/";
+    const vendorObj = vendorMap[vendor];
+    if (sku && vendorObj.sku[sku]) return vendorObj.sku[sku];
+    return vendorObj.sku.default || vendorObj.base;
+  }
 
   function ensureDebugOverlay() {
     if (!DEBUG_ANALYTICS) return;
@@ -224,7 +319,7 @@
     right.textContent = status;
     right.style.color =
       status === "OK" ? "#67f3a4" :
-      status === "ERR" ? "#ff7b7b" :
+      status === "ERR" || String(status).startsWith("ERR") ? "#ff7b7b" :
       "#ffd166";
 
     top.appendChild(left);
@@ -247,99 +342,6 @@
     row.appendChild(pre);
 
     debugBody.prepend(row);
-  }
-  const vendorMap = {
-    baker: {
-      base: "https://baker-targets.com/",
-      sku: {
-        st100: "https://baker-targets.com/",
-        default: "https://baker-targets.com/"
-      }
-    }
-  };
-
-  function round1(v) {
-    return Number(v).toFixed(1);
-  }
-
-  function round2(v) {
-    return Number(v).toFixed(2);
-  }
-
-  function nowIso() {
-    return new Date().toISOString();
-  }
-
-  function markActivity() {
-    analytics.lastActivityAtMs = Date.now();
-    if (!analytics.firstInteractionAtMs) {
-      analytics.firstInteractionAtMs = analytics.lastActivityAtMs;
-    }
-  }
-
-  function msSince(startMs) {
-    if (!startMs) return null;
-    const diff = Date.now() - startMs;
-    return Number.isFinite(diff) && diff >= 0 ? diff : null;
-  }
-
-  function getShotGoal() {
-    const raw = Number(shotGoalEl?.value || 5);
-    return Math.min(Math.max(raw, MIN_SHOTS), MAX_SHOTS);
-  }
-
-  function getDistanceYards() {
-    return Number(distanceYardsEl?.value || 100);
-  }
-
-  function getClickValueMOA() {
-    return Number(clickValueMOAEl?.value || 0.25);
-  }
-
-  function getDialUnit() {
-    return "MOA";
-  }
-
-  function getTargetWidthIn() {
-    const candidate =
-      Number(targetSurface?.dataset?.targetWidthIn) ||
-      Number(targetSurface?.dataset?.wIn) ||
-      Number(params.get("wIn")) ||
-      Number(params.get("target_w_in")) ||
-      23;
-
-    return Number.isFinite(candidate) && candidate > 0 ? candidate : 23;
-  }
-
-  function getTargetHeightIn() {
-    const candidate =
-      Number(targetSurface?.dataset?.targetHeightIn) ||
-      Number(targetSurface?.dataset?.hIn) ||
-      Number(params.get("hIn")) ||
-      Number(params.get("target_h_in")) ||
-      35;
-
-    return Number.isFinite(candidate) && candidate > 0 ? candidate : 35;
-  }
-
-  function getSettingsSnapshot() {
-    return {
-      distance_yards: getDistanceYards(),
-      click_value_moa: getClickValueMOA(),
-      click_value: getClickValueMOA(),
-      dial_unit: getDialUnit(),
-      shot_goal: getShotGoal(),
-      target_key: targetKey,
-      target_w_in: getTargetWidthIn(),
-      target_h_in: getTargetHeightIn()
-    };
-  }
-
-  function getVendorUrl() {
-    if (!vendor || !vendorMap[vendor]) return "https://baker-targets.com/";
-    const vendorObj = vendorMap[vendor];
-    if (sku && vendorObj.sku[sku]) return vendorObj.sku[sku];
-    return vendorObj.sku.default || vendorObj.base;
   }
 
   function buildTrackPayload(eventName, extra = {}) {
@@ -382,18 +384,27 @@
         const blob = new Blob([JSON.stringify(payload)], {
           type: "application/json"
         });
-        navigator.sendBeacon(TRACK_ENDPOINT, blob);
+        const ok = navigator.sendBeacon(TRACK_ENDPOINT, blob);
+        debugLog(payload.event, payload, ok ? "OK" : "ERR");
         return;
       }
+
+      debugLog(payload.event, payload, "SEND");
 
       fetch(TRACK_ENDPOINT, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
         keepalive: true
-      }).catch(() => {});
+      })
+        .then((res) => {
+          debugLog(payload.event, payload, res.ok ? "OK" : `ERR ${res.status}`);
+        })
+        .catch(() => {
+          debugLog(payload.event, payload, "ERR");
+        });
     } catch (_) {
-      // no-op
+      debugLog(payload.event || "unknown", payload, "ERR");
     }
   }
 
@@ -1046,6 +1057,7 @@
   resetSimulator(false);
   wireSettingsListeners();
   installSessionFinalizers();
+  ensureDebugOverlay();
 
   analytics.lastSettingsSignature = signatureForSettings(getSettingsSnapshot());
 
