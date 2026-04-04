@@ -1,10 +1,9 @@
 /* ============================================================
    docs/index.js — B2B Go-Live Router v1 + Phase 2 Tracking
-   Purpose:
-   - Keep printed QR URL permanent
-   - Route B2B target into B2B engine
-   - Leave all other targets on normal landing flow
-   - Send scan + results_ready + vendor_click analytics
+   Tighten Pass:
+   - Keeps existing routing
+   - Adds drill-safe hit cap
+   - Prevents runaway shot count inflation
 ============================================================ */
 
 (() => {
@@ -58,14 +57,8 @@
     return true;
   }
 
-  // ------------------------------------------------------------
-  // HARD ROUTE B2B BEFORE ANY OTHER LOGIC RUNS
-  // ------------------------------------------------------------
   if (routeTargetIfNeeded()) return;
 
-  // ------------------------------------------------------------
-  // TRACKING
-  // ------------------------------------------------------------
   const TRACK_ENDPOINT = "https://tap-n-score-backend.onrender.com/api/track";
 
   const vendor = getVendor() || "unknown";
@@ -104,9 +97,6 @@
     }).catch(() => {});
   }
 
-  // ------------------------------------------------------------
-  // EXISTING NORMAL PAGE LOGIC
-  // ------------------------------------------------------------
   const elPhotoBtn = $("photoBtn");
   const elFile = $("photoInput");
   const elVendorBox = $("vendorBox");
@@ -167,6 +157,7 @@
   let vendorPanelOpenTracked = false;
 
   const DEFAULTS = { MOA: 0.25, MRAD: 0.10 };
+  const MAX_HITS_PER_SESSION = 10;
 
   try { history.scrollRestoration = "manual"; } catch {}
 
@@ -254,6 +245,10 @@
     }
     if (!aim) {
       setInstruction("Tap Aim Point.", "aim");
+      return;
+    }
+    if (hits.length >= MAX_HITS_PER_SESSION) {
+      setInstruction("Hit limit reached. Show Results or Clear.", "go");
       return;
     }
     setInstruction("Tap Bullet Holes.", "holes");
@@ -784,6 +779,13 @@
       return;
     }
 
+    if (hits.length >= MAX_HITS_PER_SESSION) {
+      setText(elStatus, `Hit limit reached (${MAX_HITS_PER_SESSION}). Show Results or Clear.`);
+      syncInstruction();
+      showSticky();
+      return;
+    }
+
     hits.push({ x01, y01 });
     addDot(x01, y01, "hit");
     setTapCount();
@@ -889,4 +891,4 @@
   trackEvent("scan", {
     source: "target_landing"
   });
-})();
+})();v
