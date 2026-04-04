@@ -1,7 +1,7 @@
 (() => {
   const KEY_PAYLOAD = "SCZN3_SEC_PAYLOAD_V1";
-  const KEY_TARGET_IMG_DATA = "SCZN3_TARGET_IMG_DATAURL_V1";
-  const KEY_TARGET_IMG_BLOB = "SCZN3_TARGET_IMG_BLOBURL_V1";
+  const KEY_HISTORY = "SCZN3_SEC_HISTORY_V1";
+  const KEY_BEST = "SCZN3_SEC_LIFETIME_BEST_V1";
   const TRACK_ENDPOINT = "https://tap-n-score-backend.onrender.com/api/track";
 
   const $ = (id) => document.getElementById(id);
@@ -132,6 +132,13 @@
     return round2(n).toFixed(2);
   }
 
+  function getTodayLabel() {
+    return new Date().toLocaleDateString(undefined, {
+      month: "short",
+      day: "numeric"
+    });
+  }
+
   function getStarsFromScore(score) {
     const s = Number(score) || 0;
     if (s >= 95) return 4;
@@ -157,6 +164,75 @@
     return { level: 1, starsDisplay: "★☆☆☆☆", note: "Build consistency" };
   }
 
+  function getHistory() {
+    return safeJsonParse(localStorage.getItem(KEY_HISTORY) || "[]", []);
+  }
+
+  function saveHistory(items) {
+    try {
+      localStorage.setItem(KEY_HISTORY, JSON.stringify(items));
+    } catch {}
+  }
+
+  function getBest() {
+    return safeJsonParse(localStorage.getItem(KEY_BEST) || "", null);
+  }
+
+  function saveBest(item) {
+    try {
+      localStorage.setItem(KEY_BEST, JSON.stringify(item));
+    } catch {}
+  }
+
+  function makeSessionRecord(payload) {
+    return {
+      id: getSessionId(payload),
+      date: getTodayLabel(),
+      ts: new Date().toISOString(),
+      title: "Back to Basics",
+      score: Number(payload?.score || 0),
+      shots: Number(payload?.shots || 0),
+      windage: {
+        dir: String(payload?.windage?.dir || "NONE"),
+        clicks: Number(format2(payload?.windage?.clicks || 0))
+      },
+      elevation: {
+        dir: String(payload?.elevation?.dir || "NONE"),
+        clicks: Number(format2(payload?.elevation?.clicks || 0))
+      },
+      dial: {
+        unit: String(payload?.dial?.unit || ""),
+        clickValue: Number(format2(payload?.dial?.clickValue || 0))
+      },
+      distanceYds: Number(payload?.debug?.distanceYds || 0),
+      deltaX: Number(format2(payload?.debug?.inches?.x || 0)),
+      deltaY: Number(format2(payload?.debug?.inches?.y || 0)),
+      groupOffset: Number(format2(payload?.debug?.inches?.r || 0)),
+      target: {
+        key: String(payload?.target?.key || ""),
+        wIn: Number(payload?.target?.wIn || 0),
+        hIn: Number(payload?.target?.hIn || 0)
+      }
+    };
+  }
+
+  function upsertSessionIntoHistory(payload) {
+    const record = makeSessionRecord(payload);
+    const history = getHistory();
+
+    const withoutCurrent = history.filter((item) => item.id !== record.id);
+    const next = [record, ...withoutCurrent].slice(0, 12);
+    saveHistory(next);
+
+    const currentBest = getBest();
+    if (!currentBest || Number(record.score) > Number(currentBest.score || 0)) {
+      saveBest(record);
+      return { record, isNewBest: true };
+    }
+
+    return { record, isNewBest: false };
+  }
+
   function correctionRows(payload) {
     const windageDir = String(payload?.windage?.dir || "NONE");
     const windageClicks = format2(payload?.windage?.clicks || 0);
@@ -172,16 +248,16 @@
     const radius = format2(payload?.debug?.inches?.r || 0);
 
     return [
-      { label: "SMART SCORE", value: `${score}/100`, kind: "check" },
-      { label: "SHOTS", value: String(shots), kind: "check" },
-      { label: "DISTANCE", value: `${distance} yds`, kind: "check" },
-      { label: "DIAL", value: `${clickValue} ${dialUnit}`, kind: "check" },
-      { label: "WINDAGE", value: `${windageDir} ${windageClicks} clicks`, kind: "check", star: true },
-      { label: "ELEVATION", value: `${elevationDir} ${elevationClicks} clicks`, kind: "check", star: true },
-      { label: "DELTA X", value: `${dx}"`, kind: "check" },
-      { label: "DELTA Y", value: `${dy}"`, kind: "check" },
-      { label: "GROUP OFFSET", value: `${radius}"`, kind: "check" },
-      { label: "SESSION", value: "VERIFIED", kind: "check", star: score >= 90 }
+      { label: "SMART SCORE", value: `${score}/100`, star: false },
+      { label: "SHOTS", value: String(shots), star: false },
+      { label: "DISTANCE", value: `${distance} yds`, star: false },
+      { label: "DIAL", value: `${clickValue} ${dialUnit}`, star: false },
+      { label: "WINDAGE", value: `${windageDir} ${windageClicks} clicks`, star: true },
+      { label: "ELEVATION", value: `${elevationDir} ${elevationClicks} clicks`, star: true },
+      { label: "DELTA X", value: `${dx}"`, star: false },
+      { label: "DELTA Y", value: `${dy}"`, star: false },
+      { label: "GROUP OFFSET", value: `${radius}"`, star: false },
+      { label: "SESSION", value: "VERIFIED", star: score >= 90 }
     ];
   }
 
@@ -200,7 +276,7 @@
 
     const thNow = document.createElement("th");
     thNow.innerHTML = `
-      <span class="col-date">${new Date().toLocaleDateString(undefined, { month: "short", day: "numeric" })}</span>
+      <span class="col-date">${getTodayLabel()}</span>
       <span class="col-score">${Number(payload?.score || 0)}/100</span>
       <span class="col-pct">${Number(payload?.shots || 0)} shots</span>
     `;
@@ -239,10 +315,99 @@
     return table;
   }
 
+  function buildHistoryHtml() {
+    const items = getHistory();
+    if (!items.length) {
+      return `<div style="padding:14px 4px;color:#dfe8ff;font-size:16px;font-weight:700;">No saved sessions yet.</div>`;
+    }
+
+    return `
+      <div style="padding:8px 4px 2px;">
+        ${items.map((item) => `
+          <div style="
+            padding:12px 10px;
+            border-bottom:1px solid rgba(255,255,255,.08);
+            color:#f4f7ff;
+            display:grid;
+            grid-template-columns: 1fr auto;
+            gap:8px;
+            align-items:center;
+          ">
+            <div>
+              <div style="font-weight:900;font-size:17px;">${item.date} • ${item.title}</div>
+              <div style="margin-top:4px;color:#dbe4ff;font-size:14px;">
+                ${item.score}/100 • ${item.shots} shots • ${item.distanceYds} yds
+              </div>
+              <div style="margin-top:4px;color:#f1cd69;font-size:14px;font-weight:700;">
+                ${item.windage.dir} ${format2(item.windage.clicks)} clicks •
+                ${item.elevation.dir} ${format2(item.elevation.clicks)} clicks
+              </div>
+            </div>
+            <div style="font-size:18px;font-weight:900;color:#ffd54f;">${item.score}/100</div>
+          </div>
+        `).join("")}
+      </div>
+    `;
+  }
+
+  function showHistoryModal() {
+    const overlay = document.createElement("div");
+    overlay.style.cssText = `
+      position:fixed;
+      inset:0;
+      background:rgba(0,0,0,.55);
+      z-index:9999;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:16px;
+    `;
+
+    const panel = document.createElement("div");
+    panel.style.cssText = `
+      width:min(100%,720px);
+      max-height:80vh;
+      overflow:auto;
+      background:linear-gradient(180deg, rgba(8,20,52,.98), rgba(15,33,83,.98));
+      border:1px solid rgba(255,215,84,.28);
+      border-radius:20px;
+      box-shadow:0 10px 26px rgba(0,0,0,.35);
+      padding:16px;
+      color:#fff;
+    `;
+
+    panel.innerHTML = `
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:8px;">
+        <div style="font-size:24px;font-weight:900;color:#f4f7ff;">History</div>
+        <button id="secHistoryCloseBtn" style="
+          border:0;
+          background:linear-gradient(180deg, #4d74c8, #3156a8);
+          color:#fff;
+          border-radius:12px;
+          padding:10px 14px;
+          font-size:15px;
+          font-weight:900;
+          cursor:pointer;
+        ">Close</button>
+      </div>
+      ${buildHistoryHtml()}
+    `;
+
+    overlay.appendChild(panel);
+    document.body.appendChild(overlay);
+
+    const close = () => overlay.remove();
+    overlay.addEventListener("click", (e) => {
+      if (e.target === overlay) close();
+    });
+    panel.querySelector("#secHistoryCloseBtn")?.addEventListener("click", close);
+  }
+
   function render(payload) {
     const score = Number(payload?.score || 0);
     const stars = getStarsFromScore(score);
     const level = computeLevel(score, stars);
+    const best = getBest();
 
     if (els.targetTitle) {
       els.targetTitle.textContent = "Back to Basics";
@@ -253,11 +418,11 @@
     }
 
     if (els.bestScore) {
-      els.bestScore.textContent = `${score}/100`;
+      els.bestScore.textContent = best ? `${Number(best.score || 0)}/100` : `${score}/100`;
     }
 
     if (els.bestBadge) {
-      els.bestBadge.textContent = score >= 90 ? "HOT RUN" : "SESSION";
+      els.bestBadge.textContent = best && Number(best.score || 0) > score ? "BEST" : "NEW BEST";
     }
 
     if (els.levelLabel) {
@@ -292,7 +457,7 @@
     });
 
     els.historyBtn?.addEventListener("click", () => {
-      alert("History layer comes next.");
+      showHistoryModal();
     });
 
     els.newScanBtn?.addEventListener("click", () => {
@@ -333,6 +498,7 @@
     return;
   }
 
+  upsertSessionIntoHistory(payload);
   render(payload);
   wireActions(payload);
 
