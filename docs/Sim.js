@@ -3,7 +3,7 @@
   const MAX_SHOTS = 5;
   const TRUE_MOA_INCHES_AT_100 = 1.047;
   const TRACK_ENDPOINT = "https://tap-n-score-backend.onrender.com/api/track";
-
+  const DEBUG_ANALYTICS = true;
   const params = new URLSearchParams(window.location.search);
   const isDemoMode = params.get("mode") === "demo";
 
