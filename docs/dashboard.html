@@ -1,529 +1,226 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>SCZN3 Revenue Dashboard</title>
+  <meta charset="UTF-8" />
+  <title>SCZN3 Analytics Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
   <style>
-    :root{
-      --bg:#06070a;
-      --panel:#101318;
-      --panel2:#151922;
-      --line:#232938;
-      --text:#eef2f7;
-      --muted:#9aa6b2;
-      --green:#32d583;
-      --green2:#12b76a;
-      --blue:#2f66ff;
-      --gold:#f5c451;
-      --danger:#ff6b6b;
-      --shadow:0 18px 40px rgba(0,0,0,.28);
-      --radius:18px;
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+      background: #0b0f14;
+      color: #fff;
     }
 
-    *{box-sizing:border-box}
-
-    body{
-      margin:0;
-      font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
-      background:
-        radial-gradient(circle at top right, rgba(47,102,255,.12), transparent 26%),
-        radial-gradient(circle at top left, rgba(50,213,131,.10), transparent 24%),
-        var(--bg);
-      color:var(--text);
-      padding:22px;
+    .wrap {
+      max-width: 1100px;
+      margin: auto;
+      padding: 20px;
     }
 
-    .wrap{
-      max-width:1320px;
-      margin:0 auto;
+    h1 {
+      font-size: 22px;
+      margin-bottom: 20px;
+      color: #67f3a4;
     }
 
-    .hero{
-      display:flex;
-      justify-content:space-between;
-      align-items:flex-start;
-      gap:18px;
-      margin-bottom:22px;
-      flex-wrap:wrap;
+    .grid {
+      display: grid;
+      gap: 16px;
     }
 
-    .titleBlock h1{
-      margin:0;
-      font-size:clamp(1.7rem, 3vw, 2.5rem);
-      line-height:1.05;
-      letter-spacing:.01em;
+    .grid-4 {
+      grid-template-columns: repeat(4, 1fr);
     }
 
-    .titleBlock p{
-      margin:8px 0 0;
-      color:var(--muted);
-      font-size:1rem;
+    .grid-3 {
+      grid-template-columns: repeat(3, 1fr);
     }
 
-    .moneyBadge{
-      background:linear-gradient(180deg, rgba(50,213,131,.16), rgba(50,213,131,.06));
-      color:var(--green);
-      border:1px solid rgba(50,213,131,.28);
-      border-radius:999px;
-      padding:10px 14px;
-      font-weight:800;
-      box-shadow:var(--shadow);
-      white-space:nowrap;
+    .card {
+      background: #121922;
+      border-radius: 14px;
+      padding: 16px;
+      border: 1px solid rgba(255,255,255,0.08);
     }
 
-    .topGrid{
-      display:grid;
-      grid-template-columns:1.25fr 1fr;
-      gap:16px;
-      margin-bottom:16px;
+    .label {
+      font-size: 12px;
+      opacity: 0.6;
+      margin-bottom: 6px;
     }
 
-    .panel{
-      background:linear-gradient(180deg, var(--panel2), var(--panel));
-      border:1px solid var(--line);
-      border-radius:var(--radius);
-      box-shadow:var(--shadow);
+    .value {
+      font-size: 28px;
+      font-weight: bold;
+      color: #67f3a4;
     }
 
-    .panelInner{
-      padding:18px;
+    .sub {
+      font-size: 14px;
+      opacity: 0.7;
     }
 
-    .panelTitle{
-      margin:0 0 6px;
-      font-size:1rem;
-      color:var(--muted);
-      font-weight:700;
-      letter-spacing:.02em;
-      text-transform:uppercase;
+    .section {
+      margin-top: 30px;
     }
 
-    .revenueHero{
-      position:relative;
-      overflow:hidden;
+    .list {
+      margin-top: 10px;
     }
 
-    .revenueHero::after{
-      content:"$";
-      position:absolute;
-      right:18px;
-      top:8px;
-      font-size:7rem;
-      line-height:1;
-      color:rgba(245,196,81,.08);
-      font-weight:900;
-      pointer-events:none;
+    .list-item {
+      display: flex;
+      justify-content: space-between;
+      padding: 8px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
     }
 
-    .bigMoney{
-      font-size:clamp(2.6rem, 6vw, 4.4rem);
-      font-weight:900;
-      line-height:1;
-      color:var(--green);
-      letter-spacing:-.03em;
-      margin:4px 0 10px;
-    }
-
-    .subMoney{
-      color:var(--muted);
-      font-size:.98rem;
-    }
-
-    .rateRow{
-      display:grid;
-      grid-template-columns:repeat(3,1fr);
-      gap:10px;
-      margin-top:18px;
-    }
-
-    .rateCard{
-      background:rgba(255,255,255,.03);
-      border:1px solid rgba(255,255,255,.06);
-      border-radius:14px;
-      padding:12px;
-    }
-
-    .rateLabel{
-      color:var(--muted);
-      font-size:.82rem;
-      margin-bottom:6px;
-    }
-
-    .rateValue{
-      font-size:1.28rem;
-      font-weight:800;
-      color:var(--gold);
-    }
-
-    .statsGrid{
-      display:grid;
-      grid-template-columns:repeat(2,1fr);
-      gap:12px;
-    }
-
-    .statCard{
-      background:rgba(255,255,255,.03);
-      border:1px solid rgba(255,255,255,.06);
-      border-radius:14px;
-      padding:14px;
-    }
-
-    .statLabel{
-      color:var(--muted);
-      font-size:.84rem;
-    }
-
-    .statValue{
-      margin-top:8px;
-      font-size:2rem;
-      line-height:1;
-      font-weight:900;
-    }
-
-    .statValue.green{color:var(--green)}
-    .statValue.blue{color:var(--blue)}
-    .statValue.gold{color:var(--gold)}
-    .statValue.white{color:var(--text)}
-
-    .midGrid{
-      display:grid;
-      grid-template-columns:repeat(3,1fr);
-      gap:16px;
-      margin-bottom:16px;
-    }
-
-    .miniMoney{
-      font-size:2rem;
-      font-weight:900;
-      color:var(--green);
-      margin-top:6px;
-    }
-
-    .smallList{
-      display:grid;
-      gap:10px;
-      margin-top:10px;
-    }
-
-    .row{
-      display:flex;
-      justify-content:space-between;
-      align-items:center;
-      gap:12px;
-      padding:10px 12px;
-      background:rgba(255,255,255,.03);
-      border:1px solid rgba(255,255,255,.06);
-      border-radius:12px;
-    }
-
-    .rowLabel{
-      color:var(--muted);
-      font-size:.92rem;
-    }
-
-    .rowValue{
-      font-weight:800;
-      color:var(--text);
-    }
-
-    .rowValue.money{
-      color:var(--green);
-    }
-
-    .rowValue.gold{
-      color:var(--gold);
-    }
-
-    .bottomGrid{
-      display:grid;
-      grid-template-columns:1fr 1fr;
-      gap:16px;
-    }
-
-    .json{
-      background:#0b0d12;
-      color:#c9d2dc;
-      font-size:.84rem;
-      line-height:1.45;
-      border:1px solid rgba(255,255,255,.06);
-      border-radius:14px;
-      padding:14px;
-      overflow:auto;
-      max-height:380px;
-      white-space:pre-wrap;
-      word-break:break-word;
-    }
-
-    .toolbar{
-      display:flex;
-      gap:10px;
-      margin-top:14px;
-      flex-wrap:wrap;
-    }
-
-    button{
-      appearance:none;
-      border:1px solid var(--line);
-      background:#121722;
-      color:var(--text);
-      padding:10px 14px;
-      border-radius:12px;
-      font-weight:800;
-      cursor:pointer;
-    }
-
-    button.primary{
-      background:var(--blue);
-      border-color:var(--blue);
-      color:#fff;
-    }
-
-    .stamp{
-      margin-top:14px;
-      color:var(--muted);
-      font-size:.85rem;
-    }
-
-    @media (max-width: 1024px){
-      .topGrid,
-      .midGrid,
-      .bottomGrid{
-        grid-template-columns:1fr;
-      }
-    }
-
-    @media (max-width: 700px){
-      body{padding:14px}
-      .statsGrid{grid-template-columns:1fr 1fr}
-      .rateRow{grid-template-columns:1fr}
+    .btn {
+      margin-top: 20px;
+      padding: 10px 14px;
+      border-radius: 8px;
+      border: none;
+      background: #67f3a4;
+      color: #000;
+      font-weight: bold;
+      cursor: pointer;
     }
   </style>
 </head>
+
 <body>
-  <div class="wrap">
+<div class="wrap">
 
-    <section class="hero">
-      <div class="titleBlock">
-        <h1>SCZN3 Revenue Dashboard</h1>
-        <p>Live activity, conversion, and dollar value from Tap-n-Score™</p>
-      </div>
+  <h1>SCZN3 Live Analytics — Baker View</h1>
 
-      <div class="moneyBadge">Revenue Mode Active</div>
-    </section>
+  <!-- TOP METRICS -->
+  <div class="grid grid-4">
+    <div class="card">
+      <div class="label">Scans</div>
+      <div class="value" id="scans">0</div>
+    </div>
 
-    <section class="topGrid">
-      <div class="panel revenueHero">
-        <div class="panelInner">
-          <div class="panelTitle">Total Revenue</div>
-          <div id="totalRevenue" class="bigMoney">$0.00</div>
-          <div class="subMoney">Live estimated value from scans, results, and vendor clicks</div>
+    <div class="card">
+      <div class="label">Results</div>
+      <div class="value" id="results">0</div>
+    </div>
 
-          <div class="rateRow">
-            <div class="rateCard">
-              <div class="rateLabel">Scan Rate</div>
-              <div id="rateScan" class="rateValue">$0.00</div>
-            </div>
-            <div class="rateCard">
-              <div class="rateLabel">Results Rate</div>
-              <div id="rateResults" class="rateValue">$0.00</div>
-            </div>
-            <div class="rateCard">
-              <div class="rateLabel">Vendor Click Rate</div>
-              <div id="rateClick" class="rateValue">$0.00</div>
-            </div>
-          </div>
-        </div>
-      </div>
+    <div class="card">
+      <div class="label">Vendor Clicks</div>
+      <div class="value" id="clicks">0</div>
+    </div>
 
-      <div class="panel">
-        <div class="panelInner">
-          <div class="panelTitle">Activity Snapshot</div>
-          <div class="statsGrid">
-            <div class="statCard">
-              <div class="statLabel">Total Events</div>
-              <div id="events" class="statValue white">0</div>
-            </div>
-            <div class="statCard">
-              <div class="statLabel">Scans</div>
-              <div id="scans" class="statValue blue">0</div>
-            </div>
-            <div class="statCard">
-              <div class="statLabel">Results Ready</div>
-              <div id="results" class="statValue green">0</div>
-            </div>
-            <div class="statCard">
-              <div class="statLabel">Vendor Clicks</div>
-              <div id="clicks" class="statValue gold">0</div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <section class="midGrid">
-      <div class="panel">
-        <div class="panelInner">
-          <div class="panelTitle">Revenue by Action</div>
-          <div class="smallList">
-            <div class="row">
-              <div class="rowLabel">Scan Revenue</div>
-              <div id="revScan" class="rowValue money">$0.00</div>
-            </div>
-            <div class="row">
-              <div class="rowLabel">Results Revenue</div>
-              <div id="revResults" class="rowValue money">$0.00</div>
-            </div>
-            <div class="row">
-              <div class="rowLabel">Vendor Click Revenue</div>
-              <div id="revClick" class="rowValue money">$0.00</div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="panel">
-        <div class="panelInner">
-          <div class="panelTitle">Conversion</div>
-          <div class="smallList">
-            <div class="row">
-              <div class="rowLabel">Scan → Results</div>
-              <div id="scanToResults" class="rowValue gold">0%</div>
-            </div>
-            <div class="row">
-              <div class="rowLabel">Results → Vendor</div>
-              <div id="resultsToVendor" class="rowValue gold">0%</div>
-            </div>
-            <div class="row">
-              <div class="rowLabel">Scan → Vendor</div>
-              <div id="scanToVendor" class="rowValue gold">0%</div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="panel">
-        <div class="panelInner">
-          <div class="panelTitle">Top Money Buckets</div>
-          <div class="smallList">
-            <div class="row">
-              <div class="rowLabel">Top Vendor Revenue</div>
-              <div id="topVendor" class="rowValue money">$0.00</div>
-            </div>
-            <div class="row">
-              <div class="rowLabel">Top SKU Revenue</div>
-              <div id="topSku" class="rowValue money">$0.00</div>
-            </div>
-            <div class="row">
-              <div class="rowLabel">Top Batch Revenue</div>
-              <div id="topBatch" class="rowValue money">$0.00</div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <section class="bottomGrid">
-      <div class="panel">
-        <div class="panelInner">
-          <div class="panelTitle">Revenue Breakdown</div>
-          <div id="revenueJson" class="json">Loading...</div>
-        </div>
-      </div>
-
-      <div class="panel">
-        <div class="panelInner">
-          <div class="panelTitle">Activity Breakdown</div>
-          <div id="breakdownJson" class="json">Loading...</div>
-
-          <div class="toolbar">
-            <button class="primary" onclick="loadDashboard()">Refresh</button>
-          </div>
-
-          <div id="stamp" class="stamp">Waiting for live data...</div>
-        </div>
-      </div>
-    </section>
-
+    <div class="card">
+      <div class="label">Revenue</div>
+      <div class="value" id="revenue">$0</div>
+    </div>
   </div>
 
-  <script>
-    const API = "https://tap-n-score-backend.onrender.com/api/analytics/summary";
+  <!-- CONVERSION -->
+  <div class="section">
+    <h1>Conversion</h1>
 
-    function fmtMoney(n) {
-      const value = Number(n || 0);
-      return "$" + value.toFixed(2);
-    }
+    <div class="grid grid-3">
+      <div class="card">
+        <div class="label">Scan → Results</div>
+        <div class="value" id="scanResults">0%</div>
+      </div>
 
-    function fmtPct(n) {
-      return `${Number(n || 0).toFixed(2).replace(/\.00$/, "")}%`;
-    }
+      <div class="card">
+        <div class="label">Results → Vendor</div>
+        <div class="value" id="resultsVendor">0%</div>
+      </div>
 
-    function setText(id, text) {
-      const el = document.getElementById(id);
-      if (el) el.textContent = text;
-    }
+      <div class="card">
+        <div class="label">Scan → Vendor</div>
+        <div class="value" id="scanVendor">0%</div>
+      </div>
+    </div>
+  </div>
 
-    function topEntry(obj) {
-      const entries = Object.entries(obj || {});
-      if (!entries.length) return ["none", 0];
-      entries.sort((a, b) => Number(b[1]) - Number(a[1]));
-      return entries[0];
-    }
+  <!-- TOP SKUS -->
+  <div class="section">
+    <h1>Top Targets</h1>
+    <div id="skuList" class="list"></div>
+  </div>
 
-    async function loadDashboard() {
-      try {
-        const res = await fetch(API, { cache: "no-store" });
-        const data = await res.json();
+  <!-- SESSION INTELLIGENCE -->
+  <div class="section">
+    <h1>Session Intelligence</h1>
 
-        const totals = data.totals || {};
-        const conversion = data.conversion || {};
-        const pricing = (data.pricing || {}).current_rates || {};
-        const revenue = data.revenue || {};
-        const breakdown = data.breakdown || {};
+    <div class="grid grid-3">
+      <div class="card">
+        <div class="label">Completed Sessions</div>
+        <div class="value" id="completed">0</div>
+      </div>
 
-        setText("events", totals.events ?? 0);
-        setText("scans", totals.scans ?? 0);
-        setText("results", totals.results_ready ?? 0);
-        setText("clicks", totals.vendor_click ?? 0);
+      <div class="card">
+        <div class="label">Abandoned</div>
+        <div class="value" id="abandoned">0</div>
+      </div>
 
-        setText("totalRevenue", fmtMoney(revenue.total || 0));
+      <div class="card">
+        <div class="label">Completion Rate</div>
+        <div class="value" id="completionRate">0%</div>
+      </div>
+    </div>
+  </div>
 
-        setText("rateScan", fmtMoney(pricing.scan || 0));
-        setText("rateResults", fmtMoney(pricing.results_ready || 0));
-        setText("rateClick", fmtMoney(pricing.vendor_click || 0));
+  <button class="btn" onclick="loadData()">Refresh</button>
 
-        const byEventRevenue = revenue.by_event || {};
-        setText("revScan", fmtMoney(byEventRevenue.scan || 0));
-        setText("revResults", fmtMoney(byEventRevenue.results_ready || 0));
-        setText("revClick", fmtMoney(byEventRevenue.vendor_click || 0));
+</div>
 
-        setText("scanToResults", fmtPct(conversion.scan_to_results_pct || 0));
-        setText("resultsToVendor", fmtPct(conversion.results_to_vendor_pct || 0));
-        setText("scanToVendor", fmtPct(conversion.scan_to_vendor_pct || 0));
+<script>
+const API = "https://tap-n-score-backend.onrender.com/api/analytics/summary";
 
-        const [topVendorName, topVendorValue] = topEntry(revenue.by_vendor || {});
-        const [topSkuName, topSkuValue] = topEntry(revenue.by_sku || {});
-        const [topBatchName, topBatchValue] = topEntry(revenue.by_batch || {});
+async function loadData() {
+  const res = await fetch(API + "?cb=" + Date.now());
+  const data = await res.json();
 
-        setText("topVendor", `${topVendorName} · ${fmtMoney(topVendorValue)}`);
-        setText("topSku", `${topSkuName} · ${fmtMoney(topSkuValue)}`);
-        setText("topBatch", `${topBatchName} · ${fmtMoney(topBatchValue)}`);
+  document.getElementById("scans").textContent = data.totals.scans;
+  document.getElementById("results").textContent = data.totals.results_viewed;
+  document.getElementById("clicks").textContent = data.totals.vendor_clicks;
+  document.getElementById("revenue").textContent = "$" + data.revenue.total;
 
-        setText("revenueJson", JSON.stringify(revenue, null, 2));
-        setText("breakdownJson", JSON.stringify(breakdown, null, 2));
-        setText("stamp", `Last updated: ${data.generated_at || "unknown"}`);
+  document.getElementById("scanResults").textContent =
+    data.conversion.scan_to_results_pct + "%";
 
-      } catch (err) {
-        setText("revenueJson", "Error loading revenue data");
-        setText("breakdownJson", "Error loading activity data");
-        setText("stamp", "Dashboard load failed");
-      }
-    }
-v
-    loadDashboard();
-    setInterval(loadDashboard, 10000);
-  </script>
+  document.getElementById("resultsVendor").textContent =
+    data.conversion.results_to_vendor_pct + "%";
+
+  document.getElementById("scanVendor").textContent =
+    data.conversion.scan_to_vendor_pct + "%";
+
+  document.getElementById("completed").textContent =
+    data.totals.sessions_completed;
+
+  document.getElementById("abandoned").textContent =
+    data.totals.sessions_abandoned;
+
+  document.getElementById("completionRate").textContent =
+    data.conversion.session_completion_pct + "%";
+
+  // SKUs
+  const skuList = document.getElementById("skuList");
+  skuList.innerHTML = "";
+
+  const skus = Object.entries(data.funnel.by_sku);
+
+  skus.forEach(([key, val]) => {
+    const div = document.createElement("div");
+    div.className = "list-item";
+    div.innerHTML = `
+      <div>${key}</div>
+      <div>${val.scans} scans</div>
+    `;
+    skuList.appendChild(div);
+  });
+}
+
+loadData();
+</script>
+
 </body>
 </html>
