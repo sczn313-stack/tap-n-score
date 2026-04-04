@@ -2,209 +2,116 @@
   const MIN_SHOTS = 3;
   const MAX_SHOTS = 5;
   const TRUE_MOA_INCHES_AT_100 = 1.047;
+  const TRACK_ENDPOINT = "/api/track";
 
   const params = new URLSearchParams(window.location.search);
-  const isDemoMode = params.get('mode') === 'demo';
+  const isDemoMode = params.get("mode") === "demo";
 
-  const vendor = params.get('v') || 'unknown';
-  const sku = params.get('sku') || 'unknown';
-  const mode = params.get('mode') || 'live';
+  const vendor = (params.get("v") || "unknown").toLowerCase();
+  const sku = (params.get("sku") || "unknown").toLowerCase();
+  const mode = params.get("mode") || "live";
+  const batch = params.get("batch") || "";
+  const targetKey =
+    params.get("target") ||
+    params.get("target_key") ||
+    sku ||
+    "unknown";
 
-  const TRACK_ENDPOINT = '/api/track';
+  const targetSurface = document.getElementById("targetSurface");
+  const tapLayer = document.getElementById("tapLayer");
+  const secCard = document.getElementById("secCard");
 
-  const sessionId = (() => {
-    const key = 'sczn3_sim_session_id';
-    let value = sessionStorage.getItem(key);
-    if (!value) {
-      value = 'sim_' + Math.random().toString(36).slice(2) + Date.now().toString(36);
-      sessionStorage.setItem(key, value);
-    }
-    return value;
-  })();
+  const modePill = document.getElementById("modePill");
+  const statusText = document.getElementById("statusText");
 
-  const targetSurface = document.getElementById('targetSurface');
-  const tapLayer = document.getElementById('tapLayer');
-  const secCard = document.getElementById('secCard');
+  const resultsBtn = document.getElementById("resultsBtn");
+  const inlineResultsBtn = document.getElementById("inlineResultsBtn");
 
-  const modePill = document.getElementById('modePill');
-  const statusText = document.getElementById('statusText');
+  const undoBtn = document.getElementById("undoBtn");
+  const resetBtn = document.getElementById("resetBtn");
+  const inlineUndoBtn = document.getElementById("inlineUndoBtn");
+  const inlineResetBtn = document.getElementById("inlineResetBtn");
 
-  const resultsBtn = document.getElementById('resultsBtn');
-  const inlineResultsBtn = document.getElementById('inlineResultsBtn');
+  const demoModeTag = document.getElementById("demoModeTag");
+  const controlsHeading = document.getElementById("controlsHeading");
+  const controlsSubhead = document.getElementById("controlsSubhead");
+  const setupFields = document.getElementById("setupFields");
 
-  const undoBtn = document.getElementById('undoBtn');
-  const resetBtn = document.getElementById('resetBtn');
-  const inlineUndoBtn = document.getElementById('inlineUndoBtn');
-  const inlineResetBtn = document.getElementById('inlineResetBtn');
+  const simInstructionTop = document.getElementById("simInstructionTop");
 
-  const demoModeTag = document.getElementById('demoModeTag');
-  const controlsHeading = document.getElementById('controlsHeading');
-  const controlsSubhead = document.getElementById('controlsSubhead');
-  const setupFields = document.getElementById('setupFields');
+  const stepAimBar = document.getElementById("stepAimBar");
+  const stepShotsBar = document.getElementById("stepShotsBar");
+  const stepResultsBar = document.getElementById("stepResultsBar");
 
-  const simInstructionTop = document.getElementById('simInstructionTop');
-
-  const stepAimBar = document.getElementById('stepAimBar');
-  const stepShotsBar = document.getElementById('stepShotsBar');
-  const stepResultsBar = document.getElementById('stepResultsBar');
-
-  const distanceYardsEl = document.getElementById('distanceYards');
-  const clickValueMOAEl = document.getElementById('clickValueMOA');
-  const shotGoalEl = document.getElementById('shotGoal');
+  const distanceYardsEl = document.getElementById("distanceYards");
+  const clickValueMOAEl = document.getElementById("clickValueMOA");
+  const shotGoalEl = document.getElementById("shotGoal");
 
   const state = {
     aim: null,
     shots: [],
-    mode: 'aim',
+    mode: "aim",
     groupCenter: null,
     qrLive: false,
     resultsViewed: false,
     sessionStarted: false
   };
 
+  const analytics = {
+    sessionId: (() => {
+      const key = "sczn3_sim_session_id";
+      let value = sessionStorage.getItem(key);
+      if (!value) {
+        value = "sim_" + Math.random().toString(36).slice(2) + Date.now().toString(36);
+        sessionStorage.setItem(key, value);
+      }
+      return value;
+    })(),
+    startedAtMs: Date.now(),
+    firstInteractionAtMs: null,
+    aimSetAtMs: null,
+    firstShotAtMs: null,
+    resultsAtMs: null,
+    lastActivityAtMs: Date.now(),
+    completionSent: false,
+    lastSettingsSignature: ""
+  };
+
   let qrHotspot = null;
 
   const vendorMap = {
     baker: {
-      base: 'https://baker-targets.com/',
+      base: "https://baker-targets.com/",
       sku: {
-        st100: 'https://baker-targets.com/',
-        default: 'https://baker-targets.com/'
+        st100: "https://baker-targets.com/",
+        default: "https://baker-targets.com/"
       }
     }
   };
 
-  function getVendorUrl() {
-    if (!vendor || !vendorMap[vendor]) return 'https://baker-targets.com/';
-    const vendorObj = vendorMap[vendor];
-    if (sku && vendorObj.sku[sku]) return vendorObj.sku[sku];
-    return vendorObj.sku.default || vendorObj.base;
+  function round1(v) {
+    return Number(v).toFixed(1);
   }
 
-  function buildTrackPayload(eventName, extra = {}) {
-    return {
-      event: eventName,
-      vendor,
-      sku,
-      mode,
-      session_id: sessionId,
-      page: 'Sim',
-      ts: new Date().toISOString(),
-      shots: state.shots.length,
-      has_aim: !!state.aim,
-      results_viewed: !!state.resultsViewed,
-      ...extra
-    };
+  function round2(v) {
+    return Number(v).toFixed(2);
   }
 
-  function trackEvent(eventName, extra = {}) {
-    const payload = buildTrackPayload(eventName, extra);
-
-    fetch(TRACK_ENDPOINT, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-      keepalive: true
-    }).catch(() => {});
+  function nowIso() {
+    return new Date().toISOString();
   }
 
-  function deriveDirectionTruth(aim, groupCenter) {
-    const dx = groupCenter.xPct - aim.xPct;
-    const dy = groupCenter.yPct - aim.yPct;
-
-    return {
-      dx,
-      dy,
-      horizontalPosition: dx > 0 ? 'right' : dx < 0 ? 'left' : 'centered',
-      verticalPosition: dy > 0 ? 'low' : dy < 0 ? 'high' : 'centered',
-      windageDirection: dx > 0 ? 'LEFT' : dx < 0 ? 'RIGHT' : 'NONE',
-      elevationDirection: dy > 0 ? 'UP' : dy < 0 ? 'DOWN' : 'NONE'
-    };
-  }
-
-  function setPageCopy() {
-    document.title = 'Tap-n-Score™ Optic Zero Trainer';
-
-    if (controlsHeading) {
-      controlsHeading.textContent = 'Optic Zero Trainer';
-    }
-
-    if (controlsSubhead) {
-      controlsSubhead.textContent = 'Tap Aim Point • Tap 3–5 Shots • Get Scope Adjustments';
-    }
-
-    if (isDemoMode && demoModeTag) {
-      demoModeTag.hidden = false;
-    }
-
-    if (isDemoMode && setupFields) {
-      setupFields.classList.add('demo-hidden');
+  function markActivity() {
+    analytics.lastActivityAtMs = Date.now();
+    if (!analytics.firstInteractionAtMs) {
+      analytics.firstInteractionAtMs = analytics.lastActivityAtMs;
     }
   }
 
-  function setInstruction(text, stateClass) {
-    if (!simInstructionTop) return;
-    simInstructionTop.textContent = text;
-    simInstructionTop.classList.remove('state-aim', 'state-shots', 'state-results');
-    simInstructionTop.classList.add(stateClass, 'state-bump');
-
-    window.setTimeout(() => {
-      simInstructionTop.classList.remove('state-bump');
-    }, 240);
-  }
-
-  function setStepBar(active) {
-    if (!stepAimBar || !stepShotsBar || !stepResultsBar) return;
-
-    stepAimBar.className = 'step-chip aim';
-    stepShotsBar.className = 'step-chip shots';
-    stepResultsBar.className = 'step-chip results';
-
-    if (active === 'aim') stepAimBar.classList.add('is-active');
-    if (active === 'shots') stepShotsBar.classList.add('is-active');
-    if (active === 'results') stepResultsBar.classList.add('is-active');
-  }
-
-  function enableResultsButtons(enable) {
-    if (resultsBtn) resultsBtn.disabled = !enable;
-    if (inlineResultsBtn) inlineResultsBtn.disabled = !enable;
-  }
-
-  function syncModeUI() {
-    if (!modePill || !statusText) return;
-
-    if (state.mode === 'aim') {
-      modePill.textContent = 'Mode: Aim Point';
-      statusText.textContent = 'Tap Aim Point';
-      setInstruction('TAP AIM POINT', 'state-aim');
-      setStepBar('aim');
-      enableResultsButtons(false);
-      return;
-    }
-
-    if (state.mode === 'shots') {
-      modePill.textContent = 'Mode: Shots';
-      statusText.textContent = `Tap 3–5 Shots (${state.shots.length}/${getShotGoal()})`;
-      setInstruction('TAP 3–5 SHOTS', 'state-shots');
-      setStepBar('shots');
-      enableResultsButtons(false);
-      return;
-    }
-
-    if (state.mode === 'ready') {
-      modePill.textContent = 'Mode: Ready';
-      statusText.textContent = `Get Scope Adjustments (${state.shots.length}/${getShotGoal()} shots set)`;
-      setInstruction('GET SCOPE ADJUSTMENTS', 'state-results');
-      setStepBar('results');
-      enableResultsButtons(true);
-      return;
-    }
-
-    modePill.textContent = 'Mode: Adjustments Ready';
-    statusText.textContent = 'Scope adjustments ready';
-    setInstruction('SCOPE ADJUSTMENTS READY', 'state-results');
-    setStepBar('results');
-    enableResultsButtons(true);
+  function msSince(startMs) {
+    if (!startMs) return null;
+    const diff = Date.now() - startMs;
+    return Number.isFinite(diff) && diff >= 0 ? diff : null;
   }
 
   function getShotGoal() {
@@ -220,21 +127,251 @@
     return Number(clickValueMOAEl?.value || 0.25);
   }
 
+  function getDialUnit() {
+    return "MOA";
+  }
+
+  function getTargetWidthIn() {
+    const candidate =
+      Number(targetSurface?.dataset?.targetWidthIn) ||
+      Number(targetSurface?.dataset?.wIn) ||
+      Number(params.get("wIn")) ||
+      Number(params.get("target_w_in")) ||
+      23;
+
+    return Number.isFinite(candidate) && candidate > 0 ? candidate : 23;
+  }
+
+  function getTargetHeightIn() {
+    const candidate =
+      Number(targetSurface?.dataset?.targetHeightIn) ||
+      Number(targetSurface?.dataset?.hIn) ||
+      Number(params.get("hIn")) ||
+      Number(params.get("target_h_in")) ||
+      35;
+
+    return Number.isFinite(candidate) && candidate > 0 ? candidate : 35;
+  }
+
+  function getSettingsSnapshot() {
+    return {
+      distance_yards: getDistanceYards(),
+      click_value_moa: getClickValueMOA(),
+      click_value: getClickValueMOA(),
+      dial_unit: getDialUnit(),
+      shot_goal: getShotGoal(),
+      target_key: targetKey,
+      target_w_in: getTargetWidthIn(),
+      target_h_in: getTargetHeightIn()
+    };
+  }
+
+  function getVendorUrl() {
+    if (!vendor || !vendorMap[vendor]) return "https://baker-targets.com/";
+    const vendorObj = vendorMap[vendor];
+    if (sku && vendorObj.sku[sku]) return vendorObj.sku[sku];
+    return vendorObj.sku.default || vendorObj.base;
+  }
+
+  function buildTrackPayload(eventName, extra = {}) {
+    const settings = getSettingsSnapshot();
+
+    return {
+      event: eventName,
+      vendor,
+      sku,
+      batch,
+      mode,
+      session_id: analytics.sessionId,
+      page: "Sim",
+      ts: nowIso(),
+      shots: state.shots.length,
+      has_aim: !!state.aim,
+      results_viewed: !!state.resultsViewed,
+      session_started_at: new Date(analytics.startedAtMs).toISOString(),
+      session_duration_ms: msSince(analytics.startedAtMs),
+      time_to_first_interaction_ms: analytics.firstInteractionAtMs
+        ? analytics.firstInteractionAtMs - analytics.startedAtMs
+        : null,
+      time_to_aim_ms: analytics.aimSetAtMs
+        ? analytics.aimSetAtMs - analytics.startedAtMs
+        : null,
+      time_to_first_shot_ms: analytics.firstShotAtMs
+        ? analytics.firstShotAtMs - analytics.startedAtMs
+        : null,
+      time_to_results_ms: analytics.resultsAtMs
+        ? analytics.resultsAtMs - analytics.startedAtMs
+        : null,
+      ...settings,
+      ...extra
+    };
+  }
+
+  function sendTrackPayload(payload, useBeacon = false) {
+    try {
+      if (useBeacon && navigator.sendBeacon) {
+        const blob = new Blob([JSON.stringify(payload)], {
+          type: "application/json"
+        });
+        navigator.sendBeacon(TRACK_ENDPOINT, blob);
+        return;
+      }
+
+      fetch(TRACK_ENDPOINT, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+        keepalive: true
+      }).catch(() => {});
+    } catch (_) {
+      // no-op
+    }
+  }
+
+  function trackEvent(eventName, extra = {}, options = {}) {
+    const payload = buildTrackPayload(eventName, extra);
+    sendTrackPayload(payload, !!options.beacon);
+  }
+
+  function signatureForSettings(settings) {
+    return [
+      settings.distance_yards,
+      settings.click_value_moa,
+      settings.shot_goal,
+      settings.target_key,
+      settings.target_w_in,
+      settings.target_h_in,
+      settings.dial_unit
+    ].join("|");
+  }
+
+  function trackSettingsChanged(source) {
+    const settings = getSettingsSnapshot();
+    const signature = signatureForSettings(settings);
+
+    if (signature === analytics.lastSettingsSignature) return;
+    analytics.lastSettingsSignature = signature;
+
+    trackEvent("settings_changed", {
+      source,
+      ...settings
+    });
+  }
+
+  function deriveDirectionTruth(aim, groupCenter) {
+    const dx = groupCenter.xPct - aim.xPct;
+    const dy = groupCenter.yPct - aim.yPct;
+
+    return {
+      dx,
+      dy,
+      horizontalPosition: dx > 0 ? "right" : dx < 0 ? "left" : "centered",
+      verticalPosition: dy > 0 ? "low" : dy < 0 ? "high" : "centered",
+      windageDirection: dx > 0 ? "LEFT" : dx < 0 ? "RIGHT" : "NONE",
+      elevationDirection: dy > 0 ? "UP" : dy < 0 ? "DOWN" : "NONE"
+    };
+  }
+
+  function setPageCopy() {
+    document.title = "Tap-n-Score™ Optic Zero Trainer";
+
+    if (controlsHeading) {
+      controlsHeading.textContent = "Optic Zero Trainer";
+    }
+
+    if (controlsSubhead) {
+      controlsSubhead.textContent = "Tap Aim Point • Tap 3–5 Shots • Get Scope Adjustments";
+    }
+
+    if (isDemoMode && demoModeTag) {
+      demoModeTag.hidden = false;
+    }
+
+    if (isDemoMode && setupFields) {
+      setupFields.classList.add("demo-hidden");
+    }
+  }
+
+  function setInstruction(text, stateClass) {
+    if (!simInstructionTop) return;
+    simInstructionTop.textContent = text;
+    simInstructionTop.classList.remove("state-aim", "state-shots", "state-results");
+    simInstructionTop.classList.add(stateClass, "state-bump");
+
+    window.setTimeout(() => {
+      simInstructionTop.classList.remove("state-bump");
+    }, 240);
+  }
+
+  function setStepBar(active) {
+    if (!stepAimBar || !stepShotsBar || !stepResultsBar) return;
+
+    stepAimBar.className = "step-chip aim";
+    stepShotsBar.className = "step-chip shots";
+    stepResultsBar.className = "step-chip results";
+
+    if (active === "aim") stepAimBar.classList.add("is-active");
+    if (active === "shots") stepShotsBar.classList.add("is-active");
+    if (active === "results") stepResultsBar.classList.add("is-active");
+  }
+
+  function enableResultsButtons(enable) {
+    if (resultsBtn) resultsBtn.disabled = !enable;
+    if (inlineResultsBtn) inlineResultsBtn.disabled = !enable;
+  }
+
+  function syncModeUI() {
+    if (!modePill || !statusText) return;
+
+    if (state.mode === "aim") {
+      modePill.textContent = "Mode: Aim Point";
+      statusText.textContent = "Tap Aim Point";
+      setInstruction("TAP AIM POINT", "state-aim");
+      setStepBar("aim");
+      enableResultsButtons(false);
+      return;
+    }
+
+    if (state.mode === "shots") {
+      modePill.textContent = "Mode: Shots";
+      statusText.textContent = `Tap 3–5 Shots (${state.shots.length}/${getShotGoal()})`;
+      setInstruction("TAP 3–5 SHOTS", "state-shots");
+      setStepBar("shots");
+      enableResultsButtons(false);
+      return;
+    }
+
+    if (state.mode === "ready") {
+      modePill.textContent = "Mode: Ready";
+      statusText.textContent = `Get Scope Adjustments (${state.shots.length}/${getShotGoal()} shots set)`;
+      setInstruction("GET SCOPE ADJUSTMENTS", "state-results");
+      setStepBar("results");
+      enableResultsButtons(true);
+      return;
+    }
+
+    modePill.textContent = "Mode: Adjustments Ready";
+    statusText.textContent = "Scope adjustments ready";
+    setInstruction("SCOPE ADJUSTMENTS READY", "state-results");
+    setStepBar("results");
+    enableResultsButtons(true);
+  }
+
   function createAimMarker(xPct, yPct) {
-    const node = document.createElement('div');
-    node.className = 'marker aim';
+    const node = document.createElement("div");
+    node.className = "marker aim";
     node.style.left = `${xPct}%`;
     node.style.top = `${yPct}%`;
 
-    const center = document.createElement('div');
-    center.className = 'aim-center';
+    const center = document.createElement("div");
+    center.className = "aim-center";
     node.appendChild(center);
 
     tapLayer.appendChild(node);
   }
 
   function createMarker(xPct, yPct, className) {
-    const node = document.createElement('div');
+    const node = document.createElement("div");
     node.className = `marker ${className}`;
     node.style.left = `${xPct}%`;
     node.style.top = `${yPct}%`;
@@ -243,7 +380,7 @@
   }
 
   function clearMarkers() {
-    tapLayer.querySelectorAll('.marker').forEach((node) => node.remove());
+    tapLayer.querySelectorAll(".marker").forEach((node) => node.remove());
   }
 
   function redrawAll() {
@@ -254,12 +391,12 @@
     }
 
     state.shots.forEach((shot) => {
-      createMarker(shot.xPct, shot.yPct, 'hit');
+      createMarker(shot.xPct, shot.yPct, "hit");
     });
 
     if (state.groupCenter) {
-      createMarker(state.groupCenter.xPct, state.groupCenter.yPct, 'group-center-halo');
-      createMarker(state.groupCenter.xPct, state.groupCenter.yPct, 'group-center-core');
+      createMarker(state.groupCenter.xPct, state.groupCenter.yPct, "group-center-halo");
+      createMarker(state.groupCenter.xPct, state.groupCenter.yPct, "group-center-core");
     }
   }
 
@@ -277,36 +414,38 @@
   function setQrLive(isLive) {
     state.qrLive = isLive;
     if (!qrHotspot) return;
-    qrHotspot.classList.toggle('qr-live', isLive);
-    qrHotspot.style.cursor = isLive ? 'pointer' : 'default';
+    qrHotspot.classList.toggle("qr-live", isLive);
+    qrHotspot.style.cursor = isLive ? "pointer" : "default";
   }
 
   function handleQrClick(e) {
     e.stopPropagation();
     if (!state.qrLive) return;
 
+    markActivity();
+
     const destination = getVendorUrl();
 
-    trackEvent('vendor_click', {
-      source: 'qr_hotspot',
+    trackEvent("vendor_click", {
+      source: "qr_hotspot",
       destination
     });
 
-    window.open(destination, '_blank', 'noopener,noreferrer');
+    window.open(destination, "_blank", "noopener,noreferrer");
   }
 
   function addQrHotspot() {
     if (qrHotspot || !targetSurface) return;
 
-    qrHotspot = document.createElement('div');
-    qrHotspot.className = 'qr-hotspot';
+    qrHotspot = document.createElement("div");
+    qrHotspot.className = "qr-hotspot";
 
-    qrHotspot.style.left = '78.8%';
-    qrHotspot.style.top = '1.6%';
-    qrHotspot.style.width = '16.2%';
-    qrHotspot.style.height = '11.6%';
+    qrHotspot.style.left = "78.8%";
+    qrHotspot.style.top = "1.6%";
+    qrHotspot.style.width = "16.2%";
+    qrHotspot.style.height = "11.6%";
 
-    qrHotspot.addEventListener('click', handleQrClick);
+    qrHotspot.addEventListener("click", handleQrClick);
     targetSurface.appendChild(qrHotspot);
     setQrLive(false);
   }
@@ -324,14 +463,14 @@
 
   function resetSimulator(track = true) {
     if (track) {
-      trackEvent('reset', {
-        reset_from: state.resultsViewed ? 'results' : state.aim ? 'in_progress' : 'empty'
+      trackEvent("reset", {
+        reset_from: state.resultsViewed ? "results" : state.aim ? "in_progress" : "empty"
       });
     }
 
     state.aim = null;
     state.shots = [];
-    state.mode = 'aim';
+    state.mode = "aim";
     state.groupCenter = null;
     state.qrLive = false;
     state.resultsViewed = false;
@@ -345,32 +484,34 @@
 
   function recomputeModeFromState() {
     if (!state.aim) {
-      state.mode = 'aim';
+      state.mode = "aim";
       return;
     }
 
     if (state.groupCenter) {
-      state.mode = 'results';
+      state.mode = "results";
       return;
     }
 
     if (state.shots.length >= Math.min(getShotGoal(), MAX_SHOTS)) {
-      state.mode = 'ready';
+      state.mode = "ready";
       return;
     }
 
-    state.mode = 'shots';
+    state.mode = "shots";
   }
 
   function handleTap(e) {
-    if (state.mode === 'results') return;
+    if (state.mode === "results") return;
+
+    markActivity();
 
     const pos = getRelativeCoords(e);
 
     if (!state.sessionStarted) {
       state.sessionStarted = true;
-      trackEvent('demo_start', {
-        source: isDemoMode ? 'demo' : 'sim'
+      trackEvent("demo_start", {
+        source: isDemoMode ? "demo" : "sim"
       });
     }
 
@@ -378,7 +519,11 @@
       state.aim = pos;
       state.groupCenter = null;
 
-      trackEvent('aim_set', {
+      if (!analytics.aimSetAtMs) {
+        analytics.aimSetAtMs = Date.now();
+      }
+
+      trackEvent("aim_set", {
         aim_x_pct: Number(pos.xPct.toFixed(2)),
         aim_y_pct: Number(pos.yPct.toFixed(2))
       });
@@ -394,7 +539,11 @@
     state.shots.push(pos);
     state.groupCenter = null;
 
-    trackEvent('shot_added', {
+    if (!analytics.firstShotAtMs) {
+      analytics.firstShotAtMs = Date.now();
+    }
+
+    trackEvent("shot_added", {
       shot_index: state.shots.length,
       shot_x_pct: Number(pos.xPct.toFixed(2)),
       shot_y_pct: Number(pos.yPct.toFixed(2)),
@@ -407,13 +556,16 @@
   }
 
   function undoLast() {
-    if (state.mode === 'results') {
-      trackEvent('undo', {
-        undo_type: 'results'
+    markActivity();
+
+    if (state.mode === "results") {
+      trackEvent("undo", {
+        undo_type: "results"
       });
 
       state.groupCenter = null;
       state.resultsViewed = false;
+      analytics.resultsAtMs = null;
       setQrLive(false);
       recomputeModeFromState();
       redrawAll();
@@ -423,8 +575,8 @@
     }
 
     if (state.shots.length > 0) {
-      trackEvent('undo', {
-        undo_type: 'shot',
+      trackEvent("undo", {
+        undo_type: "shot",
         remaining_shots: state.shots.length - 1
       });
 
@@ -438,12 +590,15 @@
     }
 
     if (state.aim) {
-      trackEvent('undo', {
-        undo_type: 'aim'
+      trackEvent("undo", {
+        undo_type: "aim"
       });
 
       state.aim = null;
       state.groupCenter = null;
+      analytics.aimSetAtMs = null;
+      analytics.firstShotAtMs = null;
+      analytics.resultsAtMs = null;
       setQrLive(false);
       recomputeModeFromState();
       redrawAll();
@@ -479,29 +634,21 @@
     return maxDistance;
   }
 
-  function round1(v) {
-    return Number(v).toFixed(1);
-  }
-
-  function round2(v) {
-    return Number(v).toFixed(2);
-  }
-
   function moveArrow(verticalDir, horizontalDir) {
-    if (verticalDir !== 'NONE' && horizontalDir !== 'NONE') {
-      if (verticalDir === 'UP' && horizontalDir === 'LEFT') return '↖';
-      if (verticalDir === 'UP' && horizontalDir === 'RIGHT') return '↗';
-      if (verticalDir === 'DOWN' && horizontalDir === 'LEFT') return '↙';
-      return '↘';
+    if (verticalDir !== "NONE" && horizontalDir !== "NONE") {
+      if (verticalDir === "UP" && horizontalDir === "LEFT") return "↖";
+      if (verticalDir === "UP" && horizontalDir === "RIGHT") return "↗";
+      if (verticalDir === "DOWN" && horizontalDir === "LEFT") return "↙";
+      return "↘";
     }
 
-    if (verticalDir !== 'NONE') return verticalDir === 'UP' ? '↑' : '↓';
-    if (horizontalDir !== 'NONE') return horizontalDir === 'LEFT' ? '←' : '→';
-    return '•';
+    if (verticalDir !== "NONE") return verticalDir === "UP" ? "↑" : "↓";
+    if (horizontalDir !== "NONE") return horizontalDir === "LEFT" ? "←" : "→";
+    return "•";
   }
 
   function metricText(direction, moa, clicks) {
-    if (direction === 'NONE') return 'No change';
+    if (direction === "NONE") return "No change";
     return `
       ${direction} ${round2(moa)} MOA
       <span class="clicks">(${round1(clicks)} clicks)</span>
@@ -509,17 +656,23 @@
   }
 
   function calculateResults() {
+    markActivity();
+
     if (!state.aim || state.shots.length < MIN_SHOTS) return;
 
-    trackEvent('results_clicked', {
+    trackEvent("results_clicked", {
       shots: state.shots.length,
       distance_yards: getDistanceYards(),
       click_value_moa: getClickValueMOA()
     });
 
     state.groupCenter = computeGroupCenter();
-    state.mode = 'results';
+    state.mode = "results";
     state.resultsViewed = true;
+
+    if (!analytics.resultsAtMs) {
+      analytics.resultsAtMs = Date.now();
+    }
 
     const truth = deriveDirectionTruth(state.aim, state.groupCenter);
 
@@ -544,13 +697,33 @@
     syncModeUI();
     setQrLive(true);
 
-    trackEvent('results_ready', {
+    trackEvent("results_ready", {
       shots: state.shots.length,
       distance_yards: distance,
       click_value_moa: clickValue,
+      click_value: clickValue,
+      dial_unit: getDialUnit(),
       group_size_inches: Number(round2(groupSizeInches)),
       windage_direction: truth.windageDirection,
-      elevation_direction: truth.elevationDirection
+      elevation_direction: truth.elevationDirection,
+      dx_inches: Number(round2(dxInches)),
+      dy_inches: Number(round2(dyInches)),
+      windage_moa: Number(round2(windageMOA)),
+      elevation_moa: Number(round2(elevationMOA)),
+      windage_clicks: Number(round2(clicksX)),
+      elevation_clicks: Number(round2(clicksY))
+    });
+
+    trackEvent("results_viewed", {
+      shots: state.shots.length,
+      distance_yards: distance,
+      click_value_moa: clickValue,
+      click_value: clickValue,
+      dial_unit: getDialUnit(),
+      group_size_inches: Number(round2(groupSizeInches)),
+      windage_direction: truth.windageDirection,
+      elevation_direction: truth.elevationDirection,
+      time_to_results_ms: analytics.resultsAtMs - analytics.startedAtMs
     });
 
     secCard.innerHTML = `
@@ -593,50 +766,130 @@
       <div class="sec-footer">Powered by SCZN3 Precision</div>
     `;
 
-    const secTryAgainBtn = document.getElementById('secTryAgainBtn');
-    const secBuyMoreBtn = document.getElementById('secBuyMoreBtn');
+    const secTryAgainBtn = document.getElementById("secTryAgainBtn");
+    const secBuyMoreBtn = document.getElementById("secBuyMoreBtn");
 
     if (secTryAgainBtn) {
-      secTryAgainBtn.addEventListener('click', () => {
-        trackEvent('try_again', {
-          source: 'sec'
+      secTryAgainBtn.addEventListener("click", () => {
+        markActivity();
+        trackEvent("try_again", {
+          source: "sec"
         });
         resetSimulator(false);
       });
     }
 
     if (secBuyMoreBtn) {
-      secBuyMoreBtn.addEventListener('click', () => {
+      secBuyMoreBtn.addEventListener("click", () => {
+        markActivity();
         const destination = getVendorUrl();
 
-        trackEvent('vendor_click', {
-          source: 'buy_more_button',
+        trackEvent("vendor_click", {
+          source: "buy_more_button",
           destination
         });
 
-        window.open(destination, '_blank', 'noopener,noreferrer');
+        window.open(destination, "_blank", "noopener,noreferrer");
       });
     }
 
-    secCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    secCard.scrollIntoView({ behavior: "smooth", block: "center" });
   }
 
-  tapLayer.addEventListener('click', handleTap);
+  function wireSettingsListeners() {
+    [distanceYardsEl, clickValueMOAEl, shotGoalEl].forEach((el) => {
+      if (!el) return;
 
-  if (undoBtn) undoBtn.addEventListener('click', undoLast);
-  if (inlineUndoBtn) inlineUndoBtn.addEventListener('click', undoLast);
+      const handler = () => {
+        markActivity();
+        trackSettingsChanged(el.id || "settings_control");
+        recomputeModeFromState();
+        syncModeUI();
+      };
 
-  if (resetBtn) resetBtn.addEventListener('click', () => resetSimulator(true));
-  if (inlineResetBtn) inlineResetBtn.addEventListener('click', () => resetSimulator(true));
+      el.addEventListener("change", handler);
+      el.addEventListener("input", handler);
+    });
+  }
 
-  if (resultsBtn) resultsBtn.addEventListener('click', calculateResults);
-  if (inlineResultsBtn) inlineResultsBtn.addEventListener('click', calculateResults);
+  function finalizeSession(reason) {
+    if (analytics.completionSent) return;
+    analytics.completionSent = true;
+
+    const eventName = state.resultsViewed ? "session_completed" : "session_abandoned";
+
+    trackEvent(
+      eventName,
+      {
+        reason,
+        completed: state.resultsViewed,
+        final_mode: state.mode,
+        total_shots: state.shots.length,
+        had_aim: !!state.aim,
+        had_results: !!state.resultsViewed,
+        inactivity_ms: msSince(analytics.lastActivityAtMs)
+      },
+      { beacon: true }
+    );
+  }
+
+  function installSessionFinalizers() {
+    window.addEventListener("pagehide", () => finalizeSession("pagehide"));
+
+    window.addEventListener("beforeunload", () => finalizeSession("beforeunload"));
+
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "hidden") {
+        finalizeSession("hidden");
+      }
+    });
+  }
+
+  if (!targetSurface || !tapLayer || !secCard) {
+    console.warn("Sim.js: required DOM elements are missing.");
+    return;
+  }
+
+  tapLayer.addEventListener("click", handleTap);
+
+  if (undoBtn) undoBtn.addEventListener("click", undoLast);
+  if (inlineUndoBtn) inlineUndoBtn.addEventListener("click", undoLast);
+
+  if (resetBtn) {
+    resetBtn.addEventListener("click", () => {
+      markActivity();
+      resetSimulator(true);
+    });
+  }
+
+  if (inlineResetBtn) {
+    inlineResetBtn.addEventListener("click", () => {
+      markActivity();
+      resetSimulator(true);
+    });
+  }
+
+  if (resultsBtn) resultsBtn.addEventListener("click", calculateResults);
+  if (inlineResultsBtn) inlineResultsBtn.addEventListener("click", calculateResults);
 
   setPageCopy();
   addQrHotspot();
   resetSimulator(false);
+  wireSettingsListeners();
+  installSessionFinalizers();
 
-  trackEvent('scan', {
-    source: isDemoMode ? 'demo' : 'sim'
+  analytics.lastSettingsSignature = signatureForSettings(getSettingsSnapshot());
+
+  trackEvent("scan", {
+    source: isDemoMode ? "demo" : "sim"
+  });
+
+  trackEvent("page_view", {
+    source: isDemoMode ? "demo" : "sim"
+  });
+
+  trackEvent("settings_initialized", {
+    source: "init",
+    ...getSettingsSnapshot()
   });
 })();
