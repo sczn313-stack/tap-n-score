@@ -1,468 +1,82 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <meta name="theme-color" content="#06070a" />
-  <title>SEC — Shooter Experience Card</title>
-
-  <style>
-    :root{
-      --bg:#06070a;
-      --panel:#10141b;
-      --panel2:#151b24;
-      --line:#263041;
-      --text:#eef2f7;
-      --muted:#99a6b5;
-      --green:#67f3a4;
-      --lime:#b7ff3c;
-      --blue:#2f66ff;
-      --red:#ff6b6b;
-      --gold:#f5c451;
-      --shadow:0 18px 42px rgba(0,0,0,.35);
-      --radius:18px;
-    }
-
-    *{box-sizing:border-box}
-
-    body{
-      margin:0;
-      font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
-      background:
-        radial-gradient(circle at top right, rgba(47,102,255,.10), transparent 24%),
-        radial-gradient(circle at top left, rgba(103,243,164,.08), transparent 22%),
-        var(--bg);
-      color:var(--text);
-      padding:18px;
-    }
-
-    .wrap{
-      max-width:1040px;
-      margin:0 auto;
-    }
-
-    .hero{
-      display:flex;
-      justify-content:space-between;
-      align-items:flex-start;
-      gap:16px;
-      margin-bottom:18px;
-      flex-wrap:wrap;
-    }
-
-    .brand h1{
-      margin:0;
-      font-size:clamp(1.6rem, 3vw, 2.25rem);
-      line-height:1.05;
-    }
-
-    .brand p{
-      margin:8px 0 0;
-      color:var(--muted);
-    }
-
-    .secMark{
-      display:inline-flex;
-      align-items:center;
-      gap:8px;
-      padding:10px 14px;
-      border-radius:999px;
-      border:1px solid rgba(255,255,255,.10);
-      background:rgba(255,255,255,.04);
-      font-weight:800;
-      box-shadow:var(--shadow);
-      white-space:nowrap;
-    }
-
-    .r{color:var(--red)}
-    .w{color:#ffffff}
-    .b{color:var(--blue)}
-
-    .grid{
-      display:grid;
-      grid-template-columns:1.15fr .85fr;
-      gap:16px;
-    }
-
-    .panel{
-      background:linear-gradient(180deg,var(--panel2),var(--panel));
-      border:1px solid var(--line);
-      border-radius:var(--radius);
-      box-shadow:var(--shadow);
-    }
-
-    .inner{
-      padding:18px;
-    }
-
-    .eyebrow{
-      color:var(--muted);
-      font-size:.82rem;
-      font-weight:700;
-      text-transform:uppercase;
-      letter-spacing:.08em;
-      margin-bottom:8px;
-    }
-
-    .correctionCard{
-      position:relative;
-      overflow:hidden;
-    }
-
-    .correctionCard::after{
-      content:"SEC";
-      position:absolute;
-      right:14px;
-      top:10px;
-      font-size:4rem;
-      font-weight:900;
-      color:rgba(255,255,255,.04);
-      pointer-events:none;
-    }
-
-    .bigTitle{
-      font-size:1.1rem;
-      font-weight:800;
-      color:var(--muted);
-      margin-bottom:10px;
-    }
-
-    .bigDirections{
-      display:grid;
-      gap:12px;
-      margin-top:10px;
-    }
-
-    .dirRow{
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap:10px;
-      padding:14px 16px;
-      border-radius:16px;
-      border:1px solid rgba(255,255,255,.07);
-      background:rgba(255,255,255,.03);
-    }
-
-    .dirLabel{
-      display:flex;
-      align-items:center;
-      gap:12px;
-      font-size:1.1rem;
-      font-weight:900;
-      letter-spacing:.01em;
-    }
-
-    .dirArrow{
-      width:38px;
-      text-align:center;
-      font-size:1.4rem;
-    }
-
-    .dirValue{
-      font-size:1.45rem;
-      font-weight:900;
-      white-space:nowrap;
-    }
-
-    .trustLine{
-      margin-top:14px;
-      color:var(--muted);
-      font-size:.95rem;
-    }
-
-    .scoreHero{
-      display:grid;
-      gap:12px;
-    }
-
-    .scoreBox{
-      text-align:center;
-      padding:18px;
-      border-radius:16px;
-      border:1px solid rgba(255,255,255,.08);
-      background:rgba(255,255,255,.03);
-    }
-
-    .scoreLabel{
-      color:var(--muted);
-      font-size:.85rem;
-      text-transform:uppercase;
-      letter-spacing:.08em;
-    }
-
-    .scoreValue{
-      font-size:3rem;
-      font-weight:900;
-      color:var(--gold);
-      line-height:1;
-      margin-top:8px;
-    }
-
-    .scoreSub{
-      color:var(--muted);
-      font-size:.9rem;
-      margin-top:10px;
-    }
-
-    .miniGrid{
-      display:grid;
-      grid-template-columns:1fr 1fr;
-      gap:12px;
-    }
-
-    .miniCard{
-      padding:14px;
-      border-radius:14px;
-      border:1px solid rgba(255,255,255,.08);
-      background:rgba(255,255,255,.03);
-    }
-
-    .miniLabel{
-      color:var(--muted);
-      font-size:.82rem;
-      margin-bottom:6px;
-    }
-
-    .miniValue{
-      font-size:1.15rem;
-      font-weight:800;
-    }
-
-    .vizPanel{
-      margin-top:16px;
-    }
-
-    .targetViz{
-      position:relative;
-      width:100%;
-      aspect-ratio:1/1;
-      border-radius:18px;
-      overflow:hidden;
-      border:1px solid rgba(255,255,255,.08);
-      background:
-        radial-gradient(circle at center, rgba(255,255,255,.03), rgba(255,255,255,.01)),
-        linear-gradient(180deg, #0f141b, #0a0e14);
-    }
-
-    .gridLineV, .gridLineH{
-      position:absolute;
-      background:rgba(255,255,255,.05);
-    }
-
-    .gridLineV{top:0;bottom:0;width:1px}
-    .gridLineH{left:0;right:0;height:1px}
-
-    .aimDot,
-    .poiDot{
-      position:absolute;
-      transform:translate(-50%,-50%);
-      border-radius:50%;
-      box-shadow:0 8px 20px rgba(0,0,0,.35);
-    }
-
-    .aimDot{
-      width:18px;height:18px;
-      background:var(--green);
-      border:2px solid rgba(0,0,0,.45);
-    }
-
-    .aimCrossV,
-    .aimCrossH{
-      position:absolute;
-      background:rgba(103,243,164,.65);
-      transform:translate(-50%,-50%);
-    }
-
-    .aimCrossV{width:2px;height:44px}
-    .aimCrossH{width:44px;height:2px}
-
-    .poiHalo{
-      position:absolute;
-      transform:translate(-50%,-50%);
-      width:34px;height:34px;
-      border-radius:50%;
-      background:rgba(47,102,255,.16);
-    }
-
-    .poiDot{
-      width:14px;height:14px;
-      background:var(--blue);
-      border:2px solid rgba(255,255,255,.18);
-    }
-
-    .vizLegend{
-      display:flex;
-      gap:12px;
-      flex-wrap:wrap;
-      margin-top:12px;
-      color:var(--muted);
-      font-size:.9rem;
-    }
-
-    .legendKey{
-      display:inline-flex;
-      align-items:center;
-      gap:8px;
-    }
-
-    .legendSwatch{
-      width:12px;height:12px;border-radius:50%;
-    }
-
-    .actions{
-      display:grid;
-      grid-template-columns:1fr 1fr 1fr;
-      gap:12px;
-      margin-top:16px;
-    }
-
-    button, a.actionBtn{
-      appearance:none;
-      text-decoration:none;
-      border:1px solid var(--line);
-      border-radius:14px;
-      min-height:52px;
-      padding:12px 14px;
-      font-weight:900;
-      font-size:.98rem;
-      cursor:pointer;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      text-align:center;
-      background:#121722;
-      color:var(--text);
-    }
-
-    button.primary, a.primary{
-      background:var(--blue);
-      border-color:var(--blue);
-      color:#fff;
-    }
-
-    button.success{
-      background:rgba(103,243,164,.12);
-      border-color:rgba(103,243,164,.30);
-      color:var(--green);
-    }
-
-    .footerNote{
-      margin-top:14px;
-      color:var(--muted);
-      font-size:.88rem;
-      text-align:center;
-    }
-
-    .hidden{display:none !important}
-
-    @media (max-width: 860px){
-      .grid{grid-template-columns:1fr}
-      .actions{grid-template-columns:1fr}
-    }
-  </style>
+  <meta charset="UTF-8" />
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+  />
+  <title>SEC — Back to Basics</title>
+  <link rel="stylesheet" href="./sec.css" />
 </head>
 <body>
-  <div class="wrap">
+  <div class="sec-app">
+    <!-- Top Bar -->
+    <header class="topbar">
+      <button class="icon-btn back-btn" id="backBtn" aria-label="Go back">‹</button>
 
-    <section class="hero">
-      <div class="brand">
-        <h1>
-          <span class="r">S</span><span class="w">hooter </span>
-          <span class="w">Experience </span>
-          <span class="b">Card</span>
-        </h1>
-        <p>Understand what happened. Know what to do next.</p>
+      <div class="brand-wrap">
+        <div class="sec-logo" aria-label="SEC">
+          <span class="s-red">S</span><span class="e-white">E</span><span class="c-blue">C</span>
+        </div>
       </div>
 
-      <div class="secMark">
-        <span class="r">S</span><span class="w">E</span><span class="b">C</span>
+      <div class="level-pill" id="levelPill">LEVEL 2</div>
+    </header>
+
+    <!-- Title Card -->
+    <section class="title-card">
+      <div class="title-main" id="targetTitle">Back to Basics</div>
+      <div class="title-sub">Shooter Experience Card</div>
+    </section>
+
+    <!-- Utility Row -->
+    <section class="utility-row">
+      <div class="summary-copy" id="summaryCopy">
+        Understand and act on your performance
+      </div>
+
+      <button class="history-btn" id="historyBtn">History ›</button>
+    </section>
+
+    <!-- Score Grid Card -->
+    <section class="card grid-card">
+      <div class="grid-wrap" id="gridWrap">
+        <!-- built by JS -->
       </div>
     </section>
 
-    <section class="grid">
-      <div class="panel correctionCard">
-        <div class="inner">
-          <div class="eyebrow">Your Correction</div>
-          <div class="bigTitle">Move your group using these adjustments</div>
-
-          <div class="bigDirections">
-            <div class="dirRow">
-              <div class="dirLabel">
-                <span id="elevationArrow" class="dirArrow">↑</span>
-                <span id="elevationDir">UP</span>
-              </div>
-              <div id="elevationClicks" class="dirValue">0.00</div>
-            </div>
-
-            <div class="dirRow">
-              <div class="dirLabel">
-                <span id="windageArrow" class="dirArrow">→</span>
-                <span id="windageDir">RIGHT</span>
-              </div>
-              <div id="windageClicks" class="dirValue">0.00</div>
-            </div>
-          </div>
-
-          <div class="trustLine">Calculated from your shot group. Use the values above to adjust and confirm.</div>
-
-          <div class="vizPanel">
-            <div class="eyebrow">Visual Anchor</div>
-            <div id="targetViz" class="targetViz"></div>
-            <div class="vizLegend">
-              <span class="legendKey"><span class="legendSwatch" style="background:var(--green)"></span>Aim Point</span>
-              <span class="legendKey"><span class="legendSwatch" style="background:var(--blue)"></span>Group Center</span>
-            </div>
-          </div>
+    <!-- Bottom Cards -->
+    <section class="bottom-stats">
+      <div class="card stat-card">
+        <div class="stat-label">LIFETIME BEST SCORE</div>
+        <div class="best-row">
+          <div class="best-score" id="bestScore">9/10</div>
+          <div class="best-badge" id="bestBadge">NEW BEST</div>
         </div>
       </div>
 
-      <div class="panel">
-        <div class="inner">
-          <div class="eyebrow">Session Snapshot</div>
-
-          <div class="scoreHero">
-            <div class="scoreBox">
-              <div class="scoreLabel">Score</div>
-              <div id="scoreValue" class="scoreValue">0</div>
-              <div class="scoreSub">Tighter group + closer to center = higher score</div>
-            </div>
-
-            <div class="miniGrid">
-              <div class="miniCard">
-                <div class="miniLabel">Shots</div>
-                <div id="shotsValue" class="miniValue">0</div>
-              </div>
-
-              <div class="miniCard">
-                <div class="miniLabel">Dial</div>
-                <div id="dialValue" class="miniValue">MOA</div>
-              </div>
-
-              <div class="miniCard">
-                <div class="miniLabel">Target</div>
-                <div id="targetValue" class="miniValue">23×35</div>
-              </div>
-
-              <div class="miniCard">
-                <div class="miniLabel">Distance</div>
-                <div id="distanceValue" class="miniValue">100 yds</div>
-              </div>
-            </div>
-          </div>
-
-          <div class="actions">
-            <button id="againBtn" class="primary" type="button">Score Another Target</button>
-            <button id="saveBtn" class="success" type="button">Download SEC Picture</button>
-            <a id="vendorBtn" class="actionBtn hidden" href="#" target="_blank" rel="noopener">Buy More Targets Like This</a>
-          </div>
-
-          <div class="footerNote">Want to improve your next group? Shoot another.</div>
-        </div>
+      <div class="card stat-card">
+        <div class="stat-label" id="levelLabel">LEVEL 2</div>
+        <div class="stars-row" id="starsRow">★★☆☆☆</div>
+        <div class="level-note" id="levelNote">Reach 9/10 twice</div>
       </div>
+    </section>
+
+    <!-- Action Buttons -->
+    <section class="action-row">
+      <button class="action-btn" id="newScanBtn">
+        <span class="action-icon">▣</span>
+        <span>NEW SCAN</span>
+      </button>
+
+      <button class="action-btn" id="leaderboardBtn">
+        <span class="action-icon">🏆</span>
+        <span>LEADERBOARD</span>
+      </button>
     </section>
   </div>
 
-  <script src="./sec.js?v=SEC-TIGHT-1"></script>
+  <script src="./sec.js"></script>
 </body>
 </html>
