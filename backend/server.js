@@ -1,11 +1,14 @@
 /* ============================================================
    server.js — Tap-n-Score Backend
-   Layer 3 + Intelligence Layer:
+   Polished Analytics + Intelligence Layer
+   ------------------------------------------------------------
+   Includes:
    - Health endpoint
    - Poster endpoint
    - Analytics tracking endpoint
    - Analytics summary endpoint with:
      * revenue
+     * conversions
      * growth/session intelligence
      * leaderboards
      * time heatmap data
@@ -22,34 +25,40 @@ const cors = require("cors");
 
 const app = express();
 
-// ------------------------------------------------------------
-// CONFIG
-// ------------------------------------------------------------
+/* ------------------------------------------------------------
+   CONFIG
+------------------------------------------------------------ */
 const PORT = Number(process.env.PORT) || 10000;
 const TRACK_LOG = path.join(__dirname, "track-events.ndjson");
 
 const REVENUE_RATES = {
+  page_view: 0.0,
   scan: 0.05,
-  demo_start: 0.00,
-  aim_set: 0.00,
-  shot_added: 0.00,
-  results_clicked: 0.00,
-  results_ready: 0.10,
-  try_again: 0.00,
-  reset: 0.00,
-  undo: 0.00,
-  vendor_click: 0.25
+  settings_initialized: 0.0,
+  settings_changed: 0.0,
+  demo_start: 0.0,
+  aim_set: 0.0,
+  shot_added: 0.0,
+  results_clicked: 0.0,
+  results_ready: 0.1,
+  results_viewed: 0.0,
+  try_again: 0.0,
+  reset: 0.0,
+  undo: 0.0,
+  vendor_click: 0.25,
+  session_completed: 0.0,
+  session_abandoned: 0.0
 };
 
-// ------------------------------------------------------------
-// MIDDLEWARE
-// ------------------------------------------------------------
+/* ------------------------------------------------------------
+   MIDDLEWARE
+------------------------------------------------------------ */
 app.use(cors({ origin: true }));
 app.use(express.json({ limit: "2mb" }));
 
-// ------------------------------------------------------------
-// HELPERS
-// ------------------------------------------------------------
+/* ------------------------------------------------------------
+   HELPERS
+------------------------------------------------------------ */
 function clampNum(n, fallback = 0) {
   const x = Number(n);
   return Number.isFinite(x) ? x : fallback;
@@ -168,6 +177,38 @@ function calcPct(num, den) {
   return round2((num / den) * 100);
 }
 
+function median(values) {
+  const nums = values
+    .map((v) => Number(v))
+    .filter((v) => Number.isFinite(v))
+    .sort((a, b) => a - b);
+
+  if (!nums.length) return 0;
+  const mid = Math.floor(nums.length / 2);
+  if (nums.length % 2 === 0) {
+    return round2((nums[mid - 1] + nums[mid]) / 2);
+  }
+  return round2(nums[mid]);
+}
+
+function avg(values) {
+  const nums = values.map((v) => Number(v)).filter((v) => Number.isFinite(v));
+  if (!nums.length) return 0;
+  return round2(nums.reduce((sum, n) => sum + n, 0) / nums.length);
+}
+
+function minVal(values) {
+  const nums = values.map((v) => Number(v)).filter((v) => Number.isFinite(v));
+  if (!nums.length) return 0;
+  return round2(Math.min(...nums));
+}
+
+function maxVal(values) {
+  const nums = values.map((v) => Number(v)).filter((v) => Number.isFinite(v));
+  if (!nums.length) return 0;
+  return round2(Math.max(...nums));
+}
+
 // Inches per MOA at a given distance (yards)
 function inchesPerMoa(distanceYds) {
   const d = clampNum(distanceYds, 0);
@@ -236,9 +277,9 @@ function delta01ToInches(dx01, dy01, targetWIn, targetHIn) {
   };
 }
 
-// ------------------------------------------------------------
-// BASIC ROUTES
-// ------------------------------------------------------------
+/* ------------------------------------------------------------
+   BASIC ROUTES
+------------------------------------------------------------ */
 app.get("/", (req, res) => {
   res.type("text").send("Tap-n-Score backend is running. Try /api/health");
 });
@@ -263,9 +304,9 @@ app.get("/api/poster", (req, res) => {
   });
 });
 
-// ------------------------------------------------------------
-// TRACKING ENDPOINT
-// ------------------------------------------------------------
+/* ------------------------------------------------------------
+   TRACKING ENDPOINT
+------------------------------------------------------------ */
 app.post("/api/track", (req, res) => {
   try {
     const body = req.body || {};
@@ -279,30 +320,110 @@ app.post("/api/track", (req, res) => {
       mode: safeString(body.mode, ""),
       source: safeString(body.source, ""),
       destination: safeString(body.destination, ""),
+      reason: safeString(body.reason, ""),
+      final_mode: safeString(body.final_mode, ""),
+      completed: typeof body.completed === "boolean" ? body.completed : null,
+
       session_id: safeString(body.session_id, ""),
+      session_started_at: safeString(body.session_started_at, ""),
+      session_duration_ms: Number.isFinite(Number(body.session_duration_ms))
+        ? Number(body.session_duration_ms)
+        : null,
+      time_to_first_interaction_ms: Number.isFinite(Number(body.time_to_first_interaction_ms))
+        ? Number(body.time_to_first_interaction_ms)
+        : null,
+      time_to_aim_ms: Number.isFinite(Number(body.time_to_aim_ms))
+        ? Number(body.time_to_aim_ms)
+        : null,
+      time_to_first_shot_ms: Number.isFinite(Number(body.time_to_first_shot_ms))
+        ? Number(body.time_to_first_shot_ms)
+        : null,
+      time_to_results_ms: Number.isFinite(Number(body.time_to_results_ms))
+        ? Number(body.time_to_results_ms)
+        : null,
+      inactivity_ms: Number.isFinite(Number(body.inactivity_ms))
+        ? Number(body.inactivity_ms)
+        : null,
+
       score: Number.isFinite(Number(body.score)) ? Number(body.score) : null,
       shots: Number.isFinite(Number(body.shots)) ? Number(body.shots) : null,
+      total_shots: Number.isFinite(Number(body.total_shots)) ? Number(body.total_shots) : null,
       has_aim: typeof body.has_aim === "boolean" ? body.has_aim : null,
+      had_aim: typeof body.had_aim === "boolean" ? body.had_aim : null,
       results_viewed: typeof body.results_viewed === "boolean" ? body.results_viewed : null,
-      distance_yards: Number.isFinite(Number(body.distance_yards)) ? Number(body.distance_yards) : null,
-      click_value_moa: Number.isFinite(Number(body.click_value_moa)) ? Number(body.click_value_moa) : null,
+      had_results: typeof body.had_results === "boolean" ? body.had_results : null,
+
+      distance_yards: Number.isFinite(Number(body.distance_yards))
+        ? Number(body.distance_yards)
+        : null,
+      click_value_moa: Number.isFinite(Number(body.click_value_moa))
+        ? Number(body.click_value_moa)
+        : null,
       dial_unit: safeString(body.dial_unit, ""),
-      click_value: Number.isFinite(Number(body.click_value)) ? Number(body.click_value) : null,
+      click_value: Number.isFinite(Number(body.click_value))
+        ? Number(body.click_value)
+        : null,
+      shot_goal: Number.isFinite(Number(body.shot_goal))
+        ? Number(body.shot_goal)
+        : null,
+
       target_key: safeString(body.target_key, ""),
-      target_w_in: Number.isFinite(Number(body.target_w_in)) ? Number(body.target_w_in) : null,
-      target_h_in: Number.isFinite(Number(body.target_h_in)) ? Number(body.target_h_in) : null,
-      aim_x_pct: Number.isFinite(Number(body.aim_x_pct)) ? Number(body.aim_x_pct) : null,
-      aim_y_pct: Number.isFinite(Number(body.aim_y_pct)) ? Number(body.aim_y_pct) : null,
-      shot_index: Number.isFinite(Number(body.shot_index)) ? Number(body.shot_index) : null,
-      shot_x_pct: Number.isFinite(Number(body.shot_x_pct)) ? Number(body.shot_x_pct) : null,
-      shot_y_pct: Number.isFinite(Number(body.shot_y_pct)) ? Number(body.shot_y_pct) : null,
-      shot_goal: Number.isFinite(Number(body.shot_goal)) ? Number(body.shot_goal) : null,
-      group_size_inches: Number.isFinite(Number(body.group_size_inches)) ? Number(body.group_size_inches) : null,
+      target_w_in: Number.isFinite(Number(body.target_w_in))
+        ? Number(body.target_w_in)
+        : null,
+      target_h_in: Number.isFinite(Number(body.target_h_in))
+        ? Number(body.target_h_in)
+        : null,
+
+      aim_x_pct: Number.isFinite(Number(body.aim_x_pct))
+        ? Number(body.aim_x_pct)
+        : null,
+      aim_y_pct: Number.isFinite(Number(body.aim_y_pct))
+        ? Number(body.aim_y_pct)
+        : null,
+
+      shot_index: Number.isFinite(Number(body.shot_index))
+        ? Number(body.shot_index)
+        : null,
+      shot_x_pct: Number.isFinite(Number(body.shot_x_pct))
+        ? Number(body.shot_x_pct)
+        : null,
+      shot_y_pct: Number.isFinite(Number(body.shot_y_pct))
+        ? Number(body.shot_y_pct)
+        : null,
+
+      group_size_inches: Number.isFinite(Number(body.group_size_inches))
+        ? Number(body.group_size_inches)
+        : null,
+
+      dx_inches: Number.isFinite(Number(body.dx_inches))
+        ? Number(body.dx_inches)
+        : null,
+      dy_inches: Number.isFinite(Number(body.dy_inches))
+        ? Number(body.dy_inches)
+        : null,
+      windage_moa: Number.isFinite(Number(body.windage_moa))
+        ? Number(body.windage_moa)
+        : null,
+      elevation_moa: Number.isFinite(Number(body.elevation_moa))
+        ? Number(body.elevation_moa)
+        : null,
+      windage_clicks: Number.isFinite(Number(body.windage_clicks))
+        ? Number(body.windage_clicks)
+        : null,
+      elevation_clicks: Number.isFinite(Number(body.elevation_clicks))
+        ? Number(body.elevation_clicks)
+        : null,
+
       windage_direction: safeString(body.windage_direction, ""),
       elevation_direction: safeString(body.elevation_direction, ""),
+
       reset_from: safeString(body.reset_from, ""),
       undo_type: safeString(body.undo_type, ""),
-      remaining_shots: Number.isFinite(Number(body.remaining_shots)) ? Number(body.remaining_shots) : null,
+      remaining_shots: Number.isFinite(Number(body.remaining_shots))
+        ? Number(body.remaining_shots)
+        : null,
+
       ts: safeString(body.ts, new Date().toISOString()) || new Date().toISOString(),
       ip: getClientIp(req),
       ua: req.headers["user-agent"] || null,
@@ -328,9 +449,9 @@ app.post("/api/track", (req, res) => {
   }
 });
 
-// ------------------------------------------------------------
-// ANALYTICS SUMMARY ENDPOINT
-// ------------------------------------------------------------
+/* ------------------------------------------------------------
+   ANALYTICS SUMMARY ENDPOINT
+------------------------------------------------------------ */
 app.get("/api/analytics/summary", (req, res) => {
   try {
     const vendorFilter = safeLower(req.query.vendor, "");
@@ -352,6 +473,9 @@ app.get("/api/analytics/summary", (req, res) => {
     const byVendor = {};
     const bySku = {};
     const byBatch = {};
+    const byTarget = {};
+    const byMode = {};
+    const bySource = {};
     const byDay = {};
     const byHour = {};
     const byDayOfWeek = {};
@@ -376,6 +500,9 @@ app.get("/api/analytics/summary", (req, res) => {
       const vendorName = safeLower(e.vendor, "unknown");
       const skuName = safeLower(e.sku, "unknown");
       const batchName = safeLower(e.batch, "") || "unknown";
+      const targetName = safeKey(e.target_key || e.sku || "unknown");
+      const modeName = safeKey(e.mode || "unknown");
+      const sourceName = safeKey(e.source || "unknown");
       const sid = safeString(e.session_id, "unknown");
       const eventTs = e.ts || e.received_at;
 
@@ -383,6 +510,9 @@ app.get("/api/analytics/summary", (req, res) => {
       bucketCount(byVendor, vendorName);
       bucketCount(bySku, skuName);
       bucketCount(byBatch, batchName);
+      bucketCount(byTarget, targetName);
+      bucketCount(byMode, modeName);
+      bucketCount(bySource, sourceName);
       bucketCount(byDay, dayBucket(eventTs));
       bucketCount(byHour, hourBucket(eventTs));
       bucketCount(byDayOfWeek, dayOfWeekBucket(eventTs));
@@ -404,81 +534,136 @@ app.get("/api/analytics/summary", (req, res) => {
       if (!skuPerformance[skuName]) {
         skuPerformance[skuName] = {
           scans: 0,
-          results: 0,
-          clicks: 0,
+          page_views: 0,
+          results_ready: 0,
+          results_viewed: 0,
+          vendor_clicks: 0,
+          sessions_completed: 0,
+          sessions_abandoned: 0,
           revenue: 0
         };
       }
+
       if (eventName === "scan") skuPerformance[skuName].scans++;
-      if (eventName === "results_ready") skuPerformance[skuName].results++;
-      if (eventName === "vendor_click") skuPerformance[skuName].clicks++;
-      skuPerformance[skuName].revenue = round2(skuPerformance[skuName].revenue + revenueAmount);
+      if (eventName === "page_view") skuPerformance[skuName].page_views++;
+      if (eventName === "results_ready") skuPerformance[skuName].results_ready++;
+      if (eventName === "results_viewed") skuPerformance[skuName].results_viewed++;
+      if (eventName === "vendor_click") skuPerformance[skuName].vendor_clicks++;
+      if (eventName === "session_completed") skuPerformance[skuName].sessions_completed++;
+      if (eventName === "session_abandoned") skuPerformance[skuName].sessions_abandoned++;
+      skuPerformance[skuName].revenue = round2(
+        skuPerformance[skuName].revenue + revenueAmount
+      );
 
       if (!vendorPerformance[vendorName]) {
         vendorPerformance[vendorName] = {
           scans: 0,
-          results: 0,
-          clicks: 0,
+          page_views: 0,
+          results_ready: 0,
+          results_viewed: 0,
+          vendor_clicks: 0,
+          sessions_completed: 0,
+          sessions_abandoned: 0,
           revenue: 0,
           amount_due: 0
         };
       }
+
       if (eventName === "scan") vendorPerformance[vendorName].scans++;
-      if (eventName === "results_ready") vendorPerformance[vendorName].results++;
-      if (eventName === "vendor_click") vendorPerformance[vendorName].clicks++;
-      vendorPerformance[vendorName].revenue = round2(vendorPerformance[vendorName].revenue + revenueAmount);
+      if (eventName === "page_view") vendorPerformance[vendorName].page_views++;
+      if (eventName === "results_ready") vendorPerformance[vendorName].results_ready++;
+      if (eventName === "results_viewed") vendorPerformance[vendorName].results_viewed++;
+      if (eventName === "vendor_click") vendorPerformance[vendorName].vendor_clicks++;
+      if (eventName === "session_completed") vendorPerformance[vendorName].sessions_completed++;
+      if (eventName === "session_abandoned") vendorPerformance[vendorName].sessions_abandoned++;
+      vendorPerformance[vendorName].revenue = round2(
+        vendorPerformance[vendorName].revenue + revenueAmount
+      );
       vendorPerformance[vendorName].amount_due = vendorPerformance[vendorName].revenue;
 
       if (!batchPerformance[batchName]) {
         batchPerformance[batchName] = {
           scans: 0,
-          results: 0,
-          clicks: 0,
+          page_views: 0,
+          results_ready: 0,
+          results_viewed: 0,
+          vendor_clicks: 0,
+          sessions_completed: 0,
+          sessions_abandoned: 0,
           revenue: 0
         };
       }
+
       if (eventName === "scan") batchPerformance[batchName].scans++;
-      if (eventName === "results_ready") batchPerformance[batchName].results++;
-      if (eventName === "vendor_click") batchPerformance[batchName].clicks++;
-      batchPerformance[batchName].revenue = round2(batchPerformance[batchName].revenue + revenueAmount);
+      if (eventName === "page_view") batchPerformance[batchName].page_views++;
+      if (eventName === "results_ready") batchPerformance[batchName].results_ready++;
+      if (eventName === "results_viewed") batchPerformance[batchName].results_viewed++;
+      if (eventName === "vendor_click") batchPerformance[batchName].vendor_clicks++;
+      if (eventName === "session_completed") batchPerformance[batchName].sessions_completed++;
+      if (eventName === "session_abandoned") batchPerformance[batchName].sessions_abandoned++;
+      batchPerformance[batchName].revenue = round2(
+        batchPerformance[batchName].revenue + revenueAmount
+      );
     }
 
     totalRevenue = round2(totalRevenue);
 
     const scans = byEvent.scan || 0;
+    const pageViews = byEvent.page_view || 0;
     const resultsReady = byEvent.results_ready || 0;
+    const resultsViewed = byEvent.results_viewed || 0;
     const vendorClicks = byEvent.vendor_click || 0;
+    const sessionsCompleted = byEvent.session_completed || 0;
+    const sessionsAbandoned = byEvent.session_abandoned || 0;
 
-    const scanToResultsPct = calcPct(resultsReady, scans);
-    const resultsToVendorPct = calcPct(vendorClicks, resultsReady);
+    const pageToResultsPct = calcPct(resultsViewed, pageViews);
+    const scanToResultsPct = calcPct(resultsViewed, scans);
+    const resultsToVendorPct = calcPct(vendorClicks, resultsViewed);
     const scanToVendorPct = calcPct(vendorClicks, scans);
+    const sessionCompletionPct = calcPct(
+      sessionsCompleted,
+      sessionsCompleted + sessionsAbandoned
+    );
 
     const totalSessions = Object.keys(sessionSeen).length;
     const totalEventsPerSession = Object.values(sessionEventCount).reduce((a, b) => a + b, 0);
-    const avgEventsPerSession = totalSessions > 0 ? round2(totalEventsPerSession / totalSessions) : 0;
+    const avgEventsPerSession =
+      totalSessions > 0 ? round2(totalEventsPerSession / totalSessions) : 0;
 
     Object.keys(skuPerformance).forEach((skuKey) => {
       const item = skuPerformance[skuKey];
-      item.scan_to_results_pct = calcPct(item.results, item.scans);
-      item.results_to_click_pct = calcPct(item.clicks, item.results);
-      item.scan_to_click_pct = calcPct(item.clicks, item.scans);
+      item.scan_to_results_pct = calcPct(item.results_viewed, item.scans);
+      item.results_to_click_pct = calcPct(item.vendor_clicks, item.results_viewed);
+      item.scan_to_click_pct = calcPct(item.vendor_clicks, item.scans);
+      item.completion_pct = calcPct(
+        item.sessions_completed,
+        item.sessions_completed + item.sessions_abandoned
+      );
       item.revenue = round2(item.revenue);
     });
 
     Object.keys(vendorPerformance).forEach((vendorKey) => {
       const item = vendorPerformance[vendorKey];
-      item.scan_to_results_pct = calcPct(item.results, item.scans);
-      item.results_to_click_pct = calcPct(item.clicks, item.results);
-      item.scan_to_click_pct = calcPct(item.clicks, item.scans);
+      item.scan_to_results_pct = calcPct(item.results_viewed, item.scans);
+      item.results_to_click_pct = calcPct(item.vendor_clicks, item.results_viewed);
+      item.scan_to_click_pct = calcPct(item.vendor_clicks, item.scans);
+      item.completion_pct = calcPct(
+        item.sessions_completed,
+        item.sessions_completed + item.sessions_abandoned
+      );
       item.revenue = round2(item.revenue);
       item.amount_due = round2(item.amount_due);
     });
 
     Object.keys(batchPerformance).forEach((batchKey) => {
       const item = batchPerformance[batchKey];
-      item.scan_to_results_pct = calcPct(item.results, item.scans);
-      item.results_to_click_pct = calcPct(item.clicks, item.results);
-      item.scan_to_click_pct = calcPct(item.clicks, item.scans);
+      item.scan_to_results_pct = calcPct(item.results_viewed, item.scans);
+      item.results_to_click_pct = calcPct(item.vendor_clicks, item.results_viewed);
+      item.scan_to_click_pct = calcPct(item.vendor_clicks, item.scans);
+      item.completion_pct = calcPct(
+        item.sessions_completed,
+        item.sessions_completed + item.sessions_abandoned
+      );
       item.revenue = round2(item.revenue);
     });
 
@@ -501,67 +686,158 @@ app.get("/api/analytics/summary", (req, res) => {
 
     Object.entries(batchPerformance).forEach(([k, v]) => {
       batchRevenueMap[k] = v.revenue;
-      batchClickMap[k] = v.clicks;
+      batchClickMap[k] = v.vendor_clicks;
     });
 
     const revenuePerScan = scans > 0 ? round2(totalRevenue / scans) : 0;
-    const revenuePerResult = resultsReady > 0 ? round2(totalRevenue / resultsReady) : 0;
+    const revenuePerResult = resultsViewed > 0 ? round2(totalRevenue / resultsViewed) : 0;
     const projectedPer100Scans = round2(revenuePerScan * 100);
     const projectedPer1000Scans = round2(revenuePerScan * 1000);
     const projectedMonthly = round2(totalRevenue * 30);
 
-    // ------------------------------------------------------------
-    // INTELLIGENCE LAYER
-    // ------------------------------------------------------------
+    /* ------------------------------------------------------------
+       SESSION INTELLIGENCE LAYER
+    ------------------------------------------------------------ */
     const sessionProfiles = {};
 
     for (const e of filtered) {
       const sid = safeString(e.session_id, "unknown");
+      const eventName = safeLower(e.event, "unknown");
+      const eventTs = e.ts || e.received_at;
+      const vendorName = safeLower(e.vendor, "unknown");
+      const skuName = safeLower(e.sku, "unknown");
+      const batchName = safeLower(e.batch, "") || "unknown";
 
       if (!sessionProfiles[sid]) {
         sessionProfiles[sid] = {
+          session_id: sid,
+          vendor: vendorName,
+          sku: skuName,
+          batch: batchName,
+          mode: safeString(e.mode, ""),
+          source: safeString(e.source, ""),
+          target_key: safeString(e.target_key, ""),
           events: [],
+          started_at: eventTs,
+          ended_at: eventTs,
           scans: 0,
+          page_views: 0,
+          settings_initialized: 0,
+          settings_changed: 0,
           demo_starts: 0,
           aims: 0,
           shots_added: 0,
           results_clicked: 0,
-          results: 0,
-          clicks: 0,
+          results_ready: 0,
+          results_viewed: 0,
+          vendor_clicks: 0,
           resets: 0,
           tries_again: 0,
           undos: 0,
-          mode: safeString(e.mode, ""),
-          source: safeString(e.source, "")
+          session_completed: 0,
+          session_abandoned: 0,
+          reasons: [],
+          session_duration_ms: null,
+          time_to_first_interaction_ms: null,
+          time_to_aim_ms: null,
+          time_to_first_shot_ms: null,
+          time_to_results_ms: null,
+          inactivity_ms: null,
+          last_shot_goal: null,
+          last_distance_yards: null,
+          last_click_value_moa: null,
+          last_dial_unit: null,
+          group_size_inches: null,
+          windage_direction: "",
+          elevation_direction: ""
         };
       }
 
       const p = sessionProfiles[sid];
-      const eventName = safeLower(e.event, "unknown");
 
       p.events.push(eventName);
 
+      if (new Date(eventTs).getTime() < new Date(p.started_at).getTime()) {
+        p.started_at = eventTs;
+      }
+      if (new Date(eventTs).getTime() > new Date(p.ended_at).getTime()) {
+        p.ended_at = eventTs;
+      }
+
       if (eventName === "scan") p.scans++;
+      if (eventName === "page_view") p.page_views++;
+      if (eventName === "settings_initialized") p.settings_initialized++;
+      if (eventName === "settings_changed") p.settings_changed++;
       if (eventName === "demo_start") p.demo_starts++;
       if (eventName === "aim_set") p.aims++;
       if (eventName === "shot_added") p.shots_added++;
       if (eventName === "results_clicked") p.results_clicked++;
-      if (eventName === "results_ready") p.results++;
-      if (eventName === "vendor_click") p.clicks++;
+      if (eventName === "results_ready") p.results_ready++;
+      if (eventName === "results_viewed") p.results_viewed++;
+      if (eventName === "vendor_click") p.vendor_clicks++;
       if (eventName === "reset") p.resets++;
       if (eventName === "try_again") p.tries_again++;
       if (eventName === "undo") p.undos++;
+      if (eventName === "session_completed") p.session_completed++;
+      if (eventName === "session_abandoned") p.session_abandoned++;
+
+      if (e.reason) p.reasons.push(e.reason);
+
+      if (Number.isFinite(Number(e.session_duration_ms))) {
+        p.session_duration_ms = Number(e.session_duration_ms);
+      }
+      if (Number.isFinite(Number(e.time_to_first_interaction_ms))) {
+        p.time_to_first_interaction_ms = Number(e.time_to_first_interaction_ms);
+      }
+      if (Number.isFinite(Number(e.time_to_aim_ms))) {
+        p.time_to_aim_ms = Number(e.time_to_aim_ms);
+      }
+      if (Number.isFinite(Number(e.time_to_first_shot_ms))) {
+        p.time_to_first_shot_ms = Number(e.time_to_first_shot_ms);
+      }
+      if (Number.isFinite(Number(e.time_to_results_ms))) {
+        p.time_to_results_ms = Number(e.time_to_results_ms);
+      }
+      if (Number.isFinite(Number(e.inactivity_ms))) {
+        p.inactivity_ms = Number(e.inactivity_ms);
+      }
+
+      if (Number.isFinite(Number(e.shot_goal))) {
+        p.last_shot_goal = Number(e.shot_goal);
+      }
+      if (Number.isFinite(Number(e.distance_yards))) {
+        p.last_distance_yards = Number(e.distance_yards);
+      }
+      if (Number.isFinite(Number(e.click_value_moa))) {
+        p.last_click_value_moa = Number(e.click_value_moa);
+      }
+      if (safeString(e.dial_unit)) {
+        p.last_dial_unit = safeString(e.dial_unit);
+      }
+      if (Number.isFinite(Number(e.group_size_inches))) {
+        p.group_size_inches = Number(e.group_size_inches);
+      }
+      if (safeString(e.windage_direction)) {
+        p.windage_direction = safeString(e.windage_direction);
+      }
+      if (safeString(e.elevation_direction)) {
+        p.elevation_direction = safeString(e.elevation_direction);
+      }
     }
 
     const intelligence = {
       sessions: {
         total: 0,
         scan_only: 0,
+        page_only: 0,
         started: 0,
         aimed: 0,
         partial_build: 0,
         reached_results: 0,
+        viewed_results: 0,
         clicked_vendor: 0,
+        completed: 0,
+        abandoned: 0,
         repeated: 0
       },
       user_stages: {
@@ -574,70 +850,105 @@ app.get("/api/analytics/summary", (req, res) => {
       behavior_signals: {
         avg_shots_added_per_session: 0,
         avg_results_per_session: 0,
+        avg_settings_changes_per_session: 0,
         repeat_rate_pct: 0,
-        vendor_click_rate_pct: 0
+        vendor_click_rate_pct: 0,
+        completion_rate_pct: 0
+      },
+      timing: {
+        avg_time_to_first_interaction_ms: 0,
+        avg_time_to_aim_ms: 0,
+        avg_time_to_first_shot_ms: 0,
+        avg_time_to_results_ms: 0,
+        avg_session_duration_ms: 0,
+        median_time_to_results_ms: 0
+      },
+      diagnostics: {
+        avg_group_size_inches: 0,
+        min_group_size_inches: 0,
+        max_group_size_inches: 0,
+        most_common_windage_direction: "NONE",
+        most_common_elevation_direction: "NONE"
+      },
+      dropoff: {
+        scan_only_pct: 0,
+        after_start_before_aim_pct: 0,
+        after_aim_before_results_pct: 0,
+        after_results_before_vendor_pct: 0
       }
     };
 
     let totalShotsAddedAcrossSessions = 0;
-    let totalResultsAcrossSessions = 0;
+    let totalResultsViewedAcrossSessions = 0;
+    let totalSettingsChangesAcrossSessions = 0;
+
+    const timeToFirstInteractionList = [];
+    const timeToAimList = [];
+    const timeToFirstShotList = [];
+    const timeToResultsList = [];
+    const sessionDurationList = [];
+    const groupSizeList = [];
+    const windageMap = {};
+    const elevationMap = {};
 
     Object.values(sessionProfiles).forEach((p) => {
       intelligence.sessions.total += 1;
       totalShotsAddedAcrossSessions += p.shots_added;
-      totalResultsAcrossSessions += p.results;
+      totalResultsViewedAcrossSessions += p.results_viewed;
+      totalSettingsChangesAcrossSessions += p.settings_changed;
 
-      const repeated = p.tries_again > 0 || p.results > 1 || p.events.length >= 8;
-      const highIntent = p.results > 0 && p.clicks > 0;
-      const engaged = p.aims > 0 || p.shots_added > 0;
-      const understood = p.results > 0;
+      const repeated = p.tries_again > 0 || p.results_viewed > 1 || p.events.length >= 8;
+      const highIntent = p.results_viewed > 0 && p.vendor_clicks > 0;
+      const engaged = p.aims > 0 || p.shots_added > 0 || p.settings_changed > 0;
+      const understood = p.results_viewed > 0;
 
-      if (p.scans > 0 && p.demo_starts === 0 && p.aims === 0 && p.results === 0) {
+      if (p.scans > 0 && p.demo_starts === 0 && p.aims === 0 && p.results_viewed === 0) {
         intelligence.sessions.scan_only += 1;
       }
 
-      if (p.demo_starts > 0) {
-        intelligence.sessions.started += 1;
+      if (p.page_views > 0 && p.scans === 0 && p.demo_starts === 0 && p.aims === 0 && p.results_viewed === 0) {
+        intelligence.sessions.page_only += 1;
       }
 
-      if (p.aims > 0) {
-        intelligence.sessions.aimed += 1;
-      }
+      if (p.demo_starts > 0) intelligence.sessions.started += 1;
+      if (p.aims > 0) intelligence.sessions.aimed += 1;
+      if (p.shots_added > 0 && p.results_viewed === 0) intelligence.sessions.partial_build += 1;
+      if (p.results_ready > 0) intelligence.sessions.reached_results += 1;
+      if (p.results_viewed > 0) intelligence.sessions.viewed_results += 1;
+      if (p.vendor_clicks > 0) intelligence.sessions.clicked_vendor += 1;
+      if (p.session_completed > 0) intelligence.sessions.completed += 1;
+      if (p.session_abandoned > 0) intelligence.sessions.abandoned += 1;
+      if (repeated) intelligence.sessions.repeated += 1;
 
-      if (p.shots_added > 0 && p.results === 0) {
-        intelligence.sessions.partial_build += 1;
-      }
+      if (!engaged && !understood) intelligence.user_stages.curious += 1;
+      if (engaged && !understood) intelligence.user_stages.engaged += 1;
+      if (understood) intelligence.user_stages.understood += 1;
+      if (repeated) intelligence.user_stages.returning += 1;
+      if (highIntent) intelligence.user_stages.high_intent += 1;
 
-      if (p.results > 0) {
-        intelligence.sessions.reached_results += 1;
+      if (Number.isFinite(p.time_to_first_interaction_ms)) {
+        timeToFirstInteractionList.push(p.time_to_first_interaction_ms);
       }
-
-      if (p.clicks > 0) {
-        intelligence.sessions.clicked_vendor += 1;
+      if (Number.isFinite(p.time_to_aim_ms)) {
+        timeToAimList.push(p.time_to_aim_ms);
       }
-
-      if (repeated) {
-        intelligence.sessions.repeated += 1;
+      if (Number.isFinite(p.time_to_first_shot_ms)) {
+        timeToFirstShotList.push(p.time_to_first_shot_ms);
       }
-
-      if (!engaged && !understood) {
-        intelligence.user_stages.curious += 1;
+      if (Number.isFinite(p.time_to_results_ms)) {
+        timeToResultsList.push(p.time_to_results_ms);
       }
-
-      if (engaged && !understood) {
-        intelligence.user_stages.engaged += 1;
+      if (Number.isFinite(p.session_duration_ms)) {
+        sessionDurationList.push(p.session_duration_ms);
       }
-
-      if (understood) {
-        intelligence.user_stages.understood += 1;
+      if (Number.isFinite(p.group_size_inches)) {
+        groupSizeList.push(p.group_size_inches);
       }
-
-      if (repeated) {
-        intelligence.user_stages.returning += 1;
+      if (p.windage_direction) {
+        bucketCount(windageMap, p.windage_direction);
       }
-
-      if (highIntent) {
-        intelligence.user_stages.high_intent += 1;
+      if (p.elevation_direction) {
+        bucketCount(elevationMap, p.elevation_direction);
       }
     });
 
@@ -647,7 +958,11 @@ app.get("/api/analytics/summary", (req, res) => {
       );
 
       intelligence.behavior_signals.avg_results_per_session = round2(
-        totalResultsAcrossSessions / intelligence.sessions.total
+        totalResultsViewedAcrossSessions / intelligence.sessions.total
+      );
+
+      intelligence.behavior_signals.avg_settings_changes_per_session = round2(
+        totalSettingsChangesAcrossSessions / intelligence.sessions.total
       );
 
       intelligence.behavior_signals.repeat_rate_pct = calcPct(
@@ -657,9 +972,50 @@ app.get("/api/analytics/summary", (req, res) => {
 
       intelligence.behavior_signals.vendor_click_rate_pct = calcPct(
         intelligence.sessions.clicked_vendor,
-        intelligence.sessions.reached_results
+        intelligence.sessions.viewed_results
+      );
+
+      intelligence.behavior_signals.completion_rate_pct = calcPct(
+        intelligence.sessions.completed,
+        intelligence.sessions.completed + intelligence.sessions.abandoned
+      );
+
+      intelligence.dropoff.scan_only_pct = calcPct(
+        intelligence.sessions.scan_only,
+        intelligence.sessions.total
+      );
+
+      intelligence.dropoff.after_start_before_aim_pct = calcPct(
+        intelligence.sessions.started - intelligence.sessions.aimed,
+        intelligence.sessions.started
+      );
+
+      intelligence.dropoff.after_aim_before_results_pct = calcPct(
+        intelligence.sessions.aimed - intelligence.sessions.viewed_results,
+        intelligence.sessions.aimed
+      );
+
+      intelligence.dropoff.after_results_before_vendor_pct = calcPct(
+        intelligence.sessions.viewed_results - intelligence.sessions.clicked_vendor,
+        intelligence.sessions.viewed_results
       );
     }
+
+    intelligence.timing.avg_time_to_first_interaction_ms = avg(timeToFirstInteractionList);
+    intelligence.timing.avg_time_to_aim_ms = avg(timeToAimList);
+    intelligence.timing.avg_time_to_first_shot_ms = avg(timeToFirstShotList);
+    intelligence.timing.avg_time_to_results_ms = avg(timeToResultsList);
+    intelligence.timing.avg_session_duration_ms = avg(sessionDurationList);
+    intelligence.timing.median_time_to_results_ms = median(timeToResultsList);
+
+    intelligence.diagnostics.avg_group_size_inches = avg(groupSizeList);
+    intelligence.diagnostics.min_group_size_inches = minVal(groupSizeList);
+    intelligence.diagnostics.max_group_size_inches = maxVal(groupSizeList);
+
+    const topWindage = topNFromMap(windageMap, 1)[0];
+    const topElevation = topNFromMap(elevationMap, 1)[0];
+    intelligence.diagnostics.most_common_windage_direction = topWindage?.key || "NONE";
+    intelligence.diagnostics.most_common_elevation_direction = topElevation?.key || "NONE";
 
     res.json({
       ok: true,
@@ -671,28 +1027,23 @@ app.get("/api/analytics/summary", (req, res) => {
       },
       totals: {
         events: filtered.length,
+        page_views: pageViews,
         scans,
         results_ready: resultsReady,
-        vendor_click: vendorClicks
+        results_viewed: resultsViewed,
+        vendor_clicks: vendorClicks,
+        sessions_completed: sessionsCompleted,
+        sessions_abandoned: sessionsAbandoned
       },
       conversion: {
+        page_to_results_pct: pageToResultsPct,
         scan_to_results_pct: scanToResultsPct,
         results_to_vendor_pct: resultsToVendorPct,
-        scan_to_vendor_pct: scanToVendorPct
+        scan_to_vendor_pct: scanToVendorPct,
+        session_completion_pct: sessionCompletionPct
       },
       pricing: {
-        current_rates: {
-          scan: REVENUE_RATES.scan,
-          demo_start: REVENUE_RATES.demo_start,
-          aim_set: REVENUE_RATES.aim_set,
-          shot_added: REVENUE_RATES.shot_added,
-          results_clicked: REVENUE_RATES.results_clicked,
-          results_ready: REVENUE_RATES.results_ready,
-          try_again: REVENUE_RATES.try_again,
-          reset: REVENUE_RATES.reset,
-          undo: REVENUE_RATES.undo,
-          vendor_click: REVENUE_RATES.vendor_click
-        }
+        current_rates: { ...REVENUE_RATES }
       },
       revenue: {
         total: totalRevenue,
@@ -739,7 +1090,10 @@ app.get("/api/analytics/summary", (req, res) => {
         by_event: byEvent,
         by_vendor: byVendor,
         by_sku: bySku,
-        by_batch: byBatch
+        by_batch: byBatch,
+        by_target: byTarget,
+        by_mode: byMode,
+        by_source: bySource
       },
       generated_at: new Date().toISOString()
     });
@@ -752,9 +1106,9 @@ app.get("/api/analytics/summary", (req, res) => {
   }
 });
 
-// ------------------------------------------------------------
-// CORRECTION MATH ENDPOINT
-// ------------------------------------------------------------
+/* ------------------------------------------------------------
+   CORRECTION MATH ENDPOINT
+------------------------------------------------------------ */
 app.post("/api/calc", (req, res) => {
   try {
     const body = req.body || {};
@@ -811,7 +1165,8 @@ app.post("/api/calc", (req, res) => {
       const { inchesX, inchesY, scaleIn } = delta01ToInches(dx01, dy01, wIn, hIn);
       const { windage, elevation } = directionFromDelta(inchesX, inchesY);
 
-      const dialUnit = String(body?.dialUnit || "MOA").toUpperCase() === "MRAD" ? "MRAD" : "MOA";
+      const dialUnit =
+        String(body?.dialUnit || "MOA").toUpperCase() === "MRAD" ? "MRAD" : "MOA";
       const clickValue = clampNum(body?.clickValue, dialUnit === "MRAD" ? 0.1 : 0.25);
 
       if (!(clickValue > 0)) {
@@ -821,9 +1176,8 @@ app.post("/api/calc", (req, res) => {
         });
       }
 
-      const inchesPerUnit = dialUnit === "MOA"
-        ? inchesPerMoa(distanceYds)
-        : inchesPerMrad(distanceYds);
+      const inchesPerUnit =
+        dialUnit === "MOA" ? inchesPerMoa(distanceYds) : inchesPerMrad(distanceYds);
 
       const unitsX = Math.abs(inchesX) / inchesPerUnit;
       const unitsY = Math.abs(inchesY) / inchesPerUnit;
@@ -942,9 +1296,9 @@ app.post("/api/calc", (req, res) => {
   }
 });
 
-// ------------------------------------------------------------
-// START
-// ------------------------------------------------------------
+/* ------------------------------------------------------------
+   START
+------------------------------------------------------------ */
 app.listen(PORT, () => {
   console.log(`Backend listening on ${PORT}`);
 });
