@@ -78,7 +78,176 @@
   };
 
   let qrHotspot = null;
+    let debugOverlay = null;
+  let debugBody = null;
+  let debugCount = 0;
 
+  function ensureDebugOverlay() {
+    if (!DEBUG_ANALYTICS) return;
+    if (debugOverlay) return;
+
+    debugOverlay = document.createElement("div");
+    debugOverlay.id = "sczn3-debug-overlay";
+    debugOverlay.style.position = "fixed";
+    debugOverlay.style.right = "10px";
+    debugOverlay.style.bottom = "10px";
+    debugOverlay.style.width = "320px";
+    debugOverlay.style.maxWidth = "calc(100vw - 20px)";
+    debugOverlay.style.maxHeight = "42vh";
+    debugOverlay.style.background = "rgba(0,0,0,0.88)";
+    debugOverlay.style.color = "#67f3a4";
+    debugOverlay.style.border = "1px solid rgba(103,243,164,0.35)";
+    debugOverlay.style.borderRadius = "12px";
+    debugOverlay.style.boxShadow = "0 10px 28px rgba(0,0,0,0.35)";
+    debugOverlay.style.zIndex = "99999";
+    debugOverlay.style.fontFamily = "ui-monospace, SFMono-Regular, Menlo, monospace";
+    debugOverlay.style.fontSize = "11px";
+    debugOverlay.style.lineHeight = "1.35";
+    debugOverlay.style.overflow = "hidden";
+    debugOverlay.style.backdropFilter = "blur(6px)";
+
+    const header = document.createElement("div");
+    header.style.display = "flex";
+    header.style.alignItems = "center";
+    header.style.justifyContent = "space-between";
+    header.style.padding = "8px 10px";
+    header.style.background = "rgba(255,255,255,0.05)";
+    header.style.borderBottom = "1px solid rgba(255,255,255,0.08)";
+
+    const title = document.createElement("div");
+    title.textContent = "SCZN3 Analytics Debug";
+    title.style.fontWeight = "700";
+    title.style.letterSpacing = "0.2px";
+
+    const controls = document.createElement("div");
+    controls.style.display = "flex";
+    controls.style.gap = "6px";
+
+    const clearBtn = document.createElement("button");
+    clearBtn.type = "button";
+    clearBtn.textContent = "Clear";
+    clearBtn.style.background = "rgba(255,255,255,0.08)";
+    clearBtn.style.color = "#fff";
+    clearBtn.style.border = "1px solid rgba(255,255,255,0.12)";
+    clearBtn.style.borderRadius = "8px";
+    clearBtn.style.padding = "4px 8px";
+    clearBtn.style.fontSize = "10px";
+    clearBtn.style.cursor = "pointer";
+    clearBtn.addEventListener("click", () => {
+      if (debugBody) debugBody.innerHTML = "";
+      debugCount = 0;
+    });
+
+    const hideBtn = document.createElement("button");
+    hideBtn.type = "button";
+    hideBtn.textContent = "Hide";
+    hideBtn.style.background = "rgba(255,255,255,0.08)";
+    hideBtn.style.color = "#fff";
+    hideBtn.style.border = "1px solid rgba(255,255,255,0.12)";
+    hideBtn.style.borderRadius = "8px";
+    hideBtn.style.padding = "4px 8px";
+    hideBtn.style.fontSize = "10px";
+    hideBtn.style.cursor = "pointer";
+    hideBtn.addEventListener("click", () => {
+      debugOverlay.style.display = "none";
+      showDebugReopenPill();
+    });
+
+    controls.appendChild(clearBtn);
+    controls.appendChild(hideBtn);
+
+    header.appendChild(title);
+    header.appendChild(controls);
+
+    debugBody = document.createElement("div");
+    debugBody.style.padding = "8px 10px";
+    debugBody.style.overflowY = "auto";
+    debugBody.style.maxHeight = "calc(42vh - 42px)";
+    debugBody.style.wordBreak = "break-word";
+
+    debugOverlay.appendChild(header);
+    debugOverlay.appendChild(debugBody);
+    document.body.appendChild(debugOverlay);
+  }
+
+  function showDebugReopenPill() {
+    if (!DEBUG_ANALYTICS) return;
+
+    let pill = document.getElementById("sczn3-debug-pill");
+    if (!pill) {
+      pill = document.createElement("button");
+      pill.id = "sczn3-debug-pill";
+      pill.type = "button";
+      pill.textContent = "Debug";
+      pill.style.position = "fixed";
+      pill.style.right = "10px";
+      pill.style.bottom = "10px";
+      pill.style.zIndex = "100000";
+      pill.style.border = "1px solid rgba(103,243,164,0.35)";
+      pill.style.background = "rgba(0,0,0,0.88)";
+      pill.style.color = "#67f3a4";
+      pill.style.borderRadius = "999px";
+      pill.style.padding = "8px 12px";
+      pill.style.fontSize = "11px";
+      pill.style.fontFamily = "ui-monospace, SFMono-Regular, Menlo, monospace";
+      pill.style.cursor = "pointer";
+      pill.style.boxShadow = "0 8px 24px rgba(0,0,0,0.3)";
+      pill.addEventListener("click", () => {
+        ensureDebugOverlay();
+        if (debugOverlay) debugOverlay.style.display = "block";
+        pill.remove();
+      });
+      document.body.appendChild(pill);
+    }
+  }
+
+  function debugLog(eventName, payload, status = "SEND") {
+    if (!DEBUG_ANALYTICS) return;
+    ensureDebugOverlay();
+    if (!debugBody) return;
+
+    debugCount += 1;
+
+    const row = document.createElement("div");
+    row.style.padding = "6px 0";
+    row.style.borderBottom = "1px solid rgba(255,255,255,0.08)";
+
+    const top = document.createElement("div");
+    top.style.display = "flex";
+    top.style.justifyContent = "space-between";
+    top.style.gap = "8px";
+
+    const left = document.createElement("div");
+    left.innerHTML = `<strong style="color:#fff">${debugCount}. ${eventName}</strong>`;
+
+    const right = document.createElement("div");
+    right.textContent = status;
+    right.style.color =
+      status === "OK" ? "#67f3a4" :
+      status === "ERR" ? "#ff7b7b" :
+      "#ffd166";
+
+    top.appendChild(left);
+    top.appendChild(right);
+
+    const meta = document.createElement("div");
+    meta.style.marginTop = "3px";
+    meta.style.color = "rgba(255,255,255,0.72)";
+    meta.textContent =
+      `shots=${payload?.shots ?? "-"} | aim=${payload?.has_aim ? "Y" : "N"} | results=${payload?.results_viewed ? "Y" : "N"}`;
+
+    const pre = document.createElement("pre");
+    pre.style.margin = "5px 0 0 0";
+    pre.style.whiteSpace = "pre-wrap";
+    pre.style.color = "#9ad1ff";
+    pre.textContent = JSON.stringify(payload, null, 2);
+
+    row.appendChild(top);
+    row.appendChild(meta);
+    row.appendChild(pre);
+
+    debugBody.prepend(row);
+  }
   const vendorMap = {
     baker: {
       base: "https://baker-targets.com/",
