@@ -1,73 +1,418 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>SEC — Shooter Experience Card</title>
-  <link rel="stylesheet" href="./b2b-sec.css">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>B2B SEC</title>
+  <style>
+    :root{
+      --bg:#08101e;
+      --card:#121b31;
+      --card2:#162342;
+      --text:#f5f8ff;
+      --muted:#a6b7d6;
+      --line:rgba(255,255,255,.10);
+      --blue:#61acff;
+      --blue2:#8dc7ff;
+      --red:#ff6b6b;
+      --white:#ffffff;
+      --shadow:0 18px 44px rgba(0,0,0,.34);
+      --radius:22px;
+    }
+
+    *{box-sizing:border-box}
+    html,body{
+      margin:0;
+      padding:0;
+      background:
+        radial-gradient(circle at top right, rgba(97,172,255,.14), transparent 30%),
+        linear-gradient(180deg,#07101d 0%, #09111f 100%);
+      color:var(--text);
+      font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+      min-height:100%;
+    }
+
+    a{color:inherit;text-decoration:none}
+    button{font:inherit}
+
+    .wrap{
+      width:min(100%, 760px);
+      margin:0 auto;
+      padding:18px 14px 36px;
+    }
+
+    .topbar{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      margin-bottom:14px;
+    }
+
+    .brand{
+      display:flex;
+      flex-direction:column;
+      gap:2px;
+    }
+
+    .eyebrow{
+      font-size:11px;
+      font-weight:800;
+      letter-spacing:.16em;
+      text-transform:uppercase;
+      color:var(--blue2);
+    }
+
+    .title{
+      font-size:26px;
+      font-weight:900;
+      line-height:1.04;
+      letter-spacing:.01em;
+    }
+
+    .badge{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      padding:9px 12px;
+      border-radius:999px;
+      background:rgba(255,255,255,.05);
+      border:1px solid var(--line);
+      color:var(--white);
+      font-size:12px;
+      font-weight:800;
+      white-space:nowrap;
+    }
+
+    .sec{
+      background:
+        linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.02)),
+        linear-gradient(180deg, var(--card2), var(--card));
+      border:1px solid var(--line);
+      border-radius:var(--radius);
+      box-shadow:var(--shadow);
+      padding:18px;
+      overflow:hidden;
+      position:relative;
+    }
+
+    .sec::before{
+      content:"";
+      position:absolute;
+      inset:0 0 auto 0;
+      height:5px;
+      background:linear-gradient(90deg,var(--red),var(--white),var(--blue));
+    }
+
+    .hero{
+      display:grid;
+      grid-template-columns:1fr;
+      gap:14px;
+      align-items:start;
+    }
+
+    .scoreBox{
+      background:rgba(255,255,255,.04);
+      border:1px solid rgba(255,255,255,.09);
+      border-radius:20px;
+      padding:16px;
+      text-align:center;
+    }
+
+    .scoreLabel{
+      font-size:12px;
+      font-weight:800;
+      letter-spacing:.16em;
+      color:var(--muted);
+      text-transform:uppercase;
+    }
+
+    .score{
+      margin-top:6px;
+      font-size:64px;
+      line-height:1;
+      font-weight:1000;
+      letter-spacing:-.04em;
+    }
+
+    .fair{
+      margin-top:8px;
+      color:var(--muted);
+      font-size:13px;
+      line-height:1.35;
+    }
+
+    .grid{
+      display:grid;
+      grid-template-columns:1fr;
+      gap:10px;
+    }
+
+    .metric{
+      background:rgba(255,255,255,.04);
+      border:1px solid rgba(255,255,255,.09);
+      border-radius:18px;
+      padding:14px;
+    }
+
+    .metric .label{
+      font-size:12px;
+      font-weight:800;
+      letter-spacing:.14em;
+      color:var(--muted);
+      text-transform:uppercase;
+      margin-bottom:8px;
+    }
+
+    .metric .value{
+      font-size:28px;
+      line-height:1.1;
+      font-weight:900;
+    }
+
+    .metric .sub{
+      margin-top:5px;
+      font-size:13px;
+      color:var(--muted);
+    }
+
+    .preview{
+      margin-top:14px;
+      display:none;
+      border-radius:18px;
+      overflow:hidden;
+      border:1px solid var(--line);
+      background:#0b1224;
+    }
+
+    .preview.on{display:block}
+
+    .preview img{
+      display:block;
+      width:100%;
+      height:auto;
+      max-height:42vh;
+      object-fit:contain;
+      background:#09111f;
+    }
+
+    .actions{
+      display:grid;
+      grid-template-columns:1fr;
+      gap:10px;
+      margin-top:14px;
+    }
+
+    .btn{
+      width:100%;
+      border:0;
+      border-radius:16px;
+      min-height:52px;
+      padding:14px 16px;
+      font-weight:900;
+      cursor:pointer;
+      transition:transform .14s ease;
+    }
+
+    .btn:active{transform:scale(.985)}
+
+    .btnPrimary{
+      background:linear-gradient(180deg,var(--blue2),var(--blue));
+      color:#08111f;
+      box-shadow:0 10px 22px rgba(97,172,255,.24);
+    }
+
+    .btnSecondary{
+      background:rgba(255,255,255,.04);
+      border:1px solid var(--line);
+      color:var(--text);
+    }
+
+    .btnVendor{
+      background:linear-gradient(180deg,#ffffff,#dfe9ff);
+      color:#08111f;
+    }
+
+    .foot{
+      margin-top:16px;
+      padding-top:10px;
+      border-top:1px solid rgba(255,255,255,.08);
+      display:flex;
+      flex-wrap:wrap;
+      gap:10px;
+      justify-content:space-between;
+      align-items:center;
+      color:var(--muted);
+      font-size:12px;
+    }
+
+    .tinyLink{
+      color:var(--blue2);
+      font-weight:800;
+    }
+
+    @media (min-width:700px){
+      .hero{
+        grid-template-columns:1.15fr .95fr;
+      }
+      .grid{
+        grid-template-columns:1fr;
+      }
+      .actions{
+        grid-template-columns:1fr 1fr;
+      }
+    }
+  </style>
 </head>
 <body>
-  <div class="appShell">
-
-    <div class="topHeader">
-      <button id="backBtn" class="miniBtn backBtn" aria-label="Back">‹</button>
-
-      <div class="secMark">
-        <span class="secR">S</span><span class="secW">E</span><span class="secB">C</span>
+  <div class="wrap">
+    <div class="topbar">
+      <div class="brand">
+        <div class="eyebrow">SCZN3 • Shooter Experience Card</div>
+        <div class="title">B2B SEC</div>
       </div>
-
-      <div id="levelChip" class="levelChip">LEVEL 1</div>
+      <div class="badge">B2B Only</div>
     </div>
 
-    <div class="subHeader">
-      <div class="drillPill">
-        <div id="drillTitle" class="drillTitleMain">Back to Basics</div>
-        <div class="drillTitleSub">
-          <span class="subR">S</span><span class="subW">hooter </span>
-          <span class="subW">E</span><span class="subW">xperience </span>
-          <span class="subB">C</span><span class="subW">ard</span>
+    <section class="sec">
+      <div class="hero">
+        <div class="scoreBox">
+          <div class="scoreLabel">Smart Score</div>
+          <div class="score" id="scoreEl">92</div>
+          <div class="fair">Tighter group + closer to aim point = higher score</div>
+        </div>
+
+        <div class="grid">
+          <div class="metric">
+            <div class="label">Shots</div>
+            <div class="value" id="shotsEl">5</div>
+            <div class="sub">B2B session count</div>
+          </div>
+
+          <div class="metric">
+            <div class="label">Windage Clicks</div>
+            <div class="value" id="windageEl">1.25 RIGHT</div>
+            <div class="sub">Two decimals locked</div>
+          </div>
+
+          <div class="metric">
+            <div class="label">Elevation Clicks</div>
+            <div class="value" id="elevationEl">0.75 UP</div>
+            <div class="sub">Two decimals locked</div>
+          </div>
         </div>
       </div>
 
-      <button id="historyBtn" class="historyBtn">HISTORY</button>
-    </div>
-
-    <div class="matrixCard">
-      <div id="matrixHeader" class="matrixHeader"></div>
-      <div id="matrixBody" class="matrixBody"></div>
-    </div>
-
-    <div class="summaryRow">
-      <div class="summaryCard">
-        <div class="summaryLabel">LIFETIME BEST SCORE</div>
-
-        <div class="summaryValueWrap">
-          <div id="lifetimeBest" class="summaryValue">0/10</div>
-          <div id="bestBadge" class="bestBadge hidden">NEW BEST</div>
-        </div>
-
-        <div id="timeStamp" class="timeStamp">—</div>
+      <div class="preview" id="preview">
+        <img id="previewImg" alt="B2B uploaded target" />
       </div>
 
-      <div class="summaryCard">
-        <div id="levelLabel" class="summaryLabel">LEVEL 1</div>
-
-        <div id="levelStars" class="stars">★☆☆☆☆</div>
-
-        <div id="nextReq" class="nextReq">Complete 1 verified session</div>
-        <div id="nextHint" class="nextHint">One more strong session moves you up.</div>
+      <div class="actions">
+        <button class="btn btnPrimary" id="btnAnother">Score Another B2B Target</button>
+        <button class="btn btnSecondary" id="btnDownload">Download SEC Picture</button>
+        <button class="btn btnVendor" id="btnVendor">Buy More Targets Like This</button>
+        <button class="btn btnSecondary" id="btnMain">Back to Main Landing</button>
       </div>
-    </div>
 
-    <div class="actions actions3">
-      <button id="newScanBtn" class="actionBtn">NEW SCAN</button>
-      <button id="vendorBtn" class="actionBtn">BUY MORE TARGETS LIKE THIS</button>
-      <button id="surveyBtn" class="actionBtn">DO SURVEY</button>
-    </div>
-
+      <div class="foot">
+        <div>Path: <strong>/docs/b2b-sec.html</strong></div>
+        <a class="tinyLink" href="./b2b.html">Back to B2B page</a>
+      </div>
+    </section>
   </div>
 
-  <script src="./drills.js"></script>
-  <script src="./b2b-sec.js"></script>
+  <script>
+    const scoreEl = document.getElementById('scoreEl');
+    const shotsEl = document.getElementById('shotsEl');
+    const windageEl = document.getElementById('windageEl');
+    const elevationEl = document.getElementById('elevationEl');
+    const preview = document.getElementById('preview');
+    const previewImg = document.getElementById('previewImg');
+
+    const btnAnother = document.getElementById('btnAnother');
+    const btnDownload = document.getElementById('btnDownload');
+    const btnVendor = document.getElementById('btnVendor');
+    const btnMain = document.getElementById('btnMain');
+
+    function toTwo(n) {
+      return Number(n).toFixed(2);
+    }
+
+    function bootstrapFromSession() {
+      let ctx = null;
+      try {
+        ctx = JSON.parse(sessionStorage.getItem('sczn3_b2b_context') || 'null');
+      } catch {}
+
+      if (!ctx) return;
+
+      shotsEl.textContent = String(ctx.shots || 5);
+
+      if (ctx.imageDataUrl) {
+        previewImg.src = ctx.imageDataUrl;
+        preview.classList.add('on');
+      }
+
+      // Placeholder polished values until live backend values are injected.
+      // Replace this block later with real backend/session output.
+      const shots = Number(ctx.shots || 5);
+      const baseScore = shots >= 5 ? 92 : shots === 4 ? 90 : 88;
+      scoreEl.textContent = String(baseScore);
+      windageEl.textContent = `${toTwo(1.25)} RIGHT`;
+      elevationEl.textContent = `${toTwo(0.75)} UP`;
+    }
+
+    btnAnother.addEventListener('click', () => {
+      window.location.href = './b2b.html';
+    });
+
+    btnMain.addEventListener('click', () => {
+      window.location.href = './index.html';
+    });
+
+    btnVendor.addEventListener('click', () => {
+      // Replace with your Baker/vendor link when ready
+      window.open('https://bakertargets.com', '_blank', 'noopener,noreferrer');
+    });
+
+    btnDownload.addEventListener('click', async () => {
+      const root = document.querySelector('.sec');
+      const clone = root.cloneNode(true);
+      clone.style.maxWidth = '760px';
+      clone.style.margin = '20px auto';
+      clone.style.position = 'fixed';
+      clone.style.left = '-99999px';
+      clone.style.top = '0';
+      document.body.appendChild(clone);
+
+      try {
+        if (!window.html2canvas) {
+          const s = document.createElement('script');
+          s.src = 'https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js';
+          s.onload = async () => {
+            const canvas = await window.html2canvas(clone, { backgroundColor: null, scale: 2 });
+            const a = document.createElement('a');
+            a.href = canvas.toDataURL('image/png');
+            a.download = 'b2b-sec.png';
+            a.click();
+            clone.remove();
+          };
+          document.head.appendChild(s);
+        } else {
+          const canvas = await window.html2canvas(clone, { backgroundColor: null, scale: 2 });
+          const a = document.createElement('a');
+          a.href = canvas.toDataURL('image/png');
+          a.download = 'b2b-sec.png';
+          a.click();
+          clone.remove();
+        }
+      } catch (err) {
+        clone.remove();
+        alert('Unable to download SEC picture on this device right now.');
+      }
+    });
+
+    bootstrapFromSession();
+  </script>
 </body>
 </html>
