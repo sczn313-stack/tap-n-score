@@ -891,4 +891,4 @@
   trackEvent("scan", {
     source: "target_landing"
   });
-})();v
+})();
