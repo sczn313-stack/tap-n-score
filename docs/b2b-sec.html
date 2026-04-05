@@ -196,6 +196,20 @@
       background:#09111f;
     }
 
+    .status{
+      display:none;
+      margin-top:14px;
+      padding:12px 14px;
+      border-radius:14px;
+      border:1px solid rgba(255,255,255,.1);
+      background:rgba(255,255,255,.04);
+      color:var(--muted);
+      font-size:13px;
+      line-height:1.4;
+    }
+
+    .status.on{display:block}
+
     .actions{
       display:grid;
       grid-template-columns:1fr;
@@ -278,26 +292,26 @@
       <div class="hero">
         <div class="scoreBox">
           <div class="scoreLabel">Smart Score</div>
-          <div class="score" id="scoreEl">92</div>
+          <div class="score" id="scoreEl">--</div>
           <div class="fair">Tighter group + closer to aim point = higher score</div>
         </div>
 
         <div class="grid">
           <div class="metric">
             <div class="label">Shots</div>
-            <div class="value" id="shotsEl">5</div>
+            <div class="value" id="shotsEl">--</div>
             <div class="sub">B2B session count</div>
           </div>
 
           <div class="metric">
             <div class="label">Windage Clicks</div>
-            <div class="value" id="windageEl">1.25 RIGHT</div>
+            <div class="value" id="windageEl">--</div>
             <div class="sub">Two decimals locked</div>
           </div>
 
           <div class="metric">
             <div class="label">Elevation Clicks</div>
-            <div class="value" id="elevationEl">0.75 UP</div>
+            <div class="value" id="elevationEl">--</div>
             <div class="sub">Two decimals locked</div>
           </div>
         </div>
@@ -306,6 +320,8 @@
       <div class="preview" id="preview">
         <img id="previewImg" alt="B2B uploaded target" />
       </div>
+
+      <div class="status" id="statusBox"></div>
 
       <div class="actions">
         <button class="btn btnPrimary" id="btnAnother">Score Another B2B Target</button>
@@ -328,6 +344,7 @@
     const elevationEl = document.getElementById('elevationEl');
     const preview = document.getElementById('preview');
     const previewImg = document.getElementById('previewImg');
+    const statusBox = document.getElementById('statusBox');
 
     const btnAnother = document.getElementById('btnAnother');
     const btnDownload = document.getElementById('btnDownload');
@@ -335,31 +352,64 @@
     const btnMain = document.getElementById('btnMain');
 
     function toTwo(n) {
-      return Number(n).toFixed(2);
+      const num = Number(n);
+      return Number.isFinite(num) ? num.toFixed(2) : null;
+    }
+
+    function isDir(v) {
+      return v === 'LEFT' || v === 'RIGHT' || v === 'UP' || v === 'DOWN';
+    }
+
+    function setStatus(msg) {
+      statusBox.textContent = msg;
+      statusBox.classList.add('on');
+    }
+
+    function readContext() {
+      try {
+        return JSON.parse(sessionStorage.getItem('sczn3_b2b_context') || 'null');
+      } catch {
+        return null;
+      }
+    }
+
+    function renderValue(clicks, direction) {
+      const c = toTwo(clicks);
+      if (!c) return '--';
+      if (isDir(direction)) return `${c} ${direction}`;
+      return c;
     }
 
     function bootstrapFromSession() {
-      let ctx = null;
-      try {
-        ctx = JSON.parse(sessionStorage.getItem('sczn3_b2b_context') || 'null');
-      } catch {}
+      const ctx = readContext();
 
-      if (!ctx) return;
+      if (!ctx || ctx.target !== 'b2b') {
+        setStatus('No active B2B result payload was found. Return to the B2B page and continue the flow again.');
+        return;
+      }
 
-      shotsEl.textContent = String(ctx.shots || 5);
+      shotsEl.textContent = String(ctx.shots ?? '--');
 
       if (ctx.imageDataUrl) {
         previewImg.src = ctx.imageDataUrl;
         preview.classList.add('on');
       }
 
-      // Placeholder polished values until live backend values are injected.
-      // Replace this block later with real backend/session output.
-      const shots = Number(ctx.shots || 5);
-      const baseScore = shots >= 5 ? 92 : shots === 4 ? 90 : 88;
-      scoreEl.textContent = String(baseScore);
-      windageEl.textContent = `${toTwo(1.25)} RIGHT`;
-      elevationEl.textContent = `${toTwo(0.75)} UP`;
+      const hasRealScore = Number.isFinite(Number(ctx.score));
+      const hasWindage = Number.isFinite(Number(ctx.windageClicks));
+      const hasElevation = Number.isFinite(Number(ctx.elevationClicks));
+
+      scoreEl.textContent = hasRealScore ? String(Number(ctx.score)) : '--';
+      windageEl.textContent = hasWindage
+        ? renderValue(ctx.windageClicks, String(ctx.windageDirection || '').toUpperCase())
+        : '--';
+      elevationEl.textContent = hasElevation
+        ? renderValue(ctx.elevationClicks, String(ctx.elevationDirection || '').toUpperCase())
+        : '--';
+
+      if (!hasRealScore || !hasWindage || !hasElevation) {
+        setStatus('B2B identity is locked, but live score/click output has not been injected yet. The page is ready for your real analyze/tap result payload.');
+      }
     }
 
     btnAnother.addEventListener('click', () => {
@@ -371,7 +421,6 @@
     });
 
     btnVendor.addEventListener('click', () => {
-      // Replace with your Baker/vendor link when ready
       window.open('https://bakertargets.com', '_blank', 'noopener,noreferrer');
     });
 
