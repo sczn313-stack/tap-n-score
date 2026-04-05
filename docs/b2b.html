@@ -12,11 +12,7 @@
       --text:#f4f7ff;
       --muted:#9fb0d2;
       --line:rgba(255,255,255,.10);
-      --blue:#4ea1ff;
-      --blue2:#76bbff;
       --green:#67f3a4;
-      --yellow:#b7ff3c;
-      --red:#ff6b6b;
       --shadow:0 18px 40px rgba(0,0,0,.32);
       --radius:20px;
     }
@@ -31,7 +27,7 @@
       min-height:100%;
     }
 
-    button{font:inherit}
+    button,input,select{font:inherit}
     a{color:inherit;text-decoration:none}
 
     .wrap{
@@ -59,7 +55,7 @@
       font-weight:800;
       letter-spacing:.16em;
       text-transform:uppercase;
-      color:var(--blue2);
+      color:#76bbff;
     }
 
     .title{
@@ -274,15 +270,9 @@
     }
 
     @media (min-width:700px){
-      .ctaRow{
-        grid-template-columns:1fr 1fr;
-      }
-      .cards{
-        grid-template-columns:1fr 1fr;
-      }
-      .row{
-        grid-template-columns:1fr 1fr;
-      }
+      .ctaRow{grid-template-columns:1fr 1fr}
+      .cards{grid-template-columns:1fr 1fr}
+      .row{grid-template-columns:1fr 1fr}
       .hero h1{font-size:34px}
     }
   </style>
@@ -301,7 +291,7 @@
       <h1>Back to Basics, locked to its own result path.</h1>
       <p>
         This page is dedicated to the <strong>B2B</strong> target experience.
-        When the user continues, this flow hands off to the <strong>B2B-only SEC page</strong>.
+        It is the entry point only. The real score payload is created by the scoring page, then rendered on the B2B SEC page.
       </p>
 
       <div class="ctaRow">
@@ -309,7 +299,7 @@
         <button class="btn btnSecondary" id="btnMain">Back to Main Landing</button>
       </div>
 
-      <div class="mini">Dedicated B2B path • dedicated B2B SEC • cleaner routing</div>
+      <div class="mini">Dedicated B2B path • dedicated B2B SEC • clean handoff</div>
 
       <div class="panel" id="panel">
         <div class="row">
@@ -328,13 +318,12 @@
         </div>
 
         <div class="ctaRow" style="margin-top:6px;">
-          <button class="btn btnPrimary" id="btnContinue">Continue to B2B SEC</button>
+          <button class="btn btnPrimary" id="btnContinue">Continue to Scoring</button>
           <button class="btn btnSecondary" id="btnClear">Clear</button>
         </div>
 
         <div class="hint">
-          This version is ready to carry real B2B result values into the SEC page.
-          Until your live analyze/tap output is wired in, you can also pass values through the URL for testing.
+          This page only stores entry context. The scoring page will create the final Smart Score, clicks, and directions for B2B SEC.
         </div>
 
         <div class="thumb" id="thumb">
@@ -346,13 +335,13 @@
         <div class="card">
           <h3>B2B identity</h3>
           <p>
-            This path is specific to the Baker Back-to-Basics experience and should no longer rely on a shared universal SEC page.
+            This path is specific to the Baker Back-to-Basics experience and does not rely on a shared SEC page.
           </p>
         </div>
         <div class="card">
-          <h3>Hand-off</h3>
+          <h3>Handoff</h3>
           <p>
-            When the user continues, this page stores the session hand-off and routes directly into <strong>b2b-sec.html</strong>.
+            This page stores only the starter context, then routes to your scoring experience. The scoring page stores the final B2B SEC payload.
           </p>
         </div>
       </div>
@@ -377,41 +366,21 @@
 
     let activeImageDataUrl = '';
 
-    function numOrNull(v) {
-      const n = Number(v);
-      return Number.isFinite(n) ? n : null;
-    }
-
-    function strOrEmpty(v) {
-      return typeof v === 'string' ? v.trim() : '';
-    }
-
-    function parseQueryParams() {
-      const p = new URLSearchParams(window.location.search);
-      return {
-        score: numOrNull(p.get('score')),
-        windageClicks: numOrNull(p.get('windageClicks')),
-        windageDirection: strOrEmpty(p.get('windageDirection')).toUpperCase(),
-        elevationClicks: numOrNull(p.get('elevationClicks')),
-        elevationDirection: strOrEmpty(p.get('elevationDirection')).toUpperCase()
-      };
-    }
-
-    function buildPayload() {
-      const query = parseQueryParams();
-
-      return {
+    function storeB2BEntryContext() {
+      const payload = {
         target: 'b2b',
         shots: Number(shotsInput.value || 5),
         imageDataUrl: activeImageDataUrl || '',
-        score: query.score,
-        windageClicks: query.windageClicks,
-        windageDirection: query.windageDirection,
-        elevationClicks: query.elevationClicks,
-        elevationDirection: query.elevationDirection,
         createdAt: Date.now(),
         source: 'b2b.html'
       };
+
+      try {
+        sessionStorage.setItem('sczn3_active_target', 'b2b');
+        sessionStorage.setItem('sczn3_b2b_entry_context', JSON.stringify(payload));
+      } catch (err) {
+        console.warn('Unable to store B2B entry context.', err);
+      }
     }
 
     btnStart.addEventListener('click', () => {
@@ -445,19 +414,16 @@
       thumb.classList.remove('on');
       activeImageDataUrl = '';
       try {
-        sessionStorage.removeItem('sczn3_b2b_context');
+        sessionStorage.removeItem('sczn3_b2b_entry_context');
       } catch {}
     });
 
     btnContinue.addEventListener('click', () => {
-      const payload = buildPayload();
+      storeB2BEntryContext();
 
-      try {
-        sessionStorage.setItem('sczn3_active_target', 'b2b');
-        sessionStorage.setItem('sczn3_b2b_context', JSON.stringify(payload));
-      } catch {}
-
-      window.location.href = './b2b-sec.html';
+      // Route this to your actual B2B scoring page.
+      // If Sim.html is your scoring page, keep this line.
+      window.location.href = './Sim.html?v=baker&sku=b2b&target=b2b';
     });
   </script>
 </body>
