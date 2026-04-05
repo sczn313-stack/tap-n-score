@@ -133,7 +133,14 @@ body {
   color: #d6e2ff;
   letter-spacing: 0.3px;
 }
-
+.sec-score-big{
+  font-size:56px;
+  line-height:1;
+  font-weight:1000;
+  letter-spacing:-0.04em;
+  margin:6px 0 2px;
+  color:#f3f6ff;
+}
 /* Utility row */
 .utility-row {
   display: grid;
