@@ -248,6 +248,13 @@
       line-height:1.45;
     }
 
+    .hint{
+      margin-top:12px;
+      color:var(--muted);
+      font-size:13px;
+      line-height:1.4;
+    }
+
     .foot{
       margin-top:16px;
       padding-top:10px;
@@ -325,6 +332,11 @@
           <button class="btn btnSecondary" id="btnClear">Clear</button>
         </div>
 
+        <div class="hint">
+          This version is ready to carry real B2B result values into the SEC page.
+          Until your live analyze/tap output is wired in, you can also pass values through the URL for testing.
+        </div>
+
         <div class="thumb" id="thumb">
           <img id="thumbImg" alt="B2B target preview" />
         </div>
@@ -365,6 +377,43 @@
 
     let activeImageDataUrl = '';
 
+    function numOrNull(v) {
+      const n = Number(v);
+      return Number.isFinite(n) ? n : null;
+    }
+
+    function strOrEmpty(v) {
+      return typeof v === 'string' ? v.trim() : '';
+    }
+
+    function parseQueryParams() {
+      const p = new URLSearchParams(window.location.search);
+      return {
+        score: numOrNull(p.get('score')),
+        windageClicks: numOrNull(p.get('windageClicks')),
+        windageDirection: strOrEmpty(p.get('windageDirection')).toUpperCase(),
+        elevationClicks: numOrNull(p.get('elevationClicks')),
+        elevationDirection: strOrEmpty(p.get('elevationDirection')).toUpperCase()
+      };
+    }
+
+    function buildPayload() {
+      const query = parseQueryParams();
+
+      return {
+        target: 'b2b',
+        shots: Number(shotsInput.value || 5),
+        imageDataUrl: activeImageDataUrl || '',
+        score: query.score,
+        windageClicks: query.windageClicks,
+        windageDirection: query.windageDirection,
+        elevationClicks: query.elevationClicks,
+        elevationDirection: query.elevationDirection,
+        createdAt: Date.now(),
+        source: 'b2b.html'
+      };
+    }
+
     btnStart.addEventListener('click', () => {
       panel.classList.add('on');
       try {
@@ -401,13 +450,7 @@
     });
 
     btnContinue.addEventListener('click', () => {
-      const payload = {
-        target: 'b2b',
-        shots: Number(shotsInput.value || 5),
-        imageDataUrl: activeImageDataUrl || '',
-        createdAt: Date.now(),
-        source: 'b2b.html'
-      };
+      const payload = buildPayload();
 
       try {
         sessionStorage.setItem('sczn3_active_target', 'b2b');
