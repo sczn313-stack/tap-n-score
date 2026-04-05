@@ -4,6 +4,7 @@
   const TRUE_MOA_INCHES_AT_100 = 1.047;
   const TRACK_ENDPOINT = "https://tap-n-score-backend.onrender.com/api/track";
   const DEBUG_ANALYTICS = true;
+  const INCHES_PER_PERCENT = 0.75;
 
   const params = new URLSearchParams(window.location.search);
   const isDemoMode = params.get("mode") === "demo";
@@ -88,6 +89,7 @@
       base: "https://baker-targets.com/",
       sku: {
         st100: "https://baker-targets.com/",
+        b2b: "https://baker-targets.com/",
         default: "https://baker-targets.com/"
       }
     }
@@ -103,6 +105,10 @@
 
   function nowIso() {
     return new Date().toISOString();
+  }
+
+  function clamp(value, min, max) {
+    return Math.max(min, Math.min(max, value));
   }
 
   function markActivity() {
@@ -135,28 +141,6 @@
     return "MOA";
   }
 
-  function getTargetWidthIn() {
-    const candidate =
-      Number(targetSurface?.dataset?.targetWidthIn) ||
-      Number(targetSurface?.dataset?.wIn) ||
-      Number(params.get("wIn")) ||
-      Number(params.get("target_w_in")) ||
-      23;
-
-    return Number.isFinite(candidate) && candidate > 0 ? candidate : 23;
-  }
-
-  function getTargetHeightIn() {
-    const candidate =
-      Number(targetSurface?.dataset?.targetHeightIn) ||
-      Number(targetSurface?.dataset?.hIn) ||
-      Number(params.get("hIn")) ||
-      Number(params.get("target_h_in")) ||
-      35;
-
-    return Number.isFinite(candidate) && candidate > 0 ? candidate : 35;
-  }
-
   function getSettingsSnapshot() {
     return {
       distance_yards: getDistanceYards(),
@@ -164,9 +148,7 @@
       click_value: getClickValueMOA(),
       dial_unit: getDialUnit(),
       shot_goal: getShotGoal(),
-      target_key: targetKey,
-      target_w_in: getTargetWidthIn(),
-      target_h_in: getTargetHeightIn()
+      target_key: targetKey
     };
   }
 
@@ -316,7 +298,9 @@
     left.innerHTML = `<strong style="color:#fff">${debugCount}. ${eventName}</strong>`;
 
     const right = document.createElement("div");
-    right.textContent = status;
+    right.textContent =
+      status === "OK" ? "OK" :
+      status === "ERR" || String(status).startsWith("ERR") ? status : status;
     right.style.color =
       status === "OK" ? "#67f3a4" :
       status === "ERR" || String(status).startsWith("ERR") ? "#ff7b7b" :
@@ -419,8 +403,6 @@
       settings.click_value_moa,
       settings.shot_goal,
       settings.target_key,
-      settings.target_w_in,
-      settings.target_h_in,
       settings.dial_unit
     ].join("|");
   }
@@ -619,7 +601,6 @@
 
     qrHotspot = document.createElement("div");
     qrHotspot.className = "qr-hotspot";
-
     qrHotspot.style.left = "78.8%";
     qrHotspot.style.top = "1.6%";
     qrHotspot.style.width = "16.2%";
@@ -797,21 +778,45 @@
     return TRUE_MOA_INCHES_AT_100 * (distanceYards / 100);
   }
 
-  function calculateGroupSizeInches(scaleInchesPerPercent) {
+  function calculateGroupSizeInches(inchesPerPercent) {
     if (state.shots.length < 2) return 0;
 
     let maxDistance = 0;
 
     for (let i = 0; i < state.shots.length; i++) {
       for (let j = i + 1; j < state.shots.length; j++) {
-        const dx = (state.shots[j].xPct - state.shots[i].xPct) * scaleInchesPerPercent;
-        const dy = (state.shots[j].yPct - state.shots[i].yPct) * scaleInchesPerPercent;
+        const dx = (state.shots[j].xPct - state.shots[i].xPct) * inchesPerPercent;
+        const dy = (state.shots[j].yPct - state.shots[i].yPct) * inchesPerPercent;
         const d = Math.hypot(dx, dy);
         if (d > maxDistance) maxDistance = d;
       }
     }
 
     return maxDistance;
+  }
+
+  function calculateOffsetInches(dxInches, dyInches) {
+    return Math.hypot(dxInches, dyInches);
+  }
+
+  function calculateSmartScore(groupSizeInches, offsetInches) {
+    const MAX_ALLOWED_SPREAD = 6.0;
+    const MAX_ALLOWED_OFFSET = 4.0;
+
+    const tightnessScore = 50 * (1 - (groupSizeInches / MAX_ALLOWED_SPREAD));
+    const proximityScore = 50 * (1 - (offsetInches / MAX_ALLOWED_OFFSET));
+
+    const total = clamp(tightnessScore, 0, 50) + clamp(proximityScore, 0, 50);
+    return Math.round(clamp(total, 0, 100));
+  }
+
+  function storeB2BSecPayload(payload) {
+    try {
+      sessionStorage.setItem("sczn3_active_target", "b2b");
+      sessionStorage.setItem("sczn3_b2b_context", JSON.stringify(payload));
+    } catch (err) {
+      console.warn("Unable to store B2B SEC payload.", err);
+    }
   }
 
   function moveArrow(verticalDir, horizontalDir) {
@@ -856,9 +861,9 @@
 
     const truth = deriveDirectionTruth(state.aim, state.groupCenter);
 
-    const scaleInchesPerPercent = 0.75;
-    const dxInches = truth.dx * scaleInchesPerPercent;
-    const dyInches = truth.dy * scaleInchesPerPercent;
+    const dxInches = truth.dx * INCHES_PER_PERCENT;
+    const dyInches = truth.dy * INCHES_PER_PERCENT;
+    const offsetInches = calculateOffsetInches(dxInches, dyInches);
 
     const distance = getDistanceYards();
     const clickValue = getClickValueMOA();
@@ -870,12 +875,36 @@
     const clicksX = windageMOA / clickValue;
     const clicksY = elevationMOA / clickValue;
 
-    const groupSizeInches = calculateGroupSizeInches(scaleInchesPerPercent);
+    const groupSizeInches = calculateGroupSizeInches(INCHES_PER_PERCENT);
+    const smartScore = calculateSmartScore(groupSizeInches, offsetInches);
     const arrow = moveArrow(truth.elevationDirection, truth.windageDirection);
 
     redrawAll();
     syncModeUI();
     setQrLive(true);
+
+    const b2bPayload = {
+      target: "b2b",
+      shots: state.shots.length,
+      imageDataUrl: "",
+      score: smartScore,
+      windageClicks: Number(round2(clicksX)),
+      windageDirection: truth.windageDirection,
+      elevationClicks: Number(round2(clicksY)),
+      elevationDirection: truth.elevationDirection,
+      groupSizeInches: Number(round2(groupSizeInches)),
+      offsetInches: Number(round2(offsetInches)),
+      windageMOA: Number(round2(windageMOA)),
+      elevationMOA: Number(round2(elevationMOA)),
+      dxInches: Number(round2(dxInches)),
+      dyInches: Number(round2(dyInches)),
+      distanceYards: distance,
+      clickValueMOA: clickValue,
+      createdAt: Date.now(),
+      source: "b2b-score"
+    };
+
+    storeB2BSecPayload(b2bPayload);
 
     trackEvent("results_ready", {
       shots: state.shots.length,
@@ -883,7 +912,9 @@
       click_value_moa: clickValue,
       click_value: clickValue,
       dial_unit: getDialUnit(),
+      smart_score: smartScore,
       group_size_inches: Number(round2(groupSizeInches)),
+      offset_inches: Number(round2(offsetInches)),
       windage_direction: truth.windageDirection,
       elevation_direction: truth.elevationDirection,
       dx_inches: Number(round2(dxInches)),
@@ -900,7 +931,9 @@
       click_value_moa: clickValue,
       click_value: clickValue,
       dial_unit: getDialUnit(),
+      smart_score: smartScore,
       group_size_inches: Number(round2(groupSizeInches)),
+      offset_inches: Number(round2(offsetInches)),
       windage_direction: truth.windageDirection,
       elevation_direction: truth.elevationDirection,
       time_to_results_ms: analytics.resultsAtMs - analytics.startedAtMs
@@ -909,7 +942,11 @@
     secCard.innerHTML = `
       <div class="sec-brand">Shooter Experience Card</div>
 
-      <div class="sec-title">Scope Adjustments</div>
+      <div class="sec-title">Smart Score</div>
+      <div class="sec-score-big">${smartScore}</div>
+      <div class="sec-sub">Tighter group + closer to aim point = higher score</div>
+
+      <div class="sec-title" style="margin-top:14px;">Scope Adjustments</div>
       <div class="sec-sub">Based on your ${state.shots.length}-shot group</div>
 
       <div class="sec-visual">
@@ -935,11 +972,13 @@
 
       <div class="sec-support">
         Group size: ${round2(groupSizeInches)}"<br>
+        Offset from aim: ${round2(offsetInches)}"<br>
         Distance: ${distance} yd • ${clickValue} MOA/click
       </div>
 
       <div class="sec-actions">
         <button type="button" class="primary" id="secTryAgainBtn">Try Again</button>
+        <button type="button" id="secOpenB2BSecBtn">Open B2B SEC</button>
         <button type="button" id="secBuyMoreBtn">Buy More Targets Like This</button>
       </div>
 
@@ -947,6 +986,7 @@
     `;
 
     const secTryAgainBtn = document.getElementById("secTryAgainBtn");
+    const secOpenB2BSecBtn = document.getElementById("secOpenB2BSecBtn");
     const secBuyMoreBtn = document.getElementById("secBuyMoreBtn");
 
     if (secTryAgainBtn) {
@@ -956,6 +996,17 @@
           source: "sec"
         });
         resetSimulator(false);
+      });
+    }
+
+    if (secOpenB2BSecBtn) {
+      secOpenB2BSecBtn.addEventListener("click", () => {
+        markActivity();
+        trackEvent("sec_opened", {
+          source: "sim",
+          smart_score: smartScore
+        });
+        window.location.href = "./b2b-sec.html";
       });
     }
 
@@ -1015,7 +1066,6 @@
 
   function installSessionFinalizers() {
     window.addEventListener("pagehide", () => finalizeSession("pagehide"));
-
     window.addEventListener("beforeunload", () => finalizeSession("beforeunload"));
 
     document.addEventListener("visibilitychange", () => {
