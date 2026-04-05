@@ -1,1 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>ST100 — Smart Target</title>
+  <style>
+    :root{
+      --bg:#0b1020;
+      --panel:#121a31;
+      --panel2:#182240;
+      --text:#f4f7ff;
+      --muted:#9fb0d2;
+      --line:rgba(255,255,255,.10);
+      --blue:#4ea1ff;
+      --blue2:#76bbff;
+      --green:#67f3a4;
+      --yellow:#b7ff3c;
+      --red:#ff6b6b;
+      --shadow:0 18px 40px rgba(0,0,0,.32);
+      --radius:20px;
+    }
 
+    *{box-sizing:border-box}
+    html,body{
+      margin:0;
+      padding:0;
+      background:linear-gradient(180deg,#09101f 0%, #0b1020 100%);
+      color:var(--text);
+      font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+      min-height:100%;
+    }
+
+    a{color:inherit;text-decoration:none}
+    button{font:inherit}
+
+    .wrap{
+      width:min(100%, 760px);
+      margin:0 auto;
+      padding:18px 14px 34px;
+    }
+
+    .topbar{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      margin-bottom:14px;
+    }
+
+    .brand{
+      display:flex;
+      flex-direction:column;
+      gap:2px;
+    }
+
+    .eyebrow{
+      font-size:11px;
+      font-weight:800;
+      letter-spacing:.16em;
+      text-transform:uppercase;
+      color:var(--blue2);
+    }
+
+    .title{
+      font-size:24px;
+      font-weight:900;
+      letter-spacing:.01em;
+      line-height:1.05;
+    }
+
+    .badge{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      padding:9px 12px;
+      border-radius:999px;
+      background:rgba(78,161,255,.12);
+      border:1px solid rgba(78,161,255,.28);
+      color:var(--blue2);
+      font-size:12px;
+      font-weight:800;
+      white-space:nowrap;
+    }
+
+    .hero{
+      background:linear-gradient(180deg,var(--panel2),var(--panel));
+      border:1px solid var(--line);
+      border-radius:var(--radius);
+      box-shadow:var(--shadow);
+      padding:18px;
+      overflow:hidden;
+      position:relative;
+    }
+
+    .hero::after{
+      content:"";
+      position:absolute;
+      inset:auto -60px -60px auto;
+      width:180px;
+      height:180px;
+      border-radius:50%;
+      background:radial-gradient(circle, rgba(78,161,255,.20), rgba(78,161,255,0));
+      pointer-events:none;
+    }
+
+    .hero h1{
+      margin:0 0 10px;
+      font-size:28px;
+      line-height:1.02;
+      letter-spacing:-.02em;
+    }
+
+    .hero p{
+      margin:0;
+      font-size:15px;
+      line-height:1.45;
+      color:var(--muted);
+      max-width:60ch;
+    }
+
+    .ctaRow{
+      display:grid;
+      grid-template-columns:1fr;
+      gap:10px;
+      margin-top:18px;
+    }
+
+    .btn{
+      width:100%;
+      border:0;
+      border-radius:16px;
+      min-height:54px;
+      padding:14px 16px;
+      font-weight:900;
+      letter-spacing:.01em;
+      cursor:pointer;
+      transition:transform .14s ease, opacity .14s ease, border-color .14s ease;
+    }
+
+    .btn:active{transform:scale(.985)}
+
+    .btnPrimary{
+      background:linear-gradient(180deg,var(--blue2),var(--blue));
+      color:#08111f;
+      box-shadow:0 10px 24px rgba(78,161,255,.28);
+    }
+
+    .btnSecondary{
+      background:rgba(255,255,255,.04);
+      border:1px solid var(--line);
+      color:var(--text);
+    }
+
+    .mini{
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      gap:8px;
+      font-size:13px;
+      color:var(--muted);
+      margin-top:12px;
+      text-align:center;
+    }
+
+    .cards{
+      display:grid;
+      grid-template-columns:1fr;
+      gap:12px;
+      margin-top:14px;
+    }
+
+    .card{
+      background:rgba(255,255,255,.03);
+      border:1px solid var(--line);
+      border-radius:18px;
+      padding:15px 14px;
+    }
+
+    .card h3{
+      margin:0 0 8px;
+      font-size:15px;
+      font-weight:900;
+      letter-spacing:.01em;
+    }
+
+    .card p{
+      margin:0;
+      color:var(--muted);
+      font-size:14px;
+      line-height:1.45;
+    }
+
+    .picker{
+      margin-top:14px;
+      display:none;
+      background:rgba(255,255,255,.03);
+      border:1px dashed rgba(255,255,255,.18);
+      border-radius:18px;
+      padding:16px;
+    }
+
+    .picker.on{display:block}
+
+    .picker input{
+      width:100%;
+      padding:12px 12px;
+      border-radius:14px;
+      border:1px solid var(--line);
+      background:#0f1730;
+      color:var(--text);
+      font:inherit;
+    }
+
+    .previewWrap{
+      margin-top:12px;
+      display:none;
+      border-radius:18px;
+      overflow:hidden;
+      border:1px solid var(--line);
+      background:#0f1730;
+    }
+
+    .previewWrap.on{display:block}
+
+    .previewWrap img{
+      display:block;
+      width:100%;
+      height:auto;
+      max-height:62vh;
+      object-fit:contain;
+      background:#0b1122;
+    }
+
+    .foot{
+      margin-top:16px;
+      padding-top:10px;
+      border-top:1px solid rgba(255,255,255,.08);
+      display:flex;
+      flex-wrap:wrap;
+      gap:10px;
+      justify-content:space-between;
+      align-items:center;
+      color:var(--muted);
+      font-size:12px;
+    }
+
+    .tinyLink{
+      color:var(--blue2);
+      font-weight:800;
+    }
+
+    @media (min-width:700px){
+      .ctaRow{
+        grid-template-columns:1fr 1fr;
+      }
+      .cards{
+        grid-template-columns:1fr 1fr;
+      }
+      .hero h1{font-size:34px}
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="topbar">
+      <div class="brand">
+        <div class="eyebrow">SCZN3 • The Smart Target™</div>
+        <div class="title">ST100</div>
+      </div>
+      <div class="badge">100 Yard Zero Flow</div>
+    </div>
+
+    <section class="hero">
+      <h1>Zero with clarity.</h1>
+      <p>
+        This page is dedicated to the <strong>ST100</strong> target flow.
+        Add your target photo, continue through the zeroing experience, and keep this path clean and separate from B2B.
+      </p>
+
+      <div class="ctaRow">
+        <button class="btn btnPrimary" id="btnAddPhoto">Add Target Photo</button>
+        <button class="btn btnSecondary" id="btnOpenFlow">Open ST100 Flow</button>
+      </div>
+
+      <div class="mini">Dedicated page for ST100 only • no shared SEC routing</div>
+
+      <div class="picker" id="picker">
+        <input type="file" id="fileInput" accept="image/*" />
+      </div>
+
+      <div class="previewWrap" id="previewWrap">
+        <img id="previewImg" alt="ST100 target preview" />
+      </div>
+
+      <div class="cards">
+        <div class="card">
+          <h3>Purpose</h3>
+          <p>
+            Use this path for your standard ST100 target experience and keep it separate from the Baker Back-to-Basics flow.
+          </p>
+        </div>
+        <div class="card">
+          <h3>Routing</h3>
+          <p>
+            This page does not route into the B2B SEC page. It remains its own dedicated target path.
+          </p>
+        </div>
+      </div>
+
+      <div class="foot">
+        <div>Path: <strong>/docs/st100.html</strong></div>
+        <a class="tinyLink" href="./index.html">Back to main landing</a>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    const btnAddPhoto = document.getElementById('btnAddPhoto');
+    const btnOpenFlow = document.getElementById('btnOpenFlow');
+    const picker = document.getElementById('picker');
+    const fileInput = document.getElementById('fileInput');
+    const previewWrap = document.getElementById('previewWrap');
+    const previewImg = document.getElementById('previewImg');
+
+    btnAddPhoto.addEventListener('click', () => {
+      picker.classList.toggle('on');
+      if (picker.classList.contains('on')) fileInput.click();
+    });
+
+    fileInput.addEventListener('change', async (e) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      const url = URL.createObjectURL(file);
+      previewImg.src = url;
+      previewWrap.classList.add('on');
+
+      // Store lightweight handoff for ST100 path
+      const payload = {
+        target: 'st100',
+        fileName: file.name,
+        fileType: file.type,
+        ts: Date.now()
+      };
+      try {
+        sessionStorage.setItem('sczn3_active_target', 'st100');
+        sessionStorage.setItem('sczn3_st100_context', JSON.stringify(payload));
+      } catch {}
+    });
+
+    btnOpenFlow.addEventListener('click', () => {
+      try {
+        sessionStorage.setItem('sczn3_active_target', 'st100');
+      } catch {}
+
+      // You can redirect this to your existing ST100 experience page if needed.
+      // For now it stays on the dedicated page anchor.
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      alert('ST100 locked. This page is reserved for the ST100 target flow.');
+    });
+  </script>
+</body>
+</html>
