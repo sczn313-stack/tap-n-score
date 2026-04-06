@@ -712,3 +712,233 @@
       </div>
     `;
   }
+  function handleTap(e) {
+    if (state.mode === "results") return;
+
+    markActivity();
+
+    const pos = getRelativeCoords(e);
+
+    // AIM
+    if (!state.aim) {
+      state.aim = pos;
+      state.groupCenter = null;
+
+      if (!analytics.aimSetAtMs) {
+        analytics.aimSetAtMs = Date.now();
+      }
+
+      trackEvent("aim_set", {
+        aim_x_pct: Number(pos.xPct.toFixed(2)),
+        aim_y_pct: Number(pos.yPct.toFixed(2))
+      });
+
+      state.mode = "shots";
+      redrawAll();
+      syncModeUI();
+      return;
+    }
+
+    // SHOTS (NO CAP)
+    state.shots.push(pos);
+    state.groupCenter = null;
+
+    if (!analytics.firstShotAtMs) {
+      analytics.firstShotAtMs = Date.now();
+    }
+
+    trackEvent("shot_added", {
+      shot_index: state.shots.length,
+      shot_x_pct: Number(pos.xPct.toFixed(2)),
+      shot_y_pct: Number(pos.yPct.toFixed(2))
+    });
+
+    if (state.shots.length >= MIN_SHOTS) {
+      state.mode = "ready";
+    }
+
+    redrawAll();
+    syncModeUI();
+  }
+
+  function undoLast() {
+    markActivity();
+
+    // undo results
+    if (state.mode === "results") {
+      state.groupCenter = null;
+      state.resultsViewed = false;
+      analytics.resultsAtMs = null;
+      state.mode = "shots";
+      redrawAll();
+      resetSEC();
+      syncModeUI();
+      return;
+    }
+
+    // undo shot
+    if (state.shots.length > 0) {
+      state.shots.pop();
+      state.groupCenter = null;
+
+      state.mode = state.shots.length >= MIN_SHOTS ? "ready" : "shots";
+
+      redrawAll();
+      syncModeUI();
+      return;
+    }
+
+    // undo aim
+    if (state.aim) {
+      state.aim = null;
+      state.mode = "aim";
+      redrawAll();
+      resetSEC();
+      syncModeUI();
+    }
+  }
+
+  function computeGroupCenter() {
+    const avgX =
+      state.shots.reduce((s, p) => s + p.xPct, 0) / state.shots.length;
+    const avgY =
+      state.shots.reduce((s, p) => s + p.yPct, 0) / state.shots.length;
+    return { xPct: avgX, yPct: avgY };
+  }
+
+  function calculateResults() {
+    if (!state.aim || state.shots.length < MIN_SHOTS) return;
+
+    markActivity();
+
+    state.groupCenter = computeGroupCenter();
+    state.mode = "results";
+    state.resultsViewed = true;
+
+    if (!analytics.resultsAtMs) {
+      analytics.resultsAtMs = Date.now();
+    }
+
+    const dx = state.groupCenter.xPct - state.aim.xPct;
+    const dy = state.groupCenter.yPct - state.aim.yPct;
+
+    const dxIn = dx * INCHES_PER_PERCENT;
+    const dyIn = dy * INCHES_PER_PERCENT;
+
+    const distance = getDistanceYards();
+    const click = getClickValueMOA();
+    const scale = TRUE_MOA_INCHES_AT_100 * (distance / 100);
+
+    const windMOA = Math.abs(dxIn / scale);
+    const elevMOA = Math.abs(dyIn / scale);
+
+    const windClicks = windMOA / click;
+    const elevClicks = elevMOA / click;
+
+    const windDir = dx > 0 ? "LEFT" : dx < 0 ? "RIGHT" : "NONE";
+    const elevDir = dy > 0 ? "UP" : dy < 0 ? "DOWN" : "NONE";
+
+    redrawAll();
+    syncModeUI();
+
+    // FULL B2B PAYLOAD
+    if (isB2B) {
+      const payload = {
+        target: "b2b",
+        shots: state.shots.length,
+        windageClicks: Number(windClicks.toFixed(2)),
+        elevationClicks: Number(elevClicks.toFixed(2)),
+        windageDirection: windDir,
+        elevationDirection: elevDir,
+        windageMOA: Number(windMOA.toFixed(2)),
+        elevationMOA: Number(elevMOA.toFixed(2)),
+        dxInches: Number(dxIn.toFixed(2)),
+        dyInches: Number(dyIn.toFixed(2)),
+        distanceYards: distance,
+        clickValueMOA: click,
+        createdAt: Date.now()
+      };
+
+      sessionStorage.setItem("sczn3_b2b_context", JSON.stringify(payload));
+    }
+
+    secCard.innerHTML = `
+      <div class="sec-brand">Shooter Experience Card</div>
+
+      <div class="sec-title">Results</div>
+
+      <div class="metric">
+        Elevation: ${elevDir} ${elevClicks.toFixed(2)} clicks
+      </div>
+
+      <div class="metric">
+        Windage: ${windDir} ${windClicks.toFixed(2)} clicks
+      </div>
+
+      <div class="sec-actions">
+        <button id="secTryAgainBtn">Try Again</button>
+        ${
+          isB2B
+            ? `<button id="secOpenB2B">Open B2B SEC</button>`
+            : ""
+        }
+      </div>
+    `;
+
+    document.getElementById("secTryAgainBtn")?.addEventListener("click", () => {
+      resetSimulator(false);
+    });
+
+    if (isB2B) {
+      document.getElementById("secOpenB2B")?.addEventListener("click", () => {
+        window.location.href = "./b2b-sec.html";
+      });
+    }
+  }
+
+  function resetSEC() {
+    secCard.innerHTML = `
+      <div class="sec-brand">Shooter Experience Card</div>
+      <div class="sec-empty">
+        Results will appear after you tap an aim point and shots.
+      </div>
+    `;
+  }
+
+  function resetSimulator(track = true) {
+    state.aim = null;
+    state.shots = [];
+    state.groupCenter = null;
+    state.mode = "aim";
+    state.resultsViewed = false;
+
+    redrawAll();
+    resetSEC();
+    syncModeUI();
+  }
+
+  // =============================
+  // EVENT WIRING
+  // =============================
+
+  tapLayer.addEventListener("click", handleTap);
+
+  resultsBtn?.addEventListener("click", calculateResults);
+  inlineResultsBtn?.addEventListener("click", calculateResults);
+
+  undoBtn?.addEventListener("click", undoLast);
+  inlineUndoBtn?.addEventListener("click", undoLast);
+
+  resetBtn?.addEventListener("click", () => resetSimulator(true));
+  inlineResetBtn?.addEventListener("click", () => resetSimulator(true));
+
+  // =============================
+  // INIT
+  // =============================
+
+  setPageCopy();
+  resetSimulator(false);
+  syncModeUI();
+
+  trackEvent("scan", { target: targetKey });
+})();
