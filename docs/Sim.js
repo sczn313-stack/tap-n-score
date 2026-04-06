@@ -4,6 +4,7 @@
   const TRACK_ENDPOINT = "https://tap-n-score-backend.onrender.com/api/track";
   const DEBUG_ANALYTICS = true;
   const INCHES_PER_PERCENT = 0.75;
+  const SEC_PAYLOAD_KEY = "SCZN3_SEC_PAYLOAD_V1";
 
   const params = new URLSearchParams(window.location.search);
   const isDemoMode = params.get("mode") === "demo";
@@ -35,7 +36,7 @@
       params.get("target_key") ||
       storedActiveTarget ||
       sku ||
-      "unknown"
+      "st100"
     ).toLowerCase();
 
   const isB2B =
@@ -85,7 +86,7 @@
   const state = {
     aim: null,
     shots: [],
-    mode: "aim", // aim | shots | ready | results
+    mode: "aim",
     groupCenter: null,
     qrLive: false,
     resultsViewed: false,
@@ -172,7 +173,7 @@
       click_value: getClickValueMOA(),
       dial_unit: getDialUnit(),
       shot_goal: getShotGoal(),
-      target_key: isB2B ? "b2b" : targetKey
+      target_key: isB2B ? "b2b" : "st100"
     };
   }
 
@@ -181,6 +182,37 @@
     const vendorObj = vendorMap[vendor];
     if (sku && vendorObj.sku[sku]) return vendorObj.sku[sku];
     return vendorObj.sku.default || vendorObj.base;
+  }
+
+  function getTargetMeta() {
+    if (isB2B) {
+      return {
+        key: "b2b",
+        name: "Back to Basics",
+        wIn: 23,
+        hIn: 35
+      };
+    }
+
+    return {
+      key: "st100",
+      name: "ST100",
+      wIn: 23,
+      hIn: 35
+    };
+  }
+
+  function clearStaleTargetContext() {
+    try {
+      sessionStorage.removeItem("sczn3_b2b_context");
+      if (!isB2B) {
+        sessionStorage.removeItem("sczn3_b2b_entry_context");
+      }
+    } catch {}
+
+    try {
+      localStorage.removeItem(SEC_PAYLOAD_KEY);
+    } catch {}
   }
 
   function ensureDebugOverlay() {
@@ -463,6 +495,8 @@
 
     if (isB2B) {
       targetImage.alt = "Baker Back-to-Basics Target";
+    } else {
+      targetImage.alt = "Baker ST100 Smart Target";
     }
   }
 
@@ -686,6 +720,8 @@
 
     secCard.innerHTML = `
       <div class="sec-brand">Shooter Experience Card</div>
+      <div class="sec-title">Results</div>
+
       <div class="sec-empty">
         Results will appear after you tap an aim point,
         tap ${isB2B ? "at least 3 shots" : "3–5 shots"},
@@ -787,6 +823,58 @@
     return { xPct: avgX, yPct: avgY };
   }
 
+  function buildSecPayload({
+    windDir,
+    elevDir,
+    windClicks,
+    elevClicks,
+    dxIn,
+    dyIn
+  }) {
+    const meta = getTargetMeta();
+    const radius = Math.sqrt(dxIn * dxIn + dyIn * dyIn);
+
+    return {
+      sessionId: analytics.sessionId,
+      score: 50,
+      shots: state.shots.length,
+      windage: {
+        dir: windDir,
+        clicks: Number(windClicks.toFixed(2))
+      },
+      elevation: {
+        dir: elevDir,
+        clicks: Number(elevClicks.toFixed(2))
+      },
+      dial: {
+        unit: "MOA",
+        clickValue: Number(getClickValueMOA().toFixed(2))
+      },
+      target: {
+        key: meta.key,
+        name: meta.name,
+        wIn: meta.wIn,
+        hIn: meta.hIn
+      },
+      debug: {
+        distanceYds: Number(getDistanceYards().toFixed(2)),
+        inches: {
+          x: Number(dxIn.toFixed(2)),
+          y: Number(dyIn.toFixed(2)),
+          r: Number(radius.toFixed(2))
+        }
+      }
+    };
+  }
+
+  function openSecPage(payload) {
+    try {
+      localStorage.setItem(SEC_PAYLOAD_KEY, JSON.stringify(payload));
+    } catch {}
+
+    window.location.href = "./sec.html";
+  }
+
   function calculateResults() {
     if (!state.aim || state.shots.length < MIN_SHOTS) return;
 
@@ -835,25 +923,14 @@
       elevation_direction: elevDir
     });
 
-    if (isB2B) {
-      const payload = {
-        target: "b2b",
-        shots: state.shots.length,
-        windageClicks: Number(windClicks.toFixed(2)),
-        elevationClicks: Number(elevClicks.toFixed(2)),
-        windageDirection: windDir,
-        elevationDirection: elevDir,
-        windageMOA: Number(windMOA.toFixed(2)),
-        elevationMOA: Number(elevMOA.toFixed(2)),
-        dxInches: Number(dxIn.toFixed(2)),
-        dyInches: Number(dyIn.toFixed(2)),
-        distanceYards: distance,
-        clickValueMOA: click,
-        createdAt: Date.now()
-      };
-
-      sessionStorage.setItem("sczn3_b2b_context", JSON.stringify(payload));
-    }
+    const secPayload = buildSecPayload({
+      windDir,
+      elevDir,
+      windClicks,
+      elevClicks,
+      dxIn,
+      dyIn
+    });
 
     secCard.innerHTML = `
       <div class="sec-brand">Shooter Experience Card</div>
@@ -869,7 +946,7 @@
 
       <div class="sec-actions">
         <button id="secTryAgainBtn">Try Again</button>
-        ${isB2B ? `<button id="secOpenB2B">Open B2B SEC</button>` : ""}
+        <button id="secOpenSecBtn">Open SEC</button>
       </div>
     `;
 
@@ -877,11 +954,9 @@
       resetSimulator(true);
     });
 
-    if (isB2B) {
-      document.getElementById("secOpenB2B")?.addEventListener("click", () => {
-        window.location.href = "./b2b-sec.html";
-      });
-    }
+    document.getElementById("secOpenSecBtn")?.addEventListener("click", () => {
+      openSecPage(secPayload);
+    });
   }
 
   function resetSimulator(track = true) {
@@ -895,6 +970,10 @@
     state.mode = "aim";
     state.resultsViewed = false;
     analytics.resultsAtMs = null;
+
+    try {
+      localStorage.removeItem(SEC_PAYLOAD_KEY);
+    } catch {}
 
     redrawAll();
     resetSEC();
@@ -937,11 +1016,12 @@
     );
   });
 
+  clearStaleTargetContext();
   setPageCopy();
   addQrHotspot();
   resetSimulator(false);
   syncModeUI();
   analytics.lastSettingsSignature = signatureForSettings(getSettingsSnapshot());
 
-  trackEvent("scan", { target: targetKey });
+  trackEvent("scan", { target: isB2B ? "b2b" : "st100" });
 })();
