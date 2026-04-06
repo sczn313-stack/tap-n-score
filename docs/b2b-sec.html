@@ -16,6 +16,7 @@
       --blue2:#8dc7ff;
       --red:#ff6b6b;
       --white:#ffffff;
+      --gold:#ffd54f;
       --shadow:0 18px 44px rgba(0,0,0,.34);
       --radius:22px;
     }
@@ -133,6 +134,7 @@
       line-height:1;
       font-weight:1000;
       letter-spacing:-.04em;
+      color:var(--gold);
     }
 
     .fair{
@@ -174,26 +176,6 @@
       margin-top:5px;
       font-size:13px;
       color:var(--muted);
-    }
-
-    .preview{
-      margin-top:14px;
-      display:none;
-      border-radius:18px;
-      overflow:hidden;
-      border:1px solid var(--line);
-      background:#0b1224;
-    }
-
-    .preview.on{display:block}
-
-    .preview img{
-      display:block;
-      width:100%;
-      height:auto;
-      max-height:42vh;
-      object-fit:contain;
-      background:#09111f;
     }
 
     .status{
@@ -266,8 +248,12 @@
     }
 
     @media (min-width:700px){
-      .hero{grid-template-columns:1.15fr .95fr}
-      .actions{grid-template-columns:1fr 1fr}
+      .hero{
+        grid-template-columns:1.15fr .95fr;
+      }
+      .actions{
+        grid-template-columns:1fr 1fr;
+      }
     }
   </style>
 </head>
@@ -310,20 +296,22 @@
 
           <div class="metric">
             <div class="label">Group Size</div>
-            <div class="value" id="groupSizeEl">--</div>
-            <div class="sub">Shared-scale inches</div>
+            <div class="value" id="groupEl">--</div>
+            <div class="sub">Inches</div>
           </div>
 
           <div class="metric">
             <div class="label">Offset From Aim</div>
             <div class="value" id="offsetEl">--</div>
-            <div class="sub">Shared-scale inches</div>
+            <div class="sub">Inches</div>
+          </div>
+
+          <div class="metric">
+            <div class="label">Distance / Click Value</div>
+            <div class="value" id="setupEl">--</div>
+            <div class="sub">Range setup</div>
           </div>
         </div>
-      </div>
-
-      <div class="preview" id="preview">
-        <img id="previewImg" alt="B2B uploaded target" />
       </div>
 
       <div class="status" id="statusBox"></div>
@@ -347,10 +335,9 @@
     const shotsEl = document.getElementById('shotsEl');
     const windageEl = document.getElementById('windageEl');
     const elevationEl = document.getElementById('elevationEl');
-    const groupSizeEl = document.getElementById('groupSizeEl');
+    const groupEl = document.getElementById('groupEl');
     const offsetEl = document.getElementById('offsetEl');
-    const preview = document.getElementById('preview');
-    const previewImg = document.getElementById('previewImg');
+    const setupEl = document.getElementById('setupEl');
     const statusBox = document.getElementById('statusBox');
 
     const btnAnother = document.getElementById('btnAnother');
@@ -380,47 +367,49 @@
       }
     }
 
-    function renderValue(clicks, direction) {
+    function renderClicks(clicks, direction) {
       const c = toTwo(clicks);
       if (!c) return '--';
       if (isDir(direction)) return `${c} ${direction}`;
       return c;
     }
 
+    function renderInches(value) {
+      const v = toTwo(value);
+      return v ? `${v}"` : '--';
+    }
+
     function bootstrapFromSession() {
       const ctx = readContext();
 
       if (!ctx || ctx.target !== 'b2b') {
-        setStatus('No active B2B result payload was found. Return to the B2B scoring flow and run it again.');
+        setStatus('No active B2B result payload was found. Return to the B2B flow and generate results again.');
         return;
       }
 
-      shotsEl.textContent = String(ctx.shots ?? '--');
       scoreEl.textContent = Number.isFinite(Number(ctx.score)) ? String(Number(ctx.score)) : '--';
-      windageEl.textContent = Number.isFinite(Number(ctx.windageClicks))
-        ? renderValue(ctx.windageClicks, String(ctx.windageDirection || '').toUpperCase())
-        : '--';
-      elevationEl.textContent = Number.isFinite(Number(ctx.elevationClicks))
-        ? renderValue(ctx.elevationClicks, String(ctx.elevationDirection || '').toUpperCase())
-        : '--';
-      groupSizeEl.textContent = Number.isFinite(Number(ctx.groupSizeInches))
-        ? `${toTwo(ctx.groupSizeInches)}"`
-        : '--';
-      offsetEl.textContent = Number.isFinite(Number(ctx.offsetInches))
-        ? `${toTwo(ctx.offsetInches)}"`
-        : '--';
+      shotsEl.textContent = String(ctx.shots ?? '--');
+      windageEl.textContent = renderClicks(ctx.windageClicks, String(ctx.windageDirection || '').toUpperCase());
+      elevationEl.textContent = renderClicks(ctx.elevationClicks, String(ctx.elevationDirection || '').toUpperCase());
+      groupEl.textContent = renderInches(ctx.groupSizeInches);
+      offsetEl.textContent = renderInches(ctx.offsetInches);
 
-      if (ctx.imageDataUrl) {
-        previewImg.src = ctx.imageDataUrl;
-        preview.classList.add('on');
+      const distance = Number(ctx.distanceYards);
+      const clickValue = Number(ctx.clickValueMOA);
+
+      if (Number.isFinite(distance) && Number.isFinite(clickValue)) {
+        setupEl.textContent = `${distance} yd • ${clickValue} MOA/click`;
+      } else {
+        setupEl.textContent = '--';
       }
 
-      if (
+      const missingCore =
         !Number.isFinite(Number(ctx.score)) ||
         !Number.isFinite(Number(ctx.windageClicks)) ||
-        !Number.isFinite(Number(ctx.elevationClicks))
-      ) {
-        setStatus('The B2B path is locked, but the live result payload is incomplete.');
+        !Number.isFinite(Number(ctx.elevationClicks));
+
+      if (missingCore) {
+        setStatus('The B2B SEC page loaded, but the result payload is incomplete. Re-run the B2B scoring flow.');
       }
     }
 
@@ -433,7 +422,7 @@
     });
 
     btnVendor.addEventListener('click', () => {
-      window.open('https://baker-targets.com/', '_blank', 'noopener,noreferrer');
+      window.open('https://bakertargets.com', '_blank', 'noopener,noreferrer');
     });
 
     btnDownload.addEventListener('click', async () => {
