@@ -2,74 +2,50 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta
-    name="viewport"
-    content="width=device-width, initial-scale=1.0, viewport-fit=cover"
-  />
-  <title>SEC — Shooter Experience Card</title>
-  <link rel="stylesheet" href="./sec.css?v=2002" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>SEC — Stable</title>
+  <link rel="stylesheet" href="./sec.css" />
 </head>
+
 <body>
   <div class="sec-app">
-    <header class="topbar">
-      <button class="icon-btn back-btn" id="backBtn" aria-label="Go back">‹</button>
 
-      <div class="brand-wrap">
-        <div class="sec-logo" aria-label="SEC">
-          <span class="s-red">S</span><span class="e-white">E</span><span class="c-blue">C</span>
-        </div>
-      </div>
-
-      <div class="level-pill" id="levelPill">LEVEL 2</div>
+    <!-- Header -->
+    <header class="sec-header">
+      <button id="backBtn">← Back</button>
+      <h1>SEC</h1>
     </header>
 
-    <section class="title-card">
-      <div class="title-main" id="targetTitle">Shooter Experience Card</div>
-      <div class="title-sub">Shooter Experience Card</div>
-    </section>
-
-    <section class="utility-row">
-      <div class="summary-copy" id="summaryCopy">
-        Understand and act on your performance
-      </div>
-
-      <button class="history-btn" id="historyBtn">History ›</button>
-    </section>
-
-    <section class="card grid-card">
-      <div class="grid-wrap" id="gridWrap">
+    <!-- Score -->
+    <section class="score-block">
+      <div id="scoreValue">--</div>
+      <div class="score-sub">
+        Tighter group + closer to aim point = higher score
       </div>
     </section>
 
-    <section class="bottom-stats">
-      <div class="card stat-card">
-        <div class="stat-label">LIFETIME BEST SCORE</div>
-        <div class="best-row">
-          <div class="best-score" id="bestScore">9/10</div>
-          <div class="best-badge" id="bestBadge">NEW BEST</div>
-        </div>
+    <!-- Stats -->
+    <section class="stats">
+
+      <div class="stat">
+        <div class="label">Shots</div>
+        <div id="shotCount">--</div>
       </div>
 
-      <div class="card stat-card">
-        <div class="stat-label" id="levelLabel">LEVEL 2</div>
-        <div class="stars-row" id="starsRow">★★☆☆☆</div>
-        <div class="level-note" id="levelNote">Reach 9/10 twice</div>
+      <div class="stat">
+        <div class="label">Windage</div>
+        <div id="windageClicks">--</div>
       </div>
+
+      <div class="stat">
+        <div class="label">Elevation</div>
+        <div id="elevationClicks">--</div>
+      </div>
+
     </section>
 
-    <section class="action-row">
-      <button class="action-btn" id="newScanBtn">
-        <span class="action-icon">▣</span>
-        <span>NEW SCAN</span>
-      </button>
-
-      <button class="action-btn" id="leaderboardBtn">
-        <span class="action-icon">🏆</span>
-        <span>LEADERBOARD</span>
-      </button>
-    </section>
   </div>
 
-  <script src="./sec.js?v=2002"></script>
+  <script src="./sec.js?v=STABLE1"></script>
 </body>
-</html
+</html>
