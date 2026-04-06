@@ -2,39 +2,131 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>SEC — Stable</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>SEC — Shooter Experience Card</title>
+
   <link rel="stylesheet" href="./sec.css" />
 </head>
 
 <body>
   <div class="sec-app">
 
-    <!-- Header -->
-    <header class="sec-header">
-      <button id="backBtn">← Back</button>
-      <h1>SEC</h1>
-    </header>
+    <!-- =========================
+         PAGE 1 — PRECISION VIEW
+    ========================== -->
+    <section id="viewPrecision" class="view viewOn">
 
-    <!-- Score -->
-    <section class="score-block">
-      <div id="scoreValue">--</div>
-      <div class="score-sub">
-        Tighter group + closer to aim point = higher score
+      <!-- Top Bar -->
+      <header class="topbar">
+        <button id="backBtn" class="icon-btn">‹</button>
+
+        <div class="brand-wrap">
+          <div class="sec-logo">
+            <span class="s-red">S</span>
+            <span class="e-white">E</span>
+            <span class="c-blue">C</span>
+          </div>
+          <div class="brand-sub">Shooter Experience Card</div>
+        </div>
+
+        <div style="width:36px;"></div>
+      </header>
+
+      <!-- Score -->
+      <div class="score-block">
+        <div id="scoreValue" class="score-value">—</div>
+        <div id="scoreBand" class="score-band scoreBandNeutral">—</div>
       </div>
+
+      <!-- Adjustments -->
+      <div class="adjustments">
+
+        <div class="adjust-card">
+          <div class="adjust-label">WINDAGE</div>
+          <div id="windageBig" class="adjust-value">0.00</div>
+          <div id="windageDir" class="adjust-dir">—</div>
+        </div>
+
+        <div class="adjust-card">
+          <div class="adjust-label">ELEVATION</div>
+          <div id="elevationBig" class="adjust-value">0.00</div>
+          <div id="elevationDir" class="adjust-dir">—</div>
+        </div>
+
+      </div>
+
+      <!-- Run Info -->
+      <div class="run-info">
+        <div id="runDistance">—</div>
+        <div id="runHits">—</div>
+        <div id="runTime">—</div>
+      </div>
+
+      <!-- CTA -->
+      <div class="cta-wrap">
+        <button id="toReportBtn" class="primary-btn">
+          View Full Report
+        </button>
+      </div>
+
+      <!-- Home -->
+      <div class="home-wrap">
+        <button id="goHomeBtn" class="ghost-btn">
+          New Target
+        </button>
+      </div>
+
     </section>
 
-    <!-- Stats -->
-    <section class="stats">
 
-      <div class="stat">
-        <div class="label">Shots</div>
-        <div id="shotCount">--</div>
+    <!-- =========================
+         PAGE 2 — REPORT VIEW
+    ========================== -->
+    <section id="viewReport" class="view">
+
+      <!-- Top Bar -->
+      <header class="topbar">
+        <button id="backBtn" class="icon-btn">‹</button>
+
+        <div class="brand-wrap">
+          <div class="sec-logo">
+            <span class="s-red">S</span>
+            <span class="e-white">E</span>
+            <span class="c-blue">C</span>
+          </div>
+          <div class="brand-sub">Full Report</div>
+        </div>
+
+        <div style="width:36px;"></div>
+      </header>
+
+      <!-- Report Image -->
+      <div class="report-wrap">
+        <img id="secCardImg" alt="SEC Report Card" />
       </div>
 
-      <div class="stat">
-        <div class="label">Windage</div>
-        <div id="windageClicks">--</div>
+      <!-- Actions -->
+      <div class="report-actions">
+
+        <a id="vendorBtn" class="primary-btn" href="#" target="_blank">
+          Visit Vendor
+        </a>
+
+        <a id="surveyBtn" class="ghost-btn" href="#" target="_blank">
+          Feedback
+        </a>
+
+      </div>
+
+    </section>
+
+  </div>
+
+  <!-- 🔒 LOCKED VERSION -->
+  <script src="./sec.js?v=RECOVER1"></script>
+
+</body>
+</html>        <div id="windageClicks">--</div>
       </div>
 
       <div class="stat">
