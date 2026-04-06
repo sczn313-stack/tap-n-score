@@ -15,12 +15,12 @@
   --blue-1: #5f8dff;
   --blue-2: #3b63eb;
 
-  --radius-xl: 28px;
-  --radius-lg: 22px;
-  --radius-md: 18px;
+  --radius-xl: 24px;
+  --radius-lg: 18px;
+  --radius-md: 14px;
 
-  --shadow-soft: 0 16px 40px rgba(0, 0, 0, 0.28);
-  --shadow-strong: 0 22px 54px rgba(0, 0, 0, 0.42);
+  --shadow-soft: 0 14px 34px rgba(0, 0, 0, 0.24);
+  --shadow-strong: 0 20px 48px rgba(0, 0, 0, 0.36);
 }
 
 * {
@@ -40,19 +40,20 @@ html, body {
 
 body {
   min-height: 100vh;
+  overflow-x: hidden;
 }
 
 .sec-app {
   width: min(100%, 760px);
   margin: 0 auto;
-  padding: 18px 16px 42px;
+  padding: 10px 12px 18px;
 }
 
 .view {
   opacity: 0;
-  transform: translateY(10px);
+  transform: translateY(8px);
   pointer-events: none;
-  transition: opacity 0.35s ease, transform 0.35s ease;
+  transition: opacity 0.28s ease, transform 0.28s ease;
   display: none;
 }
 
@@ -67,18 +68,18 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 14px;
+  gap: 10px;
+  margin-bottom: 10px;
 }
 
 .icon-btn {
-  width: 44px;
-  height: 44px;
+  width: 42px;
+  height: 42px;
   border: 0;
-  border-radius: 14px;
+  border-radius: 12px;
   background: rgba(0, 0, 0, 0.22);
   color: #fff;
-  font-size: 34px;
+  font-size: 32px;
   line-height: 1;
   cursor: pointer;
   box-shadow: var(--shadow-soft);
@@ -87,18 +88,18 @@ body {
 .brand-wrap {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   min-width: 0;
 }
 
 .sec-logo {
   display: flex;
   align-items: center;
-  gap: 2px;
-  font-size: 48px;
+  gap: 1px;
+  font-size: 42px;
   font-weight: 900;
   line-height: 1;
-  letter-spacing: 2px;
+  letter-spacing: 1px;
 }
 
 .s-red { color: #ff6a6a; }
@@ -107,13 +108,13 @@ body {
 
 .brand-sub {
   color: var(--muted);
-  font-size: 18px;
+  font-size: 15px;
   white-space: nowrap;
 }
 
 .spacer {
-  width: 44px;
-  height: 44px;
+  width: 42px;
+  height: 42px;
 }
 
 .glass-card {
@@ -125,13 +126,13 @@ body {
 
 .score-block {
   border-radius: var(--radius-xl);
-  padding: 28px 20px 26px;
+  padding: 18px 16px 16px;
   text-align: center;
-  margin-bottom: 18px;
+  margin-bottom: 12px;
 }
 
 .score-value {
-  font-size: clamp(92px, 18vw, 128px);
+  font-size: clamp(72px, 13vw, 108px);
   font-weight: 900;
   line-height: 0.95;
   color: #fff;
@@ -141,13 +142,13 @@ body {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 56px;
-  margin-top: 14px;
-  padding: 0 26px;
+  min-height: 44px;
+  margin-top: 10px;
+  padding: 0 20px;
   border-radius: 999px;
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 900;
-  letter-spacing: 0.6px;
+  letter-spacing: 0.4px;
   text-transform: uppercase;
 }
 
@@ -174,70 +175,70 @@ body {
 .adjustments {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 18px;
-  margin-bottom: 18px;
+  gap: 12px;
+  margin-bottom: 12px;
 }
 
 .adjust-card {
   border-radius: var(--radius-lg);
-  padding: 28px 20px 24px;
+  padding: 18px 14px 16px;
   text-align: center;
 }
 
 .adjust-label {
   color: var(--muted);
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 800;
-  letter-spacing: 2px;
-  margin-bottom: 14px;
+  letter-spacing: 1.5px;
+  margin-bottom: 10px;
 }
 
 .adjust-value {
-  font-size: clamp(48px, 9vw, 70px);
+  font-size: clamp(40px, 8vw, 58px);
   font-weight: 900;
   line-height: 1;
   color: #fff;
 }
 
 .adjust-dir {
-  margin-top: 12px;
-  font-size: 26px;
+  margin-top: 8px;
+  font-size: 22px;
   font-weight: 900;
-  letter-spacing: 1px;
+  letter-spacing: 0.5px;
   color: #fff;
 }
 
 .run-info {
   border-radius: var(--radius-lg);
-  padding: 22px 20px;
+  padding: 14px 16px;
   text-align: center;
-  margin-bottom: 22px;
+  margin-bottom: 14px;
   color: var(--muted);
-  font-size: 18px;
+  font-size: 15px;
   font-weight: 800;
-  line-height: 1.8;
+  line-height: 1.6;
 }
 
 .cta-wrap,
 .home-wrap {
-  margin-top: 14px;
+  margin-top: 10px;
 }
 
 .primary-btn,
 .ghost-btn {
   width: 100%;
-  min-height: 72px;
-  border-radius: 22px;
+  min-height: 58px;
+  border-radius: 18px;
   display: flex;
   align-items: center;
   justify-content: center;
   text-align: center;
-  padding: 0 18px;
-  font-size: 22px;
+  padding: 0 16px;
+  font-size: 18px;
   font-weight: 900;
   text-decoration: none;
   cursor: pointer;
-  transition: transform 0.18s ease, opacity 0.18s ease, box-shadow 0.18s ease;
+  transition: transform 0.16s ease, opacity 0.16s ease, box-shadow 0.16s ease;
 }
 
 .primary-btn:hover,
@@ -256,7 +257,7 @@ body {
   border: 0;
   color: #fff;
   background: linear-gradient(180deg, var(--blue-1), var(--blue-2));
-  box-shadow: 0 14px 34px rgba(74, 113, 255, 0.34);
+  box-shadow: 0 12px 28px rgba(74, 113, 255, 0.28);
 }
 
 .primary-btn:disabled {
@@ -274,54 +275,133 @@ body {
   display: flex;
   justify-content: center;
   align-items: center;
-  padding: 20px;
+  padding: 14px;
   border-radius: var(--radius-xl);
-  min-height: 620px;
-  margin-bottom: 18px;
+  min-height: 330px;
+  margin-bottom: 12px;
 }
 
 #secCardImg {
   width: 100%;
-  max-width: 440px;
+  max-width: 300px;
   display: block;
-  border-radius: 24px;
+  border-radius: 18px;
   box-shadow: var(--shadow-strong);
+}
+
+.history-wrap {
+  border-radius: var(--radius-xl);
+  padding: 12px 12px 8px;
+  margin-bottom: 12px;
+}
+
+.history-title {
+  font-size: 18px;
+  font-weight: 900;
+  color: #ffffff;
+  margin-bottom: 8px;
+}
+
+.history-list {
+  display: grid;
+  gap: 8px;
+  max-height: 150px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.history-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+  padding: 10px 10px;
+  border-radius: 14px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.08);
+}
+
+.history-main {
+  min-width: 0;
+}
+
+.history-line-1 {
+  font-size: 13px;
+  font-weight: 900;
+  color: #ffffff;
+}
+
+.history-line-2 {
+  margin-top: 3px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.history-line-3 {
+  margin-top: 3px;
+  font-size: 12px;
+  font-weight: 800;
+  color: #f1c64f;
+}
+
+.history-score {
+  align-self: center;
+  font-size: 18px;
+  font-weight: 900;
+  color: #ffffff;
 }
 
 .report-actions {
   display: grid;
-  gap: 14px;
+  gap: 10px;
 }
 
 @media (max-width: 640px) {
   .sec-app {
-    padding: 14px 12px 34px;
+    padding: 8px 10px 16px;
   }
 
   .brand-sub {
-    font-size: 15px;
+    font-size: 13px;
   }
 
   .sec-logo {
-    font-size: 42px;
+    font-size: 36px;
   }
 
   .adjustments {
-    grid-template-columns: 1fr;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
   }
 
-  .report-wrap {
-    min-height: 0;
-    padding: 16px;
+  .score-block {
+    padding: 16px 12px 14px;
+  }
+
+  .adjust-card {
+    padding: 16px 10px 14px;
+  }
+
+  .run-info {
+    font-size: 14px;
+    padding: 12px 12px;
   }
 
   .primary-btn,
   .ghost-btn {
-    min-height: 64px;
-    font-size: 18px;
+    min-height: 54px;
+    font-size: 16px;
   }
 
-  .run-info {
-    font-size: 16px;
+  .report-wrap {
+    min-height: 300px;
+    padding: 12px;
+  }
+
+  #secCardImg {
+    max-width: 270px;
+  }
+
+  .history-list {
+    max-height: 120px;
   }
 }
