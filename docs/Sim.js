@@ -77,10 +77,15 @@
 
   const targetNameTag = document.getElementById("targetNameTag");
 
+  if (!targetSurface || !tapLayer || !secCard) {
+    console.warn("SCZN3 Sim init aborted: required DOM nodes missing.");
+    return;
+  }
+
   const state = {
     aim: null,
     shots: [],
-    mode: "aim",
+    mode: "aim", // aim | shots | ready | results
     groupCenter: null,
     qrLive: false,
     resultsViewed: false,
@@ -126,20 +131,8 @@
     }
   };
 
-  function round1(v) {
-    return Number(v).toFixed(1);
-  }
-
-  function round2(v) {
-    return Number(v).toFixed(2);
-  }
-
   function nowIso() {
     return new Date().toISOString();
-  }
-
-  function clamp(value, min, max) {
-    return Math.max(min, Math.min(max, value));
   }
 
   function markActivity() {
@@ -459,22 +452,6 @@
     });
   }
 
-  function deriveDirectionTruth(aim, groupCenter) {
-    const dx = groupCenter.xPct - aim.xPct;
-    const dy = groupCenter.yPct - aim.yPct;
-
-    return {
-      dx,
-      dy,
-      horizontalPosition:
-        dx > 0 ? "right" : dx < 0 ? "left" : "centered",
-      verticalPosition:
-        dy > 0 ? "low" : dy < 0 ? "high" : "centered",
-      windageDirection: dx > 0 ? "LEFT" : dx < 0 ? "RIGHT" : "NONE",
-      elevationDirection: dy > 0 ? "UP" : dy < 0 ? "DOWN" : "NONE"
-    };
-  }
-
   function applyEntryImageIfPresent() {
     if (!targetImage) return;
 
@@ -493,30 +470,21 @@
     if (isB2B) {
       document.title = "Tap-n-Score™ — B2B";
 
-      if (controlsHeading) {
-        controlsHeading.textContent = "B2B Target Scoring";
-      }
-
+      if (controlsHeading) controlsHeading.textContent = "B2B Target Scoring";
       if (controlsSubhead) {
-        controlsSubhead.textContent =
-          "Tap Aim Point • Tap Shots • Get Results";
+        controlsSubhead.textContent = "Tap Aim Point • Tap Shots • Get Results";
       }
-
       if (targetNameTag) {
         targetNameTag.textContent = "Baker Back-to-Basics Target";
       }
     } else {
       document.title = "Tap-n-Score™ Optic Zero Trainer";
 
-      if (controlsHeading) {
-        controlsHeading.textContent = "Optic Zero Trainer";
-      }
-
+      if (controlsHeading) controlsHeading.textContent = "Optic Zero Trainer";
       if (controlsSubhead) {
         controlsSubhead.textContent =
           "Tap Aim Point • Tap 3–5 Shots • Get Scope Adjustments";
       }
-
       if (targetNameTag) {
         targetNameTag.textContent = "Baker ST100 Smart Target";
       }
@@ -563,50 +531,62 @@
   }
 
   function syncModeUI() {
-    if (!modePill || !statusText) return;
-
     if (state.mode === "aim") {
-      modePill.textContent = "Mode: Aim Point";
-      statusText.textContent = "Tap Aim Point";
+      if (modePill) modePill.textContent = "Mode: Aim Point";
+      if (statusText) statusText.textContent = "Tap Aim Point";
       setInstruction("TAP AIM POINT", "state-aim");
       setStepBar("aim");
       enableResultsButtons(false);
+      setQrLive(false);
       return;
     }
 
     if (state.mode === "shots") {
-      modePill.textContent = "Mode: Shots";
-      statusText.textContent = isB2B
-        ? `Shots: ${state.shots.length} • Results ready at ${MIN_SHOTS}+`
-        : `Tap 3–5 Shots (${state.shots.length}/${getShotGoal()} goal)`;
+      if (modePill) modePill.textContent = "Mode: Shots";
+      if (statusText) {
+        statusText.textContent = isB2B
+          ? `Shots: ${state.shots.length} • Results ready at ${MIN_SHOTS}+`
+          : `Tap 3–5 Shots (${state.shots.length}/${getShotGoal()} goal)`;
+      }
       setInstruction(isB2B ? "TAP SHOTS" : "TAP 3–5 SHOTS", "state-shots");
       setStepBar("shots");
       enableResultsButtons(false);
+      setQrLive(false);
       return;
     }
 
     if (state.mode === "ready") {
-      modePill.textContent = "Mode: Ready";
-      statusText.textContent = isB2B
-        ? `Ready (${state.shots.length} shots set)`
-        : `Get Scope Adjustments (${state.shots.length}/${getShotGoal()} shots set)`;
+      if (modePill) modePill.textContent = "Mode: Ready";
+      if (statusText) {
+        statusText.textContent = isB2B
+          ? `Ready (${state.shots.length} shots set)`
+          : `Get Scope Adjustments (${state.shots.length}/${getShotGoal()} shots set)`;
+      }
       setInstruction(
         isB2B ? "GET RESULTS" : "GET SCOPE ADJUSTMENTS",
         "state-results"
       );
       setStepBar("results");
       enableResultsButtons(true);
+      setQrLive(false);
       return;
     }
 
-    modePill.textContent = isB2B ? "Mode: Results Ready" : "Mode: Adjustments Ready";
-    statusText.textContent = isB2B ? "Results ready" : "Scope adjustments ready";
-    setInstruction(
-      isB2B ? "RESULTS READY" : "SCOPE ADJUSTMENTS READY",
-      "state-results"
-    );
-    setStepBar("results");
-    enableResultsButtons(true);
+    if (state.mode === "results") {
+      if (modePill) {
+        modePill.textContent = isB2B ? "Mode: Results Ready" : "Mode: Adjustments Ready";
+      }
+      if (statusText) {
+        statusText.textContent = isB2B ? "Results ready" : "Scope adjustments ready";
+      }
+      setInstruction(
+        isB2B ? "RESULTS READY" : "SCOPE ADJUSTMENTS READY",
+        "state-results"
+      );
+      setStepBar("results");
+      enableResultsButtons(true);
+      setQrLive(true);
+    }
   }
 
   function createAimMarker(xPct, yPct) {
@@ -703,6 +683,7 @@
 
   function resetSEC() {
     if (!secCard) return;
+
     secCard.innerHTML = `
       <div class="sec-brand">Shooter Experience Card</div>
       <div class="sec-empty">
@@ -712,6 +693,7 @@
       </div>
     `;
   }
+
   function handleTap(e) {
     if (state.mode === "results") return;
 
@@ -719,7 +701,6 @@
 
     const pos = getRelativeCoords(e);
 
-    // AIM
     if (!state.aim) {
       state.aim = pos;
       state.groupCenter = null;
@@ -739,9 +720,9 @@
       return;
     }
 
-    // SHOTS (NO CAP)
     state.shots.push(pos);
     state.groupCenter = null;
+    state.resultsViewed = false;
 
     if (!analytics.firstShotAtMs) {
       analytics.firstShotAtMs = Date.now();
@@ -753,9 +734,7 @@
       shot_y_pct: Number(pos.yPct.toFixed(2))
     });
 
-    if (state.shots.length >= MIN_SHOTS) {
-      state.mode = "ready";
-    }
+    state.mode = state.shots.length >= MIN_SHOTS ? "ready" : "shots";
 
     redrawAll();
     syncModeUI();
@@ -764,37 +743,39 @@
   function undoLast() {
     markActivity();
 
-    // undo results
     if (state.mode === "results") {
       state.groupCenter = null;
       state.resultsViewed = false;
       analytics.resultsAtMs = null;
-      state.mode = "shots";
+      state.mode = state.shots.length >= MIN_SHOTS ? "ready" : "shots";
       redrawAll();
       resetSEC();
       syncModeUI();
+      trackEvent("undo_last", { undo_type: "results" });
       return;
     }
 
-    // undo shot
     if (state.shots.length > 0) {
       state.shots.pop();
       state.groupCenter = null;
-
+      state.resultsViewed = false;
       state.mode = state.shots.length >= MIN_SHOTS ? "ready" : "shots";
-
       redrawAll();
+      resetSEC();
       syncModeUI();
+      trackEvent("undo_last", { undo_type: "shot", shots_remaining: state.shots.length });
       return;
     }
 
-    // undo aim
     if (state.aim) {
       state.aim = null;
+      state.groupCenter = null;
+      state.resultsViewed = false;
       state.mode = "aim";
       redrawAll();
       resetSEC();
       syncModeUI();
+      trackEvent("undo_last", { undo_type: "aim" });
     }
   }
 
@@ -841,7 +822,19 @@
     redrawAll();
     syncModeUI();
 
-    // FULL B2B PAYLOAD
+    trackEvent("results_viewed", {
+      group_center_x_pct: Number(state.groupCenter.xPct.toFixed(2)),
+      group_center_y_pct: Number(state.groupCenter.yPct.toFixed(2)),
+      dx_pct: Number(dx.toFixed(2)),
+      dy_pct: Number(dy.toFixed(2)),
+      dx_inches: Number(dxIn.toFixed(2)),
+      dy_inches: Number(dyIn.toFixed(2)),
+      windage_clicks: Number(windClicks.toFixed(2)),
+      elevation_clicks: Number(elevClicks.toFixed(2)),
+      windage_direction: windDir,
+      elevation_direction: elevDir
+    });
+
     if (isB2B) {
       const payload = {
         target: "b2b",
@@ -864,7 +857,6 @@
 
     secCard.innerHTML = `
       <div class="sec-brand">Shooter Experience Card</div>
-
       <div class="sec-title">Results</div>
 
       <div class="metric">
@@ -877,16 +869,12 @@
 
       <div class="sec-actions">
         <button id="secTryAgainBtn">Try Again</button>
-        ${
-          isB2B
-            ? `<button id="secOpenB2B">Open B2B SEC</button>`
-            : ""
-        }
+        ${isB2B ? `<button id="secOpenB2B">Open B2B SEC</button>` : ""}
       </div>
     `;
 
     document.getElementById("secTryAgainBtn")?.addEventListener("click", () => {
-      resetSimulator(false);
+      resetSimulator(true);
     });
 
     if (isB2B) {
@@ -896,30 +884,30 @@
     }
   }
 
-  function resetSEC() {
-    secCard.innerHTML = `
-      <div class="sec-brand">Shooter Experience Card</div>
-      <div class="sec-empty">
-        Results will appear after you tap an aim point and shots.
-      </div>
-    `;
-  }
-
   function resetSimulator(track = true) {
+    const hadAim = !!state.aim;
+    const priorShots = state.shots.length;
+    const hadResults = !!state.resultsViewed;
+
     state.aim = null;
     state.shots = [];
     state.groupCenter = null;
     state.mode = "aim";
     state.resultsViewed = false;
+    analytics.resultsAtMs = null;
 
     redrawAll();
     resetSEC();
     syncModeUI();
-  }
 
-  // =============================
-  // EVENT WIRING
-  // =============================
+    if (track) {
+      trackEvent("reset_clicked", {
+        had_aim: hadAim,
+        prior_shots: priorShots,
+        had_results: hadResults
+      });
+    }
+  }
 
   tapLayer.addEventListener("click", handleTap);
 
@@ -932,13 +920,28 @@
   resetBtn?.addEventListener("click", () => resetSimulator(true));
   inlineResetBtn?.addEventListener("click", () => resetSimulator(true));
 
-  // =============================
-  // INIT
-  // =============================
+  distanceYardsEl?.addEventListener("change", () => trackSettingsChanged("distance"));
+  clickValueMOAEl?.addEventListener("change", () => trackSettingsChanged("click_value"));
+  shotGoalEl?.addEventListener("change", () => trackSettingsChanged("shot_goal"));
+
+  window.addEventListener("beforeunload", () => {
+    trackEvent(
+      "page_exit",
+      {
+        exit_state: state.mode,
+        had_aim: !!state.aim,
+        shots_taken: state.shots.length,
+        had_results: !!state.resultsViewed
+      },
+      { beacon: true }
+    );
+  });
 
   setPageCopy();
+  addQrHotspot();
   resetSimulator(false);
   syncModeUI();
+  analytics.lastSettingsSignature = signatureForSettings(getSettingsSnapshot());
 
   trackEvent("scan", { target: targetKey });
 })();
