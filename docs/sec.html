@@ -4,112 +4,106 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>SEC — Shooter Experience Card</title>
-  <link rel="stylesheet" href="./sec.css?v=SEC-CLEAN-1" />
+  <link rel="stylesheet" href="./sec.css?v=OLD-SEC-REBUILD-1" />
 </head>
 <body>
-  <div class="sec-app">
+  <main class="sec-page">
 
-    <!-- PAGE 1 -->
-    <section id="viewPrecision" class="view viewOn">
-      <header class="topbar">
-        <button id="backBtn" class="icon-btn" type="button" aria-label="Back">‹</button>
+    <header class="sec-top">
+      <div class="sec-mark" aria-label="SEC">
+        <span class="s-red">S</span><span class="e-white">E</span><span class="c-blue">C</span>
+      </div>
+      <div class="sec-top-right">SHOOTER EXPERIENCE CARD</div>
+    </header>
 
-        <div class="brand-wrap">
-          <div class="sec-logo" aria-label="SEC">
-            <span class="s-red">S</span>
-            <span class="e-white">E</span>
-            <span class="c-blue">C</span>
-          </div>
-          <div class="brand-sub">Shooter Experience Card</div>
-        </div>
+    <section class="hero-card">
+      <div class="hero-score-label">SCORE</div>
+      <div id="scoreValue" class="hero-score-value">80</div>
+      <div id="scoreBand" class="hero-score-band score-band-yellow">IMPROVING / SOLID</div>
+      <div class="hero-score-note">Tight cluster + closer to the aim point = higher score.</div>
+    </section>
 
-        <div class="spacer"></div>
-      </header>
-
-      <div class="score-block glass-card">
-        <div id="scoreValue" class="score-value">—</div>
-        <div id="scoreBand" class="score-band scoreBandNeutral">—</div>
+    <section class="corrections-grid">
+      <div class="corr-card">
+        <div class="corr-label">WINDAGE</div>
+        <div id="windageBig" class="corr-value">6.87</div>
+        <div id="windageDir" class="corr-dir">LEFT</div>
       </div>
 
-      <div class="adjustments">
-        <div class="adjust-card glass-card">
-          <div class="adjust-label">WINDAGE</div>
-          <div id="windageBig" class="adjust-value">0.00</div>
-          <div id="windageDir" class="adjust-dir">—</div>
-        </div>
-
-        <div class="adjust-card glass-card">
-          <div class="adjust-label">ELEVATION</div>
-          <div id="elevationBig" class="adjust-value">0.00</div>
-          <div id="elevationDir" class="adjust-dir">—</div>
-        </div>
-      </div>
-
-      <div class="run-info glass-card">
-        <div id="runDistance">—</div>
-        <div id="runHits">—</div>
-        <div id="runTime">—</div>
-      </div>
-
-      <div class="cta-wrap">
-        <button id="toReportBtn" class="primary-btn" type="button">
-          Unlock Full Report
-        </button>
-      </div>
-
-      <div class="home-wrap">
-        <button id="goHomeBtn" class="ghost-btn" type="button">
-          New Target
-        </button>
+      <div class="corr-card">
+        <div class="corr-label">ELEVATION</div>
+        <div id="elevationBig" class="corr-value">2.98</div>
+        <div id="elevationDir" class="corr-dir">DOWN</div>
       </div>
     </section>
 
-    <!-- PAGE 2 -->
-    <section id="viewReport" class="view">
-      <header class="topbar">
-        <button id="backBtnReport" class="icon-btn" type="button" aria-label="Back">‹</button>
+    <section class="meta-strip">
+      <span id="runDistance" class="meta-pill">100 yds</span>
+      <span id="runHits" class="meta-pill">4 hits</span>
+      <span id="runSummary" class="meta-pill">6.87 LEFT | 2.98 DOWN</span>
+    </section>
 
-        <div class="brand-wrap">
-          <div class="sec-logo" aria-label="SEC">
-            <span class="s-red">S</span>
-            <span class="e-white">E</span>
-            <span class="c-blue">C</span>
-          </div>
-          <div class="brand-sub">Full Report</div>
-        </div>
+    <section class="action-stack">
+      <button id="toReportBtn" class="action-btn action-btn-primary" type="button">
+        Save SEC + Shooter History
+      </button>
 
-        <div class="spacer"></div>
-      </header>
+      <button id="goHomeBtn" class="action-btn action-btn-secondary" type="button">
+        Zero another target / Score another
+      </button>
 
-      <div class="report-wrap glass-card">
-        <img id="secCardImg" alt="SEC Report Card" />
+      <div class="action-note">
+        Next screen creates a “Report Card” image you can save to Photos.
       </div>
 
-      <div class="history-wrap glass-card">
-        <div class="history-head">
-          <div class="history-title">Recent Sessions</div>
-          <div class="history-note">Last 3</div>
+      <div class="sec-footer-mark">SCZN3</div>
+    </section>
+
+    <section id="reportSection" class="report-section hidden">
+      <div class="report-header">SEC REPORT</div>
+
+      <div class="report-top-grid">
+        <div class="report-block">
+          <div class="report-block-title">TARGET USED</div>
+          <div class="thumb-shell">
+            <img id="targetThumb" alt="Target used" />
+          </div>
         </div>
+
+        <div class="report-block">
+          <div class="report-block-title">OFFICIAL TARGET PARTNER</div>
+          <a id="vendorCard" class="vendor-card" href="#" target="_blank" rel="noopener noreferrer">
+            <div id="vendorLogoWrap" class="vendor-logo-wrap hidden">
+              <img id="vendorLogo" alt="Vendor logo" />
+            </div>
+            <div id="vendorName" class="vendor-name">VENDOR</div>
+            <div class="vendor-sub">After-Shot Intelligence</div>
+          </a>
+        </div>
+      </div>
+
+      <div class="summary-card">
+        <div class="summary-title">SESSION SUMMARY (LAST 10)</div>
+        <div class="summary-stats">
+          <div class="summary-stat">
+            <div id="highestScore" class="summary-num">80</div>
+            <div class="summary-label">Highest (10)</div>
+          </div>
+          <div class="summary-stat">
+            <div id="averageScore" class="summary-num">80.00</div>
+            <div class="summary-label">Average (10)</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="history-card">
+        <div class="history-title">LAST 10 — SCORE / YDS / HITS (NEWEST TOP)</div>
         <div id="historyList" class="history-list"></div>
       </div>
-
-      <div class="report-actions">
-        <a id="vendorBtn" class="primary-btn" href="#" target="_blank" rel="noopener noreferrer">
-          Visit Vendor
-        </a>
-
-        <a id="downloadBtn" class="ghost-btn" href="#" download="SEC_Report.png">
-          Download SEC
-        </a>
-
-        <a id="surveyBtn" class="ghost-btn" href="#" target="_blank" rel="noopener noreferrer">
-          Feedback
-        </a>
-      </div>
     </section>
 
-  </div>
+  </main>
 
-  <script src="./sec.js?v=SEC-CLEAN-1"></script>
+  <script src="./sec.js?v=OLD-SEC-REBUILD-1"></script>
 </body>
 </html>
