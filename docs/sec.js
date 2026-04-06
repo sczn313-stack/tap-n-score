@@ -2,6 +2,7 @@
   const KEY_PAYLOAD = "SCZN3_SEC_PAYLOAD_V1";
   const KEY_HISTORY = "SCZN3_SEC_HISTORY_V1";
   const KEY_BEST = "SCZN3_SEC_LIFETIME_BEST_V1";
+  const KEY_TARGET = "SCZN3_SEC_TARGET_KEY_V1";
   const TRACK_ENDPOINT = "https://tap-n-score-backend.onrender.com/api/track";
 
   const $ = (id) => document.getElementById(id);
@@ -59,7 +60,37 @@
     return null;
   }
 
+  function getQueryParam(name) {
+    try {
+      const url = new URL(window.location.href);
+      return url.searchParams.get(name) || "";
+    } catch {
+      return "";
+    }
+  }
+
+  function getVendor() {
+    return getQueryParam("v").toLowerCase() || "unknown";
+  }
+
+  function getSku() {
+    return getQueryParam("sku").toLowerCase() || "unknown";
+  }
+
+  function getBatch() {
+    return getQueryParam("b").toLowerCase() || "";
+  }
+
+  function getSessionId(payload) {
+    return payload?.sessionId || ("sec_" + Date.now().toString(36));
+  }
+
   function normalizePayload(payload) {
+    const resolvedTargetKey =
+      String(payload?.target?.key || payload?.targetKey || "").toLowerCase() ||
+      String(localStorage.getItem(KEY_TARGET) || "").toLowerCase() ||
+      String(sessionStorage.getItem("sczn3_active_target") || "").toLowerCase();
+
     return {
       ...payload,
       sessionId: payload?.sessionId || ("sec_" + Date.now().toString(36)),
@@ -86,41 +117,30 @@
         }
       },
       target: {
-        key: String(payload?.target?.key || payload?.targetKey || ""),
+        key: resolvedTargetKey,
         name: String(payload?.target?.name || ""),
         wIn: Number(payload?.target?.wIn ?? 0),
         hIn: Number(payload?.target?.hIn ?? 0)
-      }
+      },
+      targetKey: resolvedTargetKey
     };
   }
 
-  function getQueryParam(name) {
-    try {
-      const url = new URL(window.location.href);
-      return url.searchParams.get(name) || "";
-    } catch {
-      return "";
-    }
-  }
-
-  function getVendor() {
-    return getQueryParam("v").toLowerCase() || "unknown";
-  }
-
-  function getSku() {
-    return getQueryParam("sku").toLowerCase() || "unknown";
-  }
-
-  function getBatch() {
-    return getQueryParam("b").toLowerCase() || "";
-  }
-
-  function getSessionId(payload) {
-    return payload?.sessionId || ("sec_" + Date.now().toString(36));
-  }
-
   function getTargetKey(payload) {
-    return String(payload?.target?.key || payload?.targetKey || "").toLowerCase();
+    const fromPayload = String(payload?.target?.key || payload?.targetKey || "").toLowerCase();
+    if (fromPayload) return fromPayload;
+
+    try {
+      const fromLocal = String(localStorage.getItem(KEY_TARGET) || "").toLowerCase();
+      if (fromLocal) return fromLocal;
+    } catch {}
+
+    try {
+      const fromSession = String(sessionStorage.getItem("sczn3_active_target") || "").toLowerCase();
+      if (fromSession) return fromSession;
+    } catch {}
+
+    return "";
   }
 
   function getTargetDisplayTitle(payload) {
@@ -156,7 +176,7 @@
       click_value: Number.isFinite(Number(payload?.dial?.clickValue))
         ? Number(payload.dial.clickValue)
         : null,
-      target_key: String(payload?.target?.key || ""),
+      target_key: getTargetKey(payload),
       target_w_in: Number.isFinite(Number(payload?.target?.wIn))
         ? Number(payload.target.wIn)
         : null,
@@ -262,7 +282,7 @@
       deltaY: Number(format2(payload?.debug?.inches?.y || 0)),
       groupOffset: Number(format2(payload?.debug?.inches?.r || 0)),
       target: {
-        key: String(payload?.target?.key || ""),
+        key: getTargetKey(payload),
         name: String(payload?.target?.name || ""),
         wIn: Number(payload?.target?.wIn || 0),
         hIn: Number(payload?.target?.hIn || 0)
@@ -465,7 +485,6 @@
     const title = getTargetDisplayTitle(payload);
     const summary = getTargetSummaryCopy(payload);
 
-    console.log("SEC PAYLOAD:", payload);
     document.title = `SEC — ${title}`;
 
     if (els.targetTitle) {
@@ -502,14 +521,9 @@
 
     if (els.gridWrap) {
       els.gridWrap.innerHTML = "";
-
       try {
         const grid = buildGrid(payload);
-        if (grid) {
-          els.gridWrap.appendChild(grid);
-        } else {
-          throw new Error("Grid returned null");
-        }
+        els.gridWrap.appendChild(grid);
       } catch (e) {
         console.error("GRID ERROR:", e);
         els.gridWrap.innerHTML = `
