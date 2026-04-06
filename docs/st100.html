@@ -21,7 +21,8 @@
       --radius:20px;
     }
 
-    *{box-sizing:border-box}
+    * { box-sizing:border-box; }
+
     html,body{
       margin:0;
       padding:0;
@@ -31,8 +32,8 @@
       min-height:100%;
     }
 
-    a{color:inherit;text-decoration:none}
-    button{font:inherit}
+    a{ color:inherit; text-decoration:none; }
+    button{ font:inherit; }
 
     .wrap{
       width:min(100%, 760px);
@@ -104,6 +105,13 @@
       pointer-events:none;
     }
 
+    .heroTop{
+      display:grid;
+      grid-template-columns:1fr;
+      gap:14px;
+      align-items:start;
+    }
+
     .hero h1{
       margin:0 0 10px;
       font-size:28px;
@@ -117,6 +125,61 @@
       line-height:1.45;
       color:var(--muted);
       max-width:60ch;
+    }
+
+    .brandCard{
+      display:grid;
+      gap:10px;
+      align-content:start;
+      background:rgba(255,255,255,.04);
+      border:1px solid var(--line);
+      border-radius:18px;
+      padding:14px;
+    }
+
+    .vendorLogoWrap{
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      min-height:88px;
+      border-radius:14px;
+      border:1px solid rgba(255,255,255,.08);
+      background:#0f1730;
+      overflow:hidden;
+    }
+
+    .vendorLogoWrap img{
+      display:block;
+      max-width:100%;
+      max-height:72px;
+      object-fit:contain;
+    }
+
+    .vendorFallback{
+      color:var(--blue2);
+      font-weight:900;
+      font-size:18px;
+      letter-spacing:.04em;
+      text-transform:uppercase;
+      text-align:center;
+    }
+
+    .brandMeta{
+      display:grid;
+      gap:4px;
+      text-align:center;
+    }
+
+    .brandMetaTitle{
+      font-size:15px;
+      font-weight:900;
+      color:var(--text);
+    }
+
+    .brandMetaSub{
+      font-size:12px;
+      font-weight:700;
+      color:var(--muted);
     }
 
     .ctaRow{
@@ -138,7 +201,7 @@
       transition:transform .14s ease, opacity .14s ease, border-color .14s ease;
     }
 
-    .btn:active{transform:scale(.985)}
+    .btn:active{ transform:scale(.985); }
 
     .btnPrimary{
       background:linear-gradient(180deg,var(--blue2),var(--blue));
@@ -161,6 +224,96 @@
       color:var(--muted);
       margin-top:12px;
       text-align:center;
+    }
+
+    .picker{
+      margin-top:14px;
+      display:none;
+      background:rgba(255,255,255,.03);
+      border:1px dashed rgba(255,255,255,.18);
+      border-radius:18px;
+      padding:16px;
+    }
+
+    .picker.on{ display:block; }
+
+    .picker input{
+      width:100%;
+      padding:12px 12px;
+      border-radius:14px;
+      border:1px solid var(--line);
+      background:#0f1730;
+      color:var(--text);
+      font:inherit;
+    }
+
+    .previewPanel{
+      margin-top:14px;
+      display:none;
+      grid-template-columns:1fr;
+      gap:12px;
+      background:rgba(255,255,255,.03);
+      border:1px solid var(--line);
+      border-radius:18px;
+      padding:14px;
+    }
+
+    .previewPanel.on{ display:grid; }
+
+    .previewWrap{
+      border-radius:18px;
+      overflow:hidden;
+      border:1px solid var(--line);
+      background:#0f1730;
+    }
+
+    .previewWrap img{
+      display:block;
+      width:100%;
+      height:auto;
+      max-height:52vh;
+      object-fit:contain;
+      background:#0b1122;
+    }
+
+    .thumbCard{
+      display:grid;
+      gap:10px;
+      align-content:start;
+      background:rgba(255,255,255,.03);
+      border:1px solid var(--line);
+      border-radius:18px;
+      padding:12px;
+    }
+
+    .thumbTitle{
+      font-size:14px;
+      font-weight:900;
+      color:var(--text);
+    }
+
+    .thumbBox{
+      width:100%;
+      max-width:180px;
+      aspect-ratio: 4 / 5;
+      border-radius:14px;
+      overflow:hidden;
+      border:1px solid var(--line);
+      background:#0f1730;
+    }
+
+    .thumbBox img{
+      width:100%;
+      height:100%;
+      object-fit:cover;
+      display:block;
+    }
+
+    .thumbMeta{
+      display:grid;
+      gap:4px;
+      color:var(--muted);
+      font-size:12px;
     }
 
     .cards{
@@ -191,47 +344,6 @@
       line-height:1.45;
     }
 
-    .picker{
-      margin-top:14px;
-      display:none;
-      background:rgba(255,255,255,.03);
-      border:1px dashed rgba(255,255,255,.18);
-      border-radius:18px;
-      padding:16px;
-    }
-
-    .picker.on{display:block}
-
-    .picker input{
-      width:100%;
-      padding:12px 12px;
-      border-radius:14px;
-      border:1px solid var(--line);
-      background:#0f1730;
-      color:var(--text);
-      font:inherit;
-    }
-
-    .previewWrap{
-      margin-top:12px;
-      display:none;
-      border-radius:18px;
-      overflow:hidden;
-      border:1px solid var(--line);
-      background:#0f1730;
-    }
-
-    .previewWrap.on{display:block}
-
-    .previewWrap img{
-      display:block;
-      width:100%;
-      height:auto;
-      max-height:62vh;
-      object-fit:contain;
-      background:#0b1122;
-    }
-
     .foot{
       margin-top:16px;
       padding-top:10px;
@@ -251,13 +363,24 @@
     }
 
     @media (min-width:700px){
+      .heroTop{
+        grid-template-columns:1.2fr .8fr;
+      }
+
       .ctaRow{
         grid-template-columns:1fr 1fr;
       }
+
+      .previewPanel{
+        grid-template-columns:1.15fr .85fr;
+        align-items:start;
+      }
+
       .cards{
         grid-template-columns:1fr 1fr;
       }
-      .hero h1{font-size:34px}
+
+      .hero h1{ font-size:34px; }
     }
   </style>
 </head>
@@ -272,11 +395,32 @@
     </div>
 
     <section class="hero">
-      <h1>Zero with clarity.</h1>
-      <p>
-        This page is dedicated to the <strong>ST100</strong> target flow.
-        Add your target photo, continue through the zeroing experience, and keep this path clean and separate from B2B.
-      </p>
+      <div class="heroTop">
+        <div>
+          <h1>Zero with clarity.</h1>
+          <p>
+            This page is dedicated to the <strong>ST100</strong> target flow.
+            Add your target photo, continue through the zeroing experience, and keep this path clean and separate from B2B.
+          </p>
+        </div>
+
+        <div class="brandCard">
+          <div class="vendorLogoWrap">
+            <img
+              id="vendorLogo"
+              alt="Vendor logo"
+              src="https://bakertargets.com/cdn/shop/files/baker-targets-logo_300x.png"
+              onerror="this.style.display='none'; document.getElementById('vendorFallback').style.display='block';"
+            />
+            <div id="vendorFallback" class="vendorFallback" style="display:none;">Baker Targets</div>
+          </div>
+
+          <div class="brandMeta">
+            <div class="brandMetaTitle">Vendor Partner</div>
+            <div class="brandMetaSub">Baker Targets • ST100 flow</div>
+          </div>
+        </div>
+      </div>
 
       <div class="ctaRow">
         <button class="btn btnPrimary" id="btnAddPhoto">Add Target Photo</button>
@@ -289,8 +433,23 @@
         <input type="file" id="fileInput" accept="image/*" />
       </div>
 
-      <div class="previewWrap" id="previewWrap">
-        <img id="previewImg" alt="ST100 target preview" />
+      <div class="previewPanel" id="previewPanel">
+        <div class="previewWrap">
+          <img id="previewImg" alt="ST100 target preview" />
+        </div>
+
+        <div class="thumbCard">
+          <div class="thumbTitle">Uploaded Thumbnail</div>
+
+          <div class="thumbBox">
+            <img id="thumbImg" alt="Uploaded target thumbnail" />
+          </div>
+
+          <div class="thumbMeta">
+            <div id="thumbName">No file selected</div>
+            <div id="thumbType">—</div>
+          </div>
+        </div>
       </div>
 
       <div class="cards">
@@ -316,47 +475,83 @@
   </div>
 
   <script>
-    const btnAddPhoto = document.getElementById('btnAddPhoto');
-    const btnOpenFlow = document.getElementById('btnOpenFlow');
-    const picker = document.getElementById('picker');
-    const fileInput = document.getElementById('fileInput');
-    const previewWrap = document.getElementById('previewWrap');
-    const previewImg = document.getElementById('previewImg');
+    const btnAddPhoto = document.getElementById("btnAddPhoto");
+    const btnOpenFlow = document.getElementById("btnOpenFlow");
+    const picker = document.getElementById("picker");
+    const fileInput = document.getElementById("fileInput");
+    const previewPanel = document.getElementById("previewPanel");
+    const previewImg = document.getElementById("previewImg");
+    const thumbImg = document.getElementById("thumbImg");
+    const thumbName = document.getElementById("thumbName");
+    const thumbType = document.getElementById("thumbType");
 
-    btnAddPhoto.addEventListener('click', () => {
-      picker.classList.toggle('on');
-      if (picker.classList.contains('on')) fileInput.click();
+    const KEY_ST100_CONTEXT = "sczn3_st100_context";
+    const KEY_ACTIVE_TARGET = "sczn3_active_target";
+    const KEY_VENDOR_URL = "SCZN3_VENDOR_URL_V1";
+    const KEY_VENDOR_NAME = "SCZN3_VENDOR_NAME_V1";
+    const KEY_TARGET_IMG_DATA = "SCZN3_TARGET_IMG_DATAURL_V1";
+    const KEY_TARGET_IMG_BLOB = "SCZN3_TARGET_IMG_BLOBURL_V1";
+
+    btnAddPhoto.addEventListener("click", () => {
+      picker.classList.toggle("on");
+      if (picker.classList.contains("on")) fileInput.click();
     });
 
-    fileInput.addEventListener('change', async (e) => {
+    fileInput.addEventListener("change", async (e) => {
       const file = e.target.files?.[0];
       if (!file) return;
-      const url = URL.createObjectURL(file);
-      previewImg.src = url;
-      previewWrap.classList.add('on');
 
-      // Store lightweight handoff for ST100 path
+      const objectUrl = URL.createObjectURL(file);
+      previewImg.src = objectUrl;
+      thumbImg.src = objectUrl;
+
+      previewPanel.classList.add("on");
+
+      thumbName.textContent = file.name || "Selected image";
+      thumbType.textContent = file.type || "image";
+
       const payload = {
-        target: 'st100',
+        target: "st100",
         fileName: file.name,
         fileType: file.type,
         ts: Date.now()
       };
+
       try {
-        sessionStorage.setItem('sczn3_active_target', 'st100');
-        sessionStorage.setItem('sczn3_st100_context', JSON.stringify(payload));
+        sessionStorage.setItem(KEY_ACTIVE_TARGET, "st100");
+        sessionStorage.setItem(KEY_ST100_CONTEXT, JSON.stringify(payload));
+      } catch {}
+
+      try {
+        localStorage.setItem(KEY_VENDOR_URL, "https://bakertargets.com/");
+        localStorage.setItem(KEY_VENDOR_NAME, "BAKER TARGETS");
+      } catch {}
+
+      try {
+        localStorage.setItem(KEY_TARGET_IMG_BLOB, objectUrl);
+      } catch {}
+
+      try {
+        const dataUrl = await new Promise((resolve, reject) => {
+          const r = new FileReader();
+          r.onload = () => resolve(String(r.result || ""));
+          r.onerror = reject;
+          r.readAsDataURL(file);
+        });
+
+        if (dataUrl && dataUrl.startsWith("data:image/")) {
+          localStorage.setItem(KEY_TARGET_IMG_DATA, dataUrl);
+        }
       } catch {}
     });
 
-    btnOpenFlow.addEventListener('click', () => {
+    btnOpenFlow.addEventListener("click", () => {
       try {
-        sessionStorage.setItem('sczn3_active_target', 'st100');
+        sessionStorage.setItem(KEY_ACTIVE_TARGET, "st100");
       } catch {}
 
-      // You can redirect this to your existing ST100 experience page if needed.
-      // For now it stays on the dedicated page anchor.
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-      alert('ST100 locked. This page is reserved for the ST100 target flow.');
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      alert("ST100 locked. This page is reserved for the ST100 target flow.");
     });
   </script>
 </body>
