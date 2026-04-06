@@ -1,8 +1,3 @@
-/* ============================================================
-   docs/sec.js
-   BEAUTIFIED FULL REPLACEMENT
-============================================================ */
-
 (() => {
   const $ = (id) => document.getElementById(id);
 
@@ -27,11 +22,13 @@
   const vendorBtn = $("vendorBtn");
   const downloadBtn = $("downloadBtn");
   const surveyBtn = $("surveyBtn");
+  const historyList = $("historyList");
 
   const KEY_PAYLOAD = "SCZN3_SEC_PAYLOAD_V1";
   const KEY_LAST_RESULT = "sczn3_last_result";
   const KEY_VENDOR_URL = "SCZN3_VENDOR_URL_V1";
   const KEY_VENDOR_NAME = "SCZN3_VENDOR_NAME_V1";
+  const KEY_HISTORY = "SCZN3_SEC_HISTORY_V1";
 
   const DEFAULT_SURVEY_URL = "https://forms.gle/uCSDTk5BwT4euLYeA";
 
@@ -113,6 +110,58 @@
       vendorUrl,
       vendorName
     };
+  }
+
+  function loadHistory() {
+    const arr = safeJsonParse(localStorage.getItem(KEY_HISTORY), []);
+    return Array.isArray(arr) ? arr : [];
+  }
+
+  function saveHistory(items) {
+    try {
+      localStorage.setItem(KEY_HISTORY, JSON.stringify(items));
+    } catch {}
+  }
+
+  function pushHistory(payload) {
+    const items = loadHistory();
+    const entry = {
+      ts: Date.now(),
+      score: Number(payload.score || 0),
+      shots: Number(payload.shots || 0),
+      distanceYds: Number(payload.distanceYds || 0),
+      windageClicks: Number(payload.windageClicks || 0),
+      windageDirection: String(payload.windageDirection || "—"),
+      elevationClicks: Number(payload.elevationClicks || 0),
+      elevationDirection: String(payload.elevationDirection || "—")
+    };
+
+    const next = [entry, ...items].slice(0, 10);
+    saveHistory(next);
+    return next;
+  }
+
+  function renderHistory(items) {
+    if (!historyList) return;
+
+    if (!items.length) {
+      historyList.innerHTML = `<div class="history-line-2">No saved sessions yet.</div>`;
+      return;
+    }
+
+    historyList.innerHTML = items.map((item) => `
+      <div class="history-row">
+        <div class="history-main">
+          <div class="history-line-1">${new Date(item.ts).toLocaleDateString()} • ${item.distanceYds} yds</div>
+          <div class="history-line-2">${item.shots} hits</div>
+          <div class="history-line-3">
+            ${item.windageDirection} ${fmt2(item.windageClicks)} clicks •
+            ${item.elevationDirection} ${fmt2(item.elevationClicks)} clicks
+          </div>
+        </div>
+        <div class="history-score">${Math.round(item.score)}</div>
+      </div>
+    `).join("");
   }
 
   function renderPrecision(payload) {
@@ -282,7 +331,7 @@
     return canvas.toDataURL("image/png");
   }
 
-  async function renderReport(payload) {
+  async function renderReport(payload, historyItems) {
     if (vendorBtn) {
       vendorBtn.href = payload.vendorUrl || "#";
       vendorBtn.textContent =
@@ -298,6 +347,8 @@
     if (secCardImg) {
       secCardImg.src = await drawReport(payload);
     }
+
+    renderHistory(historyItems);
 
     if (downloadBtn) {
       downloadBtn.onclick = (e) => {
@@ -322,6 +373,8 @@
     localStorage.setItem(KEY_PAYLOAD, JSON.stringify(rawPayload));
   } catch {}
 
+  const historyItems = pushHistory(payload);
+
   renderPrecision(payload);
   showPrecision();
 
@@ -331,7 +384,7 @@
       toReportBtn.disabled = true;
 
       showReport();
-      await renderReport(payload);
+      await renderReport(payload, historyItems);
     });
   }
 
