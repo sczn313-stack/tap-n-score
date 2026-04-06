@@ -4,24 +4,18 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>SEC — Shooter Experience Card</title>
-
   <link rel="stylesheet" href="./sec.css" />
 </head>
-
 <body>
   <div class="sec-app">
 
-    <!-- =========================
-         PAGE 1 — PRECISION VIEW
-    ========================== -->
+    <!-- PAGE 1 — PRECISION VIEW -->
     <section id="viewPrecision" class="view viewOn">
-
-      <!-- Top Bar -->
       <header class="topbar">
-        <button id="backBtn" class="icon-btn">‹</button>
+        <button id="backBtn" class="icon-btn" type="button" aria-label="Back">‹</button>
 
         <div class="brand-wrap">
-          <div class="sec-logo">
+          <div class="sec-logo" aria-label="SEC">
             <span class="s-red">S</span>
             <span class="e-white">E</span>
             <span class="c-blue">C</span>
@@ -32,9 +26,81 @@
         <div style="width:36px;"></div>
       </header>
 
-      <!-- Score -->
       <div class="score-block">
         <div id="scoreValue" class="score-value">—</div>
+        <div id="scoreBand" class="score-band scoreBandNeutral">—</div>
+      </div>
+
+      <div class="adjustments">
+        <div class="adjust-card">
+          <div class="adjust-label">WINDAGE</div>
+          <div id="windageBig" class="adjust-value">0.00</div>
+          <div id="windageDir" class="adjust-dir">—</div>
+        </div>
+
+        <div class="adjust-card">
+          <div class="adjust-label">ELEVATION</div>
+          <div id="elevationBig" class="adjust-value">0.00</div>
+          <div id="elevationDir" class="adjust-dir">—</div>
+        </div>
+      </div>
+
+      <div class="run-info">
+        <div id="runDistance">—</div>
+        <div id="runHits">—</div>
+        <div id="runTime">—</div>
+      </div>
+
+      <div class="cta-wrap">
+        <button id="toReportBtn" class="primary-btn" type="button">
+          🔓 Unlock Full Report
+        </button>
+      </div>
+
+      <div class="home-wrap">
+        <button id="goHomeBtn" class="ghost-btn" type="button">
+          New Target
+        </button>
+      </div>
+    </section>
+
+    <!-- PAGE 2 — REPORT VIEW -->
+    <section id="viewReport" class="view">
+      <header class="topbar">
+        <button id="backBtnReport" class="icon-btn" type="button" aria-label="Back">‹</button>
+
+        <div class="brand-wrap">
+          <div class="sec-logo" aria-label="SEC">
+            <span class="s-red">S</span>
+            <span class="e-white">E</span>
+            <span class="c-blue">C</span>
+          </div>
+          <div class="brand-sub">Full Report</div>
+        </div>
+
+        <div style="width:36px;"></div>
+      </header>
+
+      <div class="report-wrap">
+        <img id="secCardImg" alt="SEC Report Card" />
+      </div>
+
+      <div class="report-actions">
+        <a id="vendorBtn" class="primary-btn" href="#" target="_blank" rel="noopener noreferrer">
+          Visit Vendor
+        </a>
+
+        <a id="surveyBtn" class="ghost-btn" href="#" target="_blank" rel="noopener noreferrer">
+          Feedback
+        </a>
+      </div>
+    </section>
+
+  </div>
+
+  <script src="./sec.js?v=RECOVER2"></script>
+</body>
+</html>        <div id="scoreValue" class="score-value">—</div>
         <div id="scoreBand" class="score-band scoreBandNeutral">—</div>
       </div>
 
