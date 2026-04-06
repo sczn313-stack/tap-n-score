@@ -136,7 +136,7 @@
       elevationDirection: String(payload.elevationDirection || "—")
     };
 
-    const next = [entry, ...items].slice(0, 10);
+    const next = [entry, ...items].slice(0, 3);
     saveHistory(next);
     return next;
   }
