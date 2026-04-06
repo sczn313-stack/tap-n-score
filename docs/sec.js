@@ -84,6 +84,33 @@
     return payload?.sessionId || ("sec_" + Date.now().toString(36));
   }
 
+  function getTargetKey(payload) {
+    return String(payload?.target?.key || payload?.targetKey || "").toLowerCase();
+  }
+
+  function getTargetDisplayTitle(payload) {
+    const key = getTargetKey(payload);
+
+    if (key === "st100") return "ST100";
+    if (key === "b2b") return "Back to Basics";
+
+    return "Shooter Experience Card";
+  }
+
+  function getTargetSummaryCopy(payload) {
+    const key = getTargetKey(payload);
+
+    if (key === "st100") {
+      return "Understand and act on your zero performance";
+    }
+
+    if (key === "b2b") {
+      return "Understand and act on your performance";
+    }
+
+    return "Understand and act on your performance";
+  }
+
   function trackEvent(eventName, payload, extra = {}) {
     const body = {
       event: eventName,
@@ -189,7 +216,7 @@
       id: getSessionId(payload),
       date: getTodayLabel(),
       ts: new Date().toISOString(),
-      title: "Back to Basics",
+      title: getTargetDisplayTitle(payload),
       score: Number(payload?.score || 0),
       shots: Number(payload?.shots || 0),
       windage: {
@@ -410,11 +437,11 @@
     const best = getBest();
 
     if (els.targetTitle) {
-      els.targetTitle.textContent = "Back to Basics";
+      els.targetTitle.textContent = getTargetDisplayTitle(payload);
     }
 
     if (els.summaryCopy) {
-      els.summaryCopy.textContent = "Understand and act on your performance";
+      els.summaryCopy.textContent = getTargetSummaryCopy(payload);
     }
 
     if (els.bestScore) {
@@ -472,7 +499,7 @@
   }
 
   function renderEmptyState() {
-    if (els.targetTitle) els.targetTitle.textContent = "Back to Basics";
+    if (els.targetTitle) els.targetTitle.textContent = "Shooter Experience Card";
     if (els.summaryCopy) els.summaryCopy.textContent = "No SEC payload found";
     if (els.bestScore) els.bestScore.textContent = "—";
     if (els.bestBadge) els.bestBadge.textContent = "EMPTY";
