@@ -1,40 +1,323 @@
-(() => {
-  const KEY_PAYLOAD = "SCZN3_SEC_PAYLOAD_V1";
-  const KEY_HISTORY = "SCZN3_SEC_HISTORY_V1";
-  const KEY_BEST = "SCZN3_SEC_LIFETIME_BEST_V1";
-  const KEY_TARGET = "SCZN3_SEC_TARGET_KEY_V1";
-  const TRACK_ENDPOINT = "https://tap-n-score-backend.onrender.com/api/track";
+/* ============================================================
+   docs/sec.js (FULL REPLACEMENT — LOCKED)
+   TWO-PAGE SEC (Precision → Report)
 
+   - Vendor ALWAYS resolved (payload OR localStorage)
+   - History (last 10)
+   - Canvas report image
+   - Back button fix (both pages)
+   - Clean, stable, no drift
+============================================================ */
+
+(() => {
   const $ = (id) => document.getElementById(id);
 
-  const els = {
-    targetTitle: $("targetTitle"),
-    summaryCopy: $("summaryCopy"),
-    gridWrap: $("gridWrap"),
-    bestScore: $("bestScore"),
-    bestBadge: $("bestBadge"),
-    levelLabel: $("levelLabel"),
-    levelNote: $("levelNote"),
-    levelPill: $("levelPill"),
-    starsRow: $("starsRow"),
-    backBtn: $("backBtn"),
-    historyBtn: $("historyBtn"),
-    newScanBtn: $("newScanBtn"),
-    leaderboardBtn: $("leaderboardBtn")
-  };
+  // Views
+  const viewPrecision = $("viewPrecision");
+  const viewReport = $("viewReport");
 
-  function safeJsonParse(text, fallback = null) {
+  const toReportBtn = $("toReportBtn");
+
+  // 🔒 Back buttons (both supported)
+  const backBtn = $("backBtn");
+  const backBtnReport = $("backBtnReport");
+
+  // Page 1
+  const scoreValue = $("scoreValue");
+  const scoreBand = $("scoreBand");
+  const runDistance = $("runDistance");
+  const runHits = $("runHits");
+  const runTime = $("runTime");
+  const windageBig = $("windageBig");
+  const windageDir = $("windageDir");
+  const elevationBig = $("elevationBig");
+  const elevationDir = $("elevationDir");
+  const goHomeBtn = $("goHomeBtn");
+
+  // Page 2
+  const secCardImg = $("secCardImg");
+  const vendorBtn = $("vendorBtn");
+  const surveyBtn = $("surveyBtn");
+
+  // Storage
+  const KEY_PAYLOAD = "SCZN3_SEC_PAYLOAD_V1";
+  const KEY_TARGET_IMG_DATA = "SCZN3_TARGET_IMG_DATAURL_V1";
+  const KEY_TARGET_IMG_BLOB = "SCZN3_TARGET_IMG_BLOBURL_V1";
+
+  const KEY_VENDOR_URL  = "SCZN3_VENDOR_URL_V1";
+  const KEY_VENDOR_NAME = "SCZN3_VENDOR_NAME_V1";
+
+  const KEY_HISTORY = "SCZN3_SEC_HISTORY_V1";
+  const KEEP_N = 10;
+
+  const DEFAULT_SURVEY_URL = "https://forms.gle/uCSDTk5BwT4euLYeA";
+
+  // -----------------------------
+  // Helpers
+  // -----------------------------
+  function safeJsonParse(s) {
+    try { return JSON.parse(s); } catch { return null; }
+  }
+
+  function getQueryParam(name) {
+    const u = new URL(window.location.href);
+    return u.searchParams.get(name);
+  }
+
+  function b64ToObj(b64) {
     try {
-      return JSON.parse(text);
+      const json = decodeURIComponent(escape(atob(String(b64 || ""))));
+      return JSON.parse(json);
     } catch {
-      return fallback;
+      return null;
     }
   }
 
-  function decodePayloadFromQuery() {
-    try {
-      const url = new URL(window.location.href);
-      const raw = url.searchParams.get("payload");
+  function fmt2(n) {
+    const x = Number(n);
+    if (!Number.isFinite(x)) return "0.00";
+    return x.toFixed(2);
+  }
+
+  function nowStamp() {
+    const d = new Date();
+    return d.toLocaleString();
+  }
+
+  function domainFromUrl(u) {
+    try { return new URL(u).hostname.replace(/^www\./, ""); }
+    catch { return ""; }
+  }
+
+  function isBaker(url) {
+    const d = domainFromUrl(url || "");
+    return d.includes("baker");
+  }
+
+  // -----------------------------
+  // Vendor Resolution (LOCKED)
+  // -----------------------------
+  function resolveVendor(payload) {
+    const fromPayloadUrl = String(payload?.vendorUrl || "");
+    const fromStorageUrl = String(localStorage.getItem(KEY_VENDOR_URL) || "");
+
+    const vendorUrl =
+      fromPayloadUrl.startsWith("http") ? fromPayloadUrl : fromStorageUrl;
+
+    const fromPayloadName = String(payload?.vendorName || "");
+    const fromStorageName = String(localStorage.getItem(KEY_VENDOR_NAME) || "");
+
+    let vendorName = fromPayloadName || fromStorageName;
+
+    if (!vendorName) {
+      vendorName = isBaker(vendorUrl)
+        ? "BAKER TARGETS"
+        : (domainFromUrl(vendorUrl) || "VENDOR");
+    }
+
+    payload.vendorUrl = vendorUrl;
+    payload.vendorName = vendorName;
+
+    return { vendorUrl, vendorName };
+  }
+
+  // -----------------------------
+  // Image Load
+  // -----------------------------
+  function loadTargetImageUrl() {
+    const d = localStorage.getItem(KEY_TARGET_IMG_DATA) || "";
+    if (d.startsWith("data:image/")) return d;
+
+    const b = localStorage.getItem(KEY_TARGET_IMG_BLOB) || "";
+    if (b.startsWith("blob:")) return b;
+
+    return "";
+  }
+
+  // -----------------------------
+  // Score Band
+  // -----------------------------
+  function scoreBandInfo(score) {
+    const s = Number(score);
+
+    if (s >= 90) return { cls: "scoreBandGreen", text: "STRONG / EXCELLENT" };
+    if (s >= 60) return { cls: "scoreBandYellow", text: "IMPROVING / SOLID" };
+    return { cls: "scoreBandRed", text: "NEEDS WORK" };
+  }
+
+  // -----------------------------
+  // History
+  // -----------------------------
+  function loadHistory() {
+    const arr = safeJsonParse(localStorage.getItem(KEY_HISTORY) || "[]");
+    return Array.isArray(arr) ? arr : [];
+  }
+
+  function saveHistory(arr) {
+    try { localStorage.setItem(KEY_HISTORY, JSON.stringify(arr)); } catch {}
+  }
+
+  function pushHistory(payload) {
+    const hist = loadHistory();
+
+    hist.unshift({
+      t: Date.now(),
+      score: Number(payload?.score || 0)
+    });
+
+    saveHistory(hist.slice(0, KEEP_N));
+    return hist;
+  }
+
+  // -----------------------------
+  // Canvas Report (SIMPLIFIED)
+  // -----------------------------
+  async function drawReport(payload) {
+    const canvas = document.createElement("canvas");
+    canvas.width = 1080;
+    canvas.height = 1400;
+
+    const ctx = canvas.getContext("2d");
+
+    ctx.fillStyle = "#0a0f1f";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "bold 80px Arial";
+    ctx.textAlign = "center";
+
+    ctx.fillText(`Score: ${Math.round(payload.score || 0)}`, 540, 200);
+
+    ctx.font = "28px Arial";
+
+    ctx.fillText(
+      `${payload.debug?.distanceYds || 100} yds`,
+      540,
+      300
+    );
+
+    ctx.fillText(
+      `${fmt2(payload.windage?.clicks)} ${payload.windage?.dir}`,
+      540,
+      360
+    );
+
+    ctx.fillText(
+      `${fmt2(payload.elevation?.clicks)} ${payload.elevation?.dir}`,
+      540,
+      420
+    );
+
+    return canvas.toDataURL("image/png");
+  }
+
+  // -----------------------------
+  // Load Payload
+  // -----------------------------
+  function loadPayload() {
+    const qp = getQueryParam("payload");
+    if (qp) {
+      const obj = b64ToObj(qp);
+      if (obj) return obj;
+    }
+
+    return safeJsonParse(localStorage.getItem(KEY_PAYLOAD) || "");
+  }
+
+  // -----------------------------
+  // Views
+  // -----------------------------
+  function showPrecision() {
+    viewPrecision.classList.add("viewOn");
+    viewReport.classList.remove("viewOn");
+  }
+
+  function showReport() {
+    viewPrecision.classList.remove("viewOn");
+    viewReport.classList.add("viewOn");
+  }
+
+  // -----------------------------
+  // Render Page 1
+  // -----------------------------
+  function renderPrecision(payload) {
+    const score = Number(payload?.score || 0);
+    const band = scoreBandInfo(score);
+
+    scoreValue.textContent = Math.round(score);
+
+    scoreBand.className = `score-band ${band.cls}`;
+    scoreBand.textContent = band.text;
+
+    windageBig.textContent = fmt2(payload?.windage?.clicks);
+    windageDir.textContent = payload?.windage?.dir;
+
+    elevationBig.textContent = fmt2(payload?.elevation?.clicks);
+    elevationDir.textContent = payload?.elevation?.dir;
+
+    runDistance.textContent = `${payload?.debug?.distanceYds || 100} yds`;
+    runHits.textContent = `${payload?.shots || 0} hits`;
+    runTime.textContent = nowStamp();
+  }
+
+  // -----------------------------
+  // Render Page 2
+  // -----------------------------
+  async function renderReport(payload) {
+    const { vendorUrl } = resolveVendor(payload);
+
+    if (vendorUrl) {
+      vendorBtn.href = vendorUrl;
+      vendorBtn.textContent = isBaker(vendorUrl)
+        ? "Baker Targets — Shop Targets"
+        : "Visit Vendor";
+    }
+
+    surveyBtn.href = DEFAULT_SURVEY_URL;
+
+    const img = await drawReport(payload);
+    secCardImg.src = img;
+  }
+
+  // -----------------------------
+  // Boot
+  // -----------------------------
+  const payload = loadPayload();
+
+  if (!payload) {
+    alert("No SEC data found.");
+    return;
+  }
+
+  resolveVendor(payload);
+  pushHistory(payload);
+
+  renderPrecision(payload);
+  showPrecision();
+
+  // -----------------------------
+  // Events
+  // -----------------------------
+  toReportBtn.addEventListener("click", async () => {
+    showReport();
+    await renderReport(payload);
+  });
+
+  if (backBtn) {
+    backBtn.addEventListener("click", showPrecision);
+  }
+
+  if (backBtnReport) {
+    backBtnReport.addEventListener("click", showPrecision);
+  }
+
+  if (goHomeBtn) {
+    goHomeBtn.addEventListener("click", () => {
+      window.location.href = "./index.html";
+    });
+  }
+
+})();      const raw = url.searchParams.get("payload");
       if (!raw) return null;
       const json = decodeURIComponent(escape(atob(raw)));
       return safeJsonParse(json, null);
