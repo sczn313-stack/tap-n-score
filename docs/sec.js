@@ -6,14 +6,12 @@
 (() => {
   const $ = (id) => document.getElementById(id);
 
-  // Views
   const viewPrecision = $("viewPrecision");
   const viewReport = $("viewReport");
   const toReportBtn = $("toReportBtn");
   const backBtn = $("backBtn");
   const backBtnReport = $("backBtnReport");
 
-  // Page 1
   const scoreValue = $("scoreValue");
   const scoreBand = $("scoreBand");
   const runDistance = $("runDistance");
@@ -25,12 +23,11 @@
   const elevationDir = $("elevationDir");
   const goHomeBtn = $("goHomeBtn");
 
-  // Page 2
   const secCardImg = $("secCardImg");
   const vendorBtn = $("vendorBtn");
+  const downloadBtn = $("downloadBtn");
   const surveyBtn = $("surveyBtn");
 
-  // Storage
   const KEY_PAYLOAD = "SCZN3_SEC_PAYLOAD_V1";
   const KEY_LAST_RESULT = "sczn3_last_result";
   const KEY_VENDOR_URL = "SCZN3_VENDOR_URL_V1";
@@ -176,7 +173,6 @@
 
     const ctx = canvas.getContext("2d");
 
-    // Background gradient
     const bg = ctx.createLinearGradient(0, 0, 1200, 1600);
     bg.addColorStop(0, "#07163f");
     bg.addColorStop(0.55, "#0a2467");
@@ -184,18 +180,15 @@
     ctx.fillStyle = bg;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    // Soft glow
     const glow = ctx.createRadialGradient(600, 280, 80, 600, 280, 700);
     glow.addColorStop(0, "rgba(90,140,255,0.20)");
     glow.addColorStop(1, "rgba(90,140,255,0)");
     ctx.fillStyle = glow;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    // Outer card
     fillRoundedRect(ctx, 90, 80, 1020, 1440, 38, "rgba(255,255,255,0.05)");
     strokeRoundedRect(ctx, 90, 80, 1020, 1440, 38, "rgba(255,255,255,0.12)", 2);
 
-    // Header
     ctx.textAlign = "center";
     ctx.fillStyle = "#ff6666";
     ctx.font = "bold 84px Arial";
@@ -209,9 +202,8 @@
 
     ctx.fillStyle = "rgba(255,255,255,0.82)";
     ctx.font = "32px Arial";
-    ctx.fillText("Shooter Experience Card", 760, 182);
+    ctx.fillText("Shooter Experience Card", 790, 182);
 
-    // Score panel
     const scorePanel = ctx.createLinearGradient(180, 240, 1020, 520);
     scorePanel.addColorStop(0, "rgba(255,255,255,0.08)");
     scorePanel.addColorStop(1, "rgba(255,255,255,0.04)");
@@ -237,7 +229,6 @@
     ctx.font = "bold 28px Arial";
     ctx.fillText(bandText, 600, 472);
 
-    // Adjustment cards
     const cardFill = "rgba(255,255,255,0.06)";
     fillRoundedRect(ctx, 180, 560, 390, 260, 28, cardFill);
     fillRoundedRect(ctx, 630, 560, 390, 260, 28, cardFill);
@@ -258,7 +249,6 @@
     ctx.fillText(payload.windageDirection, 375, 815);
     ctx.fillText(payload.elevationDirection, 825, 815);
 
-    // Run info
     fillRoundedRect(ctx, 180, 870, 840, 180, 28, "rgba(255,255,255,0.06)");
     strokeRoundedRect(ctx, 180, 870, 840, 180, 28, "rgba(255,255,255,0.10)", 2);
 
@@ -270,10 +260,9 @@
     ctx.font = "28px Arial";
     ctx.fillText(new Date().toLocaleString(), 600, 1060);
 
-    // Footer strip
-    const footer = ctx.createLinearGradient(180, 1145, 1020, 1490);
-    footer.addColorStop(0, "rgba(78,121,255,0.95)");
-    footer.addColorStop(1, "rgba(58,97,235,0.95)");
+    const footer = ctx.createLinearGradient(180, 1145, 1020, 1255);
+    footer.addColorStop(0, "rgba(95,141,255,0.96)");
+    footer.addColorStop(1, "rgba(59,99,235,0.96)");
     fillRoundedRect(ctx, 180, 1145, 840, 110, 24, footer);
 
     ctx.fillStyle = "#ffffff";
@@ -296,7 +285,10 @@
   async function renderReport(payload) {
     if (vendorBtn) {
       vendorBtn.href = payload.vendorUrl || "#";
-      vendorBtn.textContent = payload.vendorUrl ? payload.vendorName : "Visit Vendor";
+      vendorBtn.textContent =
+        payload.vendorName === "BAKER TARGETS"
+          ? "Shop Baker Targets"
+          : (payload.vendorUrl ? payload.vendorName : "Visit Vendor");
     }
 
     if (surveyBtn) {
@@ -305,6 +297,16 @@
 
     if (secCardImg) {
       secCardImg.src = await drawReport(payload);
+    }
+
+    if (downloadBtn) {
+      downloadBtn.onclick = (e) => {
+        e.preventDefault();
+        const a = document.createElement("a");
+        a.href = secCardImg.src;
+        a.download = "SEC_Report.png";
+        a.click();
+      };
     }
   }
 
@@ -325,6 +327,9 @@
 
   if (toReportBtn) {
     toReportBtn.addEventListener("click", async () => {
+      toReportBtn.textContent = "Loading...";
+      toReportBtn.disabled = true;
+
       showReport();
       await renderReport(payload);
     });
@@ -334,6 +339,8 @@
     backBtn.addEventListener("click", () => {
       if (viewReport && viewReport.classList.contains("viewOn")) {
         showPrecision();
+        toReportBtn.textContent = "Unlock Full Report";
+        toReportBtn.disabled = false;
       } else if (window.history.length > 1) {
         window.history.back();
       } else {
@@ -343,7 +350,13 @@
   }
 
   if (backBtnReport) {
-    backBtnReport.addEventListener("click", showPrecision);
+    backBtnReport.addEventListener("click", () => {
+      showPrecision();
+      if (toReportBtn) {
+        toReportBtn.textContent = "Unlock Full Report";
+        toReportBtn.disabled = false;
+      }
+    });
   }
 
   if (goHomeBtn) {
