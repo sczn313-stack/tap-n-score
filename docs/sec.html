@@ -4,11 +4,12 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>SEC — Shooter Experience Card</title>
-  <link rel="stylesheet" href="./sec.css" />
+  <link rel="stylesheet" href="./sec.css?v=3001" />
 </head>
 <body>
   <div class="sec-app">
 
+    <!-- PAGE 1 -->
     <section id="viewPrecision" class="view viewOn">
       <header class="topbar">
         <button id="backBtn" class="icon-btn" type="button" aria-label="Back">‹</button>
@@ -22,29 +23,29 @@
           <div class="brand-sub">Shooter Experience Card</div>
         </div>
 
-        <div style="width:36px;"></div>
+        <div class="spacer"></div>
       </header>
 
-      <div class="score-block">
+      <div class="score-block glass-card">
         <div id="scoreValue" class="score-value">—</div>
         <div id="scoreBand" class="score-band scoreBandNeutral">—</div>
       </div>
 
       <div class="adjustments">
-        <div class="adjust-card">
+        <div class="adjust-card glass-card">
           <div class="adjust-label">WINDAGE</div>
           <div id="windageBig" class="adjust-value">0.00</div>
           <div id="windageDir" class="adjust-dir">—</div>
         </div>
 
-        <div class="adjust-card">
+        <div class="adjust-card glass-card">
           <div class="adjust-label">ELEVATION</div>
           <div id="elevationBig" class="adjust-value">0.00</div>
           <div id="elevationDir" class="adjust-dir">—</div>
         </div>
       </div>
 
-      <div class="run-info">
+      <div class="run-info glass-card">
         <div id="runDistance">—</div>
         <div id="runHits">—</div>
         <div id="runTime">—</div>
@@ -63,6 +64,7 @@
       </div>
     </section>
 
+    <!-- PAGE 2 -->
     <section id="viewReport" class="view">
       <header class="topbar">
         <button id="backBtnReport" class="icon-btn" type="button" aria-label="Back">‹</button>
@@ -76,16 +78,20 @@
           <div class="brand-sub">Full Report</div>
         </div>
 
-        <div style="width:36px;"></div>
+        <div class="spacer"></div>
       </header>
 
-      <div class="report-wrap">
+      <div class="report-wrap glass-card">
         <img id="secCardImg" alt="SEC Report Card" />
       </div>
 
       <div class="report-actions">
         <a id="vendorBtn" class="primary-btn" href="#" target="_blank" rel="noopener noreferrer">
           Visit Vendor
+        </a>
+
+        <a id="downloadBtn" class="ghost-btn" href="#" download="SEC_Report.png">
+          Download SEC
         </a>
 
         <a id="surveyBtn" class="ghost-btn" href="#" target="_blank" rel="noopener noreferrer">
@@ -96,6 +102,6 @@
 
   </div>
 
-  <script src="./sec.js?v=1246"></script>
+  <script src="./sec.js?v=3001"></script>
 </body>
 </html>
