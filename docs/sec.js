@@ -1,36 +1,55 @@
+/* ============================================================
+   docs/sec.js — FULL REPLACEMENT
+   Locked single-render SEC
+   - No duplicate rendering
+   - No innerHTML +=
+   - Page 1 = precision
+   - Page 2 = full report
+   - Uses existing sec.html IDs only
+============================================================ */
+
 (() => {
   const $ = (id) => document.getElementById(id);
 
+  // Views
   const viewPrecision = $("viewPrecision");
   const viewReport = $("viewReport");
-  const toReportBtn = $("toReportBtn");
+
+  // Buttons
   const backBtn = $("backBtn");
   const backBtnReport = $("backBtnReport");
+  const toReportBtn = $("toReportBtn");
+  const goHomeBtn = $("goHomeBtn");
+  const vendorBtn = $("vendorBtn");
+  const surveyBtn = $("surveyBtn");
+  const downloadBtn = $("downloadBtn");
 
+  // Page 1
   const scoreValue = $("scoreValue");
   const scoreBand = $("scoreBand");
-  const runDistance = $("runDistance");
-  const runHits = $("runHits");
-  const runTime = $("runTime");
   const windageBig = $("windageBig");
   const windageDir = $("windageDir");
   const elevationBig = $("elevationBig");
   const elevationDir = $("elevationDir");
-  const goHomeBtn = $("goHomeBtn");
+  const runDistance = $("runDistance");
+  const runHits = $("runHits");
+  const runTime = $("runTime");
 
+  // Page 2
   const secCardImg = $("secCardImg");
-  const vendorBtn = $("vendorBtn");
-  const downloadBtn = $("downloadBtn");
-  const surveyBtn = $("surveyBtn");
   const historyList = $("historyList");
 
+  // Storage keys
   const KEY_PAYLOAD = "SCZN3_SEC_PAYLOAD_V1";
-  const KEY_LAST_RESULT = "sczn3_last_result";
+  const KEY_HISTORY = "SCZN3_SEC_HISTORY_V1";
   const KEY_VENDOR_URL = "SCZN3_VENDOR_URL_V1";
   const KEY_VENDOR_NAME = "SCZN3_VENDOR_NAME_V1";
-  const KEY_HISTORY = "SCZN3_SEC_HISTORY_V1";
+  const KEY_TARGET_IMG_DATA = "SCZN3_TARGET_IMG_DATAURL_V1";
+  const KEY_TARGET_IMG_BLOB = "SCZN3_TARGET_IMG_BLOBURL_V1";
 
   const DEFAULT_SURVEY_URL = "https://forms.gle/uCSDTk5BwT4euLYeA";
+  const HISTORY_LIMIT = 10;
+  const HISTORY_PREVIEW = 3;
 
   function safeJsonParse(value, fallback = null) {
     try {
@@ -42,12 +61,7 @@
 
   function fmt2(n) {
     const x = Number(n);
-    if (!Number.isFinite(x)) return "0.00";
-    return x.toFixed(2);
-  }
-
-  function nowStamp() {
-    return new Date().toLocaleString();
+    return Number.isFinite(x) ? x.toFixed(2) : "0.00";
   }
 
   function showPrecision() {
@@ -60,60 +74,98 @@
     if (viewReport) viewReport.classList.add("viewOn");
   }
 
-  function scoreBandInfo(score) {
+  function scoreBandText(score) {
     const s = Number(score) || 0;
-    if (s >= 90) return { cls: "scoreBandGreen", text: "STRONG / EXCELLENT" };
-    if (s >= 60) return { cls: "scoreBandYellow", text: "IMPROVING / SOLID" };
-    return { cls: "scoreBandRed", text: "NEEDS WORK" };
+    if (s >= 90) return "STRONG / EXCELLENT";
+    if (s >= 80) return "IMPROVING / SOLID";
+    return "NEEDS WORK";
   }
 
-  function getPayload() {
-    const fromSessionMain = safeJsonParse(sessionStorage.getItem(KEY_PAYLOAD));
-    if (fromSessionMain) return fromSessionMain;
+  function scoreBandClass(score) {
+    const s = Number(score) || 0;
+    if (s >= 90) return "scoreBandGreen";
+    if (s >= 80) return "scoreBandYellow";
+    return "scoreBandRed";
+  }
 
-    const fromSessionLast = safeJsonParse(sessionStorage.getItem(KEY_LAST_RESULT));
-    if (fromSessionLast) return fromSessionLast;
+  function getQueryPayload() {
+    try {
+      const url = new URL(window.location.href);
+      const raw = url.searchParams.get("payload");
+      if (!raw) return null;
+      const json = decodeURIComponent(escape(atob(raw)));
+      return JSON.parse(json);
+    } catch {
+      return null;
+    }
+  }
 
-    const fromLocalMain = safeJsonParse(localStorage.getItem(KEY_PAYLOAD));
-    if (fromLocalMain) return fromLocalMain;
+  function loadPayload() {
+    const fromQuery = getQueryPayload();
+    if (fromQuery && typeof fromQuery === "object") {
+      try {
+        localStorage.setItem(KEY_PAYLOAD, JSON.stringify(fromQuery));
+      } catch {}
+      return fromQuery;
+    }
 
-    const fromLocalLast = safeJsonParse(localStorage.getItem(KEY_LAST_RESULT));
-    if (fromLocalLast) return fromLocalLast;
+    const fromStorage = safeJsonParse(localStorage.getItem(KEY_PAYLOAD) || "", null);
+    if (fromStorage && typeof fromStorage === "object") {
+      return fromStorage;
+    }
 
     return null;
   }
 
-  function normalizePayload(raw) {
-    if (!raw) return null;
+  function getTargetImageUrl() {
+    const dataUrl = localStorage.getItem(KEY_TARGET_IMG_DATA) || "";
+    if (dataUrl.startsWith("data:image/")) return dataUrl;
 
-    const score = Number(raw.score ?? raw.smartScore ?? 0);
-    const shots = Number(raw.shots ?? 0);
-    const distanceYds = Number(raw.distance_yards ?? raw.debug?.distanceYds ?? 100);
+    const blobUrl = localStorage.getItem(KEY_TARGET_IMG_BLOB) || "";
+    if (blobUrl.startsWith("blob:")) return blobUrl;
 
-    const windageClicks = Number(raw.windage_clicks ?? raw.windage?.clicks ?? 0);
-    const elevationClicks = Number(raw.elevation_clicks ?? raw.elevation?.clicks ?? 0);
+    return "";
+  }
 
-    const windageDirection = String(raw.windage_dir ?? raw.windage?.dir ?? "—");
-    const elevationDirection = String(raw.elevation_dir ?? raw.elevation?.dir ?? "—");
+  function normalizePayload(payload) {
+    const vendorUrl =
+      String(payload?.vendorUrl || localStorage.getItem(KEY_VENDOR_URL) || "").trim();
 
-    const vendorUrl = String(raw.vendorUrl || localStorage.getItem(KEY_VENDOR_URL) || "");
-    const vendorName = String(raw.vendorName || localStorage.getItem(KEY_VENDOR_NAME) || "Visit Vendor");
+    const vendorName =
+      String(payload?.vendorName || localStorage.getItem(KEY_VENDOR_NAME) || "").trim() ||
+      (vendorUrl.toLowerCase().includes("baker") ? "BAKER TARGETS" : "VENDOR");
 
     return {
-      score,
-      shots,
-      distanceYds,
-      windageClicks,
-      elevationClicks,
-      windageDirection,
-      elevationDirection,
+      sessionId: String(payload?.sessionId || ("sec_" + Date.now())),
+      score: Number(payload?.score ?? 0),
+      shots: Number(payload?.shots ?? 0),
+      windage: {
+        dir: String(payload?.windage?.dir || "—"),
+        clicks: Number(payload?.windage?.clicks ?? 0)
+      },
+      elevation: {
+        dir: String(payload?.elevation?.dir || "—"),
+        clicks: Number(payload?.elevation?.clicks ?? 0)
+      },
+      dial: {
+        unit: String(payload?.dial?.unit || "MOA"),
+        clickValue: Number(payload?.dial?.clickValue ?? 0.25)
+      },
+      debug: {
+        distanceYds: Number(payload?.debug?.distanceYds ?? 100),
+        inches: {
+          x: Number(payload?.debug?.inches?.x ?? 0),
+          y: Number(payload?.debug?.inches?.y ?? 0),
+          r: Number(payload?.debug?.inches?.r ?? 0)
+        }
+      },
       vendorUrl,
       vendorName
     };
   }
 
-  function loadHistory() {
-    const arr = safeJsonParse(localStorage.getItem(KEY_HISTORY), []);
+  function getHistory() {
+    const arr = safeJsonParse(localStorage.getItem(KEY_HISTORY) || "[]", []);
     return Array.isArray(arr) ? arr : [];
   }
 
@@ -123,298 +175,266 @@
     } catch {}
   }
 
-  function pushHistory(payload) {
-    const items = loadHistory();
-    const entry = {
-      ts: Date.now(),
+  function makeHistoryRow(payload) {
+    return {
+      sessionId: payload.sessionId,
       score: Number(payload.score || 0),
       shots: Number(payload.shots || 0),
-      distanceYds: Number(payload.distanceYds || 0),
-      windageClicks: Number(payload.windageClicks || 0),
-      windageDirection: String(payload.windageDirection || "—"),
-      elevationClicks: Number(payload.elevationClicks || 0),
-      elevationDirection: String(payload.elevationDirection || "—")
+      distanceYds: Number(payload.debug?.distanceYds || 100),
+      windageDir: String(payload.windage?.dir || "—"),
+      windageClicks: Number(payload.windage?.clicks || 0),
+      elevationDir: String(payload.elevation?.dir || "—"),
+      elevationClicks: Number(payload.elevation?.clicks || 0),
+      ts: Date.now()
     };
-
-    const next = [entry, ...items].slice(0, 3);
-    saveHistory(next);
-    return next;
   }
 
-  function renderHistory(items) {
+  function upsertHistory(payload) {
+    const nextRow = makeHistoryRow(payload);
+    const history = getHistory().filter((item) => item.sessionId !== nextRow.sessionId);
+    history.unshift(nextRow);
+    const trimmed = history.slice(0, HISTORY_LIMIT);
+    saveHistory(trimmed);
+    return trimmed;
+  }
+
+  function renderHistory(history) {
     if (!historyList) return;
 
-    if (!items.length) {
-      historyList.innerHTML = `<div class="history-line-2">No saved sessions yet.</div>`;
+    const preview = history.slice(0, HISTORY_PREVIEW);
+
+    if (!preview.length) {
+      historyList.innerHTML = `<div class="history-empty">No recent sessions.</div>`;
       return;
     }
 
-    historyList.innerHTML = items.map((item) => `
-      <div class="history-row">
-        <div class="history-main">
-          <div class="history-line-1">${new Date(item.ts).toLocaleDateString()} • ${item.distanceYds} yds</div>
-          <div class="history-line-2">${item.shots} hits</div>
-          <div class="history-line-3">
-            ${item.windageDirection} ${fmt2(item.windageClicks)} clicks •
-            ${item.elevationDirection} ${fmt2(item.elevationClicks)} clicks
+    historyList.innerHTML = preview.map((item) => {
+      return `
+        <div class="history-row">
+          <div class="history-main">
+            <div class="history-meta">${item.distanceYds} yds • ${item.shots} hits</div>
+            <div class="history-sub">${item.windageDir} ${fmt2(item.windageClicks)} clicks • ${item.elevationDir} ${fmt2(item.elevationClicks)} clicks</div>
           </div>
+          <div class="history-score">${Math.round(item.score)}</div>
         </div>
-        <div class="history-score">${Math.round(item.score)}</div>
-      </div>
-    `).join("");
+      `;
+    }).join("");
   }
 
   function renderPrecision(payload) {
-    const band = scoreBandInfo(payload.score);
+    if (scoreValue) scoreValue.textContent = String(Math.round(payload.score || 0));
 
-    if (scoreValue) scoreValue.textContent = Math.round(payload.score);
     if (scoreBand) {
-      scoreBand.className = `score-band ${band.cls}`;
-      scoreBand.textContent = band.text;
+      scoreBand.className = "score-band " + scoreBandClass(payload.score);
+      scoreBand.textContent = scoreBandText(payload.score);
     }
 
-    if (windageBig) windageBig.textContent = fmt2(payload.windageClicks);
-    if (windageDir) windageDir.textContent = payload.windageDirection;
+    if (windageBig) windageBig.textContent = fmt2(payload.windage?.clicks);
+    if (windageDir) windageDir.textContent = payload.windage?.dir || "—";
 
-    if (elevationBig) elevationBig.textContent = fmt2(payload.elevationClicks);
-    if (elevationDir) elevationDir.textContent = payload.elevationDirection;
+    if (elevationBig) elevationBig.textContent = fmt2(payload.elevation?.clicks);
+    if (elevationDir) elevationDir.textContent = payload.elevation?.dir || "—";
 
-    if (runDistance) runDistance.textContent = `${payload.distanceYds} yds`;
-    if (runHits) runHits.textContent = `${payload.shots} hits`;
-    if (runTime) runTime.textContent = nowStamp();
+    if (runDistance) runDistance.textContent = `${Number(payload.debug?.distanceYds || 100)} yds`;
+    if (runHits) runHits.textContent = `${Number(payload.shots || 0)} hits`;
+
+    if (runTime) {
+      runTime.textContent = new Date().toLocaleString();
+    }
   }
 
-  function drawRoundedRect(ctx, x, y, w, h, r) {
+  function drawSecCard(payload) {
+    return new Promise((resolve) => {
+      const canvas = document.createElement("canvas");
+      canvas.width = 1080;
+      canvas.height = 1350;
+
+      const ctx = canvas.getContext("2d");
+
+      // Background
+      const g = ctx.createLinearGradient(0, 0, 0, canvas.height);
+      g.addColorStop(0, "#0a1226");
+      g.addColorStop(1, "#08111f");
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // Main panel
+      roundRect(ctx, 90, 70, 900, 1210, 40);
+      ctx.fillStyle = "#0f1e4b";
+      ctx.fill();
+
+      // Header logo
+      ctx.textAlign = "center";
+      ctx.font = "bold 64px Arial";
+      ctx.fillStyle = "#ff5b5b";
+      ctx.fillText("S", 450, 150);
+      ctx.fillStyle = "#ffffff";
+      ctx.fillText("E", 540, 150);
+      ctx.fillStyle = "#5a8cff";
+      ctx.fillText("C", 630, 150);
+
+      ctx.font = "28px Arial";
+      ctx.fillStyle = "#d9e3ff";
+      ctx.fillText("Shooter Experience Card", 540, 200);
+
+      // Score block
+      roundRect(ctx, 180, 240, 720, 170, 26);
+      ctx.fillStyle = "#273d83";
+      ctx.fill();
+
+      ctx.font = "bold 120px Arial";
+      ctx.fillStyle = "#ffffff";
+      ctx.fillText(String(Math.round(payload.score || 0)), 540, 355);
+
+      // Band
+      roundRect(ctx, 360, 425, 360, 56, 28);
+      ctx.fillStyle = Number(payload.score || 0) >= 80 ? "#ffd23f" : "#ef6a6a";
+      ctx.fill();
+      ctx.font = "bold 24px Arial";
+      ctx.fillStyle = "#0b1020";
+      ctx.fillText(scoreBandText(payload.score), 540, 462);
+
+      // Corrections
+      roundRect(ctx, 180, 540, 300, 165, 22);
+      ctx.fillStyle = "#2c438a";
+      ctx.fill();
+
+      roundRect(ctx, 600, 540, 300, 165, 22);
+      ctx.fill();
+
+      ctx.font = "bold 24px Arial";
+      ctx.fillStyle = "#cfd9ff";
+      ctx.fillText("WINDAGE", 330, 590);
+      ctx.fillText("ELEVATION", 750, 590);
+
+      ctx.font = "bold 62px Arial";
+      ctx.fillStyle = "#ffffff";
+      ctx.fillText(fmt2(payload.windage?.clicks), 330, 660);
+      ctx.fillText(fmt2(payload.elevation?.clicks), 750, 660);
+
+      ctx.font = "bold 28px Arial";
+      ctx.fillText(payload.windage?.dir || "—", 330, 700);
+      ctx.fillText(payload.elevation?.dir || "—", 750, 700);
+
+      // Meta block
+      roundRect(ctx, 180, 760, 720, 120, 22);
+      ctx.fillStyle = "#2a4187";
+      ctx.fill();
+
+      ctx.font = "bold 26px Arial";
+      ctx.fillStyle = "#ffffff";
+      ctx.fillText(`${Number(payload.debug?.distanceYds || 100)} yds`, 540, 810);
+      ctx.fillText(`${Number(payload.shots || 0)} hits`, 540, 848);
+
+      ctx.font = "20px Arial";
+      ctx.fillStyle = "#d2dbff";
+      ctx.fillText(new Date().toLocaleString(), 540, 880);
+
+      // Vendor button
+      roundRect(ctx, 220, 975, 640, 68, 18);
+      ctx.fillStyle = "#4d7cff";
+      ctx.fill();
+
+      ctx.font = "bold 30px Arial";
+      ctx.fillStyle = "#ffffff";
+      ctx.fillText(payload.vendorName || "VENDOR", 540, 1020);
+
+      ctx.font = "bold 18px Arial";
+      ctx.fillStyle = "#b8c7ff";
+      ctx.fillText("FAITH • ORDER • PRECISION", 540, 1125);
+
+      // Optional target thumbnail
+      const imgUrl = getTargetImageUrl();
+      if (imgUrl) {
+        const img = new Image();
+        img.onload = () => {
+          try {
+            roundRect(ctx, 320, 1110, 400, 180, 20);
+            ctx.save();
+            ctx.clip();
+            ctx.drawImage(img, 320, 1110, 400, 180);
+            ctx.restore();
+          } catch {}
+          resolve(canvas.toDataURL("image/png"));
+        };
+        img.onerror = () => resolve(canvas.toDataURL("image/png"));
+        img.src = imgUrl;
+      } else {
+        resolve(canvas.toDataURL("image/png"));
+      }
+    });
+  }
+
+  function roundRect(ctx, x, y, w, h, r) {
     ctx.beginPath();
     ctx.moveTo(x + r, y);
-    ctx.lineTo(x + w - r, y);
-    ctx.quadraticCurveTo(x + w, y, x + w, y + r);
-    ctx.lineTo(x + w, y + h - r);
-    ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
-    ctx.lineTo(x + r, y + h);
-    ctx.quadraticCurveTo(x, y + h, x, y + h - r);
-    ctx.lineTo(x, y + r);
-    ctx.quadraticCurveTo(x, y, x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
     ctx.closePath();
   }
 
-  function fillRoundedRect(ctx, x, y, w, h, r, fillStyle) {
-    ctx.save();
-    drawRoundedRect(ctx, x, y, w, h, r);
-    ctx.fillStyle = fillStyle;
-    ctx.fill();
-    ctx.restore();
-  }
+  async function renderReport(payload) {
+    const dataUrl = await drawSecCard(payload);
 
-  function strokeRoundedRect(ctx, x, y, w, h, r, strokeStyle, lineWidth = 1) {
-    ctx.save();
-    drawRoundedRect(ctx, x, y, w, h, r);
-    ctx.strokeStyle = strokeStyle;
-    ctx.lineWidth = lineWidth;
-    ctx.stroke();
-    ctx.restore();
-  }
-
-  async function drawReport(payload) {
-    const canvas = document.createElement("canvas");
-    canvas.width = 1200;
-    canvas.height = 1600;
-
-    const ctx = canvas.getContext("2d");
-
-    const bg = ctx.createLinearGradient(0, 0, 1200, 1600);
-    bg.addColorStop(0, "#07163f");
-    bg.addColorStop(0.55, "#0a2467");
-    bg.addColorStop(1, "#081434");
-    ctx.fillStyle = bg;
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-    const glow = ctx.createRadialGradient(600, 280, 80, 600, 280, 700);
-    glow.addColorStop(0, "rgba(90,140,255,0.20)");
-    glow.addColorStop(1, "rgba(90,140,255,0)");
-    ctx.fillStyle = glow;
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-    fillRoundedRect(ctx, 90, 80, 1020, 1440, 38, "rgba(255,255,255,0.05)");
-    strokeRoundedRect(ctx, 90, 80, 1020, 1440, 38, "rgba(255,255,255,0.12)", 2);
-
-    ctx.textAlign = "center";
-    ctx.fillStyle = "#ff6666";
-    ctx.font = "bold 84px Arial";
-    ctx.fillText("S", 470, 180);
-
-    ctx.fillStyle = "#ffffff";
-    ctx.fillText("E", 600, 180);
-
-    ctx.fillStyle = "#6b95ff";
-    ctx.fillText("C", 725, 180);
-
-    ctx.fillStyle = "rgba(255,255,255,0.82)";
-    ctx.font = "32px Arial";
-    ctx.fillText("Shooter Experience Card", 790, 182);
-
-    const scorePanel = ctx.createLinearGradient(180, 240, 1020, 520);
-    scorePanel.addColorStop(0, "rgba(255,255,255,0.08)");
-    scorePanel.addColorStop(1, "rgba(255,255,255,0.04)");
-    fillRoundedRect(ctx, 180, 240, 840, 260, 32, scorePanel);
-    strokeRoundedRect(ctx, 180, 240, 840, 260, 32, "rgba(255,255,255,0.10)", 2);
-
-    ctx.fillStyle = "#ffffff";
-    ctx.font = "bold 170px Arial";
-    ctx.fillText(String(Math.round(payload.score)), 600, 390);
-
-    let bandText = "NEEDS WORK";
-    let bandFill = "#f16c6c";
-    if (payload.score >= 90) {
-      bandText = "STRONG / EXCELLENT";
-      bandFill = "#59d37c";
-    } else if (payload.score >= 60) {
-      bandText = "IMPROVING / SOLID";
-      bandFill = "#f1c64f";
+    if (secCardImg) {
+      secCardImg.src = dataUrl;
     }
 
-    fillRoundedRect(ctx, 430, 425, 340, 72, 36, bandFill);
-    ctx.fillStyle = "#111111";
-    ctx.font = "bold 28px Arial";
-    ctx.fillText(bandText, 600, 472);
+    if (downloadBtn) {
+      downloadBtn.href = dataUrl;
+      downloadBtn.download = "SEC_Report.png";
+    }
 
-    const cardFill = "rgba(255,255,255,0.06)";
-    fillRoundedRect(ctx, 180, 560, 390, 260, 28, cardFill);
-    fillRoundedRect(ctx, 630, 560, 390, 260, 28, cardFill);
-    strokeRoundedRect(ctx, 180, 560, 390, 260, 28, "rgba(255,255,255,0.10)", 2);
-    strokeRoundedRect(ctx, 630, 560, 390, 260, 28, "rgba(255,255,255,0.10)", 2);
-
-    ctx.fillStyle = "rgba(255,255,255,0.75)";
-    ctx.font = "bold 34px Arial";
-    ctx.fillText("WINDAGE", 375, 645);
-    ctx.fillText("ELEVATION", 825, 645);
-
-    ctx.fillStyle = "#ffffff";
-    ctx.font = "bold 88px Arial";
-    ctx.fillText(fmt2(payload.windageClicks), 375, 745);
-    ctx.fillText(fmt2(payload.elevationClicks), 825, 745);
-
-    ctx.font = "bold 54px Arial";
-    ctx.fillText(payload.windageDirection, 375, 815);
-    ctx.fillText(payload.elevationDirection, 825, 815);
-
-    fillRoundedRect(ctx, 180, 870, 840, 180, 28, "rgba(255,255,255,0.06)");
-    strokeRoundedRect(ctx, 180, 870, 840, 180, 28, "rgba(255,255,255,0.10)", 2);
-
-    ctx.fillStyle = "rgba(255,255,255,0.84)";
-    ctx.font = "bold 34px Arial";
-    ctx.fillText(`${payload.distanceYds} yds`, 600, 950);
-    ctx.fillText(`${payload.shots} hits`, 600, 1005);
-
-    ctx.font = "28px Arial";
-    ctx.fillText(new Date().toLocaleString(), 600, 1060);
-
-    const footer = ctx.createLinearGradient(180, 1145, 1020, 1255);
-    footer.addColorStop(0, "rgba(95,141,255,0.96)");
-    footer.addColorStop(1, "rgba(59,99,235,0.96)");
-    fillRoundedRect(ctx, 180, 1145, 840, 110, 24, footer);
-
-    ctx.fillStyle = "#ffffff";
-    ctx.font = "bold 42px Arial";
-    ctx.fillText(
-      payload.vendorName && payload.vendorName !== "Visit Vendor"
-        ? String(payload.vendorName).toUpperCase()
-        : "SEC REPORT",
-      600,
-      1215
-    );
-
-    ctx.fillStyle = "rgba(255,255,255,0.45)";
-    ctx.font = "bold 26px Arial";
-    ctx.fillText("FAITH • ORDER • PRECISION", 600, 1360);
-
-    return canvas.toDataURL("image/png");
-  }
-
-  async function renderReport(payload, historyItems) {
     if (vendorBtn) {
-      vendorBtn.href = payload.vendorUrl || "#";
-      vendorBtn.textContent =
-        payload.vendorName === "BAKER TARGETS"
-          ? "Shop Baker Targets"
-          : (payload.vendorUrl ? payload.vendorName : "Visit Vendor");
+      const href = payload.vendorUrl || "#";
+      vendorBtn.href = href;
+      vendorBtn.textContent = payload.vendorName || "Visit Vendor";
+      if (!payload.vendorUrl) {
+        vendorBtn.removeAttribute("target");
+      }
     }
 
     if (surveyBtn) {
       surveyBtn.href = DEFAULT_SURVEY_URL;
     }
-
-    if (secCardImg) {
-      secCardImg.src = await drawReport(payload);
-    }
-
-    renderHistory(historyItems);
-
-    if (downloadBtn) {
-      downloadBtn.onclick = (e) => {
-        e.preventDefault();
-        const a = document.createElement("a");
-        a.href = secCardImg.src;
-        a.download = "SEC_Report.png";
-        a.click();
-      };
-    }
   }
 
-  const rawPayload = getPayload();
-  const payload = normalizePayload(rawPayload);
+  function goHome() {
+    window.location.href = "./index.html";
+  }
 
-  if (!payload) {
-    alert("No SEC data found.");
+  // Boot once only
+  const rawPayload = loadPayload();
+  if (!rawPayload) {
+    console.warn("No SEC payload found.");
     return;
   }
 
-  try {
-    localStorage.setItem(KEY_PAYLOAD, JSON.stringify(rawPayload));
-  } catch {}
-
-  const historyItems = pushHistory(payload);
+  const payload = normalizePayload(rawPayload);
+  const history = upsertHistory(payload);
 
   renderPrecision(payload);
+  renderHistory(history);
   showPrecision();
 
   if (toReportBtn) {
     toReportBtn.addEventListener("click", async () => {
-      toReportBtn.textContent = "Loading...";
-      toReportBtn.disabled = true;
-
+      await renderReport(payload);
       showReport();
-      await renderReport(payload, historyItems);
     });
   }
 
   if (backBtn) {
-    backBtn.addEventListener("click", () => {
-      if (viewReport && viewReport.classList.contains("viewOn")) {
-        showPrecision();
-        toReportBtn.textContent = "Unlock Full Report";
-        toReportBtn.disabled = false;
-      } else if (window.history.length > 1) {
-        window.history.back();
-      } else {
-        window.location.href = "./index.html";
-      }
-    });
+    backBtn.addEventListener("click", goHome);
   }
 
   if (backBtnReport) {
-    backBtnReport.addEventListener("click", () => {
-      showPrecision();
-      if (toReportBtn) {
-        toReportBtn.textContent = "Unlock Full Report";
-        toReportBtn.disabled = false;
-      }
-    });
+    backBtnReport.addEventListener("click", showPrecision);
   }
 
   if (goHomeBtn) {
-    goHomeBtn.addEventListener("click", () => {
-      window.location.href = "./index.html";
-    });
+    goHomeBtn.addEventListener("click", goHome);
   }
 })();
