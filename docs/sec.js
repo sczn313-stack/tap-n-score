@@ -1,6 +1,6 @@
 /* ============================================================
    docs/sec.js
-   CLEAN FULL REPLACEMENT
+   BEAUTIFIED FULL REPLACEMENT
 ============================================================ */
 
 (() => {
@@ -92,32 +92,18 @@
   function normalizePayload(raw) {
     if (!raw) return null;
 
-    const score =
-      Number(raw.score ?? raw.smartScore ?? 0);
+    const score = Number(raw.score ?? raw.smartScore ?? 0);
+    const shots = Number(raw.shots ?? 0);
+    const distanceYds = Number(raw.distance_yards ?? raw.debug?.distanceYds ?? 100);
 
-    const shots =
-      Number(raw.shots ?? 0);
+    const windageClicks = Number(raw.windage_clicks ?? raw.windage?.clicks ?? 0);
+    const elevationClicks = Number(raw.elevation_clicks ?? raw.elevation?.clicks ?? 0);
 
-    const distanceYds =
-      Number(raw.distance_yards ?? raw.debug?.distanceYds ?? 100);
+    const windageDirection = String(raw.windage_dir ?? raw.windage?.dir ?? "—");
+    const elevationDirection = String(raw.elevation_dir ?? raw.elevation?.dir ?? "—");
 
-    const windageClicks =
-      Number(raw.windage_clicks ?? raw.windage?.clicks ?? 0);
-
-    const elevationClicks =
-      Number(raw.elevation_clicks ?? raw.elevation?.clicks ?? 0);
-
-    const windageDirection =
-      String(raw.windage_dir ?? raw.windage?.dir ?? "—");
-
-    const elevationDirection =
-      String(raw.elevation_dir ?? raw.elevation?.dir ?? "—");
-
-    const vendorUrl =
-      String(raw.vendorUrl || localStorage.getItem(KEY_VENDOR_URL) || "");
-
-    const vendorName =
-      String(raw.vendorName || localStorage.getItem(KEY_VENDOR_NAME) || "Visit Vendor");
+    const vendorUrl = String(raw.vendorUrl || localStorage.getItem(KEY_VENDOR_URL) || "");
+    const vendorName = String(raw.vendorName || localStorage.getItem(KEY_VENDOR_NAME) || "Visit Vendor");
 
     return {
       score,
@@ -152,38 +138,157 @@
     if (runTime) runTime.textContent = nowStamp();
   }
 
+  function drawRoundedRect(ctx, x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.lineTo(x + w - r, y);
+    ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+    ctx.lineTo(x + w, y + h - r);
+    ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+    ctx.lineTo(x + r, y + h);
+    ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+    ctx.lineTo(x, y + r);
+    ctx.quadraticCurveTo(x, y, x + r, y);
+    ctx.closePath();
+  }
+
+  function fillRoundedRect(ctx, x, y, w, h, r, fillStyle) {
+    ctx.save();
+    drawRoundedRect(ctx, x, y, w, h, r);
+    ctx.fillStyle = fillStyle;
+    ctx.fill();
+    ctx.restore();
+  }
+
+  function strokeRoundedRect(ctx, x, y, w, h, r, strokeStyle, lineWidth = 1) {
+    ctx.save();
+    drawRoundedRect(ctx, x, y, w, h, r);
+    ctx.strokeStyle = strokeStyle;
+    ctx.lineWidth = lineWidth;
+    ctx.stroke();
+    ctx.restore();
+  }
+
   async function drawReport(payload) {
     const canvas = document.createElement("canvas");
-    canvas.width = 1080;
-    canvas.height = 1350;
+    canvas.width = 1200;
+    canvas.height = 1600;
 
     const ctx = canvas.getContext("2d");
 
-    ctx.fillStyle = "#081434";
+    // Background gradient
+    const bg = ctx.createLinearGradient(0, 0, 1200, 1600);
+    bg.addColorStop(0, "#07163f");
+    bg.addColorStop(0.55, "#0a2467");
+    bg.addColorStop(1, "#081434");
+    ctx.fillStyle = bg;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    ctx.fillStyle = "#ffffff";
+    // Soft glow
+    const glow = ctx.createRadialGradient(600, 280, 80, 600, 280, 700);
+    glow.addColorStop(0, "rgba(90,140,255,0.20)");
+    glow.addColorStop(1, "rgba(90,140,255,0)");
+    ctx.fillStyle = glow;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // Outer card
+    fillRoundedRect(ctx, 90, 80, 1020, 1440, 38, "rgba(255,255,255,0.05)");
+    strokeRoundedRect(ctx, 90, 80, 1020, 1440, 38, "rgba(255,255,255,0.12)", 2);
+
+    // Header
     ctx.textAlign = "center";
+    ctx.fillStyle = "#ff6666";
+    ctx.font = "bold 84px Arial";
+    ctx.fillText("S", 470, 180);
 
-    ctx.font = "bold 72px Arial";
-    ctx.fillText("SEC Report", 540, 120);
+    ctx.fillStyle = "#ffffff";
+    ctx.fillText("E", 600, 180);
 
-    ctx.font = "bold 140px Arial";
-    ctx.fillText(String(Math.round(payload.score)), 540, 280);
+    ctx.fillStyle = "#6b95ff";
+    ctx.fillText("C", 725, 180);
 
+    ctx.fillStyle = "rgba(255,255,255,0.82)";
     ctx.font = "32px Arial";
-    ctx.fillText(`Distance: ${payload.distanceYds} yds`, 540, 360);
-    ctx.fillText(`Shots: ${payload.shots}`, 540, 415);
+    ctx.fillText("Shooter Experience Card", 760, 182);
+
+    // Score panel
+    const scorePanel = ctx.createLinearGradient(180, 240, 1020, 520);
+    scorePanel.addColorStop(0, "rgba(255,255,255,0.08)");
+    scorePanel.addColorStop(1, "rgba(255,255,255,0.04)");
+    fillRoundedRect(ctx, 180, 240, 840, 260, 32, scorePanel);
+    strokeRoundedRect(ctx, 180, 240, 840, 260, 32, "rgba(255,255,255,0.10)", 2);
+
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "bold 170px Arial";
+    ctx.fillText(String(Math.round(payload.score)), 600, 390);
+
+    let bandText = "NEEDS WORK";
+    let bandFill = "#f16c6c";
+    if (payload.score >= 90) {
+      bandText = "STRONG / EXCELLENT";
+      bandFill = "#59d37c";
+    } else if (payload.score >= 60) {
+      bandText = "IMPROVING / SOLID";
+      bandFill = "#f1c64f";
+    }
+
+    fillRoundedRect(ctx, 430, 425, 340, 72, 36, bandFill);
+    ctx.fillStyle = "#111111";
+    ctx.font = "bold 28px Arial";
+    ctx.fillText(bandText, 600, 472);
+
+    // Adjustment cards
+    const cardFill = "rgba(255,255,255,0.06)";
+    fillRoundedRect(ctx, 180, 560, 390, 260, 28, cardFill);
+    fillRoundedRect(ctx, 630, 560, 390, 260, 28, cardFill);
+    strokeRoundedRect(ctx, 180, 560, 390, 260, 28, "rgba(255,255,255,0.10)", 2);
+    strokeRoundedRect(ctx, 630, 560, 390, 260, 28, "rgba(255,255,255,0.10)", 2);
+
+    ctx.fillStyle = "rgba(255,255,255,0.75)";
+    ctx.font = "bold 34px Arial";
+    ctx.fillText("WINDAGE", 375, 645);
+    ctx.fillText("ELEVATION", 825, 645);
+
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "bold 88px Arial";
+    ctx.fillText(fmt2(payload.windageClicks), 375, 745);
+    ctx.fillText(fmt2(payload.elevationClicks), 825, 745);
+
+    ctx.font = "bold 54px Arial";
+    ctx.fillText(payload.windageDirection, 375, 815);
+    ctx.fillText(payload.elevationDirection, 825, 815);
+
+    // Run info
+    fillRoundedRect(ctx, 180, 870, 840, 180, 28, "rgba(255,255,255,0.06)");
+    strokeRoundedRect(ctx, 180, 870, 840, 180, 28, "rgba(255,255,255,0.10)", 2);
+
+    ctx.fillStyle = "rgba(255,255,255,0.84)";
+    ctx.font = "bold 34px Arial";
+    ctx.fillText(`${payload.distanceYds} yds`, 600, 950);
+    ctx.fillText(`${payload.shots} hits`, 600, 1005);
+
+    ctx.font = "28px Arial";
+    ctx.fillText(new Date().toLocaleString(), 600, 1060);
+
+    // Footer strip
+    const footer = ctx.createLinearGradient(180, 1145, 1020, 1490);
+    footer.addColorStop(0, "rgba(78,121,255,0.95)");
+    footer.addColorStop(1, "rgba(58,97,235,0.95)");
+    fillRoundedRect(ctx, 180, 1145, 840, 110, 24, footer);
+
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "bold 42px Arial";
     ctx.fillText(
-      `Windage: ${fmt2(payload.windageClicks)} ${payload.windageDirection}`,
-      540,
-      500
+      payload.vendorName && payload.vendorName !== "Visit Vendor"
+        ? String(payload.vendorName).toUpperCase()
+        : "SEC REPORT",
+      600,
+      1215
     );
-    ctx.fillText(
-      `Elevation: ${fmt2(payload.elevationClicks)} ${payload.elevationDirection}`,
-      540,
-      555
-    );
+
+    ctx.fillStyle = "rgba(255,255,255,0.45)";
+    ctx.font = "bold 26px Arial";
+    ctx.fillText("FAITH • ORDER • PRECISION", 600, 1360);
 
     return canvas.toDataURL("image/png");
   }
