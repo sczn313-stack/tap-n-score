@@ -5,6 +5,7 @@
   const DEBUG_ANALYTICS = true;
   const INCHES_PER_PERCENT = 0.75;
   const SEC_PAYLOAD_KEY = "SCZN3_SEC_PAYLOAD_V1";
+  const SEC_TARGET_KEY = "SCZN3_SEC_TARGET_KEY_V1";
 
   const params = new URLSearchParams(window.location.search);
   const isDemoMode = params.get("mode") === "demo";
@@ -89,8 +90,7 @@
     mode: "aim",
     groupCenter: null,
     qrLive: false,
-    resultsViewed: false,
-    sessionStarted: false
+    resultsViewed: false
   };
 
   const analytics = {
@@ -112,7 +112,6 @@
     firstShotAtMs: null,
     resultsAtMs: null,
     lastActivityAtMs: Date.now(),
-    completionSent: false,
     lastSettingsSignature: ""
   };
 
@@ -204,14 +203,12 @@
 
   function clearStaleTargetContext() {
     try {
+      localStorage.removeItem(SEC_PAYLOAD_KEY);
+      localStorage.removeItem(SEC_TARGET_KEY);
       sessionStorage.removeItem("sczn3_b2b_context");
       if (!isB2B) {
         sessionStorage.removeItem("sczn3_b2b_entry_context");
       }
-    } catch {}
-
-    try {
-      localStorage.removeItem(SEC_PAYLOAD_KEY);
     } catch {}
   }
 
@@ -250,7 +247,6 @@
     const title = document.createElement("div");
     title.textContent = "SCZN3 Analytics Debug";
     title.style.fontWeight = "700";
-    title.style.letterSpacing = "0.2px";
 
     const controls = document.createElement("div");
     controls.style.display = "flex";
@@ -493,17 +489,14 @@
       return;
     }
 
-    if (isB2B) {
-      targetImage.alt = "Baker Back-to-Basics Target";
-    } else {
-      targetImage.alt = "Baker ST100 Smart Target";
-    }
+    targetImage.alt = isB2B
+      ? "Baker Back-to-Basics Target"
+      : "Baker ST100 Smart Target";
   }
 
   function setPageCopy() {
     if (isB2B) {
       document.title = "Tap-n-Score™ — B2B";
-
       if (controlsHeading) controlsHeading.textContent = "B2B Target Scoring";
       if (controlsSubhead) {
         controlsSubhead.textContent = "Tap Aim Point • Tap Shots • Get Results";
@@ -513,7 +506,6 @@
       }
     } else {
       document.title = "Tap-n-Score™ Optic Zero Trainer";
-
       if (controlsHeading) controlsHeading.textContent = "Optic Zero Trainer";
       if (controlsSubhead) {
         controlsSubhead.textContent =
@@ -721,7 +713,6 @@
     secCard.innerHTML = `
       <div class="sec-brand">Shooter Experience Card</div>
       <div class="sec-title">Results</div>
-
       <div class="sec-empty">
         Results will appear after you tap an aim point,
         tap ${isB2B ? "at least 3 shots" : "3–5 shots"},
@@ -856,6 +847,7 @@
         wIn: meta.wIn,
         hIn: meta.hIn
       },
+      targetKey: meta.key,
       debug: {
         distanceYds: Number(getDistanceYards().toFixed(2)),
         inches: {
@@ -868,8 +860,12 @@
   }
 
   function openSecPage(payload) {
+    const targetKeyToSave = String(payload?.target?.key || payload?.targetKey || "");
+
     try {
       localStorage.setItem(SEC_PAYLOAD_KEY, JSON.stringify(payload));
+      localStorage.setItem(SEC_TARGET_KEY, targetKeyToSave);
+      sessionStorage.setItem("sczn3_active_target", targetKeyToSave);
     } catch {}
 
     window.location.href = "./sec.html";
@@ -973,6 +969,7 @@
 
     try {
       localStorage.removeItem(SEC_PAYLOAD_KEY);
+      localStorage.removeItem(SEC_TARGET_KEY);
     } catch {}
 
     redrawAll();
