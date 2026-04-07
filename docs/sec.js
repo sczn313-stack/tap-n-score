@@ -81,9 +81,12 @@
   }
 
   function normalize(payload) {
+    const shots = Number(payload?.shots ?? payload?.hits ?? 4);
+    const distanceYds = Number(payload?.debug?.distanceYds ?? payload?.distanceYds ?? 100);
+
     return {
       score: Number(payload?.score ?? 80),
-      shots: Number(payload?.shots ?? 4),
+      shots: Number.isFinite(shots) ? shots : 4,
       windage: {
         clicks: Number(payload?.windage?.clicks ?? 6.87),
         dir: String(payload?.windage?.dir || "LEFT")
@@ -93,7 +96,7 @@
         dir: String(payload?.elevation?.dir || "DOWN")
       },
       debug: {
-        distanceYds: Number(payload?.debug?.distanceYds ?? 100)
+        distanceYds: Number.isFinite(distanceYds) ? distanceYds : 100
       },
       vendorUrl: String(payload?.vendorUrl || localStorage.getItem(KEY_VENDOR_URL) || "#"),
       vendorName: String(payload?.vendorName || localStorage.getItem(KEY_VENDOR_NAME) || "VENDOR")
@@ -107,10 +110,16 @@
       hits: Number(payload.shots)
     };
 
-    const history = getHistory();
-    history.unshift(row);
+    const cleanHistory = getHistory().filter((item) => {
+      const hits = Number(item?.hits);
+      const score = Number(item?.score);
+      const yds = Number(item?.distanceYds);
+      return Number.isFinite(hits) && Number.isFinite(score) && Number.isFinite(yds);
+    });
 
-    const trimmed = history.slice(0, 10);
+    cleanHistory.unshift(row);
+
+    const trimmed = cleanHistory.slice(0, 10);
     saveHistory(trimmed);
     return trimmed;
   }
@@ -133,7 +142,9 @@
 
   function renderReport(payload, history) {
     const img = getTargetImage();
-    if (img) targetThumb.src = img;
+    if (img && targetThumb) {
+      targetThumb.src = img;
+    }
 
     const logo = localStorage.getItem(KEY_VENDOR_LOGO) || "";
     if (logo && vendorLogo && vendorLogoWrap) {
@@ -141,32 +152,43 @@
       vendorLogoWrap.classList.remove("hidden");
     }
 
-    vendorName.textContent = payload.vendorName || "VENDOR";
-    vendorCard.href = payload.vendorUrl || "#";
+    if (vendorName) {
+      vendorName.textContent = payload.vendorName || "VENDOR";
+    }
 
-    const scores = history.map((x) => Number(x.score || 0));
+    if (vendorCard) {
+      vendorCard.href = payload.vendorUrl || "#";
+    }
+
+    const scores = history.map((x) => Number(x.score || 0)).filter(Number.isFinite);
     const highest = scores.length ? Math.max(...scores) : Math.round(payload.score);
     const average = scores.length
       ? (scores.reduce((a, b) => a + b, 0) / scores.length)
       : payload.score;
 
-    highestScore.textContent = String(highest);
-    averageScore.textContent = average.toFixed(2);
+    if (highestScore) highestScore.textContent = String(highest);
+    if (averageScore) averageScore.textContent = average.toFixed(2);
 
-    historyList.innerHTML = history.map((row, idx) => {
-      const n = String(idx + 1).padStart(2, "0");
-      return `<div class="history-row">${n}. ${row.score} &nbsp; | &nbsp; ${row.distanceYds} yds &nbsp; | &nbsp; ${row.hits} hits</div>`;
-    }).join("");
+    if (historyList) {
+      historyList.innerHTML = history.map((row, idx) => {
+        const n = String(idx + 1).padStart(2, "0");
+        return `<div class="history-row">${n}. ${row.score} &nbsp; | &nbsp; ${row.distanceYds} yds &nbsp; | &nbsp; ${row.hits} hits</div>`;
+      }).join("");
+    }
   }
 
-  toReportBtn.addEventListener("click", () => {
-    reportSection.classList.remove("hidden");
-    reportSection.scrollIntoView({ behavior: "smooth", block: "start" });
-  });
+  if (toReportBtn) {
+    toReportBtn.addEventListener("click", () => {
+      reportSection.classList.remove("hidden");
+      reportSection.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  }
 
-  goHomeBtn.addEventListener("click", () => {
-    window.location.href = "./index.html";
-  });
+  if (goHomeBtn) {
+    goHomeBtn.addEventListener("click", () => {
+      window.location.href = "./index.html";
+    });
+  }
 
   const payload = normalize(getPayload() || {});
   const history = pushHistory(payload);
