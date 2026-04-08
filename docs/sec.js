@@ -1,7 +1,6 @@
 (() => {
-  const qs = new URLSearchParams(window.location.search);
-
   const $ = (id) => document.getElementById(id);
+  const qs = new URLSearchParams(window.location.search);
 
   const el = {
     viewScore: $("viewScore"),
@@ -33,7 +32,7 @@
   };
 
   const HISTORY_KEY = "sczn3_shooter_history";
-  const SEC_KEY = "sczn3_sec_payload";
+  const SEC_KEY = "SCZN3_SEC_PAYLOAD_V1";
 
   function toNum(v, fallback = 0) {
     const n = Number(v);
@@ -49,7 +48,7 @@
   }
 
   function clampScore(v) {
-    const n = Math.round(toNum(v, 50));
+    const n = Math.round(toNum(v, 0));
     return Math.max(0, Math.min(100, n));
   }
 
@@ -57,46 +56,113 @@
     return toNum(v, 0).toFixed(2);
   }
 
-  function normalizeDir(value, fallbackPositive, fallbackNegative) {
-    const n = toNum(value, 0);
-    return n >= 0 ? fallbackPositive : fallbackNegative;
+  function upper(v, fallback = "") {
+    return String(v || fallback).trim().toUpperCase();
   }
 
-  function stripSign(v) {
-    return Math.abs(toNum(v, 0));
+  function decodePayloadParam() {
+    const raw = qs.get("payload") || "";
+    if (!raw) return null;
+
+    try {
+      const json = decodeURIComponent(escape(atob(raw)));
+      return JSON.parse(json);
+    } catch {
+      return null;
+    }
   }
 
-  function getSecPayload() {
-    const fromSession = safeParse(sessionStorage.getItem(SEC_KEY), null);
-    const fromLocal = safeParse(localStorage.getItem(SEC_KEY), null);
+  function normalizePayload(raw) {
+    if (!raw || typeof raw !== "object") return null;
 
-    if (fromSession && typeof fromSession === "object") return fromSession;
-    if (fromLocal && typeof fromLocal === "object") return fromLocal;
+    const score = clampScore(raw.score);
 
-    const score = toNum(qs.get("score"), 50);
-    const windage = toNum(qs.get("windage"), 13.56);
-    const elevation = toNum(qs.get("elevation"), 12.57);
-    const distanceYds = toNum(qs.get("yds"), 200);
-    const hits = toNum(qs.get("hits"), 4);
+    const windageClicks = toNum(
+      raw.windage_clicks ?? raw.windage?.clicks ?? raw.windageClicks,
+      0
+    );
+
+    const elevationClicks = toNum(
+      raw.elevation_clicks ?? raw.elevation?.clicks ?? raw.elevationClicks,
+      0
+    );
+
+    const windageDirection = upper(
+      raw.windage_dir ?? raw.windage?.dir ?? raw.windageDirection,
+      "LEFT"
+    );
+
+    const elevationDirection = upper(
+      raw.elevation_dir ?? raw.elevation?.dir ?? raw.elevationDirection,
+      "DOWN"
+    );
+
+    const distanceYards = Math.round(
+      toNum(raw.distance_yards ?? raw.distanceYards ?? raw.yds, 0)
+    );
+
+    const hits = Math.max(
+      0,
+      Math.round(toNum(raw.shots ?? raw.hits, 0))
+    );
 
     return {
+      sessionId: raw.sessionId || "",
       score,
-      windageClicks: Math.abs(windage),
-      windageDirection: windage >= 0 ? "LEFT" : "RIGHT",
-      elevationClicks: Math.abs(elevation),
-      elevationDirection: elevation >= 0 ? "DOWN" : "UP",
-      distanceYards: distanceYds,
-      hits
+      windageClicks: Math.abs(windageClicks),
+      windageDirection,
+      elevationClicks: Math.abs(elevationClicks),
+      elevationDirection,
+      distanceYards,
+      hits,
+      vendorUrl: raw.vendorUrl || "",
+      vendorName: raw.vendorName || "",
+      dial: raw.dial || {},
+      target: raw.target || {},
+      debug: raw.debug || {}
     };
   }
 
-  function getHistory() {
-    const history = safeParse(localStorage.getItem(HISTORY_KEY), []);
-    return Array.isArray(history) ? history : [];
-  }
+  function getSecPayload() {
+    const fromUrlPayload = normalizePayload(decodePayloadParam());
+    if (fromUrlPayload) return fromUrlPayload;
 
-  function setHistory(history) {
-    localStorage.setItem(HISTORY_KEY, JSON.stringify(history.slice(0, 10)));
+    const fromSession = normalizePayload(
+      safeParse(sessionStorage.getItem(SEC_KEY), null)
+    );
+    if (fromSession) return fromSession;
+
+    const fromLocal = normalizePayload(
+      safeParse(localStorage.getItem(SEC_KEY), null)
+    );
+    if (fromLocal) return fromLocal;
+
+    const fromFlatQuery = normalizePayload({
+      score: qs.get("score"),
+      windage_clicks: qs.get("windage"),
+      elevation_clicks: qs.get("elevation"),
+      distance_yards: qs.get("yds"),
+      hits: qs.get("hits"),
+      windage_dir: qs.get("windage_dir") || "LEFT",
+      elevation_dir: qs.get("elevation_dir") || "DOWN"
+    });
+    if (fromFlatQuery) return fromFlatQuery;
+
+    return {
+      sessionId: "",
+      score: 0,
+      windageClicks: 0,
+      windageDirection: "LEFT",
+      elevationClicks: 0,
+      elevationDirection: "DOWN",
+      distanceYards: 0,
+      hits: 0,
+      vendorUrl: "",
+      vendorName: "",
+      dial: {},
+      target: {},
+      debug: {}
+    };
   }
 
   function bandForScore(score) {
@@ -120,12 +186,12 @@
 
   function renderScore(payload) {
     const score = clampScore(payload.score);
-    const windageClicks = stripSign(payload.windageClicks);
-    const elevationClicks = stripSign(payload.elevationClicks);
-    const windageDirection = (payload.windageDirection || normalizeDir(payload.windageClicks, "LEFT", "RIGHT")).toUpperCase();
-    const elevationDirection = (payload.elevationDirection || normalizeDir(payload.elevationClicks, "DOWN", "UP")).toUpperCase();
-    const distanceYards = Math.round(toNum(payload.distanceYards, 200));
-    const hits = Math.max(0, Math.round(toNum(payload.hits, payload.shots || 0)));
+    const windageClicks = Math.abs(toNum(payload.windageClicks, 0));
+    const elevationClicks = Math.abs(toNum(payload.elevationClicks, 0));
+    const windageDirection = upper(payload.windageDirection, "LEFT");
+    const elevationDirection = upper(payload.elevationDirection, "DOWN");
+    const distanceYards = Math.round(toNum(payload.distanceYards, 0));
+    const hits = Math.max(0, Math.round(toNum(payload.hits, 0)));
 
     el.scoreValue.textContent = String(score);
 
@@ -142,19 +208,29 @@
 
     el.distanceChip.textContent = `${distanceYards} yds`;
     el.hitsChip.textContent = `${hits} ${hits === 1 ? "hit" : "hits"}`;
-    el.summaryChip.textContent = `${fmt2(windageClicks)} ${windageDirection} | ${fmt2(elevationClicks)} ${elevationDirection}`;
+    el.summaryChip.textContent =
+      `${fmt2(windageClicks)} ${windageDirection} | ${fmt2(elevationClicks)} ${elevationDirection}`;
+  }
+
+  function getHistory() {
+    const history = safeParse(localStorage.getItem(HISTORY_KEY), []);
+    return Array.isArray(history) ? history : [];
+  }
+
+  function setHistory(history) {
+    localStorage.setItem(HISTORY_KEY, JSON.stringify(history.slice(0, 10)));
   }
 
   function pushCurrentToHistory(payload) {
     const entry = {
       ts: Date.now(),
       score: clampScore(payload.score),
-      yds: Math.round(toNum(payload.distanceYards, 200)),
-      hits: Math.max(0, Math.round(toNum(payload.hits, payload.shots || 0))),
-      windageClicks: stripSign(payload.windageClicks),
-      windageDirection: (payload.windageDirection || normalizeDir(payload.windageClicks, "LEFT", "RIGHT")).toUpperCase(),
-      elevationClicks: stripSign(payload.elevationClicks),
-      elevationDirection: (payload.elevationDirection || normalizeDir(payload.elevationClicks, "DOWN", "UP")).toUpperCase()
+      yds: Math.round(toNum(payload.distanceYards, 0)),
+      hits: Math.max(0, Math.round(toNum(payload.hits, 0))),
+      windageClicks: Math.abs(toNum(payload.windageClicks, 0)),
+      windageDirection: upper(payload.windageDirection, "LEFT"),
+      elevationClicks: Math.abs(toNum(payload.elevationClicks, 0)),
+      elevationDirection: upper(payload.elevationDirection, "DOWN")
     };
 
     const existing = getHistory();
@@ -175,9 +251,9 @@
         Math.round(toNum(x.yds, 0)),
         Math.round(toNum(x.hits, 0)),
         fmt2(x.windageClicks),
-        String(x.windageDirection || "").toUpperCase(),
+        upper(x.windageDirection),
         fmt2(x.elevationClicks),
-        String(x.elevationDirection || "").toUpperCase()
+        upper(x.elevationDirection)
       ].join("|");
       return key === dedupeKey;
     });
@@ -192,9 +268,7 @@
     if (!history.length) {
       el.highestValue.textContent = "0";
       el.averageValue.textContent = "0.00";
-      el.historyList.innerHTML = `
-        <div class="history-row">01. No saved sessions yet</div>
-      `;
+      el.historyList.innerHTML = `<div class="history-row">01. No saved sessions yet</div>`;
       return;
     }
 
@@ -226,14 +300,16 @@
   function showScoreView() {
     el.viewScore.classList.add("view-on");
     el.viewHistory.classList.remove("view-on");
-    window.scrollTo({ top: 0, behavior: "instant" });
+    try { window.scrollTo({ top: 0, behavior: "instant" }); }
+    catch { window.scrollTo(0, 0); }
   }
 
   function showHistoryView() {
     renderHistory();
     el.viewHistory.classList.add("view-on");
     el.viewScore.classList.remove("view-on");
-    window.scrollTo({ top: 0, behavior: "instant" });
+    try { window.scrollTo({ top: 0, behavior: "instant" }); }
+    catch { window.scrollTo(0, 0); }
   }
 
   function saveReportImage() {
@@ -242,11 +318,7 @@
 
   function resetFlow() {
     try { sessionStorage.removeItem(SEC_KEY); } catch {}
-    try { sessionStorage.removeItem("sczn3_active_target"); } catch {}
-    try { sessionStorage.removeItem("sczn3_b2b_entry_context"); } catch {}
-
-    const resetUrl = "./index.html";
-    window.location.href = resetUrl;
+    window.location.href = "./index.html";
   }
 
   function bindEvents() {
