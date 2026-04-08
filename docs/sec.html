@@ -1,109 +1,141 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta charset="utf-8" />
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1, viewport-fit=cover"
+  />
+  <meta name="theme-color" content="#04111f" />
   <title>SEC — Shooter Experience Card</title>
-  <link rel="stylesheet" href="./sec.css?v=OLD-SEC-REBUILD-1" />
+  <link rel="stylesheet" href="./sec.css?v=sec-tight-001" />
 </head>
 <body>
-  <main class="sec-page">
+  <main class="sec-app">
 
+    <!-- TOP -->
     <header class="sec-top">
-      <div class="sec-mark" aria-label="SEC">
-        <span class="s-red">S</span><span class="e-white">E</span><span class="c-blue">C</span>
+      <div class="sec-brand-left" aria-label="SEC logo">
+        <span class="sec-s">S</span><span class="sec-e">E</span><span class="sec-c">C</span>
       </div>
-      <div class="sec-top-right">SHOOTER EXPERIENCE CARD</div>
+
+      <div class="sec-brand-right">
+        <div class="sec-domain">tap-n-score.com</div>
+        <div class="sec-title">SHOOTER EXPERIENCE CARD</div>
+      </div>
     </header>
 
-    <section class="hero-card">
-      <div class="hero-score-label">SCORE</div>
-      <div id="scoreValue" class="hero-score-value">80</div>
-      <div id="scoreBand" class="hero-score-band score-band-yellow">IMPROVING / SOLID</div>
-      <div class="hero-score-note">Tight cluster + closer to the aim point = higher score.</div>
-    </section>
+    <!-- PAGE 1 -->
+    <section id="viewScore" class="view view-on" aria-label="SEC score view">
 
-    <section class="corrections-grid">
-      <div class="corr-card">
-        <div class="corr-label">WINDAGE</div>
-        <div id="windageBig" class="corr-value">6.87</div>
-        <div id="windageDir" class="corr-dir">LEFT</div>
+      <article class="card score-card">
+        <div class="card-label spaced">SCORE</div>
+        <div id="scoreValue" class="score-value">50</div>
+        <div id="scoreBand" class="score-band band-mid">ON TARGET — ADJUST TO CENTER</div>
+        <div class="score-note">Tighter cluster + closer to the aim point = higher score.</div>
+      </article>
+
+      <article class="card action-card">
+        <div class="card-label spaced">ADJUST</div>
+
+        <div class="adjust-grid">
+          <div class="adjust-col">
+            <div class="adjust-mini-label">WINDAGE</div>
+            <div id="windageValue" class="adjust-value">13.56</div>
+            <div id="windageDir" class="adjust-dir">LEFT</div>
+          </div>
+
+          <div class="adjust-divider" aria-hidden="true"></div>
+
+          <div class="adjust-col">
+            <div class="adjust-mini-label">ELEVATION</div>
+            <div id="elevationValue" class="adjust-value">12.57</div>
+            <div id="elevationDir" class="adjust-dir">DOWN</div>
+          </div>
+        </div>
+
+        <div class="action-subline">MOVE GROUP TO CENTER</div>
+      </article>
+
+      <article class="context-strip" aria-label="session context">
+        <div id="distanceChip" class="chip">200 yds</div>
+        <div id="hitsChip" class="chip">4 hits</div>
+        <div id="summaryChip" class="chip chip-wide">13.56 LEFT | 12.57 DOWN</div>
+      </article>
+
+      <div class="btn-stack">
+        <button id="saveBtn" class="btn btn-primary" type="button">
+          Save SEC + Shooter History
+        </button>
+
+        <button id="resetBtn" class="btn btn-secondary" type="button">
+          Zero another target / Score another
+        </button>
+
+        <button id="historyBtn" class="btn btn-ghost" type="button">
+          View Session Summary
+        </button>
       </div>
 
-      <div class="corr-card">
-        <div class="corr-label">ELEVATION</div>
-        <div id="elevationBig" class="corr-value">2.98</div>
-        <div id="elevationDir" class="corr-dir">DOWN</div>
-      </div>
-    </section>
-
-    <section class="meta-strip">
-      <span id="runDistance" class="meta-pill">100 yds</span>
-      <span id="runHits" class="meta-pill">4 hits</span>
-      <span id="runSummary" class="meta-pill">6.87 LEFT | 2.98 DOWN</span>
-    </section>
-
-    <section class="action-stack">
-      <button id="toReportBtn" class="action-btn action-btn-primary" type="button">
-        Save SEC + Shooter History
-      </button>
-
-      <button id="goHomeBtn" class="action-btn action-btn-secondary" type="button">
-        Zero another target / Score another
-      </button>
-
-      <div class="action-note">
+      <p class="footer-copy">
         Next screen creates a “Report Card” image you can save to Photos.
-      </div>
+      </p>
 
-      <div class="sec-footer-mark">SCZN3</div>
+      <div class="footer-mark">S C Z N 3</div>
     </section>
 
-    <section id="reportSection" class="report-section hidden">
-      <div class="report-header">SEC REPORT</div>
+    <!-- PAGE 2 -->
+    <section id="viewHistory" class="view" aria-label="SEC history view">
 
-      <div class="report-top-grid">
-        <div class="report-block">
-          <div class="report-block-title">TARGET USED</div>
-          <div class="thumb-shell">
-            <img id="targetThumb" alt="Target used" />
-          </div>
+      <header class="history-top">
+        <button id="backToScoreBtn" class="round-btn" type="button" aria-label="Back to score">
+          ‹
+        </button>
+
+        <div class="history-top-center">
+          <div class="sec-domain">tap-n-score.com</div>
+          <div class="history-title">VENDOR</div>
+          <div class="history-subtitle">After-Shot Intelligence</div>
         </div>
 
-        <div class="report-block">
-          <div class="report-block-title">OFFICIAL TARGET PARTNER</div>
-          <a id="vendorCard" class="vendor-card" href="#" target="_blank" rel="noopener noreferrer">
-            <div id="vendorLogoWrap" class="vendor-logo-wrap hidden">
-              <img id="vendorLogo" alt="Vendor logo" />
-            </div>
-            <div id="vendorName" class="vendor-name">VENDOR</div>
-            <div class="vendor-sub">After-Shot Intelligence</div>
-          </a>
-        </div>
-      </div>
+        <div class="history-right-space" aria-hidden="true"></div>
+      </header>
 
-      <div class="summary-card">
-        <div class="summary-title">SESSION SUMMARY (LAST 10)</div>
-        <div class="summary-stats">
-          <div class="summary-stat">
-            <div id="highestScore" class="summary-num">80</div>
-            <div class="summary-label">Highest (10)</div>
-          </div>
-          <div class="summary-stat">
-            <div id="averageScore" class="summary-num">80.00</div>
-            <div class="summary-label">Average (10)</div>
-          </div>
-        </div>
-      </div>
+      <article class="card history-summary-card">
+        <div class="card-label history-main-label">SESSION SUMMARY (LAST 10)</div>
 
-      <div class="history-card">
-        <div class="history-title">LAST 10 — SCORE / YDS / HITS (NEWEST TOP)</div>
+        <div class="metric-block">
+          <div id="highestValue" class="metric-value">50</div>
+          <div class="metric-caption">Highest (10)</div>
+        </div>
+
+        <div class="metric-block">
+          <div id="averageValue" class="metric-value">50.00</div>
+          <div class="metric-caption">Average (10)</div>
+        </div>
+      </article>
+
+      <article class="card history-list-card">
+        <div class="card-label history-main-label">
+          LAST 10 — SCORE / YDS / HITS (NEWEST TOP)
+        </div>
+
         <div id="historyList" class="history-list"></div>
+      </article>
+
+      <div class="btn-stack history-actions">
+        <button id="historySaveBtn" class="btn btn-primary" type="button">
+          Save SEC + Shooter History
+        </button>
+
+        <button id="historyResetBtn" class="btn btn-secondary" type="button">
+          Zero another target / Score another
+        </button>
       </div>
     </section>
 
   </main>
 
-  <script src="./sec.js?v=OLD-SEC-REBUILD-1"></script>
+  <script src="./sec.js?v=sec-tight-001"></script>
 </body>
 </html>
