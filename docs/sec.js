@@ -89,12 +89,12 @@
 
     const windageDirection = upper(
       raw.windage_dir ?? raw.windage?.dir ?? raw.windageDirection,
-      "LEFT"
+      windageClicks >= 0 ? "RIGHT" : "LEFT"
     );
 
     const elevationDirection = upper(
       raw.elevation_dir ?? raw.elevation?.dir ?? raw.elevationDirection,
-      "DOWN"
+      elevationClicks >= 0 ? "DOWN" : "UP"
     );
 
     const distanceYards = Math.round(
@@ -143,8 +143,8 @@
       elevation_clicks: qs.get("elevation"),
       distance_yards: qs.get("yds"),
       hits: qs.get("hits"),
-      windage_dir: qs.get("windage_dir") || "LEFT",
-      elevation_dir: qs.get("elevation_dir") || "DOWN"
+      windage_dir: qs.get("windage_dir"),
+      elevation_dir: qs.get("elevation_dir")
     });
     if (fromFlatQuery) return fromFlatQuery;
 
@@ -216,23 +216,6 @@
     }
   }
 
-  function isMeaningfulEntry(row) {
-    if (!row || typeof row !== "object") return false;
-
-    const score = clampScore(row.score);
-    const yds = Math.round(toNum(row.yds ?? row.distanceYards, 0));
-    const hits = Math.round(toNum(row.hits ?? row.shots, 0));
-    const windageClicks = Math.abs(toNum(row.windageClicks, 0));
-    const elevationClicks = Math.abs(toNum(row.elevationClicks, 0));
-
-    if (hits > 0) return true;
-    if (yds > 0) return true;
-    if (windageClicks > 0) return true;
-    if (elevationClicks > 0) return true;
-
-    return score > 0 && (yds > 0 || hits > 0 || windageClicks > 0 || elevationClicks > 0);
-  }
-
   function normalizeHistoryRow(row) {
     return {
       ts: toNum(row.ts, Date.now()),
@@ -246,15 +229,27 @@
     };
   }
 
+  function isGarbageRow(row) {
+    const r = normalizeHistoryRow(row);
+    return (
+      r.score === 0 &&
+      r.yds === 0 &&
+      r.hits === 0 &&
+      r.windageClicks === 0 &&
+      r.elevationClicks === 0
+    );
+  }
+
   function entryKey(row) {
+    const r = normalizeHistoryRow(row);
     return [
-      clampScore(row.score),
-      Math.round(toNum(row.yds, 0)),
-      Math.round(toNum(row.hits, 0)),
-      fmt2(row.windageClicks),
-      upper(row.windageDirection, "LEFT"),
-      fmt2(row.elevationClicks),
-      upper(row.elevationDirection, "DOWN")
+      r.score,
+      r.yds,
+      r.hits,
+      fmt2(r.windageClicks),
+      r.windageDirection,
+      fmt2(r.elevationClicks),
+      r.elevationDirection
     ].join("|");
   }
 
@@ -266,31 +261,46 @@
     const seen = new Set();
 
     for (const item of list) {
-      if (!isMeaningfulEntry(item)) continue;
+      if (!item || typeof item !== "object") continue;
+      if (isGarbageRow(item)) continue;
+
       const row = normalizeHistoryRow(item);
       const key = entryKey(row);
+
       if (seen.has(key)) continue;
       seen.add(key);
       cleaned.push(row);
     }
 
-    return cleaned.slice(0, 10);
+    const finalList = cleaned.slice(0, 10);
+
+    try {
+      localStorage.setItem(HISTORY_KEY, JSON.stringify(finalList));
+    } catch {}
+
+    return finalList;
   }
 
   function setHistory(history) {
+    const list = Array.isArray(history) ? history : [];
     const cleaned = [];
     const seen = new Set();
 
-    for (const item of Array.isArray(history) ? history : []) {
-      if (!isMeaningfulEntry(item)) continue;
+    for (const item of list) {
+      if (!item || typeof item !== "object") continue;
+      if (isGarbageRow(item)) continue;
+
       const row = normalizeHistoryRow(item);
       const key = entryKey(row);
+
       if (seen.has(key)) continue;
       seen.add(key);
       cleaned.push(row);
     }
 
-    localStorage.setItem(HISTORY_KEY, JSON.stringify(cleaned.slice(0, 10)));
+    try {
+      localStorage.setItem(HISTORY_KEY, JSON.stringify(cleaned.slice(0, 10)));
+    } catch {}
   }
 
   function pushCurrentToHistory(payload) {
@@ -305,7 +315,7 @@
       elevationDirection: payload.elevationDirection
     });
 
-    if (!isMeaningfulEntry(entry)) return;
+    if (isGarbageRow(entry)) return;
 
     const existing = getHistory();
     const next = [entry, ...existing];
@@ -387,6 +397,9 @@
   }
 
   function init() {
+    // hard-clean legacy history first
+    getHistory();
+
     const payload = getSecPayload();
 
     try {
