@@ -193,82 +193,134 @@
     const distanceYards = Math.round(toNum(payload.distanceYards, 0));
     const hits = Math.max(0, Math.round(toNum(payload.hits, 0)));
 
-    el.scoreValue.textContent = String(score);
+    if (el.scoreValue) el.scoreValue.textContent = String(score);
 
     const band = bandForScore(score);
-    el.scoreBand.textContent = band.text;
-    el.scoreBand.classList.remove("band-low", "band-mid", "band-high");
-    el.scoreBand.classList.add(band.className);
+    if (el.scoreBand) {
+      el.scoreBand.textContent = band.text;
+      el.scoreBand.classList.remove("band-low", "band-mid", "band-high");
+      el.scoreBand.classList.add(band.className);
+    }
 
-    el.windageValue.textContent = fmt2(windageClicks);
-    el.windageDir.textContent = windageDirection;
+    if (el.windageValue) el.windageValue.textContent = fmt2(windageClicks);
+    if (el.windageDir) el.windageDir.textContent = windageDirection;
 
-    el.elevationValue.textContent = fmt2(elevationClicks);
-    el.elevationDir.textContent = elevationDirection;
+    if (el.elevationValue) el.elevationValue.textContent = fmt2(elevationClicks);
+    if (el.elevationDir) el.elevationDir.textContent = elevationDirection;
 
-    el.distanceChip.textContent = `${distanceYards} yds`;
-    el.hitsChip.textContent = `${hits} ${hits === 1 ? "hit" : "hits"}`;
-    el.summaryChip.textContent =
-      `${fmt2(windageClicks)} ${windageDirection} | ${fmt2(elevationClicks)} ${elevationDirection}`;
+    if (el.distanceChip) el.distanceChip.textContent = `${distanceYards} yds`;
+    if (el.hitsChip) el.hitsChip.textContent = `${hits} ${hits === 1 ? "hit" : "hits"}`;
+    if (el.summaryChip) {
+      el.summaryChip.textContent =
+        `${fmt2(windageClicks)} ${windageDirection} | ${fmt2(elevationClicks)} ${elevationDirection}`;
+    }
+  }
+
+  function isMeaningfulEntry(row) {
+    if (!row || typeof row !== "object") return false;
+
+    const score = clampScore(row.score);
+    const yds = Math.round(toNum(row.yds ?? row.distanceYards, 0));
+    const hits = Math.round(toNum(row.hits ?? row.shots, 0));
+    const windageClicks = Math.abs(toNum(row.windageClicks, 0));
+    const elevationClicks = Math.abs(toNum(row.elevationClicks, 0));
+
+    if (hits > 0) return true;
+    if (yds > 0) return true;
+    if (windageClicks > 0) return true;
+    if (elevationClicks > 0) return true;
+
+    return score > 0 && (yds > 0 || hits > 0 || windageClicks > 0 || elevationClicks > 0);
+  }
+
+  function normalizeHistoryRow(row) {
+    return {
+      ts: toNum(row.ts, Date.now()),
+      score: clampScore(row.score),
+      yds: Math.round(toNum(row.yds ?? row.distanceYards, 0)),
+      hits: Math.max(0, Math.round(toNum(row.hits ?? row.shots, 0))),
+      windageClicks: Math.abs(toNum(row.windageClicks, 0)),
+      windageDirection: upper(row.windageDirection, "LEFT"),
+      elevationClicks: Math.abs(toNum(row.elevationClicks, 0)),
+      elevationDirection: upper(row.elevationDirection, "DOWN")
+    };
+  }
+
+  function entryKey(row) {
+    return [
+      clampScore(row.score),
+      Math.round(toNum(row.yds, 0)),
+      Math.round(toNum(row.hits, 0)),
+      fmt2(row.windageClicks),
+      upper(row.windageDirection, "LEFT"),
+      fmt2(row.elevationClicks),
+      upper(row.elevationDirection, "DOWN")
+    ].join("|");
   }
 
   function getHistory() {
-    const history = safeParse(localStorage.getItem(HISTORY_KEY), []);
-    return Array.isArray(history) ? history : [];
+    const raw = safeParse(localStorage.getItem(HISTORY_KEY), []);
+    const list = Array.isArray(raw) ? raw : [];
+
+    const cleaned = [];
+    const seen = new Set();
+
+    for (const item of list) {
+      if (!isMeaningfulEntry(item)) continue;
+      const row = normalizeHistoryRow(item);
+      const key = entryKey(row);
+      if (seen.has(key)) continue;
+      seen.add(key);
+      cleaned.push(row);
+    }
+
+    return cleaned.slice(0, 10);
   }
 
   function setHistory(history) {
-    localStorage.setItem(HISTORY_KEY, JSON.stringify(history.slice(0, 10)));
+    const cleaned = [];
+    const seen = new Set();
+
+    for (const item of Array.isArray(history) ? history : []) {
+      if (!isMeaningfulEntry(item)) continue;
+      const row = normalizeHistoryRow(item);
+      const key = entryKey(row);
+      if (seen.has(key)) continue;
+      seen.add(key);
+      cleaned.push(row);
+    }
+
+    localStorage.setItem(HISTORY_KEY, JSON.stringify(cleaned.slice(0, 10)));
   }
 
   function pushCurrentToHistory(payload) {
-    const entry = {
+    const entry = normalizeHistoryRow({
       ts: Date.now(),
-      score: clampScore(payload.score),
-      yds: Math.round(toNum(payload.distanceYards, 0)),
-      hits: Math.max(0, Math.round(toNum(payload.hits, 0))),
-      windageClicks: Math.abs(toNum(payload.windageClicks, 0)),
-      windageDirection: upper(payload.windageDirection, "LEFT"),
-      elevationClicks: Math.abs(toNum(payload.elevationClicks, 0)),
-      elevationDirection: upper(payload.elevationDirection, "DOWN")
-    };
-
-    const existing = getHistory();
-
-    const dedupeKey = [
-      entry.score,
-      entry.yds,
-      entry.hits,
-      fmt2(entry.windageClicks),
-      entry.windageDirection,
-      fmt2(entry.elevationClicks),
-      entry.elevationDirection
-    ].join("|");
-
-    const alreadyExists = existing.some((x) => {
-      const key = [
-        clampScore(x.score),
-        Math.round(toNum(x.yds, 0)),
-        Math.round(toNum(x.hits, 0)),
-        fmt2(x.windageClicks),
-        upper(x.windageDirection),
-        fmt2(x.elevationClicks),
-        upper(x.elevationDirection)
-      ].join("|");
-      return key === dedupeKey;
+      score: payload.score,
+      yds: payload.distanceYards,
+      hits: payload.hits,
+      windageClicks: payload.windageClicks,
+      windageDirection: payload.windageDirection,
+      elevationClicks: payload.elevationClicks,
+      elevationDirection: payload.elevationDirection
     });
 
-    const next = alreadyExists ? existing : [entry, ...existing];
+    if (!isMeaningfulEntry(entry)) return;
+
+    const existing = getHistory();
+    const next = [entry, ...existing];
     setHistory(next);
   }
 
   function renderHistory() {
-    const history = getHistory().slice(0, 10);
+    const history = getHistory();
 
     if (!history.length) {
-      el.highestValue.textContent = "0";
-      el.averageValue.textContent = "0.00";
-      el.historyList.innerHTML = `<div class="history-row">01. No saved sessions yet</div>`;
+      if (el.highestValue) el.highestValue.textContent = "0";
+      if (el.averageValue) el.averageValue.textContent = "0.00";
+      if (el.historyList) {
+        el.historyList.innerHTML = `<div class="history-row">01. No saved sessions yet</div>`;
+      }
       return;
     }
 
@@ -276,38 +328,40 @@
     const highest = Math.max(...scores);
     const avg = scores.reduce((a, b) => a + b, 0) / scores.length;
 
-    el.highestValue.textContent = String(highest);
-    el.averageValue.textContent = avg.toFixed(2);
+    if (el.highestValue) el.highestValue.textContent = String(highest);
+    if (el.averageValue) el.averageValue.textContent = avg.toFixed(2);
 
-    el.historyList.innerHTML = history.map((row, idx) => {
-      const num = String(idx + 1).padStart(2, "0");
-      const score = clampScore(row.score);
-      const yds = Math.round(toNum(row.yds, 0));
-      const hits = Math.round(toNum(row.hits, 0));
+    if (el.historyList) {
+      el.historyList.innerHTML = history.map((row, idx) => {
+        const num = String(idx + 1).padStart(2, "0");
+        const score = clampScore(row.score);
+        const yds = Math.round(toNum(row.yds, 0));
+        const hits = Math.round(toNum(row.hits, 0));
 
-      return `
-        <div class="history-row">
-          <span>${num}. ${score}</span>
-          <span>|</span>
-          <span>${yds} yds</span>
-          <span>|</span>
-          <span>${hits} ${hits === 1 ? "hit" : "hits"}</span>
-        </div>
-      `;
-    }).join("");
+        return `
+          <div class="history-row">
+            <span>${num}. ${score}</span>
+            <span>|</span>
+            <span>${yds} yds</span>
+            <span>|</span>
+            <span>${hits} ${hits === 1 ? "hit" : "hits"}</span>
+          </div>
+        `;
+      }).join("");
+    }
   }
 
   function showScoreView() {
-    el.viewScore.classList.add("view-on");
-    el.viewHistory.classList.remove("view-on");
+    if (el.viewScore) el.viewScore.classList.add("view-on");
+    if (el.viewHistory) el.viewHistory.classList.remove("view-on");
     try { window.scrollTo({ top: 0, behavior: "instant" }); }
     catch { window.scrollTo(0, 0); }
   }
 
   function showHistoryView() {
     renderHistory();
-    el.viewHistory.classList.add("view-on");
-    el.viewScore.classList.remove("view-on");
+    if (el.viewHistory) el.viewHistory.classList.add("view-on");
+    if (el.viewScore) el.viewScore.classList.remove("view-on");
     try { window.scrollTo({ top: 0, behavior: "instant" }); }
     catch { window.scrollTo(0, 0); }
   }
